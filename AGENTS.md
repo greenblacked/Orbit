@@ -4,7 +4,7 @@ The working agreement for any coding agent on this site. `CLAUDE.md` imports thi
 
 ## What this is
 
-A static site (plain HTML in `src/`, one stylesheet, two small scripts) served by a Cloudflare Worker. `scripts/build_site.py` copies `src/` to `dist/site/`. Link stylesheets directly from the page: `@import` is not supported, and `check_site.py` and `bundle_preview.py` refuse it. There is no framework and no bundler, and the Python scripts use the standard library only. The README lists every file; SETUP.md is the one-time Cloudflare and GitHub setup.
+A static site (plain HTML in `src/`, one stylesheet, a few small scripts) served by a Cloudflare Worker. `scripts/build_site.py` copies `src/` to `dist/site/`. Link stylesheets directly from the page: `@import` is not supported, and `check_site.py` and `bundle_preview.py` refuse it. There is no framework and no bundler, and the Python scripts use the standard library only. The README lists every file; SETUP.md is the one-time Cloudflare and GitHub setup.
 
 ## Commands
 

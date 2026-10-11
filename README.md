@@ -6,7 +6,7 @@ The source of <https://orbit.szolotov.com>, a static site served by Cloudflare W
 
 | Path | What lives there |
 | --- | --- |
-| `src/` | The site: `index.html`, `about/index.html`, `404.html`, the icons, `_headers`, `assets/` (`site.css`, `theme.js`, `site.js`) and `data/`: `releases.json`, the releases snapshot, and `families.json`, the platform families with their accents. Edit these. |
+| `src/` | The site: `index.html` (the latest release per platform, a section with a drawn device for each family, developer highlights), `timeline/`, `compare/`, `about/`, `404.html`, the icons, `_headers`, `assets/` (`site.css`, `theme.js`, `site.js`, and the data scripts `releases.js`, `home.js`, `timeline.js`, `compare.js`) and `data/`: `releases.json`, the releases snapshot, `families.json`, the platform families with their accents and the vendors with their sources, and `features.json`, the developer highlights. Edit these. |
 | `scripts/build_site.py` | Copies `src/` to `dist/site/` and stamps every page and `version.txt` with a version. Standard library only. |
 | `scripts/check_branch_name.py` | The rule behind the `branch-name` CI job: `<type>/<kebab>` for working branches, with a tool-named prefix refused. |
 | `scripts/check_results.py` | Validates `results/`: the schema, and that only publicly released builds are there (a beta or an RC is refused). Run by CI and by the build. |
@@ -36,7 +36,7 @@ python -m pytest -m "not browser"                  # build tests
 REQUIRE_BROWSER=1 BROWSER_CHANNEL=chrome python -m pytest -m browser   # needs Chrome
 ```
 
-The header, footer, Back bar and To top button are repeated on each page. When you change one, change it on every page; the browser tests check the behaviour on the front page and on `/about/`.
+The header, footer, toast, Back bar and To top button are repeated on each page. When you change one, change it on every page; the browser tests check the behaviour on the front page and on `/about/`.
 
 ## The preview loop
 
@@ -92,6 +92,18 @@ GET /api/health                   { ok, fetchedAt, stale, count, sources: [{ id,
 `stage` is `release`, `beta` or `rc`; `beta` is the iteration number of a beta or RC (null otherwise); `source` at the top lists the ids of the sources in the answer. `snapshot` is true when part of the answer is the bundled copy. The Worker identifies itself as `orbit (+https://orbit.szolotov.com)`. The families and their accents live in `src/data/families.json`, which the Worker and the pages both read.
 
 `serve_site.py` does not run the Worker, but it answers `/api/releases.json` (with `?vendor=`) from `data/releases.json` and `/api/health` with `{"ok":true}`, so the preview loop loads data the way a live page does. `python -m http.server` has no `/api/*` at all, and a client then falls back to `/data/releases.json`. Refresh the snapshot with `node deploy/snapshot_releases.mjs` and commit the result.
+
+## The pages and their data
+
+`/` shows the newest release or beta per platform family (cards), then one section per family with a CSS-drawn device and mock screen (the iPhone Software Update check, the Mac About This Mac window and the watch complication are interactive), then the developer highlights. `/timeline/` lists everything newest first by month with platform and stage filters, kept in the query string (`?family=iOS&stage=beta`). `/compare/` takes a platform and two of its releases.
+
+Every page that shows releases loads `releases.js`. It reads `/data/families.json`, fetches `/api/releases.json`, falls back to `/data/releases.json` when that is missing or not JSON, polls every five minutes while the tab is visible, and shows a toast (an `aria-live` region) when ids it has not shown before appear. It keeps only entries whose family belongs to the entry's vendor in `families.json` and whose link is on a host that vendor's source allows, and it writes text with `textContent`. Without JavaScript the pages show placeholders and a link to the source. In the preview bundle, which cannot fetch, every `data/*.json` is embedded and read instead.
+
+Every page carries the notice that the site is independent of Apple Inc. and a "Source: Apple Developer Releases" link to <https://developer.apple.com/news/releases/>.
+
+`data/features.json` is a list of `{vendor, family, major, title, summary, source}`: a short summary in your own words (no copied sentences) and the vendor page it refers to in `source`. Add an entry only for something you have read on that page now; never write one from memory. An empty list hides the section.
+
+Each family has accent tokens (`--fam-text`, `--fam-text-card`, `--fam-a`, `--fam-b`, `--fam-on`) on a `.fam-<id>` class in `site.css`, taken from `accent` and `accentText` in `families.json`; `tests/test_palette.py` holds the values to that file and to WCAG AA in all three themes. A new family needs its accent rule there. Scroll reveals run only where `animation-timeline` exists and the visitor allows motion, with a class-only `IntersectionObserver` fallback in `releases.js`.
 
 ## Validation results
 
