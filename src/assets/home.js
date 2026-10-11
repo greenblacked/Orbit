@@ -266,4 +266,21 @@
     all = data.releases;
     render();
   });
+
+  // The visual effects are a separate module, loaded once the page has painted and the browser
+  // is idle, and only when motion is allowed. The preview bundle (which embeds its data) has no
+  // files to load.
+  function loadEffects() {
+    if (document.querySelector("script[data-seed]") || RO.reduced()) return;
+    var s = document.createElement("script");
+    s.type = "module";
+    s.src = "/assets/fx.js";
+    document.head.appendChild(s);
+  }
+  function afterPaint() {
+    if ("requestIdleCallback" in window) window.requestIdleCallback(loadEffects, { timeout: 3000 });
+    else window.setTimeout(loadEffects, 1500);
+  }
+  if (document.readyState === "complete") afterPaint();
+  else window.addEventListener("load", afterPaint);
 })();

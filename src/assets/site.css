@@ -1532,3 +1532,31 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   }
   @keyframes sigil-pop { from { opacity: 0; } to { opacity: 1; } }
 }
+
+/* Exploded orbit: as the dial scrolls away above the viewport it tilts back and its rings
+   separate in depth. Where the browser has scroll-driven animations (animation-timeline) the
+   scroll position drives it; elsewhere fx.js adds .out to the stage and the same state is
+   reached by a transition. Both only when motion is allowed, and only transform and translate
+   move. The dial sits flat and still while it is in view, so dragging it is never skewed. */
+@media (prefers-reduced-motion: no-preference) {
+  .orbit-stage { perspective: 1100px; }
+  .dial3d { transform-style: preserve-3d; }
+  @keyframes orbit-tilt {
+    from { transform: none; }
+    to { transform: rotateX(58deg) scale(0.92); }
+  }
+  @keyframes orbit-lift {
+    from { translate: 0 0 0; }
+    to { translate: 0 0 calc(var(--lane, 0) * 3.5rem); }
+  }
+  @supports (animation-timeline: view()) {
+    .dial3d { animation: orbit-tilt linear both; animation-timeline: view(); animation-range: exit 8% exit 95%; }
+    .layer.lane { animation: orbit-lift linear both; animation-timeline: view(); animation-range: exit 8% exit 95%; }
+  }
+  @supports not (animation-timeline: view()) {
+    .dial3d { transition: transform 700ms ease; }
+    .layer.lane { transition: translate 700ms ease; }
+    .orbit-stage.out .dial3d { transform: rotateX(58deg) scale(0.92); }
+    .orbit-stage.out .layer.lane { translate: 0 0 calc(var(--lane, 0) * 3.5rem); }
+  }
+}
