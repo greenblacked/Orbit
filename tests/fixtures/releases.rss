@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<atom:link href="https://developer.apple.com/news/releases/rss/releases.rss" rel="self" type="application/rss+xml" />
+<title>Releases - Apple Developer</title>
+<link>https://developer.apple.com/news/</link>
+<description>Apple Developer News and Updates feed provided by Apple, Inc.</description>
+<language>en-US</language>
+<lastBuildDate>Tue, 06 Oct 2026 10:00:00 PDT</lastBuildDate>
+<generator>Custom</generator>
+<copyright>Copyright 2026, Apple Inc.</copyright>
+
+<item>
+<title>App Store Connect API 4.5.1</title>
+<link>https://developer.apple.com/news/releases/?id=10062026a</link>
+<guid>https://developer.apple.com/news/releases/?id=10062026a</guid>
+<description>Download fileView release notes</description>
+<pubDate>Tue, 06 Oct 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=http://developer.apple.com/sample-code/app-store-connect/app-store-connect-openapi-specification.zip class=more>Download file</a></li><li><a href=https://developer.apple.com/documentation/appstoreconnectapi/app-store-connect-api-release-notes class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>App Store Connect Update</title>
+<link>https://developer.apple.com/news/releases/?id=10052026h</link>
+<guid>https://developer.apple.com/news/releases/?id=10052026h</guid>
+<description>View release notes</description>
+<pubDate>Mon, 05 Oct 2026 18:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=https://developer.apple.com/app-store-connect/release-notes/ class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iOS 27.2 beta 3 (24B5099f)</title>
+<link>https://developer.apple.com/news/releases/?id=10052026a</link>
+<guid>https://developer.apple.com/news/releases/?id=10052026a</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 05 Oct 2026 11:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=ios-27_2-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iPadOS 27.2 beta 3 (24B5099f)</title>
+<link>https://developer.apple.com/news/releases/?id=10052026b</link>
+<guid>https://developer.apple.com/news/releases/?id=10052026b</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 05 Oct 2026 11:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=ipados-27_2-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>macOS 27.2 beta 3 (26B5101f)</title>
+<link>https://developer.apple.com/news/releases/?id=10052026c</link>
+<guid>https://developer.apple.com/news/releases/?id=10052026c</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 05 Oct 2026 11:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=macos-27_2-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>tvOS 27.2 beta 3 (24K5103f)</title>
+<link>https://developer.apple.com/news/releases/?id=10052026d</link>
+<guid>https://developer.apple.com/news/releases/?id=10052026d</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 05 Oct 2026 11:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=tvos-27_2-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>visionOS 27.2 beta 3 (24N5103f)</title>
+<link>https://developer.apple.com/news/releases/?id=10052026e</link>
+<guid>https://developer.apple.com/news/releases/?id=10052026e</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 05 Oct 2026 11:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=visionos-27_2-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>watchOS 27.2 beta 3 (24S5101f)</title>
+<link>https://developer.apple.com/news/releases/?id=10052026f</link>
+<guid>https://developer.apple.com/news/releases/?id=10052026f</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 05 Oct 2026 11:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=watchos-27_2-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>Xcode 27.1 RC (27A9275)</title>
+<link>https://developer.apple.com/news/releases/?id=10052026g</link>
+<guid>https://developer.apple.com/news/releases/?id=10052026g</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 05 Oct 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/applications class=more>View downloads</a></li><li><a href=/go/?id=xcode-27_1-sdk-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>TestFlight Update</title>
+<link>https://developer.apple.com/news/releases/?id=09282026h</link>
+<guid>https://developer.apple.com/news/releases/?id=09282026h</guid>
+<description>View release notes</description>
+<pubDate>Mon, 28 Sep 2026 14:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><ul class=links-stacked><li><a href=/help/app-store-connect/release-notes/ class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>watchOS 27.0.1 (24R365)</title>
+<link>https://developer.apple.com/news/releases/?id=09282026e</link>
+<guid>https://developer.apple.com/news/releases/?id=09282026e</guid>
+<description>View downloads</description>
+<pubDate>Mon, 28 Sep 2026 13:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>Xcode 27.2 beta 2 (27B5028f)</title>
+<link>https://developer.apple.com/news/releases/?id=09282026g</link>
+<guid>https://developer.apple.com/news/releases/?id=09282026g</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 28 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/applications class=more>View downloads</a></li><li><a href=/go/?id=xcode-27_2-sdk-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iOS 27.0.1 (24A446)</title>
+<link>https://developer.apple.com/news/releases/?id=09282026a</link>
+<guid>https://developer.apple.com/news/releases/?id=09282026a</guid>
+<description>View downloads</description>
+<pubDate>Mon, 28 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iPadOS 27.0.1 (24A446)</title>
+<link>https://developer.apple.com/news/releases/?id=09282026b</link>
+<guid>https://developer.apple.com/news/releases/?id=09282026b</guid>
+<description>View downloads</description>
+<pubDate>Mon, 28 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>macOS 27.0.1 (26A434)</title>
+<link>https://developer.apple.com/news/releases/?id=09282026c</link>
+<guid>https://developer.apple.com/news/releases/?id=09282026c</guid>
+<description>View downloads</description>
+<pubDate>Mon, 28 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>visionOS 27.0.1 (24M372)</title>
+<link>https://developer.apple.com/news/releases/?id=09282026d</link>
+<guid>https://developer.apple.com/news/releases/?id=09282026d</guid>
+<description>View downloads</description>
+<pubDate>Mon, 28 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iPadOS 26.7.1 (23H30)</title>
+<link>https://developer.apple.com/news/releases/?id=09282026f</link>
+<guid>https://developer.apple.com/news/releases/?id=09282026f</guid>
+<description>View downloads</description>
+<pubDate>Mon, 28 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>TestFlight 4.4.0</title>
+<link>https://developer.apple.com/news/releases/?id=09224026a</link>
+<guid>https://developer.apple.com/news/releases/?id=09224026a</guid>
+<description>Download the appView release notes</description>
+<pubDate>Thu, 24 Sep 2026 14:30:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=https://apps.apple.com/us/app/testflight/id899247664 class=more>Download the app</a></li><ul class=links-stacked><li><a href= https://developer.apple.com/help/app-store-connect/release-notes/ class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>App Store Connect 3.3</title>
+<link>https://developer.apple.com/news/releases/?id=09223026a</link>
+<guid>https://developer.apple.com/news/releases/?id=09223026a</guid>
+<description>Download the appView release notes</description>
+<pubDate>Wed, 23 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=https://apps.apple.com/us/app/app-store-connect/id1234793120 class=more>Download the app</a></li><li><a href=https://developer.apple.com/help/app-store-connect/release-notes/ class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>App Store Connect API 4.5</title>
+<link>https://developer.apple.com/news/releases/?id=09222026a</link>
+<guid>https://developer.apple.com/news/releases/?id=09222026a</guid>
+<description>Download fileView release notes</description>
+<pubDate>Tue, 22 Sep 2026 16:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=http://developer.apple.com/sample-code/app-store-connect/app-store-connect-openapi-specification.zip class=more>Download file</a></li><li><a href=https://developer.apple.com/documentation/appstoreconnectapi/app-store-connect-api-release-notes class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>Xcode 27.1 beta (27A9269)</title>
+<link>https://developer.apple.com/news/releases/?id=09182026a</link>
+<guid>https://developer.apple.com/news/releases/?id=09182026a</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Fri, 18 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/applications class=more>View downloads</a></li><li><a href=/go/?id=xcode-27_1-sdk-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>Xcode 27 (27A266a)</title>
+<link>https://developer.apple.com/news/releases/?id=09142026h</link>
+<guid>https://developer.apple.com/news/releases/?id=09142026h</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 14 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/applications class=more>View downloads</a></li><li><a href=/go/?id=xcode-27-sdk-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>tvOS 27.0 (24J361)</title>
+<link>https://developer.apple.com/news/releases/?id=09142026d</link>
+<guid>https://developer.apple.com/news/releases/?id=09142026d</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 14 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=tvos-27-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>watchOS 27.0 (24R364)</title>
+<link>https://developer.apple.com/news/releases/?id=09142026f</link>
+<guid>https://developer.apple.com/news/releases/?id=09142026f</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 14 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=watchos-27-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iPadOS 26.7 (23H24)</title>
+<link>https://developer.apple.com/news/releases/?id=09092026g</link>
+<guid>https://developer.apple.com/news/releases/?id=09092026g</guid>
+<description>View downloads</description>
+<pubDate>Wed, 09 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>Transporter 1.4.5</title>
+<link>https://developer.apple.com/news/releases/?id=09082026c</link>
+<guid>https://developer.apple.com/news/releases/?id=09082026c</guid>
+<description>Download the appView release notes</description>
+<pubDate>Tue, 08 Sep 2026 13:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=https://apps.apple.com/us/app/transporter/id1450874784?mt=12id1234793120 class=more>Download the app</a></li><li><a href=https://developer.apple.com/transporter/release-notes/ class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iOS 26.6.2 (23G90)</title>
+<link>https://developer.apple.com/news/releases/?id=09082026a</link>
+<guid>https://developer.apple.com/news/releases/?id=09082026a</guid>
+<description>View downloads</description>
+<pubDate>Tue, 08 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iPadOS 26.6.2 (23G90)</title>
+<link>https://developer.apple.com/news/releases/?id=09082026b</link>
+<guid>https://developer.apple.com/news/releases/?id=09082026b</guid>
+<description>View downloads</description>
+<pubDate>Tue, 08 Sep 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>visionOS 26.6.1 (23O780)</title>
+<link>https://developer.apple.com/news/releases/?id=08172026i</link>
+<guid>https://developer.apple.com/news/releases/?id=08172026i</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 17 Aug 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=visionos-26_6-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>macOS 26.6.2 (25G83)</title>
+<link>https://developer.apple.com/news/releases/?id=08172026j</link>
+<guid>https://developer.apple.com/news/releases/?id=08172026j</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 17 Aug 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=macos-26_6-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iOS 18.7.10 (22H374)</title>
+<link>https://developer.apple.com/news/releases/?id=08172026k</link>
+<guid>https://developer.apple.com/news/releases/?id=08172026k</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 17 Aug 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=ios-18_7-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iPadOS 18.7.10 (22H374)</title>
+<link>https://developer.apple.com/news/releases/?id=08172026l</link>
+<guid>https://developer.apple.com/news/releases/?id=08172026l</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 17 Aug 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=ipados-18_7-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>tvOS 26.6 (23L773)</title>
+<link>https://developer.apple.com/news/releases/?id=07272026d</link>
+<guid>https://developer.apple.com/news/releases/?id=07272026d</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 27 Jul 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=tvos-26_6-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>watchOS 26.6 (23U67)</title>
+<link>https://developer.apple.com/news/releases/?id=07272026f</link>
+<guid>https://developer.apple.com/news/releases/?id=07272026f</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 27 Jul 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=watchos-26_6-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>Xcode 26.6 (17F113)</title>
+<link>https://developer.apple.com/news/releases/?id=06252026a</link>
+<guid>https://developer.apple.com/news/releases/?id=06252026a</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Thu, 25 Jun 2026 15:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/applications class=more>View downloads</a></li><li><a href=/go/?id=xcode-26_6-sdk-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>AirPods beta (9A292e)</title>
+<link>https://developer.apple.com/news/releases/?id=06092026a</link>
+<guid>https://developer.apple.com/news/releases/?id=06092026a</guid>
+<description>View installation instructions</description>
+<pubDate>Tue, 09 Jun 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><a href=https://developer.apple.com/support/install-beta/#airpods-beta class=more>View installation instructions</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iPadOS 17.7.11 (21H461)</title>
+<link>https://developer.apple.com/news/releases/?id=05112026i</link>
+<guid>https://developer.apple.com/news/releases/?id=05112026i</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 11 May 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=ipados-17_7-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iOS 16.7.16 (20H392)</title>
+<link>https://developer.apple.com/news/releases/?id=05112026j</link>
+<guid>https://developer.apple.com/news/releases/?id=05112026j</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 11 May 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=ios-16_7-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iPadOS 16.7.16 (20H392)</title>
+<link>https://developer.apple.com/news/releases/?id=05112026k</link>
+<guid>https://developer.apple.com/news/releases/?id=05112026k</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 11 May 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=ipados-16_7-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iOS 15.8.8 (19H422)</title>
+<link>https://developer.apple.com/news/releases/?id=05112026l</link>
+<guid>https://developer.apple.com/news/releases/?id=05112026l</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 11 May 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=ios-15_8-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+<item>
+<title>iPadOS 15.8.8 (19H422)</title>
+<link>https://developer.apple.com/news/releases/?id=05112026m</link>
+<guid>https://developer.apple.com/news/releases/?id=05112026m</guid>
+<description>View downloadsView release notes</description>
+<pubDate>Mon, 11 May 2026 10:00:00 PDT</pubDate>
+<content:encoded><![CDATA[<ul class=links-stacked><li><a href=/download/os class=more>View downloads</a></li><li><a href=/go/?id=ipados-15_8-rn class=more>View release notes</a></li></ul>]]></content:encoded>
+</item>
+
+</channel>
+</rss>
