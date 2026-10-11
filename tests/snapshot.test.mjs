@@ -38,6 +38,10 @@ describe('deploy/snapshot_releases.mjs', () => {
     assert.doesNotMatch(source, /developer\.apple\.com/);
   });
 
+  it('follows no redirect away from a source URL', () => {
+    assert.match(readFileSync(script, 'utf8'), /redirect: 'manual'/);
+  });
+
   it('starts from nothing only when there is no snapshot file, and aborts otherwise', () => {
     const source = readFileSync(script, 'utf8');
     assert.match(source, /error\.code !== 'ENOENT'/);

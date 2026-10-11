@@ -54,6 +54,7 @@ for (const source of SOURCES) {
     const found = [];
     for (const url of source.urls) {
       const res = await fetch(url, {
+        redirect: 'manual',
         signal: AbortSignal.timeout(15000),
         headers: { 'user-agent': USER_AGENT },
       });
