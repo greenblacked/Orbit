@@ -44,7 +44,7 @@
     genericDigits: 8
   };
   var APPLE = /^(\d+)([A-Z])(\d+)([a-z]?)$/;
-  var generic = null, waiting = [], loading = false;
+  var generic = null, waiting = [], loading = false, failed = false;
 
   // sigil-generic.js calls use() with the rule; a glyph that needs it waits (ready).
   function flush(rule, name) {
@@ -54,11 +54,11 @@
   }
   function use(fn) { flush(fn, "run"); }
   // One request per host (key); hosts off the page are dropped. fail runs if the rule cannot
-  // load, at once in the preview bundle (data-seed), where nothing queues.
+  // load, at once in the preview bundle (data-seed) and after one failed load, where nothing queues.
   function ready(run, key, fail) {
     if (generic) return run();
     var doc = global.document;
-    if (!doc || doc.querySelector("script[data-seed]")) {
+    if (failed || !doc || doc.querySelector("script[data-seed]")) {
       if (fail) fail();
       return;
     }
@@ -70,7 +70,11 @@
     loading = true;
     var s = doc.createElement("script");
     s.src = "/assets/sigil-generic.js";
-    s.onerror = function () { flush(null, "fail"); };
+    s.onerror = function () {
+      failed = true;
+      if (s.parentNode) s.parentNode.removeChild(s);
+      flush(null, "fail");
+    };
     doc.head.appendChild(s);
   }
 
