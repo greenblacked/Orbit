@@ -148,6 +148,88 @@ def test_the_page_drops_entries_it_cannot_show_safely(page, base_url):
     assert page.locator("#latest-grid [data-family=iOS] [data-f=ver]").inner_text() == "iOS 27.2"
 
 
+def test_each_family_has_a_section_with_a_device_and_recent_releases(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    for name in FAMILIES:
+        section = page.locator(f'section.fam[data-family="{name}"]')
+        assert section.locator(".dev .screen").count() == 1
+        assert 1 <= section.locator(".recent li").count() <= 5
+        assert name in section.locator("[data-f=latest]").inner_text()
+        assert section.locator("[data-f=name]").first.inner_text().startswith(name)
+        link = f'#latest-grid [data-family="{name}"] a[href="#{name.lower()}"]'
+        assert page.locator(link).count() == 1
+
+
+def test_the_software_update_mock_reports_the_real_latest_release(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    page.click("[data-act=check]")
+    page.wait_for_function(
+        "() => document.querySelector('[data-f=result]').textContent.length > 20"
+    )
+    public = next(r for r in releases("iOS") if r["stage"] == "release")
+    text = page.inner_text("[data-f=result]")
+    assert public["version"] in text and public["build"] in text
+    assert "newest beta is iOS 27.2 beta 3" in text
+    assert page.get_attribute("[data-f=result]", "aria-live") == "polite"
+    assert page.inner_text("[data-act=check]") == "Check Again"
+
+
+def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    rows = page.locator(".m-ios .m-rows")
+    assert rows.get_attribute("aria-hidden") == "true"
+    ios = releases("iOS")
+    public = next(r for r in ios if r["stage"] == "release")
+    assert rows.locator("[data-f=pubrow]").inner_text() == public["version"]
+    beta = next((r for r in ios if r["stage"] != "release"), None)
+    newer_beta = beta and beta["date"] > public["date"]
+    assert (rows.locator("[data-f=betarow]").inner_text() != "Off") == bool(newer_beta)
+    screen = page.locator(".m-ios").bounding_box()
+    below = rows.bounding_box()
+    assert below["y"] + below["height"] > screen["y"] + screen["height"] * 0.8
+    assert below["y"] > screen["y"] + screen["height"] * 0.4
+
+
+def test_the_about_this_mac_mock_switches_between_release_and_beta(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    public = next(r for r in releases("macOS") if r["stage"] == "release")
+    beta = next(r for r in releases("macOS") if r["stage"] != "release")
+    info = page.locator(".m-mac .m-info")
+    assert public["build"] in info.inner_text()
+    page.click("[data-ch=beta]")
+    assert beta["build"] in info.inner_text()
+    assert page.get_attribute("[data-ch=beta]", "aria-pressed") == "true"
+    assert page.get_attribute("[data-ch=release]", "aria-pressed") == "false"
+
+
+def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    newest = releases("watchOS")[0]
+    seen = [page.text_content(".m-comp .k")]
+    assert page.text_content(".m-comp .v") == newest["version"]
+    for _ in range(2):
+        page.click(".m-comp")
+        seen.append(page.text_content(".m-comp .k"))
+    assert seen == ["Version", "Build", "Released"]
+    assert page.inner_text("[data-f=said]").startswith("Showing released")
+    page.click(".m-comp")
+    assert page.text_content(".m-comp .k") == "Version"
+
+
+def test_mock_controls_are_real_buttons_and_big_enough(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    for selector in ("[data-act=check]", "[data-ch=release]", "[data-ch=beta]", ".m-comp"):
+        size = page.locator(selector).bounding_box()
+        assert size["width"] >= 44 and size["height"] >= 44, (selector, size)
+        assert page.locator(selector).evaluate("e => e.tagName") == "BUTTON"
+
+
 # --- the toast --------------------------------------------------------------------------
 
 
@@ -193,5 +275,78 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         page.clock.run_for(5 * 60 * 1000 + 1000)
         page.wait_for_timeout(200)
         assert "on" not in page.get_attribute("#toast", "class").split()
+    finally:
+        context.close()
+
+
+# --- motion -----------------------------------------------------------------------------
+
+
+def test_content_is_visible_and_still_without_motion(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
+    state = page.evaluate(
+        """() => [...document.querySelectorAll('.reveal, .aurora i')].map((el) => {
+          const s = getComputedStyle(el);
+          return { animation: s.animationName, pre: el.classList.contains('pre') };
+        })"""
+    )
+    assert state and all(s["animation"] == "none" and not s["pre"] for s in state)
+    assert page.evaluate("() => getComputedStyle(document.querySelector('.rel')).opacity") == "1"
+
+
+def test_with_motion_allowed_everything_still_ends_up_visible(browser, base_url):
+    context = make_context(browser, base_url, motion="no-preference")
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        assert (
+            page.evaluate(
+                "() => getComputedStyle(document.querySelector('.aurora i')).animationName"
+            )
+            == "drift"
+        )
+        step = page.evaluate("() => innerHeight")
+        for y in range(0, page.evaluate("() => document.body.scrollHeight"), step // 2):
+            page.evaluate("y => window.scrollTo(0, y)", y)
+            page.wait_for_timeout(30)
+        page.wait_for_timeout(700)
+        hidden = page.evaluate(
+            "() => [...document.querySelectorAll('.reveal')]"
+            ".filter(e => getComputedStyle(e).opacity !== '1').length"
+        )
+        assert hidden == 0
+    finally:
+        context.close()
+
+
+def test_without_scroll_driven_animation_a_script_only_adds_classes(browser, base_url):
+    context = make_context(browser, base_url, motion="no-preference")
+    context.add_init_script(
+        "const s = CSS.supports.bind(CSS); CSS.supports = (...a) => "
+        "String(a[0]).includes('animation-timeline') ? false : s(...a);"
+    )
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        assert page.locator(".reveal.pre").count() > 0
+        assert page.evaluate(
+            "() => [...document.querySelectorAll('.reveal.pre')]"
+            ".every(e => getComputedStyle(e).opacity === '0')"
+        )
+        page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
+        page.wait_for_function("() => document.querySelectorAll('.reveal.pre:not(.in)').length < 3")
+        for _ in range(12):
+            page.mouse.wheel(0, -600)
+            page.wait_for_timeout(50)
+        page.wait_for_function(
+            "() => document.querySelectorAll('.reveal.pre:not(.in)').length === 0"
+        )
+        page.wait_for_timeout(700)
+        opacity = "() => getComputedStyle(document.querySelector('#ios .fam-copy')).opacity"
+        assert page.evaluate(opacity) == "1"
     finally:
         context.close()

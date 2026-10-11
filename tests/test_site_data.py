@@ -134,3 +134,20 @@ def test_the_console_theme_squares_the_cards_of_the_later_pages(name):
         if selector in [part.strip() for part in match.group(1).split(",")]
     ]
     assert squared, f"{selector} is not squared"
+
+
+def test_the_front_page_has_one_section_per_family_in_the_order_of_the_config():
+    html = page("index.html")
+    found = re.findall(
+        r'<section id="([a-z]+)" class="fam fam-[a-z]+(?: fam-flip)?" data-family="([A-Za-z]+)"',
+        html,
+    )
+    assert [family for _, family in found] == APPLE
+    for anchor, family in found:
+        assert anchor == family.lower()
+        assert f'<a href="#{anchor}">{family}</a>' in html
+
+
+def test_the_mock_buttons_do_not_animate_their_colour():
+    rule = re.search(r"\.m-btn, \.m-segb, \.m-comp \{ transition: ([^;]+);", CSS)
+    assert rule and "color" not in rule.group(1)
