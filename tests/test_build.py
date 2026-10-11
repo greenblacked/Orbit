@@ -224,7 +224,9 @@ def read_pages():
         yield page.relative_to(REPO / "src").as_posix(), page.read_text(encoding="utf-8")
 
 
-@pytest.mark.parametrize("name", ["index.html", "about/index.html"])
+@pytest.mark.parametrize(
+    "name", ["index.html", "timeline/index.html", "compare/index.html", "about/index.html"]
+)
 def test_a_page_head_carries_open_graph_and_twitter_meta_that_match_the_canonical_link(name):
     text = dict(read_pages())[name]
 
@@ -239,7 +241,14 @@ def test_a_page_head_carries_open_graph_and_twitter_meta_that_match_the_canonica
     assert meta("property", "og:description") == meta("name", "twitter:description")
     assert meta("property", "og:title") and meta("property", "og:description")
     assert meta("property", "og:type") == "website"
-    assert meta("name", "twitter:card") == "summary"
+    assert meta("name", "twitter:card") == "summary_large_image"
+    image = "https://orbit.szolotov.com/og.png"
+    assert meta("property", "og:image") == meta("name", "twitter:image") == image
+    assert (meta("property", "og:image:width"), meta("property", "og:image:height")) == (
+        "1200",
+        "630",
+    )
+    assert meta("property", "og:image:alt")
     assert meta("name", "description") == meta("property", "og:description")
 
 
@@ -275,3 +284,13 @@ def test_only_the_root_404_page_is_left_out_of_the_sitemap(tmp_path):
     pages = load_script("site_pages")
     assert pages.indexable_urls(src) == ["/", "/docs/404.html", "/docs/"]
     assert [p.relative_to(src).as_posix() for p in pages.page_files(src)][-1] == "404.html"
+
+
+def test_the_share_image_ships_with_the_site_and_fits_the_image_budget():
+    image = REPO / "src" / "og.png"
+    data = image.read_bytes()
+    assert data.startswith(b"\x89PNG\r\n\x1a\n")
+    # The width and height of the IHDR chunk are what the og:image:width and height claim.
+    assert int.from_bytes(data[16:20], "big") == 1200
+    assert int.from_bytes(data[20:24], "big") == 630
+    assert len(data) < 200_000
