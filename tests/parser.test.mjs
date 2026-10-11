@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { FAMILIES, familyIds } from '../deploy/families.js';
+import { FAMILIES, VENDORS, familyIds } from '../deploy/families.js';
 import { mergeReleases, parseDate } from '../deploy/releases.js';
 import apple, { FEED_URL, parseFeed, parseTitle } from '../deploy/sources/apple.js';
 
@@ -52,9 +52,37 @@ describe('the families config', () => {
     assert.deepEqual(familyIds('nobody'), []);
     for (const family of FAMILIES) {
       assert.match(family.accent, /^#[0-9a-f]{6}$/i, family.id);
+      assert.match(family.accentText, /^#[0-9a-f]{6}$/i, family.id);
       assert.ok(family.vendor && family.name, family.id);
     }
     assert.equal(new Set(FAMILIES.map((family) => family.id)).size, FAMILIES.length);
+  });
+
+  it('gives each family its accent and the darker text colour used on a light page', () => {
+    assert.deepEqual(
+      FAMILIES.map((family) => [family.id, family.accent, family.accentText]),
+      [
+        ['iOS', '#d7452f', '#c53b26'],
+        ['iPadOS', '#a36f14', '#926312'],
+        ['macOS', '#288b35', '#247c2f'],
+        ['watchOS', '#158591', '#137883'],
+        ['tvOS', '#7869d9', '#6a5ad5'],
+        ['visionOS', '#cc3fa1', '#bd3293'],
+      ],
+    );
+  });
+
+  it('names each vendor and the page its data comes from', () => {
+    assert.deepEqual(VENDORS.map((vendor) => vendor.id), ['apple']);
+    for (const vendor of VENDORS) {
+      assert.ok(vendor.name, vendor.id);
+      assert.match(vendor.source.url, /^https:\/\//, vendor.id);
+      assert.ok(vendor.source.name && vendor.source.hosts.length, vendor.id);
+      assert.ok(FAMILIES.some((family) => family.vendor === vendor.id), vendor.id);
+    }
+    for (const family of FAMILIES) {
+      assert.ok(VENDORS.some((vendor) => vendor.id === family.vendor), family.id);
+    }
   });
 });
 

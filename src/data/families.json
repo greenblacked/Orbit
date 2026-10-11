@@ -1,10 +1,21 @@
 {
+  "vendors": [
+    {
+      "id": "apple",
+      "name": "Apple",
+      "source": {
+        "name": "Apple Developer Releases",
+        "url": "https://developer.apple.com/news/releases/",
+        "hosts": ["developer.apple.com"]
+      }
+    }
+  ],
   "families": [
-    { "id": "iOS", "vendor": "apple", "name": "iOS", "accent": "#0a84ff" },
-    { "id": "iPadOS", "vendor": "apple", "name": "iPadOS", "accent": "#5e5ce6" },
-    { "id": "macOS", "vendor": "apple", "name": "macOS", "accent": "#bf5af2" },
-    { "id": "watchOS", "vendor": "apple", "name": "watchOS", "accent": "#ff375f" },
-    { "id": "tvOS", "vendor": "apple", "name": "tvOS", "accent": "#ff9f0a" },
-    { "id": "visionOS", "vendor": "apple", "name": "visionOS", "accent": "#30d158" }
+    { "id": "iOS", "vendor": "apple", "name": "iOS", "accent": "#d7452f", "accentText": "#c53b26" },
+    { "id": "iPadOS", "vendor": "apple", "name": "iPadOS", "accent": "#a36f14", "accentText": "#926312" },
+    { "id": "macOS", "vendor": "apple", "name": "macOS", "accent": "#288b35", "accentText": "#247c2f" },
+    { "id": "watchOS", "vendor": "apple", "name": "watchOS", "accent": "#158591", "accentText": "#137883" },
+    { "id": "tvOS", "vendor": "apple", "name": "tvOS", "accent": "#7869d9", "accentText": "#6a5ad5" },
+    { "id": "visionOS", "vendor": "apple", "name": "visionOS", "accent": "#cc3fa1", "accentText": "#bd3293" }
   ]
 }
