@@ -16,9 +16,19 @@ VERSION = "9.9.9"
 BASH = shutil.which("bash")
 
 
-def handler_for(health_status: int, health_body: bytes, flaky_path: str = "", flaky_404s: int = 0):
-    """flaky_path answers 404 for its first flaky_404s requests, then as normal."""
-    seen = {"count": 0}
+def handler_for(
+    health_status: int,
+    health_body: bytes,
+    flaky_path: str = "",
+    flaky_404s: int = 0,
+    missing_200s: int = 0,
+):
+    """flaky_path answers 404 for its first flaky_404s requests, then as normal.
+
+    A path that does not exist answers 200 (as a front page would) for its first
+    missing_200s requests.
+    """
+    seen = {"count": 0, "missing": 0}
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
@@ -29,7 +39,10 @@ def handler_for(health_status: int, health_body: bytes, flaky_path: str = "", fl
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return
-            if self.path == "/version.txt":
+            if self.path.startswith("/no-such-page-") and seen["missing"] < missing_200s:
+                seen["missing"] += 1
+                body = b"front page"
+            elif self.path == "/version.txt":
                 body = f"{VERSION}\n".encode()
             elif self.path == "/":
                 body = f'<meta name="site-version" content="{VERSION}">'.encode()
@@ -56,8 +69,9 @@ def run_smoke(
     check_api: bool = True,
     flaky_path: str = "",
     flaky_404s: int = 0,
+    missing_200s: int = 0,
 ):
-    handler = handler_for(health_status, health_body, flaky_path, flaky_404s)
+    handler = handler_for(health_status, health_body, flaky_path, flaky_404s, missing_200s)
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -124,9 +138,9 @@ def test_a_path_that_404s_at_first_is_retried_until_it_serves(path):
 @pytest.mark.parametrize(
     ("path", "check"),
     [
-        ("/", "the front page"),
-        ("/favicon.png", "the icon"),
-        ("/api/health", "/api/health"),
+        ("/", "the front page does not carry"),
+        ("/favicon.png", "the icon was not served"),
+        ("/api/health", "/api/health did not answer JSON"),
     ],
 )
 def test_a_path_that_never_recovers_fails_and_names_the_check(path, check):
@@ -134,3 +148,15 @@ def test_a_path_that_never_recovers_fails_and_names_the_check(path, check):
     assert result.returncode == 1
     assert check in result.stderr
     assert "last HTTP status 404" in result.stderr
+
+
+def test_a_missing_path_that_answers_200_at_first_is_retried_until_it_404s():
+    result = run_smoke(200, b'{"ok": true}', missing_200s=4)
+    assert result.returncode == 0, result.stderr
+
+
+def test_a_missing_path_that_never_404s_fails_and_names_the_check():
+    result = run_smoke(200, b'{"ok": true}', missing_200s=10**6)
+    assert result.returncode == 1
+    assert "did not answer 404" in result.stderr
+    assert "last HTTP status 200" in result.stderr

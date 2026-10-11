@@ -5,8 +5,7 @@
 # does not hold the Cloudflare credential. version.txt is retried until its first
 # line is the expected version, not merely until it answers: a host can answer for a
 # while with the previous version while the new one propagates, and that must not
-# fail a healthy deploy. The other paths are required once it matches, since they
-# The other paths are required once it matches, since they
+# fail a healthy deploy. The other paths must then pass too, since they
 # were uploaded in the same version: the front page must carry the same version in its
 # site-version meta tag, the icon must be served (2xx), and a path that does not exist must
 # answer exactly 404 (the Worker's not_found_handling), not the front page. The releases API
@@ -25,10 +24,11 @@
 # timeout-minutes, which matters because a job that times out is cancelled rather
 # than failed, and a cancelled release job skips its rollback. Worst case is about 90s for
 # version.txt plus 60s for the other checks plus a 1s-minimum request each, roughly 2.5
-# minutes, against the release job's timeout-minutes of 15.
+# minutes, against the deploy job's timeout-minutes of 20 in release.yml.
 #
 # Test hook: with SMOKE_SITE_TEST_MODE=1 the script also accepts exactly
-# http://127.0.0.1:<port>, waits 0.1s between attempts and gives up after 3s (2s for the checks after version.txt), so a
+# http://127.0.0.1:<port>, waits 0.1s between attempts and gives up after 3s (3s for
+# the checks after version.txt), so a
 # test can serve versions from a local socket. Unset by default; it changes nothing
 # else, and every other URL still has to be https, except that it skips the /api/health check:
 # the loopback servers (python -m http.server, scripts/serve_site.py) serve files only and
@@ -53,7 +53,7 @@ if [ "${SMOKE_SITE_TEST_MODE:-}" = 1 ]; then
   loopback_ok=1
   delay=0.1
   wait_seconds=3
-  post_seconds=2
+  post_seconds=3
 fi
 
 # A strict shape, not a glob: a glob lets "https://a b", "https://x@evil.example" and
@@ -165,13 +165,13 @@ retry() {
     fi
     sleep "$delay"
   done
-  echo "$what failed: $target, last HTTP status ${status/#000/none}, within ${post_seconds}s of version.txt matching" >&2
+  echo "$what: $target, last HTTP status ${status/#000/none}, within ${post_seconds}s of version.txt matching" >&2
   exit 1
 }
 
-retry "the front page carrying site-version '$version'" "$url/" check_front
-retry "the icon being served" "$url/favicon.png" check_icon
-retry "a path that does not exist answering 404" "$url/no-such-page-$$/" check_missing
+retry "the front page does not carry site-version '$version'" "$url/" check_front
+retry "the icon was not served" "$url/favicon.png" check_icon
+retry "a path that does not exist did not answer 404" "$url/no-such-page-$$/" check_missing
 if [ "$loopback_ok" -ne 1 ] || [ "${SMOKE_SITE_CHECK_API:-}" = 1 ]; then
-  retry "/api/health answering JSON with ok true" "$url/api/health" check_health
+  retry "/api/health did not answer JSON with ok true" "$url/api/health" check_health
 fi
