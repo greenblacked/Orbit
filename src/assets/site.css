@@ -1499,6 +1499,8 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid var(--line);
+  /* The row is filled in once the page has painted (cadence.js); the space is kept meanwhile. */
+  min-height: 4.5rem;
 }
 .cadence li { min-width: 0; font-size: 0.8125rem; line-height: 1.4; }
 .cadence .c-fam {
@@ -1507,8 +1509,14 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.cadence .c-nums { display: block; color: var(--muted); font-family: var(--font-mono); }
+/* The platform name on one line, then each part ("Every 21 days," and "last 6 days ago") as an
+   unbreakable unit: the line wraps only between the parts, at any width. */
+.cadence .c-nums { display: block; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cadence .c-part { display: inline-block; white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) {
   .ring.breath { transform-box: fill-box; transform-origin: center; animation: breathe var(--breath, 6s) ease-in-out infinite; }
   @keyframes breathe {

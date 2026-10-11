@@ -14,7 +14,7 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 | Snapshot | `src/data/releases.json` | The bundled copy of the releases. Refreshed with `node deploy/snapshot_releases.mjs`. |
 | Families | `src/data/families.json` | Platform families, their accents and the vendors with their sources. Read by the Worker and the pages. |
 | Results | `results/` | One JSON file per publicly released, tested build. |
-| Page scripts | `src/assets/` | `releases.js` loads the data. `home.js`, `timeline.js` and `compare.js` draw a page. `sigil.js`, `orbit.js` and `cadence.js` draw the signature. `fx.js` and `aurora.js` are the optional effects. |
+| Page scripts | `src/assets/` | `releases.js` loads the data. `home.js`, `timeline.js` and `compare.js` draw a page. `sigil.js` and `orbit.js` draw the signature. `cadence.js`, `sigil-generic.js` (the sigil rule for a build that is not an Apple build), `fx.js` and `aurora.js` load after the first paint. |
 | Checks | `scripts/check_*.py`, `tests/` | Site, results and pipeline checks, and the Python and Node tests. |
 | Pipeline | `.github/workflows/` | `ci`, `security`, `deploy` (pull request dry run and the Preview), `cut-release`, `release` and `dependabot-auto-merge`. |
 

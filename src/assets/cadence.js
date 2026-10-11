@@ -2,7 +2,7 @@
    its last one, as a quiet row under the dial and as a slow breathing of the family's ring.
    The breath's period is the median gap scaled down: half a second per day, between 2 and 14
    seconds (CSS reads it from --breath; it is off under reduced motion). Both follow the time
-   machine: the numbers are as of the chosen day. Gaps count distinct UTC days, so a beta and
+   machine: the numbers are as of the chosen day. The page loads this file once it has painted (home.js). Gaps count distinct UTC days, so a beta and
    a release candidate on one day are one release day. */
 (function () {
   "use strict";
@@ -58,10 +58,16 @@
       var s = stats(all, fam.id, at);
       var li = RO.h("li", "fam-" + String(fam.id).toLowerCase());
       li.appendChild(RO.h("span", "c-fam", fam.name || fam.id));
-      var text = "No releases yet";
-      if (s.count === 1) text = "1 release, " + plural(s.since, "day") + " ago";
-      else if (s.count > 1) text = "Every " + plural(Math.round(s.median), "day") + ", last " + plural(s.since, "day") + " ago";
-      li.appendChild(RO.h("span", "c-nums", text));
+      var parts = ["No releases yet"];
+      if (s.count === 1) parts = ["1 release,", plural(s.since, "day") + " ago"];
+      else if (s.count > 1) parts = ["Every " + plural(Math.round(s.median), "day") + ",", "last " + plural(s.since, "day") + " ago"];
+      // Each part is one unbreakable unit (CSS), so a narrow column wraps only between them.
+      var nums = RO.h("span", "c-nums");
+      parts.forEach(function (part, i) {
+        if (i) nums.appendChild(document.createTextNode(" "));
+        nums.appendChild(RO.h("span", "c-part", part));
+      });
+      li.appendChild(nums);
       row.appendChild(li);
       // Compared, not put into a selector: an id may hold a quote or a backslash.
       var ring = Array.prototype.filter.call(document.querySelectorAll(".ring"), function (n) {
@@ -78,10 +84,13 @@
     });
   }
 
-  document.addEventListener("ro:asof", function (e) {
-    asOf = e.detail && typeof e.detail.t === "number" ? e.detail.t : null;
+  function at(t) {
+    asOf = typeof t === "number" ? t : null;
     paint();
-  });
+  }
+  document.addEventListener("ro:asof", function (e) { at(e.detail && e.detail.t); });
+  // Loaded after the first paint, so the page hands over the day the hand points at (at).
+  window.Cadence = { at: at };
   // The dial draws its rings after the data arrives, and again when it changes.
   document.addEventListener("ro:orbit", paint);
   RO.on(function (data) {

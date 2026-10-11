@@ -75,8 +75,13 @@ def test_the_front_page_has_one_card_per_family_in_the_order_of_the_config():
 
 # The effects are separate modules that load after the first paint; no page names them.
 LAZY = ("fx.js", "aurora.js")
+# Also off the first paint: the cadence row (home.js loads it once the page has painted) and
+# the generic sigil rule (sigil.js loads it when a build that is not an Apple build appears).
+# The script that loads each one is the only file that names it.
+AFTER_PAINT = {"cadence.js": "home.js", "sigil-generic.js": "sigil.js"}
 FIRST_PAINT_BUDGET = 60_000
 LAZY_BUDGET = 16_000
+AFTER_PAINT_BUDGET = 8_000
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])
@@ -84,6 +89,7 @@ def test_the_scripts_a_page_loads_stay_under_the_first_paint_budget(name):
     loaded = re.findall(r'<script src="/assets/([a-z.-]+\.js)"', page(name))
     assert loaded, name
     assert not set(LAZY) & set(loaded), "the effects load after first paint, not from the page"
+    assert not set(AFTER_PAINT) & set(loaded), "these load after first paint, not from the page"
     total = sum((ASSETS / script).stat().st_size for script in loaded)
     assert total < FIRST_PAINT_BUDGET, (name, total)
 
@@ -97,6 +103,17 @@ def test_the_lazily_loaded_effects_stay_small_and_are_only_loaded_by_the_scripts
         if any(f"/assets/{name}" in script.read_text(encoding="utf-8") for name in LAZY)
     ]
     assert named == ["home.js"]
+
+
+def test_the_scripts_loaded_after_the_first_paint_are_named_only_by_their_loader():
+    assert sum((ASSETS / name).stat().st_size for name in AFTER_PAINT) < AFTER_PAINT_BUDGET
+    for name, loader in AFTER_PAINT.items():
+        named = [
+            script.name
+            for script in ASSETS.glob("*.js")
+            if f"/assets/{name}" in script.read_text(encoding="utf-8")
+        ]
+        assert named == [loader], name
 
 
 @pytest.mark.parametrize("script", sorted(ASSETS.glob("*.js")), ids=lambda p: p.name)

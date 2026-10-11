@@ -1,6 +1,6 @@
 # Build sigils
 
-A build sigil is a deterministic glyph drawn from a build string. Same build, same sigil. The colour is the only part not derived from the string: on the site it is the accent of the platform family whose card, dial or section shows the glyph, so a build that two families share (iOS and iPadOS can ship the same build) is drawn once in each family's accent. Anywhere one glyph stands for several families at once, the page ink is the colour to use. The reference implementation is [`src/assets/sigil.js`](../src/assets/sigil.js); `tests/sigil.test.mjs` pins its geometry to the examples below and `tests/test_sigil_doc.py` holds its constants to the table in this page.
+A build sigil is a deterministic glyph drawn from a build string. Same build, same sigil. The colour is the only part not derived from the string: on the site it is the accent of the platform family whose card, dial or section shows the glyph, so a build that two families share (iOS and iPadOS can ship the same build) is drawn once in each family's accent. Anywhere one glyph stands for several families at once, the page ink is the colour to use. The reference implementation is [`src/assets/sigil.js`](../src/assets/sigil.js), with the generic rule in [`src/assets/sigil-generic.js`](../src/assets/sigil-generic.js); `tests/sigil.test.mjs` pins its geometry to the examples below and `tests/test_sigil_doc.py` holds its constants to the table in this page.
 
 ## Grammar
 
