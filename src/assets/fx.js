@@ -23,3 +23,53 @@ function explodeFallback() {
 if (motionOk) {
   explodeFallback();
 }
+
+// Liquid-light glass on the cards. A pointer-following specular highlight: the pointer's
+// position inside the hovered card goes into two custom properties (--mx, --my) and the CSS
+// paints a soft highlight at that spot. Only for a fine pointer that can hover; a finger has
+// no hover to follow.
+const GLASS = ".rel, .orbit-card";
+function glass() {
+  if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  root.classList.add("fx-glass");
+  let frame = 0;
+  let last = null;
+  const paint = () => {
+    frame = 0;
+    const card = last.target.closest(GLASS);
+    if (!card) return;
+    const box = card.getBoundingClientRect();
+    card.style.setProperty("--mx", Math.round(last.x - box.left) + "px");
+    card.style.setProperty("--my", Math.round(last.y - box.top) + "px");
+  };
+  document.addEventListener("pointermove", (e) => {
+    if (e.pointerType === "touch" || !e.target.closest || !e.target.closest(GLASS)) return;
+    last = { target: e.target, x: e.clientX, y: e.clientY };
+    if (!frame) frame = requestAnimationFrame(paint);
+  }, { passive: true });
+}
+
+// Refraction: an SVG feTurbulence and feDisplacementMap filter that bends a card a little while
+// it is hovered (the CSS applies it to .rel:hover only, a single element at a time). Added only
+// where the engine accepts a filter reference, so nothing changes elsewhere.
+function refraction() {
+  if (!window.CSS || !CSS.supports || !CSS.supports("filter", "url(#fx-refract)")) return;
+  const NS = "http://www.w3.org/2000/svg";
+  const make = (tag, attrs, parent) => {
+    const node = document.createElementNS(NS, tag);
+    for (const key in attrs) node.setAttribute(key, attrs[key]);
+    if (parent) parent.appendChild(node);
+    return node;
+  };
+  const svg = make("svg", { width: 0, height: 0, "aria-hidden": "true", focusable: "false", "class": "fx-defs" });
+  const filter = make("filter", { id: "fx-refract", x: "-4%", y: "-4%", width: "108%", height: "108%" }, svg);
+  make("feTurbulence", { type: "fractalNoise", baseFrequency: "0.012 0.02", numOctaves: 2, seed: 7, result: "noise" }, filter);
+  make("feDisplacementMap", { in: "SourceGraphic", in2: "noise", scale: 4, xChannelSelector: "R", yChannelSelector: "G" }, filter);
+  document.body.appendChild(svg);
+  root.classList.add("fx-refract");
+}
+
+if (motionOk) {
+  glass();
+  refraction();
+}
