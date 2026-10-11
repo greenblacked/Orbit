@@ -70,6 +70,12 @@ jobs:
         run: |
           set -Eeuo pipefail
           python scripts/check_site.py dist/site
+      - name: Check the validation results
+        # Only results for publicly released builds may be committed (results/README.md);
+        # this refuses a beta or an RC and any file that does not match the schema.
+        run: |
+          set -Eeuo pipefail
+          python scripts/check_results.py
       - name: Run the build tests
         run: |
           set -Eeuo pipefail
@@ -161,6 +167,27 @@ jobs:
           path: dist/preview
           if-no-files-found: warn
           retention-days: 14
+
+  worker:
+    name: test the releases worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: '22.23.3'
+          # Nothing is installed: the tests use node:test and the Worker's own files.
+          package-manager-cache: false
+      - name: Run the parser, registry and Worker tests
+        # The glob is quoted so Node expands it, the same on every runner.
+        run: |
+          set -Eeuo pipefail
+          node --test 'tests/*.test.mjs'
 
   branch-name:
     name: check branch name
@@ -257,6 +284,7 @@ jobs:
       - build
       - branch-name
       - smoke
+      - worker
       - site-browser
       - lint-actions
       - lint-markdown
@@ -278,4 +306,4 @@ jobs:
         run: |
           set -Eeuo pipefail
           python3 scripts/check_job_results.py \
-            build branch-name smoke site-browser lint-actions lint-markdown links
+            build branch-name smoke worker site-browser lint-actions lint-markdown links

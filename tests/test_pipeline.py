@@ -182,6 +182,31 @@ def test_release_verifies_on_workers_dev_and_rolls_back_on_failure():
     assert "deployed=true" in block
 
 
+def test_the_worker_script_runs_first_only_for_the_api():
+    config = json.loads((REPO / "deploy" / "wrangler.json").read_text(encoding="utf-8"))
+    assert config["main"] == "worker.js"
+    assert (REPO / "deploy" / config["main"]).is_file()
+    # Everything else is served by the static assets without starting the script.
+    assert config["assets"]["run_worker_first"] == ["/api/*"]
+    assert config["assets"]["binding"] == "ASSETS"
+
+
+def test_ci_runs_the_worker_tests_with_the_pinned_node():
+    ci = workflow("ci.yml")
+    block = job_block(ci, "worker")
+    assert "node --test 'tests/*.test.mjs'" in block
+    deploy_pin = re.search(r"actions/setup-node@\S+\s+# v\S+", workflow("deploy.yml"))
+    assert deploy_pin
+    assert deploy_pin.group(0) in block
+    assert "package-manager-cache: false" in block
+
+
+def test_ci_checks_the_validation_results_in_the_test_job_before_the_tests():
+    block = job_block(workflow("ci.yml"), "build")
+    assert "python scripts/check_results.py" in block
+    assert block.index("check_results.py") < block.index("python -m pytest")
+
+
 def test_the_worker_serves_a_404_page_and_keeps_workers_dev():
     config = json.loads((REPO / "deploy" / "wrangler.json").read_text(encoding="utf-8"))
     assert config["assets"]["not_found_handling"] == "404-page"

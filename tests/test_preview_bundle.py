@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import re
 import shutil
 import subprocess
@@ -1708,3 +1709,19 @@ def test_a_get_form_to_another_page_lands_on_its_route_without_a_policy_violatio
     assert "About this template" in page.content()
     page.close()
     assert problems == []
+
+
+def test_every_data_file_is_embedded_as_a_seed_a_page_reads_instead_of_fetching(text, built):
+    seeds = dict(
+        re.findall(
+            r'<script type="application/json" data-seed="([^"]+)">(.*?)</script>', text, re.S
+        )
+    )
+    files = sorted((built / "data").glob("*.json"))
+    assert files, "the build ships data files"
+    assert sorted(seeds) == [f"/data/{path.name}" for path in files]
+    for path in files:
+        body = seeds[f"/data/{path.name}"]
+        assert "<" not in body, "a '<' could close the block early"
+        # The < escape is plain JSON, so the seed parses back to the file's own data.
+        assert json.loads(body) == json.loads(path.read_text(encoding="utf-8"))

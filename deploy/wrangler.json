@@ -1,5 +1,6 @@
 {
   "name": "orbit",
+  "main": "worker.js",
   "compatibility_date": "2026-10-01",
   "workers_dev": true,
   "preview_urls": true,
@@ -13,6 +14,8 @@
   "previews": {},
   "assets": {
     "directory": "../dist/site",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   }

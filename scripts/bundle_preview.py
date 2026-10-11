@@ -54,6 +54,10 @@ template (``String.raw``), which sees the ``<\\/`` escape that closing tags get 
 script. A script that is not written for
 one page per load needs a look here.
 
+The pages fetch their data (``/data/*.json``), which a bundle cannot do, so every JSON file
+under ``data/`` is embedded as ``<script type="application/json" data-seed="/data/NAME">``
+(a data block the browser never runs) and a page that finds its seed reads that instead.
+
 Standard library only. The file must stay under 5 MB.
 """
 
@@ -618,6 +622,16 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
         f'<script type="text/plain" data-page-script="{html.escape(path)}">{source}</script>'
         for path, source in page_scripts.items()
     )
+    seed_files = [
+        (path.name, path.read_text(encoding="utf-8").replace("<", "\\u003c"))
+        for path in sorted((dist / "data").glob("*.json"))
+    ]
+    seeds = "\n".join(
+        f'<script type="application/json" data-seed="/data/{html.escape(name)}">'
+        + text
+        + "</script>"
+        for name, text in seed_files
+    )
     label = (
         f"<strong>Preview</strong><span>{html.escape(site_name)}</span>"
         f"<span>version <code>{html.escape(version)}</code></span>"
@@ -627,12 +641,13 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
     )
     # The exact text of each element, hashed as the browser will read it. The page scripts
     # are hashed too: the router runs each by putting its text in a new <script>, and the
-    # policy admits that only if the text is one listed here.
+    # policy admits that only if the text is one listed here. The embedded data
+    # scripts are listed too, so the policy names every inline script the file holds.
     style_text = f"\n{NOTE_CSS}\n"
     router_text = f"\n{ROUTER}\n"
     shell = parse_html(label + "\n".join(templates))
     policy = preview_csp(
-        unique([router_text, *page_scripts.values()]),
+        unique([router_text, *page_scripts.values(), *(text for _, text in seed_files)]),
         unique([style_text, *(s.text for s in shell.styles if s.block)]),
         [s.text for s in shell.styles if not s.block],
     )
@@ -652,6 +667,7 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
 <div id="app"></div>
 {chr(10).join(templates)}
 {scripts}
+{seeds}
 <script>{router_text}</script>
 </body>
 </html>

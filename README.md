@@ -6,9 +6,10 @@ The source of <https://orbit.szolotov.com>, a static site served by Cloudflare W
 
 | Path | What lives there |
 | --- | --- |
-| `src/` | The site: `index.html`, `about/index.html`, `404.html`, the icons, `_headers`, and `assets/` (`site.css`, `theme.js`, `site.js`). Edit these. |
+| `src/` | The site: `index.html`, `about/index.html`, `404.html`, the icons, `_headers`, `assets/` (`site.css`, `theme.js`, `site.js`) and `data/`: `releases.json`, the releases snapshot, and `families.json`, the platform families with their accents. Edit these. |
 | `scripts/build_site.py` | Copies `src/` to `dist/site/` and stamps every page and `version.txt` with a version. Standard library only. |
 | `scripts/check_branch_name.py` | The rule behind the `branch-name` CI job: `<type>/<kebab>` for working branches, with a tool-named prefix refused. |
+| `scripts/check_results.py` | Validates `results/`: the schema, and that only publicly released builds are there (a beta or an RC is refused). Run by CI and by the build. |
 | `scripts/check_site.py` | Offline check of a build: every local link, asset and `#fragment` resolves, and no page or image is over the size budget. Run by CI and by `preview.sh`. |
 | `scripts/serve_site.py` | Serves `dist/site` on loopback the way the Worker does: the 404 page, the trailing-slash redirect and the `_headers` file, so the CSP a browser enforces locally is the production one. |
 | `scripts/site_pages.py` | The page list and URL rules the other scripts share. |
@@ -18,9 +19,11 @@ The source of <https://orbit.szolotov.com>, a static site served by Cloudflare W
 | `scripts/preview.sh` | The preview loop in one command: build, check, serve on loopback, smoke-test, screenshots, bundle. Run it before a pull request that changes anything visible. |
 | `scripts/check_release_order.py` | The guard the release deploy runs just before it deploys: fails when a greater `vX.Y.Z` tag exists, so an older release cannot overwrite a newer one. |
 | `scripts/check_stage_tip.py` | The guard the stage Preview runs just before it uploads: a run that is no longer the tip of `main` skips its upload, so an older push cannot overwrite a newer one. |
-| `scripts/smoke_site.sh` | Post-deploy check: the version is live, the front page carries it, the icon is served, a missing path answers 404. |
-| `deploy/` | `wrangler.json` (assets, routes) and the pinned, locked Wrangler. |
-| `tests/` | Build tests, and browser tests that drive the built site in Chrome. |
+| `scripts/smoke_site.sh` | Post-deploy check: the version is live, the front page carries it, the icon is served, a missing path answers 404, and `/api/health` answers JSON with `ok` true (skipped against a loopback server, which does not run the Worker). |
+| `deploy/snapshot_releases.mjs` | Refreshes `src/data/releases.json` from every source in the registry, merging into what the file already holds (it stops and leaves the file alone if that file exists but cannot be parsed). Node only, no dependencies: `node deploy/snapshot_releases.mjs`. |
+| `deploy/` | `wrangler.json` (assets, routes, the Worker script), the pinned, locked Wrangler, and the releases API: `worker.js` (`/api/releases.json` and `/api/health`, the only paths that run the script; everything else is the static assets), `releases.js` (the release contract, date parsing and merge), `families.js` (reads `src/data/families.json`) and `sources/` (one adapter per source and the registry `index.js`). |
+| `results/` | One JSON file per publicly released, tested build, and a README that says why only those. |
+| `tests/` | Build tests, and browser tests that drive the built site in Chrome. `parser.test.mjs`, `registry.test.mjs`, `worker.test.mjs` and `snapshot.test.mjs` (Node's own test runner: `node --test 'tests/*.test.mjs'`) cover the parser, the registry and the Worker, with the recorded feed in `tests/fixtures/releases.rss`. |
 | `.github/workflows/` | `ci`, `security`, `deploy` (dry run and the stage Preview from `main`), `release`, `cut-release`, `dependabot-auto-merge`. |
 
 ## Working on the site
@@ -50,6 +53,49 @@ It builds `dist/site`, runs `check_site.py`, serves the build on `127.0.0.1` wit
 - `dist/preview/index.html`: the whole site as one self-contained file (CSS and JS inlined, images as data URIs, every page reachable by hash route), labelled as a preview of a version and commit, to share as a private page. It uses system fonts, so it looks slightly different from the live site.
 
 `PLAYWRIGHT_BROWSERS_PATH` is honoured. CI runs the same loop in the `site-browser` job and keeps `dist/preview` as the `preview` artifact. `AGENTS.md` says what an agent does with the output.
+
+## The releases API
+
+`deploy/worker.js` answers `/api/releases.json` and `/api/health`. The releases come from **sources**, one adapter per feed in `deploy/sources/` (`{ id, vendor, urls, parse(text) }`, where `urls` is the allowlist the Worker may fetch) listed in the registry `deploy/sources/index.js`. The Worker iterates the registry and treats every source on its own: its own edge-cache entry (fresh for 10 minutes; a copy up to 24 hours old is served at once while a refresh runs in the background; kept for 7 days from the fetch; failed refreshes do not extend that), its own back-off (a failed refresh marks the copy `"stale": true` and the source is not asked again for 5 minutes; with nothing cached, a failed fetch leaves a short marker that holds the same back-off, and simultaneous requests share one fetch) and its own fallback to the bundled `data/releases.json`. A redirect from an allowlisted URL is never followed. One source failing never blanks the others: the response is built from the sources that have data and says `"stale": true` while any is missing or out of date. Only title, build, date and link are stored, never release-notes text. Adding a vendor is one new adapter and one line in the registry.
+
+```text
+GET /api/releases.json            every vendor
+GET /api/releases.json?vendor=apple   one vendor (400 and the list of known vendors otherwise)
+GET /api/health                   { ok, fetchedAt, stale, count, sources: [{ id, vendor, ok, stale, fetchedAt, count }] }
+```
+
+```json
+{
+  "source": "apple-developer-releases",
+  "fetchedAt": "2026-10-11T15:26:54Z",
+  "stale": false,
+  "snapshot": false,
+  "releases": [
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10052026a",
+      "vendor": "apple",
+      "family": "iOS",
+      "version": "27.2",
+      "major": 27,
+      "stage": "beta",
+      "beta": 3,
+      "build": "24B5099f",
+      "title": "iOS 27.2 beta 3 (24B5099f)",
+      "date": "2026-10-05T18:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10052026a",
+      "source": "apple-developer-releases"
+    }
+  ]
+}
+```
+
+`stage` is `release`, `beta` or `rc`; `beta` is the iteration number of a beta or RC (null otherwise); `source` at the top lists the ids of the sources in the answer. `snapshot` is true when part of the answer is the bundled copy. The Worker identifies itself as `orbit (+https://orbit.szolotov.com)`. The families and their accents live in `src/data/families.json`, which the Worker and the pages both read.
+
+`serve_site.py` does not run the Worker, but it answers `/api/releases.json` (with `?vendor=`) from `data/releases.json` and `/api/health` with `{"ok":true}`, so the preview loop loads data the way a live page does. `python -m http.server` has no `/api/*` at all, and a client then falls back to `/data/releases.json`. Refresh the snapshot with `node deploy/snapshot_releases.mjs` and commit the result.
+
+## Validation results
+
+`results/<vendor>/<family>/<build>.json` holds the outcome of testing one build. Only results for publicly released builds (stage `release`) are committed: pre-release software results stay private until the build is publicly released. `python scripts/check_results.py` enforces it, CI runs it in the build job and the build copies the files to `data/results/` in the site. `results/README.md` has the schema.
 
 ## The design
 
