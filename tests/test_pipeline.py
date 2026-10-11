@@ -73,6 +73,20 @@ def test_the_branch_name_job_runs_on_pull_requests_and_reads_the_ref_from_env():
     assert len(re.findall(r"SKIPPABLE:", ci)) == 1
 
 
+def test_codeql_runs_only_on_a_public_repository_and_is_skippable_only_when_private():
+    security = workflow("security.yml")
+    block = job_block(security, "codeql")
+    assert "if: ${{ !github.event.repository.private }}" in block
+    gate = job_block(security, "security")
+    assert "codeql" in needs_of(security, "security")
+    skippable = re.findall(r"^\s+SKIPPABLE: (.*)$", gate, flags=re.MULTILINE)
+    assert skippable == ["${{ github.event.repository.private && 'codeql' || '' }}"]
+    # The gate script is handed the same names as `needs`, codeql included.
+    call = re.search(r"check_job_results\.py \\\n\s+(.+)", gate)
+    assert call
+    assert sorted(call.group(1).split()) == sorted(needs_of(security, "security"))
+
+
 def test_no_run_block_expands_an_expression_in_any_workflow():
     for path in sorted(WORKFLOWS.glob("*.yml")):
         text = path.read_text(encoding="utf-8")
