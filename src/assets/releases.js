@@ -11,7 +11,8 @@
   var CONFIG = "/data/families.json";
   var POLL = 5 * 60 * 1000;
   var STAGES = ["release", "beta", "rc"];
-  // A validation verdict may come with a release once results exist; without one it is untested.
+  // A validation verdict may come with a released build once results exist; a beta, a release
+  // candidate and anything without a verdict is untested (see docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
   // Used when the families config cannot be read: Apple is the only vendor so far.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
@@ -83,7 +84,7 @@
         major: Number(r.major) || parts(r.version)[0],
         stage: r.stage, beta: typeof r.beta === "number" ? r.beta : null,
         build: typeof r.build === "string" ? r.build : "",
-        status: VERDICTS.indexOf(r.status) >= 0 ? r.status : "untested",
+        status: r.stage === "release" && VERDICTS.indexOf(r.status) >= 0 ? r.status : "untested",
         title: typeof r.title === "string" ? r.title : r.family + " " + r.version,
         date: new Date(t).toISOString(), t: t, url: r.url
       });

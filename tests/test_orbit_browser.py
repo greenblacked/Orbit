@@ -182,8 +182,11 @@ def test_betas_are_shorter_and_thinner_than_releases_in_the_same_full_colour(pag
 
 def test_a_notch_is_untested_until_a_verdict_exists(page, base_url):
     data = json.loads(json.dumps(SNAPSHOT))
-    data["releases"][0]["status"] = "pass"
-    data["releases"][1]["status"] = "fail"
+    # Verdicts are for released builds, so these are two public releases inside the window.
+    for family, status in (("iOS", "pass"), ("macOS", "fail")):
+        next(
+            r for r in data["releases"] if r["family"] == family and r["version"] == "27.0.1"
+        )["status"] = status
     serve(page, data)
     open_front_page(page, base_url)
     total = page.locator("#orbit-dial .notch").count()
@@ -195,6 +198,22 @@ def test_a_notch_is_untested_until_a_verdict_exists(page, base_url):
     assert "validation passed" in page.get_attribute(
         "#orbit-dial .notch[data-status='pass']", "aria-label"
     )
+
+
+def test_a_pre_release_never_shows_a_verdict_even_if_the_data_carries_one(page, base_url):
+    data = json.loads(json.dumps(SNAPSHOT))
+    for r in data["releases"]:
+        if r["stage"] != "release":
+            r["status"] = "fail"
+    assert any(r["stage"] != "release" for r in data["releases"])
+    serve(page, data)
+    open_front_page(page, base_url)
+    for stage in ("beta", "rc"):
+        statuses = page.eval_on_selector_all(
+            f"#orbit-dial .notch.{stage}", "els => els.map(e => e.getAttribute('data-status'))"
+        )
+        assert set(statuses) <= {"untested"}, stage
+    assert page.locator("#orbit-dial .mk-fail").count() == 0
 
 
 def test_a_notch_opens_a_card_with_its_sigil_build_date_and_link(page, base_url):
