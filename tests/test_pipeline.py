@@ -636,7 +636,9 @@ def test_the_stage_upload_waits_on_a_tip_check_made_right_before_it():
     names = [step.split("\n", 1)[0] for step in steps]
     guard = next(i for i, name in enumerate(names) if "superseded" in name)
     upload = next(i for i, name in enumerate(names) if name == "name: Upload the stage Preview")
-    assert guard == upload - 1, "the tip check must be the step right before the upload"
+    # Only the Preview-only domain attach sits between the tip check and the upload.
+    assert names[guard + 1].startswith("name: Attach the stage domain"), names[guard + 1]
+    assert guard == upload - 2, "the tip check must come right before the domain attach"
     text = steps[guard]
     assert "id: tip" in text
     assert "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in text
@@ -668,6 +670,68 @@ def test_the_stage_tip_check_says_current_only_for_the_tip_of_main(capsys):
     assert tip.main([a, ""]) == 2, "an empty read of the tip is an error, not 'current'"
     assert capsys.readouterr().out == ""
     assert tip.main([a]) == 2
+
+
+def test_the_preview_only_config_serves_the_custom_domain_for_preview_traffic_only(tmp_path):
+    writer = load_script("write_preview_only_config")
+    source = REPO / "deploy" / "wrangler.json"
+    config = json.loads(source.read_text(encoding="utf-8"))
+    out = tmp_path / "wrangler.preview-only.json"
+    assert writer.main([str(source), str(out)]) == 0
+    written = json.loads(out.read_text(encoding="utf-8"))
+    (route,) = written["routes"]
+    assert route["custom_domain"] is True
+    assert route["enabled"] is False
+    assert route["previews_enabled"] is True
+    assert route["pattern"] == config["routes"][0]["pattern"]
+    # Everything else is kept, so relative paths and the Worker's settings do not change.
+    assert {k: v for k, v in written.items() if k != "routes"} == {
+        k: v for k, v in config.items() if k != "routes"
+    }
+    # The config the release deploys is not touched and stays Production and Preview.
+    assert "enabled" not in json.loads(source.read_text(encoding="utf-8"))["routes"][0]
+
+
+def test_the_preview_only_config_leaves_other_routes_alone_and_refuses_no_custom_domain():
+    writer = load_script("write_preview_only_config")
+    mixed = {
+        "routes": [
+            {"pattern": "example.com/*", "zone_name": "example.com"},
+            {"pattern": "orbit.szolotov.com", "custom_domain": True},
+        ]
+    }
+    result = writer.preview_only(mixed)
+    assert result["routes"][0] == mixed["routes"][0]
+    assert result["routes"][1]["enabled"] is False
+    assert "enabled" not in mixed["routes"][1], "the input is not modified"
+    for bad in ({"routes": [{"pattern": "example.com/*"}]}, {"routes": []}, {}, []):
+        with pytest.raises(SystemExit):
+            writer.preview_only(bad)
+
+
+def test_the_stage_job_attaches_the_domain_for_preview_only_until_the_first_release():
+    steps = job_block(workflow("deploy.yml"), "preview").split("\n      - ")
+    names = [step.split("\n", 1)[0] for step in steps]
+    attach = next(i for i, name in enumerate(names) if "Attach the stage domain" in name)
+    upload = next(i for i, name in enumerate(names) if name == "name: Upload the stage Preview")
+    install = next(i for i, name in enumerate(names) if name == "name: Install Wrangler")
+    assert install < attach < upload
+    text = steps[attach]
+    assert "if: steps.tip.outputs.current == 'true'" in text
+    assert "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in text
+    assert 'gh api "repos/${GH_REPO}/git/matching-refs/tags/v"' in text
+    run = text.split("run: |", 1)[1]
+    assert "${{" not in run, "an expression inside a run: block is shell injection"
+    # The tag check exits before anything is written or applied.
+    assert run.index("matching-refs/tags/v") < run.index("exit 0") < run.index("write_preview_only")
+    assert run.index("write_preview_only_config.py") < run.index("triggers deploy")
+    assert "wrangler.json wrangler.preview-only.json" in run
+    assert "wrangler triggers deploy --config wrangler.preview-only.json" in run
+    # It never runs the production config through a deploy.
+    assert "wrangler deploy" not in run
+    assert "deploy/wrangler.preview-only.json" in (REPO / ".gitignore").read_text(encoding="utf-8")
+    # release.yml is where the domain becomes Production and Preview, and it is unchanged.
+    assert "preview-only" not in workflow("release.yml")
 
 
 # --- the flow: typed branches into dev, dev into main, stage previews from main -------

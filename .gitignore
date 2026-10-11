@@ -8,3 +8,4 @@ __pycache__/
 .dev.vars
 .env
 .wrangler/
+deploy/wrangler.preview-only.json
