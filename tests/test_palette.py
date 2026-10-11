@@ -76,6 +76,32 @@ def test_the_accent_text_is_readable_on_the_page_and_on_a_card(family, theme):
     assert ratio(accent["--fam-text-card"], surface["--card"]) >= 4.5, (family["id"], theme)
 
 
+def mix(accent: str, base: str, share: float) -> str:
+    """``color-mix(in srgb, accent share, base)`` as a hex colour."""
+    a = [int(accent[i : i + 2], 16) for i in (1, 3, 5)]
+    b = [int(base[i : i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x * share + y * (1 - share)):02x}" for x, y in zip(a, b))
+
+
+@pytest.mark.parametrize("theme", THEMES)
+@pytest.mark.parametrize("family", FAMILIES, ids=ids())
+def test_small_text_is_readable_on_the_family_tint(family, theme):
+    # .fam::before paints up to 11% of --fam-a behind the copy; the small labels and links
+    # there use --fam-text-card, the large title may use --fam-text at 3:1.
+    surface, accent = theme_surface(theme), tokens(family, theme)
+    tint = mix(accent["--fam-a"], surface["--bg"], 0.11)
+    assert ratio(accent["--fam-text-card"], tint) >= 4.5, (family["id"], theme)
+    assert ratio(accent["--fam-text"], tint) >= 3.0, (family["id"], theme)
+
+
+def test_the_small_family_text_uses_the_tint_safe_token():
+    bare = re.sub(r"/\*.*?\*/", "", CSS, flags=re.DOTALL)
+    for selector in (".r-stage", ".more"):
+        rule = re.search(re.escape(selector) + r"\s*\{([^{}]*)\}", bare)
+        assert rule, selector
+        assert "color: var(--fam-text-card)" in rule.group(1), selector
+
+
 @pytest.mark.parametrize("theme", THEMES)
 @pytest.mark.parametrize("family", FAMILIES, ids=ids())
 def test_text_on_the_accent_fill_is_readable(family, theme):

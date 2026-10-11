@@ -643,8 +643,9 @@ html[data-theme="night"] .sun { display: none; }
 /* Release Orbit: per-family accent tokens, one rule per family and theme. The accents come
    from src/data/families.json (the same file the Worker reads): "accent" is the colour
    itself and "accentText" the darker one that reads on the light page. Each family has
-   --fam-text, for words on the page (at least 4.5:1 on --bg), --fam-text-card, for words
-   on a card (at least 4.5:1 on --card), --fam-a, the fill, and --fam-on, the text colour
+   --fam-text, for large words on the page (at least 4.5:1 on --bg, 3:1 on the family tint),
+   --fam-text-card, for small words on a card or on the family tint (at least 4.5:1 on --card
+   and on --bg mixed with 11% of --fam-a), --fam-a, the fill, and --fam-on, the text colour
    that sits on that fill (at least 4.5:1). On night and the console theme the accent
    itself is the text colour and the fill. --fam-b, the far end of a gradient, is
    mixed from --fam-a. tests/test_palette.py holds the hex values to families.json and
@@ -985,7 +986,8 @@ html[data-theme="reactor"] .chip-link {
 }
 .recent a:hover .r-ver { text-decoration: underline; text-underline-offset: 4px; }
 .r-ver { font-weight: 500; }
-.r-stage { color: var(--fam-text); font-size: 0.8125rem; }
+/* Small words in a family section sit on its tint (11% of --fam-a), so they use the card colour. */
+.r-stage { color: var(--fam-text-card); font-size: 0.8125rem; }
 .r-build { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--muted); }
 .r-date { margin-left: auto; font-size: 0.8125rem; color: var(--muted); }
 .more {
@@ -993,7 +995,7 @@ html[data-theme="reactor"] .chip-link {
   min-height: 2.75rem;
   align-items: center;
   margin-top: 0.75rem;
-  color: var(--fam-text);
+  color: var(--fam-text-card);
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 4px;
