@@ -14,7 +14,9 @@ release is accepted: a release candidate and the final release often share a bui
     python scripts/check_results.py
     python scripts/check_results.py --results results --snapshot src/data/releases.json
 
-Exit status 0 when every file is valid (or there are none), 1 with one line per problem.
+With any result file present, a missing or unreadable snapshot is an error, and so is a
+vendor and family that families.json does not list. Exit status 0 when every file is valid
+(or there are none), 1 with one line per problem.
 """
 
 from __future__ import annotations
@@ -52,15 +54,21 @@ def text(value: object) -> bool:
 
 
 def snapshot_stages(snapshot: Path | None) -> dict[tuple[str, str, str], set[str]]:
-    """The stages the snapshot lists for each (vendor, family, build)."""
-    stages: dict[tuple[str, str, str], set[str]] = {}
+    """The stages the snapshot lists for each (vendor, family, build).
+
+    Raises ``ValueError`` when the snapshot is missing, unreadable or has no releases list:
+    without it a beta could not be told from a release, so nothing is accepted.
+    """
     if snapshot is None or not snapshot.is_file():
-        return stages
+        raise ValueError(f"the releases snapshot is missing ({snapshot})")
     try:
         releases = json.loads(snapshot.read_text(encoding="utf-8"))["releases"]
-    except (OSError, ValueError, KeyError, TypeError):
-        return stages
-    for release in releases if isinstance(releases, list) else []:
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise ValueError(f"the releases snapshot is not readable ({snapshot}: {error})") from None
+    if not isinstance(releases, list):
+        raise ValueError(f"the releases snapshot has no releases list ({snapshot})")
+    stages: dict[tuple[str, str, str], set[str]] = {}
+    for release in releases:
         if not isinstance(release, dict):
             continue
         key = (release.get("vendor"), release.get("family"), release.get("build"))
@@ -68,11 +76,29 @@ def snapshot_stages(snapshot: Path | None) -> dict[tuple[str, str, str], set[str
     return stages
 
 
-def check_document(doc: object, vendor: str, family: str, build: str, stages: dict) -> list[str]:
+def known_families(families: Path | None) -> set[tuple[str, str]]:
+    """The (vendor, family) pairs listed in the families config.
+
+    Raises ``ValueError`` when the file is missing or unreadable.
+    """
+    if families is None or not families.is_file():
+        raise ValueError(f"the families config is missing ({families})")
+    try:
+        entries = json.loads(families.read_text(encoding="utf-8"))["families"]
+        return {(entry["vendor"], entry["id"]) for entry in entries}
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise ValueError(f"the families config is not readable ({families}: {error})") from None
+
+
+def check_document(
+    doc: object, vendor: str, family: str, build: str, stages: dict, known: set
+) -> list[str]:
     """Why ``doc`` is not a valid result for this path, as a list of messages."""
     if not isinstance(doc, dict):
         return ["the file must hold a JSON object"]
     problems: list[str] = []
+    if (vendor, family) not in known:
+        problems.append(f"{vendor}/{family} is not a vendor and family in the families config")
     extra = sorted(set(doc) - set(FIELDS))
     missing = [name for name in FIELDS if name not in doc]
     if extra:
@@ -91,7 +117,11 @@ def check_document(doc: object, vendor: str, family: str, build: str, stages: di
     elif "stage" in doc and stage != "release":
         problems.append(f"stage must be 'release', not {stage!r}")
     seen = stages.get((vendor, family, build), set())
-    if seen & set(PRE_RELEASE) and "release" not in seen:
+    # The same build under any other family of the vendor counts too.
+    same_build = [kinds for (v, _, b), kinds in stages.items() if v == vendor and b == build]
+    pre = bool(seen & set(PRE_RELEASE)) or any(k & set(PRE_RELEASE) for k in same_build)
+    released = "release" in seen or any("release" in k for k in same_build)
+    if pre and not released:
         problems.append(f"build {build} is only a pre-release in the snapshot: {PRIVATE}")
     if "status" in doc and doc["status"] not in STATUSES:
         problems.append(f"status must be one of {', '.join(STATUSES)}")
@@ -131,12 +161,25 @@ def check_list(checks: object) -> list[str]:
     return problems
 
 
-def problems(results: Path, snapshot: Path | None = None) -> list[str]:
-    """Every problem under ``results``, one ``path: message`` string each."""
+def problems(
+    results: Path, snapshot: Path | None = None, families: Path | None = None
+) -> list[str]:
+    """Every problem under ``results``, one ``path: message`` string each.
+
+    A directory with no result file needs neither the snapshot nor the families config.
+    Once a result file exists, a missing or unreadable one is an error and nothing passes.
+    """
     found: list[str] = []
     if not results.is_dir():
         return found
-    stages = snapshot_stages(snapshot)
+    entries = [p for p in results.rglob("*") if p.is_symlink() or not p.is_dir()]
+    if all(p.relative_to(results).parts == ("README.md",) for p in entries):
+        return found
+    try:
+        stages = snapshot_stages(snapshot)
+        known = known_families(families or ROOT / "src" / "data" / "families.json")
+    except ValueError as error:
+        return [f"{results.name}: {error}; no result can be checked, so none is accepted"]
     for path in sorted(results.rglob("*")):
         relative = path.relative_to(results)
         label = f"{results.name}/{relative.as_posix()}"
@@ -163,7 +206,8 @@ def problems(results: Path, snapshot: Path | None = None) -> list[str]:
         except (OSError, ValueError) as error:
             found.append(f"{label}: not readable JSON ({error})")
             continue
-        found += [f"{label}: {m}" for m in check_document(doc, vendor, family, build, stages)]
+        messages = check_document(doc, vendor, family, build, stages, known)
+        found += [f"{label}: {m}" for m in messages]
     return found
 
 
@@ -171,8 +215,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="check_results", description=__doc__.split("\n", 1)[0])
     parser.add_argument("--results", type=Path, default=ROOT / "results")
     parser.add_argument("--snapshot", type=Path, default=ROOT / "src" / "data" / "releases.json")
+    parser.add_argument("--families", type=Path, default=ROOT / "src" / "data" / "families.json")
     args = parser.parse_args(argv)
-    found = problems(args.results, args.snapshot)
+    found = problems(args.results, args.snapshot, args.families)
     for line in found:
         print(line, file=sys.stderr)
     if found:

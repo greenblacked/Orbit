@@ -1,6 +1,6 @@
 # Release Orbit
 
-The source of <https://orbit.szolotov.com>, a static site served by Cloudflare Workers static assets (Worker `orbit`). It was started from the shared web template, so its design and its CI and CD pipeline match every other site made from it.
+The source of <https://orbit.szolotov.com>, a static site served by Cloudflare Workers static assets (Worker `orbit`).
 
 ## Layout
 
@@ -20,7 +20,7 @@ The source of <https://orbit.szolotov.com>, a static site served by Cloudflare W
 | `scripts/check_release_order.py` | The guard the release deploy runs just before it deploys: fails when a greater `vX.Y.Z` tag exists, so an older release cannot overwrite a newer one. |
 | `scripts/check_stage_tip.py` | The guard the stage Preview runs just before it uploads: a run that is no longer the tip of `main` skips its upload, so an older push cannot overwrite a newer one. |
 | `scripts/smoke_site.sh` | Post-deploy check: the version is live, the front page carries it, the icon is served, a missing path answers 404, and `/api/health` answers JSON with `ok` true (skipped against a loopback server, which does not run the Worker). |
-| `deploy/snapshot_releases.mjs` | Refreshes `src/data/releases.json` from every source in the registry, merging into what the file already holds. Node only, no dependencies: `node deploy/snapshot_releases.mjs`. |
+| `deploy/snapshot_releases.mjs` | Refreshes `src/data/releases.json` from every source in the registry, merging into what the file already holds (it stops and leaves the file alone if that file exists but cannot be parsed). Node only, no dependencies: `node deploy/snapshot_releases.mjs`. |
 | `deploy/` | `wrangler.json` (assets, routes, the Worker script), the pinned, locked Wrangler, and the releases API: `worker.js` (`/api/releases.json` and `/api/health`, the only paths that run the script; everything else is the static assets), `releases.js` (the release contract, date parsing and merge), `families.js` (reads `src/data/families.json`) and `sources/` (one adapter per source and the registry `index.js`). |
 | `results/` | One JSON file per publicly released, tested build, and a README that says why only those. |
 | `tests/` | Build tests, and browser tests that drive the built site in Chrome. `parser.test.mjs`, `registry.test.mjs`, `worker.test.mjs` and `snapshot.test.mjs` (Node's own test runner: `node --test 'tests/*.test.mjs'`) cover the parser, the registry and the Worker, with the recorded feed in `tests/fixtures/releases.rss`. |
@@ -56,7 +56,7 @@ It builds `dist/site`, runs `check_site.py`, serves the build on `127.0.0.1` wit
 
 ## The releases API
 
-`deploy/worker.js` answers `/api/releases.json` and `/api/health`. The releases come from **sources**, one adapter per feed in `deploy/sources/` (`{ id, vendor, urls, parse(text) }`, where `urls` is the allowlist the Worker may fetch) listed in the registry `deploy/sources/index.js`. The Worker iterates the registry and treats every source on its own: its own edge-cache entry (fresh for 10 minutes; a copy up to 24 hours old is served at once while a refresh runs in the background; kept for 7 days), its own back-off (a failed refresh marks the copy `"stale": true` and the source is not asked again for 5 minutes) and its own fallback to the bundled `data/releases.json`. One source failing never blanks the others: the response is built from the sources that have data and says `"stale": true` while any is missing or out of date. Only title, build, date and link are stored, never release-notes text. Adding a vendor is one new adapter and one line in the registry.
+`deploy/worker.js` answers `/api/releases.json` and `/api/health`. The releases come from **sources**, one adapter per feed in `deploy/sources/` (`{ id, vendor, urls, parse(text) }`, where `urls` is the allowlist the Worker may fetch) listed in the registry `deploy/sources/index.js`. The Worker iterates the registry and treats every source on its own: its own edge-cache entry (fresh for 10 minutes; a copy up to 24 hours old is served at once while a refresh runs in the background; kept for 7 days from the fetch; failed refreshes do not extend that), its own back-off (a failed refresh marks the copy `"stale": true` and the source is not asked again for 5 minutes; with nothing cached, a failed fetch leaves a short marker that holds the same back-off, and simultaneous requests share one fetch) and its own fallback to the bundled `data/releases.json`. A redirect from an allowlisted URL is never followed. One source failing never blanks the others: the response is built from the sources that have data and says `"stale": true` while any is missing or out of date. Only title, build, date and link are stored, never release-notes text. Adding a vendor is one new adapter and one line in the registry.
 
 ```text
 GET /api/releases.json            every vendor

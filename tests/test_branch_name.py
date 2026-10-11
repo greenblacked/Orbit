@@ -61,8 +61,8 @@ def test_an_allowed_name_passes(name):
         "feat-contact",
         "feature/contact-form",
         "release/v1.0.0",
-        "fb-contact-form",
-        "fb/contact-form",
+        "feature-contact-form",
+        "x/contact-form",
         "contact-form",
         "main2",
         "main/x",
@@ -103,10 +103,10 @@ def test_a_tool_word_inside_a_typed_name_is_not_a_tool_prefix(name):
     assert gate.is_allowed(name)
 
 
-def test_there_is_no_stage_branch_and_no_fb_prefix():
+def test_there_is_no_stage_branch_and_no_untyped_prefix():
     assert gate.LONG_LIVED == frozenset({"main", "dev"})
     assert not gate.is_allowed("stage")
-    assert not gate.is_allowed("fb-contact-form")
+    assert not gate.is_allowed("feature-contact-form")
     assert gate.TYPES == ("feat", "fix", "chore", "docs", "ci", "test")
 
 

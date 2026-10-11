@@ -16,9 +16,12 @@
 // one built into the deploy. A copy past its fresh window is still served at once while a
 // refresh runs in the background. A refresh that fails leaves a `failedAt` mark on the
 // cached copy: from then on the copy is served with stale true, and the source is not asked
-// again until RETRY_MS has passed. The cache keeps a copy for STORE_MS, far longer than
-// MAX_AGE_MS, so the last good live copy outlives an outage instead of giving way to the
-// older snapshot built into the deploy.
+// again until RETRY_MS has passed. With nothing cached, a failed fetch leaves a short
+// negative marker (no releases, just failedAt) that holds the same back-off, so an outage
+// does not make every request wait for the timeout. The cache keeps a live copy for
+// STORE_MS, counted from when it was fetched and not extended by failed refreshes, far
+// longer than MAX_AGE_MS, so the last good live copy outlives an outage instead of giving
+// way to the older snapshot built into the deploy.
 
 import { mergeReleases } from './releases.js';
 import { SOURCES, isSource, vendorsOf } from './sources/index.js';
@@ -63,25 +66,35 @@ async function readCache(source) {
     const hit = await globalThis.caches?.default?.match(cacheKey(source));
     if (!hit) return null;
     const payload = await hit.json();
-    return usable(payload) && Number.isFinite(Date.parse(payload.fetchedAt)) ? payload : null;
+    if (!usable(payload) || !Number.isFinite(Date.parse(payload.fetchedAt))) return null;
+    // Whatever the cache still holds, a copy older than STORE_MS is not served.
+    return Date.now() - Date.parse(payload.fetchedAt) > STORE_MS ? null : payload;
   } catch {
     return null;
   }
 }
 
-async function writeCache(source, payload) {
+async function writeCache(source, payload, ttlMs = STORE_MS) {
   try {
     await globalThis.caches?.default?.put(
       cacheKey(source),
       new Response(JSON.stringify(payload), {
         headers: {
           'content-type': 'application/json; charset=utf-8',
-          'cache-control': `public, max-age=${STORE_MS / 1000}`,
+          'cache-control': `public, max-age=${Math.max(1, Math.floor(ttlMs / 1000))}`,
         },
       }),
     );
   } catch {
     // A cache that cannot be written only costs the next request a live fetch.
+  }
+}
+
+async function dropCache(source) {
+  try {
+    await globalThis.caches?.default?.delete(cacheKey(source));
+  } catch {
+    // Nothing to do: readCache ignores a copy past STORE_MS anyway.
   }
 }
 
@@ -134,6 +147,8 @@ async function fetchLive(source, env, request) {
   const found = [];
   for (const url of source.urls) {
     const res = await fetch(url, {
+      // The allowlist covers the URL itself: a redirect would leave it, so none is followed.
+      redirect: 'manual',
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         'user-agent': USER_AGENT,
@@ -166,34 +181,71 @@ function serve(cached, stale) {
 }
 
 // Remember that a source could not be reached, so later requests do not ask again at once.
+// The copy keeps the lifetime it had: STORE_MS counts from when it was fetched, so a long
+// outage cannot keep re-extending it.
 async function markFailed(source, cached) {
-  await writeCache(source, { ...cached, failedAt: now() });
+  const left = STORE_MS - (Date.now() - Date.parse(cached.fetchedAt));
+  if (left <= 0) {
+    await dropCache(source);
+    return;
+  }
+  await writeCache(source, { ...cached, failedAt: now() }, left);
 }
 
-const refreshing = new Map();
+// With nothing cached, remember the failure alone: no releases, just when it happened.
+async function markUnavailable(source) {
+  const stamp = now();
+  await writeCache(
+    source,
+    { source: source.id, fetchedAt: stamp, failedAt: stamp, negative: true, releases: [] },
+    RETRY_MS,
+  );
+}
 
-// One background refresh per source at a time: requests that arrive while it runs share it.
-function refresh(source, env, request, cached) {
-  if (!refreshing.has(source.id)) {
-    refreshing.set(
+const inflight = new Map();
+
+// One live fetch per source at a time, whoever asks: a background refresh and requests on a
+// cold cache share it. A success is cached; a failure rejects for each caller to handle.
+function fetchAndStore(source, env, request) {
+  if (!inflight.has(source.id)) {
+    inflight.set(
       source.id,
       (async () => {
         try {
-          await writeCache(source, await fetchLive(source, env, request));
-        } catch {
-          await markFailed(source, cached);
+          const live = await fetchLive(source, env, request);
+          await writeCache(source, live);
+          return live;
         } finally {
-          refreshing.delete(source.id);
+          inflight.delete(source.id);
         }
       })(),
     );
   }
-  return refreshing.get(source.id);
+  return inflight.get(source.id);
+}
+
+// A background refresh; a failure leaves the retry mark on the copy it was refreshing.
+function refresh(source, env, request, cached) {
+  return fetchAndStore(source, env, request).then(
+    () => undefined,
+    () => markFailed(source, cached),
+  );
+}
+
+// The snapshot built into the deploy, as the answer when a source cannot be reached.
+async function fallback(source, request, env) {
+  const snapshot = await readSnapshot(source, env, request);
+  return snapshot ? { ...snapshot, stale: true, snapshot: true } : null;
 }
 
 // One source's payload to serve, or null when nothing at all is available for it.
 async function load(source, request, env, ctx) {
-  const cached = await readCache(source);
+  let cached = await readCache(source);
+  if (cached?.negative) {
+    // Nothing was cached and the last attempt failed: inside the back-off, do not ask again.
+    if (Date.now() - Date.parse(cached.failedAt) < RETRY_MS) return fallback(source, request, env);
+    cached = null;
+  }
   if (cached) {
     const age = Date.now() - Date.parse(cached.fetchedAt);
     const failedAt = Date.parse(cached.failedAt);
@@ -206,16 +258,14 @@ async function load(source, request, env, ctx) {
     }
   }
   try {
-    const live = await fetchLive(source, env, request);
-    await writeCache(source, live);
-    return live;
+    return await fetchAndStore(source, env, request);
   } catch {
     if (cached) {
       await markFailed(source, cached);
       return serve(cached, true);
     }
-    const snapshot = await readSnapshot(source, env, request);
-    return snapshot ? { ...snapshot, stale: true, snapshot: true } : null;
+    await markUnavailable(source);
+    return fallback(source, request, env);
   }
 }
 

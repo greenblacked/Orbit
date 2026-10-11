@@ -60,6 +60,9 @@ export function fakeCache() {
       }
       return hit.res.clone();
     },
+    async delete(k) {
+      return store.delete(key(k));
+    },
     async put(k, res) {
       const m = /max-age=(\d+)/.exec(res.headers.get('cache-control') ?? '');
       store.set(key(k), {

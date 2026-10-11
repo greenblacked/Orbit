@@ -39,12 +39,8 @@ VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,79}$")
 STAMP = "{{version}}"
 # Files whose text carries the version token. Everything else is copied byte for byte.
 STAMPED = {".html"}
-# The production host; new-site.sh fills it in. Sitemap URLs are absolute, so they need it.
+# The production host. Sitemap URLs are absolute, so they need it.
 DOMAIN = "orbit.szolotov.com"
-# What the constant above is in the template itself, before new-site.sh fills it in. Split
-# so that the generator does not rewrite this one too; it lets the template's own build
-# and tests run unmodified.
-UNFILLED = "__" + "DOMAIN__"
 DOMAIN_RE = re.compile(r"^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$")
 REQUIRED = ("index.html", "404.html", "favicon.png", "apple-touch-icon.png")
 
@@ -146,7 +142,7 @@ def build(
     ``data/results`` after they pass ``check_results``.
     """
     version = normalise_version(version)
-    if domain != UNFILLED and DOMAIN_RE.fullmatch(domain) is None:
+    if DOMAIN_RE.fullmatch(domain) is None:
         raise SystemExit(f"refusing domain {domain!r}: expected a lower-case hostname")
     if not source.is_dir():
         raise SystemExit(f"no source directory at {source}")
@@ -170,7 +166,9 @@ def build(
         raise SystemExit(f"refusing to write {output}: {reason}")
     if results is not None:
         # Before anything is deleted, so a refused result leaves the previous build alone.
-        bad_results = result_problems(results, source / "data" / "releases.json")
+        bad_results = result_problems(
+            results, source / "data" / "releases.json", source / "data" / "families.json"
+        )
         if bad_results:
             raise SystemExit("refusing result file(s):\n" + "\n".join(bad_results))
     # Read and check every page before anything is deleted, so a refusal leaves the

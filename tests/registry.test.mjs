@@ -185,8 +185,11 @@ describe('a Worker with two sources', () => {
     assert.equal(body.stale, true);
     assert.equal(body.snapshot, true, 'one of the two parts is the bundled copy');
     assert.equal(body.releases.find((r) => r.vendor === 'acme').id, 'a0');
-    // Only the live source was cached: a fallback is never cached as if it were live.
-    assert.deepEqual([...state.cache.store.keys()], [cacheUrl(APPLE_ID)]);
+    // Only the live source was cached: a fallback is never cached as if it were live. The
+    // failing one holds just a back-off marker with no releases.
+    assert.deepEqual([...state.cache.store.keys()].sort(), [cacheUrl(ACME_ID), cacheUrl(APPLE_ID)].sort());
+    const marker = await state.cache.store.get(cacheUrl(ACME_ID)).res.clone().json();
+    assert.deepEqual([marker.negative, marker.releases], [true, []]);
   });
 
   it('gives each source its own back-off and refresh', async () => {
