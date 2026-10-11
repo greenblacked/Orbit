@@ -48,8 +48,15 @@ def snapshot(tmp_path, *releases):
     return path
 
 
+FAMILIES = REPO / "src" / "data" / "families.json"
+
+
 def problems(root, snap=None):
-    return check.problems(root, snap)
+    if snap is None:
+        # An empty but valid snapshot: no build is a pre-release in it.
+        snap = root.parent / "empty-snapshot.json"
+        snap.write_text(json.dumps({"releases": []}), encoding="utf-8")
+    return check.problems(root, snap, FAMILIES)
 
 
 @pytest.fixture
@@ -64,7 +71,7 @@ def test_the_repository_commits_the_readme_and_no_results_yet():
     results = REPO / "results"
     assert (results / "README.md").is_file()
     assert list(results.rglob("*.json")) == []
-    assert check.problems(results, REPO / "src" / "data" / "releases.json") == []
+    assert check.problems(results, REPO / "src" / "data" / "releases.json", FAMILIES) == []
 
 
 def test_the_readme_says_why_only_released_builds_are_committed():
@@ -121,23 +128,69 @@ def test_a_build_the_snapshot_also_lists_as_a_release_is_accepted(root, tmp_path
     assert problems(root, snap) == []
 
 
-def test_the_snapshot_match_is_by_vendor_family_and_build(root, tmp_path):
+def test_the_snapshot_match_ignores_another_vendor_or_build(root, tmp_path):
     put(root, valid())
     snap = snapshot(
         tmp_path,
-        release("T0001", "beta", family="iPadOS"),
         release("T0001", "beta", vendor="other"),
         release("T0002", "beta"),
     )
     assert problems(root, snap) == []
 
 
-def test_a_missing_or_unreadable_snapshot_does_not_block_a_valid_result(root, tmp_path):
+def test_a_build_that_is_a_pre_release_under_another_family_is_refused(root, tmp_path):
     put(root, valid())
-    assert problems(root, tmp_path / "missing.json") == []
+    found = problems(root, snapshot(tmp_path, release("T0001", "beta", family="iPadOS")))
+    assert len(found) == 1
+    assert "only a pre-release in the snapshot" in found[0]
+    # Listed as a release under any family of the vendor, it is accepted.
+    snap = snapshot(
+        tmp_path, release("T0001", "beta", family="iPadOS"), release("T0001", "release")
+    )
+    assert problems(root, snap) == []
+
+
+@pytest.mark.parametrize("family", ["ios", "iPhone", "IOS", "iOS2"])
+def test_a_wrong_case_or_unknown_family_is_refused(root, tmp_path, family):
+    # The snapshot lists the build as a beta of the real family; a misfiled result must
+    # not slip past by naming a family the snapshot does not know.
+    put(root, valid(family=family), family=family)
+    snap = snapshot(tmp_path, release("T0001", "beta"))
+    found = problems(root, snap)
+    assert any("not a vendor and family in the families config" in line for line in found)
+    assert any("only a pre-release in the snapshot" in line for line in found)
+
+
+def test_an_unknown_vendor_is_refused(root):
+    put(root, valid(vendor="other"), vendor="other")
+    assert any("not a vendor and family" in line for line in problems(root))
+
+
+def test_a_missing_or_unreadable_snapshot_refuses_every_result(root, tmp_path):
+    put(root, valid())
+    found = check.problems(root, tmp_path / "missing.json", FAMILIES)
+    assert len(found) == 1 and "snapshot is missing" in found[0]
     bad = tmp_path / "bad.json"
     bad.write_text("not json", encoding="utf-8")
-    assert problems(root, bad) == []
+    found = check.problems(root, bad, FAMILIES)
+    assert len(found) == 1 and "snapshot is not readable" in found[0]
+    bad.write_text(json.dumps({"releases": "none"}), encoding="utf-8")
+    found = check.problems(root, bad, FAMILIES)
+    assert len(found) == 1 and "no releases list" in found[0]
+    bad.write_text(json.dumps({"other": []}), encoding="utf-8")
+    assert "not readable" in check.problems(root, bad, FAMILIES)[0]
+    assert check.problems(root, None, FAMILIES)[0].endswith("so none is accepted")
+
+
+def test_a_missing_families_config_refuses_every_result(root, tmp_path):
+    put(root, valid())
+    snap = snapshot(tmp_path)
+    found = check.problems(root, snap, tmp_path / "none.json")
+    assert len(found) == 1 and "families config is missing" in found[0]
+
+
+def test_no_result_file_needs_no_snapshot(root, tmp_path):
+    assert check.problems(root, tmp_path / "missing.json", tmp_path / "none.json") == []
 
 
 def test_the_path_must_match_the_document(root):
@@ -211,7 +264,8 @@ def test_a_symbolic_link_is_refused(root, tmp_path):
 
 
 def test_main_exits_zero_or_one_and_reports(root, tmp_path, capsys):
-    args = ["--results", str(root), "--snapshot", str(tmp_path / "none.json")]
+    empty = snapshot(tmp_path)
+    args = ["--results", str(root), "--snapshot", str(empty), "--families", str(FAMILIES)]
     assert check.main(args) == 0
     assert "0 result file(s) ok" in capsys.readouterr().out
     put(root, valid())

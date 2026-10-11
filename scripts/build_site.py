@@ -166,7 +166,9 @@ def build(
         raise SystemExit(f"refusing to write {output}: {reason}")
     if results is not None:
         # Before anything is deleted, so a refused result leaves the previous build alone.
-        bad_results = result_problems(results, source / "data" / "releases.json")
+        bad_results = result_problems(
+            results, source / "data" / "releases.json", source / "data" / "families.json"
+        )
         if bad_results:
             raise SystemExit("refusing result file(s):\n" + "\n".join(bad_results))
     # Read and check every page before anything is deleted, so a refusal leaves the
