@@ -70,6 +70,12 @@ jobs:
         run: |
           set -Eeuo pipefail
           python scripts/check_site.py dist/site
+      - name: Check the validation results
+        # Only results for publicly released builds may be committed (results/README.md);
+        # this refuses a beta or an RC and any file that does not match the schema.
+        run: |
+          set -Eeuo pipefail
+          python scripts/check_results.py
       - name: Run the build tests
         run: |
           set -Eeuo pipefail

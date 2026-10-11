@@ -9,6 +9,9 @@ has no sitemap), and to refuse to overwrite a directory that is not a previous b
 
     python scripts/build_site.py --version v1.2.3
     python scripts/build_site.py --version stage-abc1234 --noindex
+
+The validation results under ``results/`` are copied to ``data/results/`` in the build, after
+``check_results.py`` has accepted them: a result for a beta or an RC fails the build.
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ import sys
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from check_results import problems as result_problems
 from site_pages import indexable_urls, invalid_page_paths
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -110,10 +114,37 @@ def sitemap(urls: list[str], domain: str = DOMAIN) -> str:
     )
 
 
+def copy_results(results: Path, output: Path) -> int:
+    """Copy the validated result files to ``output/data/results``; return how many.
+
+    The directory is always made, so the page that reads it finds an empty one rather than
+    a missing path. Call it only after ``check_results`` has accepted the files.
+    """
+    target = output / "data" / "results"
+    target.mkdir(parents=True, exist_ok=True)
+    count = 0
+    for path in sorted(results.rglob("*.json")) if results.is_dir() else []:
+        destination = target / path.relative_to(results)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(path, destination)
+        count += 1
+    return count
+
+
 def build(
-    source: Path, output: Path, version: str, *, noindex: bool = False, domain: str = DOMAIN
+    source: Path,
+    output: Path,
+    version: str,
+    *,
+    noindex: bool = False,
+    domain: str = DOMAIN,
+    results: Path | None = None,
 ) -> None:
-    """Replace ``output`` with the site in ``source`` stamped with ``version``."""
+    """Replace ``output`` with the site in ``source`` stamped with ``version``.
+
+    With ``results``, the validation results in that directory are copied to
+    ``data/results`` after they pass ``check_results``.
+    """
     version = normalise_version(version)
     if domain != UNFILLED and DOMAIN_RE.fullmatch(domain) is None:
         raise SystemExit(f"refusing domain {domain!r}: expected a lower-case hostname")
@@ -137,6 +168,11 @@ def build(
     reason = overlaps_source(source, output) or unsafe_output(ROOT, output)
     if reason is not None:
         raise SystemExit(f"refusing to write {output}: {reason}")
+    if results is not None:
+        # Before anything is deleted, so a refused result leaves the previous build alone.
+        bad_results = result_problems(results, source / "data" / "releases.json")
+        if bad_results:
+            raise SystemExit("refusing result file(s):\n" + "\n".join(bad_results))
     # Read and check every page before anything is deleted, so a refusal leaves the
     # previous build alone rather than a half-made one.
     files = sorted(path for path in source.rglob("*") if path.is_file())
@@ -161,6 +197,8 @@ def build(
             target.write_text(stamped[path], encoding="utf-8")
         else:
             shutil.copyfile(path, target)
+    if results is not None:
+        copy_results(results, output)
     (output / "version.txt").write_text(version + "\n", encoding="utf-8")
     (output / "robots.txt").write_text(robots(noindex, domain), encoding="utf-8")
     if not noindex:
@@ -175,8 +213,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--noindex", action="store_true", help="write a robots.txt that blocks all")
     parser.add_argument("--src", type=Path, default=ROOT / "src", help="source directory")
     parser.add_argument("--out", type=Path, default=ROOT / "dist" / "site", help="output directory")
+    parser.add_argument(
+        "--results", type=Path, default=ROOT / "results", help="validation results directory"
+    )
     args = parser.parse_args(argv)
-    build(args.src.resolve(), args.out.resolve(), args.version, noindex=args.noindex)
+    build(
+        args.src.resolve(),
+        args.out.resolve(),
+        args.version,
+        noindex=args.noindex,
+        results=args.results.resolve(),
+    )
     return 0
 
 

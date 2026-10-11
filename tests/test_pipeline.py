@@ -187,6 +187,12 @@ def test_ci_runs_the_worker_tests_with_the_pinned_node():
     assert "package-manager-cache: false" in block
 
 
+def test_ci_checks_the_validation_results_in_the_test_job_before_the_tests():
+    block = job_block(workflow("ci.yml"), "build")
+    assert "python scripts/check_results.py" in block
+    assert block.index("check_results.py") < block.index("python -m pytest")
+
+
 def test_the_worker_serves_a_404_page_and_keeps_workers_dev():
     config = json.loads((REPO / "deploy" / "wrangler.json").read_text(encoding="utf-8"))
     assert config["assets"]["not_found_handling"] == "404-page"
