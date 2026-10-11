@@ -99,8 +99,7 @@
     shown.forEach(function (x) {
       var item = RO.h("li");
       var a = RO.h("a", "", null, { href: x.url });
-      // In the document before any mark draws: a draw that waits for the sigil rule keeps its
-      // place in the queue only while its mark is connected.
+      // Connected before the marks draw: a waiting draw is dropped from the queue otherwise.
       item.appendChild(a);
       recent.appendChild(item);
       if (x.build && window.Sigil) {

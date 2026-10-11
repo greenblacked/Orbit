@@ -54,7 +54,7 @@
   }
   function use(fn) { flush(fn, "run"); }
   // One request per host (key); hosts off the page are dropped. fail runs if the rule cannot
-  // load, at once in the preview bundle (data-seed) and after one failed load, where nothing queues.
+  // load, at once in the preview bundle (data-seed) or after a failed load.
   function ready(run, key, fail) {
     if (generic) return run();
     var doc = global.document;
@@ -72,7 +72,7 @@
     s.src = "/assets/sigil-generic.js";
     s.onerror = function () {
       failed = true;
-      if (s.parentNode) s.parentNode.removeChild(s);
+      s.remove();
       flush(null, "fail");
     };
     doc.head.appendChild(s);
