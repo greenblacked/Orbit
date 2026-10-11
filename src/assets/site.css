@@ -1411,3 +1411,186 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .cmp-result .month-h { margin-top: 2rem; }
 .cmp-result .notice { margin-bottom: 1rem; }
 
+
+/* Build sigils (sigil.js, docs/sigils.md): drawn in the family colour and never rotated, since
+   12 o'clock is north. The card shows the full form, the recent lists the micro form. */
+.sigil { display: block; flex: none; width: 72px; height: 72px; color: var(--fam-a); }
+.sigil-svg { display: block; overflow: visible; }
+.rel { flex-wrap: wrap; }
+.rel .rel-body { flex: 1 1 0; }
+.rel-sig {
+  display: flex;
+  flex: 0 0 100%;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+.rel-sigtxt { margin: 0; }
+.r-sig { display: block; flex: none; width: 28px; height: 28px; color: var(--fam-text-card); }
+
+/* The dial (orbit.js). A stack of square SVG layers: the base (month ticks, centre label),
+   one per ring and the hand. Only the notches and the hand take the pointer. */
+.hero-wrap .orbit { position: relative; z-index: 1; padding-top: 1rem; padding-bottom: 3rem; }
+.orbit-body { display: grid; gap: 1.5rem; }
+@media (min-width: 64rem) {
+  .orbit-body { grid-template-columns: minmax(0, 34rem) minmax(0, 1fr); align-items: center; gap: 4rem; }
+}
+.orbit-stage { position: relative; width: min(100%, 34rem); aspect-ratio: 1; margin: 0 auto; }
+@media (min-width: 64rem) { .orbit-stage { margin: 0; } }
+.dial3d { position: absolute; inset: 0; }
+.layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.lane { color: var(--fam-a); }
+.ring { fill: none; stroke: var(--muted); stroke-opacity: 0.4; stroke-width: 1; }
+.tick { stroke: var(--muted); stroke-width: 1.2; }
+.mlabel { fill: var(--muted); font: 11px var(--font-mono); letter-spacing: 0.06em; text-anchor: middle; dominant-baseline: central; }
+.c-date { fill: var(--ink); font: 500 22px var(--font-mono); text-anchor: middle; }
+.c-note { fill: var(--muted); font: 11px var(--font-mono); letter-spacing: 0.14em; text-anchor: middle; }
+.notch { cursor: pointer; }
+.notch .hit { pointer-events: stroke; stroke: transparent; fill: none; }
+.notch .nl { stroke: currentColor; stroke-linecap: butt; }
+.notch:focus-visible .nl, .notch:hover .nl { stroke-width: 7; }
+.mk { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.mk-pass, .mk-warn { fill: currentColor; }
+.mk-fail { stroke-width: 2; }
+.hl { stroke: var(--ink); stroke-width: 2; }
+.hk { fill: var(--ink); }
+.orbit-card {
+  position: absolute;
+  left: var(--cx, 0);
+  top: var(--cy, 0);
+  z-index: 3;
+  display: flex;
+  gap: 0.75rem;
+  width: min(17rem, 100%);
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow: 0 12px 28px -12px var(--glass-shadow);
+}
+.orbit-card .sigil { width: 64px; height: 64px; }
+.oc-text { min-width: 0; }
+.oc-title { font-weight: 500; line-height: 1.25; overflow-wrap: anywhere; }
+.oc-build { color: var(--muted); font: 0.8125rem var(--font-mono); overflow-wrap: anywhere; }
+.orbit-side { display: grid; gap: 1.25rem; align-content: center; }
+.orbit-asof { font-size: 1.0625rem; font-weight: 500; line-height: 1.35; }
+.orbit-key { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; max-width: 22rem; }
+.orbit-key li { display: flex; align-items: center; gap: 0.5rem; min-height: 1.75rem; font-size: 0.9375rem; }
+.orbit-key .sw { flex: none; width: 1.25rem; height: 0.25rem; background: var(--fam-a); }
+.orbit-key .k-n { margin-left: auto; color: var(--muted); font: 0.8125rem var(--font-mono); }
+html[data-theme="reactor"] .orbit-card { border-radius: 0; }
+
+/* The time machine: the hand is draggable and a slider; a notch after the chosen day dims. */
+.hand { cursor: grab; touch-action: none; }
+.hand .hit { pointer-events: all; stroke: transparent; fill: transparent; }
+.hand:active { cursor: grabbing; }
+.hand:focus-visible .hl { stroke-width: 4; }
+.notch.later { opacity: 0.35; }
+.orbit-back { margin-top: 0; justify-self: start; }
+.asof-note { margin: 0; flex-basis: 100%; }
+
+/* The cadence pulse (cadence.js): a quiet row, and each ring breathes once per median gap
+   scaled down (--breath, set by the script). Motion is in the block below. */
+.cadence {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  /* The row is filled in once the page has painted (cadence.js); the space is kept meanwhile. */
+  min-height: 4.5rem;
+}
+.cadence li { min-width: 0; font-size: 0.8125rem; line-height: 1.4; }
+.cadence .c-fam {
+  display: block;
+  color: var(--fam-text-card);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The platform name on one line, then each part ("Every 21 days," and "last 6 days ago") as an
+   unbreakable unit: the line wraps only between the parts, at any width. */
+.cadence .c-nums { display: block; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cadence .c-part { display: inline-block; white-space: nowrap; }
+@media (prefers-reduced-motion: no-preference) {
+  .ring.breath { transform-box: fill-box; transform-origin: center; animation: breathe var(--breath, 6s) ease-in-out infinite; }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.012); opacity: 1; }
+  }
+}
+
+/* Sigil birth: a sigil that first appears or changes draws itself in, ring by ring and spoke by
+   spoke (stroke-dashoffset along a path normalised to length 1, staggered by --i, which
+   sigil.js sets); the dots fade in. The dash is only in the keyframes, so a finished sigil is
+   a plain stroke. This is the one effect that moves something other than transform and
+   opacity, on a few small strokes, once. */
+@media (prefers-reduced-motion: no-preference) {
+  .sigil-svg.birth circle:not(.sd), .sigil-svg.birth line {
+    animation: sigil-draw 700ms cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--i, 0) * 30ms) backwards;
+  }
+  .sigil-svg.birth .sd { animation: sigil-pop 400ms ease calc(var(--i, 0) * 30ms + 250ms) backwards; }
+  @keyframes sigil-draw {
+    from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+    to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+  }
+  @keyframes sigil-pop { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* Exploded orbit: as the dial scrolls away above the viewport it tilts back and its rings
+   separate in depth. Where the browser has scroll-driven animations (animation-timeline) the
+   scroll position drives it; elsewhere fx.js adds .out to the stage and the same state is
+   reached by a transition. Both only when motion is allowed, and only transform and translate
+   move. The dial sits flat and still while it is in view, so dragging it is never skewed. */
+@media (prefers-reduced-motion: no-preference) {
+  .orbit-stage { perspective: 1100px; }
+  .dial3d { transform-style: preserve-3d; }
+  @keyframes orbit-tilt {
+    from { transform: none; }
+    to { transform: rotateX(58deg) scale(0.92); }
+  }
+  @keyframes orbit-lift {
+    from { translate: 0 0 0; }
+    to { translate: 0 0 calc(var(--lane, 0) * 3.5rem); }
+  }
+  @supports (animation-timeline: view()) {
+    .dial3d { animation: orbit-tilt linear both; animation-timeline: view(); animation-range: exit 8% exit 95%; }
+    .layer.lane { animation: orbit-lift linear both; animation-timeline: view(); animation-range: exit 8% exit 95%; }
+  }
+  @supports not (animation-timeline: view()) {
+    .dial3d { transition: transform 700ms ease; }
+    .layer.lane { transition: translate 700ms ease; }
+    .orbit-stage.out .dial3d { transform: rotateX(58deg) scale(0.92); }
+    .orbit-stage.out .layer.lane { translate: 0 0 calc(var(--lane, 0) * 3.5rem); }
+  }
+}
+
+/* Liquid-light glass (fx.js): a specular highlight that follows the pointer over a card
+   (--mx and --my are set by the script), and a slight refraction of the hovered card. The
+   classes on <html> are added only where the effect is supported, so nothing here applies
+   otherwise. */
+.fx-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  .fx-glass .rel::after, .fx-glass .orbit-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(16rem circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--glass-edge) 70%, transparent), transparent 62%);
+    transition: opacity 200ms ease;
+  }
+  .fx-glass .rel:hover::after, .fx-glass .orbit-card:hover::after { opacity: 1; }
+  .fx-refract .rel:hover { filter: url(#fx-refract); }
+}
+
+/* Aurora (aurora.js): the WebGL canvas takes the place of the CSS gradient blobs, which stay
+   as the fallback whenever the canvas is not there. */
+.aurora-gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.aurora.gl i { display: none; }

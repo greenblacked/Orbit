@@ -84,6 +84,11 @@ def cards_ready(page):
     )
 
 
+def mocks_ready(page):
+    """The mock screens are painted by below.js, which loads once the page has painted."""
+    page.wait_for_function("() => document.querySelector('[data-f=pubrow]').textContent !== ''")
+
+
 # --- the front page ---------------------------------------------------------------------
 
 
@@ -171,6 +176,7 @@ def test_each_family_has_a_section_with_a_device_and_recent_releases(page, base_
 def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     page.click("[data-act=check]")
     page.wait_for_function(
         "() => document.querySelector('[data-f=result]').textContent.length > 20"
@@ -183,9 +189,35 @@ def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     assert page.inner_text("[data-act=check]") == "Check again"
 
 
+def test_the_mock_screens_and_highlights_wait_for_their_script_and_then_paint(page, base_url):
+    held = []
+    page.route("**/assets/below.js", lambda route: held.append(route))
+    with page.expect_request("**/assets/below.js"):
+        page.goto(base_url + "/")
+    cards_ready(page)
+    assert held, "below.js was never requested"
+    assert page.inner_text("[data-f=pubrow]") == ""
+    assert page.inner_text("[data-f=betarow]") == ""
+    assert page.locator("#features").is_hidden()
+    # Nothing on the mock screens is the section's data, and nothing on them works yet.
+    mac = page.locator(".m-mac")
+    assert mac.locator("[data-f=name]").inner_text() == "macOS"
+    for field in ("version", "build", "date"):
+        assert mac.locator(f"[data-f={field}]").inner_text() == ""
+    for button in ("[data-ch=release]", "[data-ch=beta]", "[data-act=check]", "[data-act=cycle]"):
+        assert page.locator(button).is_disabled(), button
+    assert page.inner_text(".m-ios [data-f=name]") == "iOS"
+    held[0].continue_()
+    mocks_ready(page)
+    page.wait_for_selector("#features:not([hidden])")
+    page.click("[data-ch=beta]")
+    assert page.get_attribute("[data-ch=beta]", "aria-pressed") == "true"
+
+
 def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     rows = page.locator(".m-ios .m-rows")
     assert rows.get_attribute("aria-hidden") == "true"
     ios = releases("iOS")
@@ -203,6 +235,7 @@ def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
 def test_the_about_this_mac_mock_switches_between_release_and_beta(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     public = next(r for r in releases("macOS") if r["stage"] == "release")
     beta = next(r for r in releases("macOS") if r["stage"] != "release")
     info = page.locator(".m-mac .m-info")
@@ -216,6 +249,7 @@ def test_the_about_this_mac_mock_switches_between_release_and_beta(page, base_ur
 def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     newest = releases("watchOS")[0]
     seen = [page.text_content(".m-comp .k")]
     assert page.text_content(".m-comp .v") == newest["version"]
@@ -231,6 +265,7 @@ def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
 def test_mock_controls_are_real_buttons_and_big_enough(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     for selector in ("[data-act=check]", "[data-ch=release]", "[data-ch=beta]", ".m-comp"):
         size = page.locator(selector).bounding_box()
         assert size["width"] >= 44 and size["height"] >= 44, (selector, size)
@@ -329,6 +364,13 @@ def test_with_motion_allowed_everything_still_ends_up_visible(browser, base_url)
         context.close()
 
 
+# True once every .reveal.pre in the observer's view (the viewport less 8% at the bottom) is .in.
+REVEALED_IN_VIEW = """() => [...document.querySelectorAll('.reveal.pre:not(.in)')].every((e) => {
+  const r = e.getBoundingClientRect();
+  return r.bottom <= 1 || r.top >= innerHeight * 0.92 - 1;
+})"""
+
+
 def test_without_scroll_driven_animation_a_script_only_adds_classes(browser, base_url):
     context = make_context(browser, base_url, motion="no-preference")
     context.add_init_script(
@@ -344,15 +386,22 @@ def test_without_scroll_driven_animation_a_script_only_adds_classes(browser, bas
             "() => [...document.querySelectorAll('.reveal.pre')]"
             ".every(e => getComputedStyle(e).opacity === '0')"
         )
-        page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
-        page.wait_for_function("() => document.querySelectorAll('.reveal.pre:not(.in)').length < 3")
-        for _ in range(12):
-            page.mouse.wheel(0, -600)
-            page.wait_for_timeout(50)
+        # Walk down the page in steps that overlap, jumping (the page scrolls smoothly otherwise,
+        # and a smooth scroll under load can skip an element between two frames, which an
+        # observer then never reports) and waiting at each stop until the observer has
+        # revealed what is in view. Every wait ends when its condition is true.
+        height = page.evaluate("() => document.documentElement.scrollHeight")
+        for y in range(0, height, 400):
+            page.evaluate("y => window.scrollTo({ top: y, behavior: 'instant' })", y)
+            page.wait_for_function(REVEALED_IN_VIEW)
         page.wait_for_function(
             "() => document.querySelectorAll('.reveal.pre:not(.in)').length === 0"
         )
-        page.wait_for_timeout(700)
+        # The reveal fades for 500 ms; wait for the end of the transitions, not for a guess.
+        page.wait_for_function(
+            "() => [...document.querySelectorAll('.reveal.pre')]"
+            ".every(e => getComputedStyle(e).opacity === '1')"
+        )
         opacity = "() => getComputedStyle(document.querySelector('#ios .fam-copy')).opacity"
         assert page.evaluate(opacity) == "1"
     finally:

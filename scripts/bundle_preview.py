@@ -123,6 +123,8 @@ def preview_csp(scripts: list[str], styles: list[str], style_attrs: list[str]) -
     return f"{CSP_FIXED}; script-src {script_src}; style-src {style_src}"
 
 
+HOME_SCRIPT = "/assets/home.js"
+BELOW_SCRIPT = "/assets/below.js"
 HOME_CHECK = 'window.location.pathname === "/"'
 HOME_CHECK_BUNDLE = '(window.location.hash.slice(1).split("#")[0] || "/") === "/"'
 
@@ -566,6 +568,13 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
     routes = {page["url"] for page in pages}
     front = pages[0]
     site_name = front["site_name"] or front["title"]
+
+    # home.js loads below.js (the mock screens) after the page has painted, which a bundle
+    # cannot do; the bundle runs it right after home.js instead, so the mocks are painted.
+    for page in pages:
+        if HOME_SCRIPT in page["body_scripts"]:
+            at = page["body_scripts"].index(HOME_SCRIPT) + 1
+            page["body_scripts"].insert(at, BELOW_SCRIPT)
 
     # Every script, head or body, is stored once by its URL and run by the router when a
     # route that names it is shown. A head script keeps its own page's list: the union of

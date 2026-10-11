@@ -52,6 +52,14 @@ def test_every_page_of_the_build_is_in_the_file(text, built):
         assert needle in text
 
 
+def test_the_front_page_runs_below_js_after_home_js_as_the_bundle_cannot_load_it(text):
+    tag = re.search(r'<template data-route="/"[^>]*data-scripts="([^"]*)"', text)
+    assert tag
+    names = tag.group(1).split()
+    assert names.index("/assets/below.js") == names.index("/assets/home.js") + 1
+    assert 'data-page-script="/assets/below.js"' in text
+
+
 def test_nothing_is_fetched_from_outside_the_file(text):
     assert bundle.external_requests(text) == []
     assert "fonts.googleapis.com" not in text

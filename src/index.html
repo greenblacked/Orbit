@@ -13,9 +13,14 @@
 <meta property="og:title" content="Release Orbit">
 <meta property="og:description" content="Release Orbit tracks operating system releases and betas as they land, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, with a timeline and a version compare.">
 <meta property="og:url" content="https://orbit.szolotov.com/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://orbit.szolotov.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A build sigil of iOS 27.2 beta 3 beside the Release Orbit dial of the last 26 weeks.">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Release Orbit">
 <meta name="twitter:description" content="Release Orbit tracks operating system releases and betas as they land, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, with a timeline and a version compare.">
+<meta name="twitter:image" content="https://orbit.szolotov.com/og.png">
 <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,10 +52,32 @@
 <div class="actions"><a class="pill" href="/timeline/">Timeline</a><a class="pill" href="/compare/">Compare</a><a class="pill" href="/about/">About</a></div>
 </div>
 </section>
+<section class="wrap orbit" id="orbit" aria-labelledby="orbit-h">
+<div class="sec-head">
+<h2 id="orbit-h" class="title">The last <span id="orbit-weeks">26</span> weeks</h2>
+<p class="small">One ring per platform, iOS outermost. A long notch is a release, a short thin one a beta or release candidate.</p>
+</div>
+<div class="orbit-body">
+<div class="orbit-stage" id="orbit-stage">
+<div class="dial3d" id="orbit-dial" role="group" aria-label="Release dial"></div>
+<div class="orbit-card" id="orbit-card" hidden></div>
+</div>
+<div class="orbit-side">
+<p class="orbit-asof" id="orbit-asof">Loading the dial…</p>
+<button type="button" class="pill orbit-back" id="orbit-back" hidden>Back to now</button>
+<ul class="orbit-key" id="orbit-key" aria-label="Platforms and the releases of each in the window"></ul>
+<p class="small" id="orbit-help">Drag the hand round the dial, or focus it and press the arrow keys (a day), Page Up and Page Down (a week), Home and End to travel in time. Press Enter on a notch to keep its card open.</p>
+</div>
+</div>
+<ul class="cadence" id="cadence" aria-label="Release cadence per platform"></ul>
+<p class="sr-only" id="orbit-live" role="status" aria-live="polite"></p>
+<noscript><p class="notice">The dial needs JavaScript. The newest releases are listed below.</p></noscript>
+</section>
 </div>
 <section class="wrap latest" aria-labelledby="latest-h">
 <div class="sec-head">
 <h2 id="latest-h" class="title">Latest per platform</h2>
+<p class="notice asof-note" id="latest-asof" hidden></p>
 <p class="small">The newest release or beta for each platform family. Source: <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>.</p>
 </div>
 <ul class="grid" id="latest-grid">
@@ -63,6 +90,7 @@
 <p class="rel-when small" data-f="when"></p>
 <a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
 </div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
 </li>
 <li class="rel fam-ipados reveal" data-family="iPadOS">
 <div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
@@ -73,6 +101,7 @@
 <p class="rel-when small" data-f="when"></p>
 <a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
 </div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
 </li>
 <li class="rel fam-macos reveal" data-family="macOS">
 <div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
@@ -83,6 +112,7 @@
 <p class="rel-when small" data-f="when"></p>
 <a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
 </div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
 </li>
 <li class="rel fam-watchos reveal" data-family="watchOS">
 <div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
@@ -93,6 +123,7 @@
 <p class="rel-when small" data-f="when"></p>
 <a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
 </div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
 </li>
 <li class="rel fam-tvos reveal" data-family="tvOS">
 <div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
@@ -103,6 +134,7 @@
 <p class="rel-when small" data-f="when"></p>
 <a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
 </div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
 </li>
 <li class="rel fam-visionos reveal" data-family="visionOS">
 <div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
@@ -113,6 +145,7 @@
 <p class="rel-when small" data-f="when"></p>
 <a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
 </div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
 </li>
 </ul>
 <noscript><p class="notice">The release cards need JavaScript. Read the releases at <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a> directly.</p></noscript>
@@ -139,11 +172,11 @@
 <p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
 <p class="m-sub" data-f="date"></p>
 </div>
-<button type="button" class="m-btn" data-act="check">Check the data</button>
+<button type="button" class="m-btn" data-act="check" disabled>Check the data</button>
 <p class="m-result" data-f="result" aria-live="polite"></p>
 <ul class="m-rows" aria-hidden="true">
 <li><span>Platform</span><span>iOS</span></li>
-<li><span>Newest beta</span><span data-f="betarow">None</span></li>
+<li><span>Newest beta</span><span data-f="betarow"></span></li>
 <li><span>Latest release</span><span data-f="pubrow"></span></li>
 </ul>
 </div>
@@ -207,8 +240,8 @@
 <p><span class="k">Released</span><span data-f="date"></span></p>
 </div>
 <div class="m-seg" role="group" aria-label="Release channel">
-<button type="button" class="m-segb" aria-pressed="true" data-ch="release">Release</button>
-<button type="button" class="m-segb" aria-pressed="false" data-ch="beta">Beta</button>
+<button type="button" class="m-segb" aria-pressed="true" data-ch="release" disabled>Release</button>
+<button type="button" class="m-segb" aria-pressed="false" data-ch="beta" disabled>Beta</button>
 </div>
 </div>
 </div>
@@ -237,7 +270,7 @@
 <span class="w-crown" aria-hidden="true"></span>
 <div class="screen m-watch">
 <p class="m-time" aria-hidden="true">10:09</p>
-<button type="button" class="m-comp" data-act="cycle"><span class="k" data-f="k">Version</span><span class="v" data-f="v"></span></button>
+<button type="button" class="m-comp" data-act="cycle" disabled><span class="k" data-f="k">Version</span><span class="v" data-f="v"></span></button>
 <p class="sr-only" data-f="said" aria-live="polite"></p>
 <p class="m-name" data-f="name">watchOS</p>
 </div>
@@ -328,6 +361,8 @@
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <button type="button" class="back fab" id="to-top" aria-label="To top"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 20V5M5.5 11.5 12 5l6.5 6.5"/></svg><span>To top</span></button>
 <script src="/assets/releases.js" defer></script>
+<script src="/assets/sigil.js" defer></script>
+<script src="/assets/orbit.js" defer></script>
 <script src="/assets/home.js" defer></script>
 <script src="/assets/site.js" defer></script>
 </body>
