@@ -1,6 +1,6 @@
 # Build sigils
 
-A build sigil is a deterministic glyph drawn from a build string. Same build, same sigil. The colour is the only part not derived from the string: it is the platform family's accent, or the page ink for a build shared by two families. The reference implementation is [`src/assets/sigil.js`](../src/assets/sigil.js); `tests/sigil.test.mjs` pins its geometry to the examples below and `tests/test_sigil_doc.py` holds its constants to the table in this page.
+A build sigil is a deterministic glyph drawn from a build string. Same build, same sigil. The colour is the only part not derived from the string: on the site it is the accent of the platform family whose card, dial or section shows the glyph, so a build that two families share (iOS and iPadOS can ship the same build) is drawn once in each family's accent. Anywhere one glyph stands for several families at once, the page ink is the colour to use. The reference implementation is [`src/assets/sigil.js`](../src/assets/sigil.js); `tests/sigil.test.mjs` pins its geometry to the examples below and `tests/test_sigil_doc.py` holds its constants to the table in this page.
 
 ## Grammar
 
@@ -20,7 +20,7 @@ Let `t = TRAIN - 'A'` (0 to 25).
 4. Dots: `dots = SUFFIX ? min(6, ord(SUFFIX) - 96) : 0`, placed evenly on r = 0.10 starting at the rotation angle, each of radius 0.032.
 5. Minimum stroke: every stroke width is `max(unit width * scale, 1 px)` and every dot radius is `max(unit radius * scale, 1 px)`.
 6. The r = 1.0 guide circle is optional decoration, not part of the rule: `sigil.js` draws it only with `{guide: true}`, at 22% opacity and 0.8 px wide, and never below 40 px.
-7. Colour: the family accent. It carries no information about the build.
+7. Colour: the accent of the family whose view shows the glyph (the page ink where one glyph stands for several families). It carries no information about the build.
 
 ## Micro form (below 40 px)
 
