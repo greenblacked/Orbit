@@ -3,7 +3,7 @@
    in SPEC to that page. An Apple build such as 24B5099f follows the Apple rule exactly; any
    other string (an Android, Windows or Ubuntu build) goes through generic(), which hashes
    its characters into the same parameters. The glyph is built with createElementNS, never
-   with innerHTML. The colour is not part of the rule: the SVG strokes with currentColor. */
+   with markup strings. The colour is not part of the rule: the SVG strokes with currentColor. */
 (function (global) {
   "use strict";
   var NS = "http://www.w3.org/2000/svg";
