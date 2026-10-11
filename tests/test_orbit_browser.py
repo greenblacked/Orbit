@@ -699,6 +699,87 @@ def test_a_blocked_generic_rule_leaves_the_build_string_and_stops_waiting(page, 
     assert requests, "the generic rule was never requested"
 
 
+def with_only_other_builds(family="iOS"):
+    """The snapshot with every build of a family non-Apple, each one different."""
+    data = json.loads(json.dumps(SNAPSHOT))
+    for number, release in enumerate(r for r in data["releases"] if r["family"] == family):
+        if release.get("build"):
+            release["build"] = f"UP1A.231005.{number:03d}"
+    return data
+
+
+def test_a_failed_generic_rule_is_requested_once_however_often_the_sigil_redraws(page, base_url):
+    serve(page, with_only_other_builds())
+    requests = []
+    page.route(
+        "**/assets/sigil-generic.js",
+        lambda route: (requests.append(route.request.url), route.abort())[1],
+    )
+    page.goto(base_url + "/")
+    page.wait_for_selector("#orbit-dial .notch")
+    host = f"{IOS} .sigil"
+    page.wait_for_function(
+        "(sel) => /^UP1A/.test(document.querySelector(sel).textContent)", arg=host
+    )
+    first = page.text_content(host)
+    # From here on the fallback text must never leave the host, not even for a moment.
+    page.evaluate(
+        """(sel) => {
+          const host = document.querySelector(sel);
+          window.__gaps = 0;
+          new MutationObserver(() => {
+            if (!host.textContent) window.__gaps++;
+          }).observe(host, { childList: true, characterData: true, subtree: true });
+        }""",
+        host,
+    )
+    page.focus(HAND)
+    seen = [first]
+    for _ in range(2):
+        page.keyboard.press("PageDown")
+        page.keyboard.press("PageDown")
+        pending(page)
+        page.wait_for_function(
+            "([sel, was]) => document.querySelector(sel).textContent !== was",
+            arg=[host, seen[-1]],
+        )
+        seen.append(page.text_content(host))
+    assert len(set(seen)) == 3, seen
+    assert all(item.startswith("UP1A") for item in seen), seen
+    assert page.locator(f"{IOS} .sigil svg").count() == 0
+    assert len(requests) == 1, requests
+    assert page.locator("script[src$='sigil-generic.js']").count() == 0
+    assert page.evaluate("() => window.__gaps") == 0
+
+
+def test_a_late_generic_rule_does_not_repaint_a_card_the_hand_has_moved_off(page, base_url):
+    serve(page, with_other_build())
+    held = []
+    page.route("**/assets/sigil-generic.js", lambda route: held.append(route))
+    page.goto(base_url + "/")
+    page.wait_for_selector("#orbit-dial .notch")
+    for _ in range(100):
+        if held:
+            break
+        page.wait_for_timeout(100)
+    assert held, "sigil-generic.js was never requested"
+    assert page.get_attribute(f"{IOS} .sigil", "data-build") is None
+    page.focus(HAND)
+    page.keyboard.press("PageDown")
+    page.keyboard.press("PageDown")
+    pending(page)
+    apple = "24A446"
+    assert page.get_attribute(f"{IOS} .sigil", "data-build") == apple
+    held[0].continue_()
+    page.wait_for_function("() => typeof window.Sigil.generic === 'function'")
+    # Give the late rule's queued repaints the chance to run before looking.
+    page.wait_for_timeout(300)
+    assert page.get_attribute(f"{IOS} .sigil", "data-build") == apple
+    assert page.locator(f"{IOS} .sigil svg").count() == 1
+    assert text(page, f"{IOS} [data-f=build]") == "Build " + apple
+    assert re.match(r"^Build sigil: \d", text(page, f"{IOS} [data-f=sigtxt]"))
+
+
 def test_the_cadence_row_starts_on_the_day_the_hand_points_at_after_a_late_load(page, base_url):
     held = []
     page.route("**/assets/cadence.js", lambda route: held.append(route))
