@@ -179,7 +179,60 @@ describe('the Worker: /api/releases.json', () => {
     assert.equal(body.stale, true);
     assert.equal(body.snapshot, true);
     assert.deepEqual(body.releases, SNAPSHOT.releases);
-    assert.equal(state.cache.store.size, 0, 'a fallback is never cached as if it were live');
+    // The snapshot is never cached as if it were live: only a marker without releases.
+    const marker = state.cache.store.get(CACHE_URL);
+    assert.equal(state.cache.store.size, 1);
+    const stored = await marker.res.clone().json();
+    assert.equal(stored.negative, true);
+    assert.deepEqual(stored.releases, []);
+    assert.ok(marker.maxAge <= 300, `the marker lives ${marker.maxAge} s`);
+  });
+
+  it('does not ask again within the back-off when nothing was cached', async () => {
+    stubUpstream(() => new Response('nope', { status: 503 }));
+    const first = await (await call('/api/releases.json', fakeEnv())).json();
+    assert.equal(first.snapshot, true);
+    assert.equal(state.upstream.calls.length, 1);
+    for (const path of ['/api/releases.json', '/api/health', '/api/health']) {
+      const body = await (await call(path, fakeEnv())).json();
+      assert.equal(body.stale, true, path);
+    }
+    assert.equal(state.upstream.calls.length, 1, 'a cold cache backs off like a cached copy');
+    // After RETRY_MS one request tries again, and a success replaces the marker.
+    advance(6 * 60 * 1000);
+    stubUpstream(() => feedResponse());
+    const healed = await (await call('/api/releases.json', fakeEnv())).json();
+    assert.equal(healed.stale, false);
+    assert.equal(healed.releases.length, 29);
+    assert.equal(state.upstream.calls.length, 1);
+  });
+
+  it('shares one live fetch between simultaneous cold requests', async () => {
+    let answer;
+    stubUpstream(() => new Promise((resolve) => (answer = resolve)));
+    const pending = Promise.all([
+      call('/api/releases.json', fakeEnv()),
+      call('/api/releases.json', fakeEnv()),
+      call('/api/health', fakeEnv()),
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(state.upstream.calls.length, 1);
+    answer(feedResponse());
+    for (const res of await pending) assert.equal(res.status, 200);
+    assert.equal(state.upstream.calls.length, 1);
+  });
+
+  it('does not extend the life of a copy by failing to refresh it', async () => {
+    await seed(ago(3 * 24 * 3600 * 1000)); // fetched three days ago
+    stubUpstream(() => new Response('nope', { status: 503 }));
+    await call('/api/releases.json', fakeEnv());
+    const kept = state.cache.store.get(CACHE_URL);
+    assert.ok(kept.maxAge <= 4 * 24 * 3600 + 5, `re-put for ${kept.maxAge} s`);
+    assert.ok(kept.maxAge >= 4 * 24 * 3600 - 5, `re-put for ${kept.maxAge} s`);
+    // Past the 7 days the copy is gone and the snapshot answers.
+    advance(5 * 24 * 3600 * 1000);
+    const body = await (await call('/api/releases.json', fakeEnv())).json();
+    assert.equal(body.snapshot, true);
   });
 
   it('answers 503 only when nothing at all is available', async () => {
@@ -192,6 +245,7 @@ describe('the Worker: /api/releases.json', () => {
   it('rejects a feed that is not a 200, or holds no releases', async () => {
     for (const handler of [() => new Response('x', { status: 301 }), () => feedResponse(rss())]) {
       stubUpstream(handler);
+      advance(6 * 60 * 1000); // past the back-off the previous failure left
       const body = await (await call('/api/releases.json', fakeEnv())).json();
       assert.equal(body.snapshot, true);
     }
@@ -202,10 +256,12 @@ describe('the Worker: /api/releases.json', () => {
     stubUpstream(() => feedResponse(big));
     assert.equal((await (await call('/api/releases.json', fakeEnv())).json()).snapshot, true);
 
+    advance(6 * 60 * 1000); // past the back-off the previous failure left
     stubUpstream(() => feedResponse(FEED, { headers: { 'content-length': String(big.length) } }));
     assert.equal((await (await call('/api/releases.json', fakeEnv())).json()).snapshot, true);
 
     // No content-length and an endless body: the count stops it.
+    advance(6 * 60 * 1000);
     let sent = 0;
     stubUpstream(
       () =>
