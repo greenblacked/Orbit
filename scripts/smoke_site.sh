@@ -6,20 +6,29 @@
 # line is the expected version, not merely until it answers: a host can answer for a
 # while with the previous version while the new one propagates, and that must not
 # fail a healthy deploy. The other paths are required once it matches, since they
+# The other paths are required once it matches, since they
 # were uploaded in the same version: the front page must carry the same version in its
-# site-version meta tag, the icon must be served, and a path that does not exist must
-# answer 404 (the Worker's not_found_handling), not the front page. The releases API must
-# answer: /api/health is JSON with "ok": true (served by the Worker's own code, so this also
-# proves the Worker script deployed, not only the static assets).
+# site-version meta tag, the icon must be served (2xx), and a path that does not exist must
+# answer exactly 404 (the Worker's not_found_handling), not the front page. The releases API
+# must answer: /api/health is JSON with "ok": true (served by the Worker's own code, so this
+# also proves the Worker script deployed, not only the static assets).
+#
+# Those other checks are retried too. A first-ever deploy can serve version.txt from a host
+# that does not yet serve every path (a fresh route is still propagating), and a single
+# attempt would fail the release with nothing to roll back to. The checks share a second
+# budget (60s) that starts when version.txt matches, and each gets at least one attempt. On
+# the final failure the script names the check, the URL and the last HTTP status.
 #
 # The wait is bounded by elapsed time, not by a count of attempts: each request's
 # own timeout is cut to what is left, so a host that accepts and then stalls cannot
 # stretch the poll past WAIT_SECONDS. That keeps several URLs inside a job's
 # timeout-minutes, which matters because a job that times out is cancelled rather
-# than failed, and a cancelled release job skips its rollback.
+# than failed, and a cancelled release job skips its rollback. Worst case is about 90s for
+# version.txt plus 60s for the other checks plus a 1s-minimum request each, roughly 2.5
+# minutes, against the release job's timeout-minutes of 15.
 #
 # Test hook: with SMOKE_SITE_TEST_MODE=1 the script also accepts exactly
-# http://127.0.0.1:<port>, waits 0.1s between attempts and gives up after 3s, so a
+# http://127.0.0.1:<port>, waits 0.1s between attempts and gives up after 3s (2s for the checks after version.txt), so a
 # test can serve versions from a local socket. Unset by default; it changes nothing
 # else, and every other URL still has to be https, except that it skips the /api/health check:
 # the loopback servers (python -m http.server, scripts/serve_site.py) serve files only and
@@ -38,11 +47,13 @@ url=${url%/}
 
 delay=2
 wait_seconds=90
+post_seconds=60
 loopback_ok=0
 if [ "${SMOKE_SITE_TEST_MODE:-}" = 1 ]; then
   loopback_ok=1
   delay=0.1
   wait_seconds=3
+  post_seconds=2
 fi
 
 # A strict shape, not a glob: a glob lets "https://a b", "https://x@evil.example" and
@@ -105,22 +116,62 @@ if [ "$got" != "$version" ]; then
   exit 1
 fi
 
-curl -fsS --max-time 20 -o "$tmp" "$url/"
-if ! grep -qF "<meta name=\"site-version\" content=\"$version\">" "$tmp"; then
-  echo "the front page does not carry site-version '$version'" >&2
-  exit 1
-fi
-curl -fsS --max-time 20 -o /dev/null "$url/favicon.png"
-code=$(curl -sS --max-time 20 -o /dev/null --write-out '%{http_code}' "$url/no-such-page-$$/" || true)
-if [ "$code" != 404 ]; then
-  echo "a path that does not exist answered HTTP ${code:-none}, expected 404" >&2
-  exit 1
-fi
-if [ "$loopback_ok" -ne 1 ] || [ "${SMOKE_SITE_CHECK_API:-}" = 1 ]; then
-  curl -fsS --max-time 30 -o "$tmp" "$url/api/health"
-  if ! python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get("ok") is True else 1)' \
-    "$tmp" 2>/dev/null; then
-    echo "/api/health did not answer JSON with ok true" >&2
-    exit 1
+# The other checks share one budget that starts when version.txt matched. Each request's
+# timeout is cut to what is left (at least 1s, so every check gets an attempt), and each
+# check sets $status to the last HTTP status (000 when nothing answered).
+post_deadline=$((SECONDS + post_seconds))
+status=""
+
+fetch() {
+  local max=$1 target=$2 left limit
+  left=$((post_deadline - SECONDS))
+  limit=$((left < max ? left : max))
+  if [ "$limit" -lt 1 ]; then
+    limit=1
   fi
+  status=$(curl -sS --max-time "$limit" -o "$tmp" --write-out '%{http_code}' "$target" 2>/dev/null || true)
+  status=${status:-000}
+}
+
+is_2xx() { [[ "$status" =~ ^2[0-9][0-9]$ ]]; }
+
+check_front() {
+  fetch 20 "$url/"
+  is_2xx && grep -qF "<meta name=\"site-version\" content=\"$version\">" "$tmp"
+}
+check_icon() {
+  fetch 20 "$url/favicon.png"
+  is_2xx
+}
+check_missing() {
+  fetch 20 "$url/no-such-page-$$/"
+  [ "$status" = 404 ]
+}
+check_health() {
+  fetch 30 "$url/api/health"
+  is_2xx && python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get("ok") is True else 1)' \
+    "$tmp" 2>/dev/null
+}
+
+# retry <description> <url> <function>: run the check until it passes or the budget is gone.
+retry() {
+  local what=$1 target=$2 fn=$3
+  while :; do
+    if "$fn"; then
+      return 0
+    fi
+    if [ "$SECONDS" -ge "$post_deadline" ]; then
+      break
+    fi
+    sleep "$delay"
+  done
+  echo "$what failed: $target, last HTTP status ${status/#000/none}, within ${post_seconds}s of version.txt matching" >&2
+  exit 1
+}
+
+retry "the front page carrying site-version '$version'" "$url/" check_front
+retry "the icon being served" "$url/favicon.png" check_icon
+retry "a path that does not exist answering 404" "$url/no-such-page-$$/" check_missing
+if [ "$loopback_ok" -ne 1 ] || [ "${SMOKE_SITE_CHECK_API:-}" = 1 ]; then
+  retry "/api/health answering JSON with ok true" "$url/api/health" check_health
 fi

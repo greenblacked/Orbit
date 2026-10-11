@@ -16,10 +16,19 @@ VERSION = "9.9.9"
 BASH = shutil.which("bash")
 
 
-def handler_for(health_status: int, health_body: bytes):
+def handler_for(health_status: int, health_body: bytes, flaky_path: str = "", flaky_404s: int = 0):
+    """flaky_path answers 404 for its first flaky_404s requests, then as normal."""
+    seen = {"count": 0}
+
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
             status, body = 200, b""
+            if self.path == flaky_path and seen["count"] < flaky_404s:
+                seen["count"] += 1
+                self.send_response(404)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             if self.path == "/version.txt":
                 body = f"{VERSION}\n".encode()
             elif self.path == "/":
@@ -41,8 +50,14 @@ def handler_for(health_status: int, health_body: bytes):
     return Handler
 
 
-def run_smoke(health_status: int, health_body: bytes, check_api: bool = True):
-    handler = handler_for(health_status, health_body)
+def run_smoke(
+    health_status: int,
+    health_body: bytes,
+    check_api: bool = True,
+    flaky_path: str = "",
+    flaky_404s: int = 0,
+):
+    handler = handler_for(health_status, health_body, flaky_path, flaky_404s)
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -98,3 +113,24 @@ def test_the_health_failure_is_the_reason_for_the_failure():
 def test_without_the_override_loopback_skips_the_health_check():
     result = run_smoke(503, b"broken", check_api=False)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("path", ["/", "/favicon.png", "/api/health"])
+def test_a_path_that_404s_at_first_is_retried_until_it_serves(path):
+    result = run_smoke(200, b'{"ok": true}', flaky_path=path, flaky_404s=4)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    ("path", "check"),
+    [
+        ("/", "the front page"),
+        ("/favicon.png", "the icon"),
+        ("/api/health", "/api/health"),
+    ],
+)
+def test_a_path_that_never_recovers_fails_and_names_the_check(path, check):
+    result = run_smoke(200, b'{"ok": true}', flaky_path=path, flaky_404s=10**6)
+    assert result.returncode == 1
+    assert check in result.stderr
+    assert "last HTTP status 404" in result.stderr
