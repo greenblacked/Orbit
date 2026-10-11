@@ -58,10 +58,16 @@
       var s = stats(all, fam.id, at);
       var li = RO.h("li", "fam-" + String(fam.id).toLowerCase());
       li.appendChild(RO.h("span", "c-fam", fam.name || fam.id));
-      var text = "No releases yet";
-      if (s.count === 1) text = "1 release, " + plural(s.since, "day") + " ago";
-      else if (s.count > 1) text = "Every " + plural(Math.round(s.median), "day") + ", last " + plural(s.since, "day") + " ago";
-      li.appendChild(RO.h("span", "c-nums", text));
+      var parts = ["No releases yet"];
+      if (s.count === 1) parts = ["1 release,", plural(s.since, "day") + " ago"];
+      else if (s.count > 1) parts = ["Every " + plural(Math.round(s.median), "day") + ",", "last " + plural(s.since, "day") + " ago"];
+      // Each part is one unbreakable unit (CSS), so a narrow column wraps only between them.
+      var nums = RO.h("span", "c-nums");
+      parts.forEach(function (part, i) {
+        if (i) nums.appendChild(document.createTextNode(" "));
+        nums.appendChild(RO.h("span", "c-part", part));
+      });
+      li.appendChild(nums);
       row.appendChild(li);
       // Compared, not put into a selector: an id may hold a quote or a backslash.
       var ring = Array.prototype.filter.call(document.querySelectorAll(".ring"), function (n) {
