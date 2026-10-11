@@ -1,0 +1,55 @@
+name: Bug report
+description: Something on the site is broken, wrong or hard to use.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For a security problem, do not file an issue: follow the security policy instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected to see.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the front page
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: The address of the page where it happens.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and device
+      description: For example, Safari on an iPhone, or Firefox on a laptop, with versions if you know them.
+    validations:
+      required: true
+  - type: dropdown
+    id: theme
+    attributes:
+      label: Theme and settings
+      multiple: true
+      options:
+        - Day
+        - Night
+        - Console
+        - Reduced motion on
+        - JavaScript off
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or console output
+      description: Do not include anything private.

@@ -1,0 +1,33 @@
+name: Data problem
+description: A release is missing, wrong or shown with the wrong date, build or stage.
+title: "data: "
+labels: ["data"]
+body:
+  - type: input
+    id: release
+    attributes:
+      label: Release
+      description: The platform, version and build, for example the family and the build string shown on the card.
+    validations:
+      required: true
+  - type: textarea
+    id: wrong
+    attributes:
+      label: What is wrong
+      description: What the site shows, and what it should show.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Public source
+      description: A link to the vendor's public release page that shows the correct value.
+    validations:
+      required: true
+  - type: checkboxes
+    id: public
+    attributes:
+      label: Public information only
+      options:
+        - label: This report uses only information that is already public. It does not describe pre-release findings.
+          required: true
