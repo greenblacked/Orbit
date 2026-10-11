@@ -99,18 +99,20 @@
     shown.forEach(function (x) {
       var item = RO.h("li");
       var a = RO.h("a", "", null, { href: x.url });
+      // In the document before any mark draws: a draw that waits for the sigil rule keeps its
+      // place in the queue only while its mark is connected.
+      item.appendChild(a);
+      recent.appendChild(item);
       if (x.build && window.Sigil) {
         var mark = RO.h("span", "r-sig");
-        window.Sigil.draw(mark, x.build, { size: 28, birth: false });
         a.appendChild(mark);
+        window.Sigil.draw(mark, x.build, { size: 28, birth: false });
       }
       a.appendChild(RO.h("span", "r-ver", x.version));
       a.appendChild(RO.h("span", "r-stage", RO.stageLabel(x)));
       if (x.build) a.appendChild(RO.h("span", "r-build", x.build));
       a.appendChild(RO.h("span", "r-date", RO.day(x.t)));
       external(a);
-      item.appendChild(a);
-      recent.appendChild(item);
     });
     if (!r) {
       text(sec, "latest", "No " + family + " release in the data" + (asOf === null ? " yet." : " by then."));
