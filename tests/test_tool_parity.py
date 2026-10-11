@@ -394,7 +394,8 @@ def test_the_real_site_is_accepted_by_both_and_weighs_what_is_inlined(tmp_path, 
     infos = check.inspect_all(out)
     weighed = {path for info in infos.values() for path in info.weighed}
     icons = {target for info in infos.values() for ref, target in info.targets if ref.icon}
-    assert inlined - icons == weighed
+    # The bundle also runs below.js, which loads after the first paint and is not weighed.
+    assert inlined - icons - {out / "assets" / "below.js"} == weighed
 
 
 def test_a_remote_subresource_is_the_one_difference_on_purpose(tmp_path, monkeypatch):
