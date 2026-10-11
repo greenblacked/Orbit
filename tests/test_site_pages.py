@@ -197,7 +197,16 @@ def test_the_mock_screens_and_highlights_wait_for_their_script_and_then_paint(pa
     cards_ready(page)
     assert held, "below.js was never requested"
     assert page.inner_text("[data-f=pubrow]") == ""
+    assert page.inner_text("[data-f=betarow]") == ""
     assert page.locator("#features").is_hidden()
+    # Nothing on the mock screens is the section's data, and nothing on them works yet.
+    mac = page.locator(".m-mac")
+    assert mac.locator("[data-f=name]").inner_text() == "macOS"
+    for field in ("version", "build", "date"):
+        assert mac.locator(f"[data-f={field}]").inner_text() == ""
+    for button in ("[data-ch=release]", "[data-ch=beta]", "[data-act=check]", "[data-act=cycle]"):
+        assert page.locator(button).is_disabled(), button
+    assert page.inner_text(".m-ios [data-f=name]") == "iOS"
     held[0].continue_()
     mocks_ready(page)
     page.wait_for_selector("#features:not([hidden])")

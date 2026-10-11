@@ -110,19 +110,10 @@
       a.appendChild(RO.h("span", "r-date", RO.day(x.t)));
       external(a);
     });
-    if (!r) {
-      text(sec, "latest", "No " + family + " release in the data" + (asOf === null ? " yet." : " by then."));
-      text(sec, "name", family);
-      ["stage", "build", "date"].forEach(function (name) { text(sec, name, ""); });
-      text(sec, "version", "None");
-      return;
-    }
-    text(sec, "latest", "Newest: " + r.title + ", " + RO.day(r.t));
-    text(sec, "name", r.family + " " + RO.short(r));
-    text(sec, "stage", RO.stageLabel(r) + " ·");
-    text(sec, "build", r.build ? "Build " + r.build : "");
-    text(sec, "date", "Published " + RO.day(r.t));
-    text(sec, "version", r.version);
+    // The mock screens' fields (name, stage, build, date, version) are below.js's to paint.
+    text(sec, "latest", r
+      ? "Newest: " + r.title + ", " + RO.day(r.t)
+      : "No " + family + " release in the data" + (asOf === null ? " yet." : " by then."));
   }
 
   // The time machine (orbit.js) sets asOf: the releases after that day are left out of
@@ -171,7 +162,8 @@
     document.head.appendChild(s);
   }
   function loadBelow() {
-    load("/assets/below.js", "", function () { if (signature) window.Below.paint(current); });
+    // No onerror: the mock screens start out neutral and inert, and stay so if this fails.
+    load("/assets/below.js", "", function () { if (signature && window.Below) window.Below.paint(current); });
   }
   function loadLater() {
     load("/assets/cadence.js", "", function () { if (window.Cadence) window.Cadence.at(asOf); });

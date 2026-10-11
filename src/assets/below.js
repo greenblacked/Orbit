@@ -1,7 +1,8 @@
 /* Below the fold on the front page: the mock screens (a data check on iPhone, a release
    channel switch on Mac, a watch complication) and the developer highlights from
    data/features.json. home.js loads this file once the page has painted and tells it the
-   releases on show (Below.paint), again whenever the time machine changes them. */
+   releases on show (Below.paint), again whenever the time machine changes them. Until then
+   the mocks are blank and their controls disabled. */
 (function () {
   "use strict";
   var RO = window.RO;
@@ -25,11 +26,24 @@
     }
     return null;
   }
+  // The name, stage, build and date on each mock screen. The Mac's are repainted by paintMac.
+  function paintFields() {
+    var all = document.querySelectorAll("section.fam");
+    for (var i = 0; i < all.length; i++) {
+      var family = all[i].getAttribute("data-family");
+      var r = RO.latest(releases, family, false);
+      text(all[i], "name", r ? r.family + " " + RO.short(r) : family);
+      text(all[i], "stage", r ? RO.stageLabel(r) + " ·" : "");
+      text(all[i], "build", r && r.build ? "Build " + r.build : "");
+      text(all[i], "date", r ? "Published " + RO.day(r.t) : "");
+    }
+  }
   function paintIos() {
     var box = sec("iOS");
     var out = box.querySelector('[data-f="result"]');
     var btn = box.querySelector('[data-act="check"]');
     if (!out) return;
+    btn.disabled = false;
     var latestPub = RO.latest(releases, "iOS", true);
     var latestBeta = newestBeta("iOS");
     text(box, "pubrow", latestPub ? latestPub.version : "None");
@@ -52,6 +66,7 @@
     for (var i = 0; i < seg.length; i++) {
       seg[i].setAttribute("aria-pressed", String(seg[i].getAttribute("data-ch") === channel));
     }
+    seg[0].disabled = false;
     seg[1].disabled = !beta;
     text(box, "name", r ? r.family + " " + RO.short(r) : "macOS");
     text(box, "version", r ? r.version : "None in the data");
@@ -62,6 +77,7 @@
     var box = sec("watchOS");
     var v = box.querySelector('[data-f="v"]');
     if (!v) return;
+    box.querySelector('[data-act="cycle"]').disabled = false;
     var r = RO.latest(releases, "watchOS", false);
     var values = r ? [r.version, r.build || "None", RO.day(r.t).replace(/, \d{4}$/, "")] : ["None", "None", "None"];
     text(box, "k", MODES[mode]);
@@ -128,6 +144,7 @@
   window.Below = {
     paint: function (list) {
       releases = list;
+      paintFields();
       paintIos();
       paintMac();
       paintWatch(false);
