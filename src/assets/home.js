@@ -41,7 +41,9 @@
     var text = "";
     if (build) {
       var p = window.Sigil.parse(build);
-      text = "Build sigil: " + p.rings + (p.rings === 1 ? " ring" : " rings") +
+      // A build that needs the generic rule is described once that rule has loaded.
+      if (p.pending) window.Sigil.ready(function () { paintSigil(card, r); });
+      else text = "Build sigil: " + p.rings + (p.rings === 1 ? " ring" : " rings") +
         (p.dots ? ", " + p.dots + (p.dots === 1 ? " dot" : " dots") : "");
     }
     card.querySelector('[data-f="sigtxt"]').textContent = text;
@@ -267,19 +269,31 @@
     render();
   });
 
-  // The visual effects are a separate module, loaded once the page has painted and the browser
-  // is idle, and only when motion is allowed. The preview bundle (which embeds its data) has no
-  // files to load.
+  // Two things load once the page has painted and the browser is idle, never from the HTML. The
+  // cadence row under the dial (a classic script, told the day the hand points at when it
+  // arrives) always; the visual effects module only when motion is allowed. The preview bundle
+  // (which embeds its data) has no files to load.
+  function loadCadence() {
+    var s = document.createElement("script");
+    s.src = "/assets/cadence.js";
+    s.onload = function () { if (window.Cadence) window.Cadence.at(asOf); };
+    document.head.appendChild(s);
+  }
   function loadEffects() {
-    if (document.querySelector("script[data-seed]") || RO.reduced()) return;
+    if (RO.reduced()) return;
     var s = document.createElement("script");
     s.type = "module";
     s.src = "/assets/fx.js";
     document.head.appendChild(s);
   }
+  function loadLater() {
+    if (document.querySelector("script[data-seed]")) return;
+    loadCadence();
+    loadEffects();
+  }
   function afterPaint() {
-    if ("requestIdleCallback" in window) window.requestIdleCallback(loadEffects, { timeout: 3000 });
-    else window.setTimeout(loadEffects, 1500);
+    if ("requestIdleCallback" in window) window.requestIdleCallback(loadLater, { timeout: 1500 });
+    else window.setTimeout(loadLater, 1000);
   }
   if (document.readyState === "complete") afterPaint();
   else window.addEventListener("load", afterPaint);

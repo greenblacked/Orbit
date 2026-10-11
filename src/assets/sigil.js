@@ -2,7 +2,8 @@
    The rule is written out in docs/sigils.md, and tests/test_sigil_doc.py holds the constants
    in SPEC to that page. An Apple build such as 24B5099f follows the Apple rule exactly; any
    other string (an Android, Windows or Ubuntu build) goes through generic(), which hashes
-   its characters into the same parameters. The glyph is built with createElementNS, never
+   its characters into the same parameters; that rule is sigil-generic.js, loaded only when
+   such a build first appears. The glyph is built with createElementNS, never
    with markup strings. The colour is not part of the rule: the SVG strokes with currentColor. */
 (function (global) {
   "use strict";
@@ -43,33 +44,29 @@
     genericDigits: 8
   };
   var APPLE = /^(\d+)([A-Z])(\d+)([a-z]?)$/;
+  var generic = null, waiting = [], loading = false;
 
-  // The generic rule: a Fletcher-style checksum of the letters and digits (upper-cased,
-  // everything else ignored) gives rings, train and dots; a small linear congruential
-  // generator seeded from that checksum gives the digits. Pure integer arithmetic, so every
-  // engine draws the same glyph.
-  function generic(text) {
-    var s = String(text).toUpperCase().replace(/[^A-Z0-9]/g, "") || "0";
-    var a = 1, b = 0, i, x, digits = [];
-    for (i = 0; i < s.length; i++) {
-      a = (a + s.charCodeAt(i)) % SPEC.hashMod;
-      b = (b + a) % SPEC.hashMod;
-    }
-    x = a * SPEC.hashMod + b;
-    for (i = 0; i < SPEC.genericDigits; i++) {
-      x = (x * SPEC.lcgMul + SPEC.lcgAdd) % SPEC.lcgMod;
-      digits.push(x % 10);
-    }
-    return {
-      rings: 1 + (a % SPEC.ringMod), t: b % SPEC.trains, digits: digits,
-      dots: a % (SPEC.maxDots + 1), generic: true
-    };
+  // The generic rule arrives from sigil-generic.js (use); a glyph that needs it waits for it.
+  function use(fn) {
+    generic = fn;
+    waiting.splice(0).forEach(function (run) { run(); });
+  }
+  function ready(run) {
+    if (generic) return run();
+    waiting.push(run);
+    if (loading || !global.document || global.document.querySelector("script[data-seed]")) return;
+    loading = true;
+    var s = global.document.createElement("script");
+    s.src = "/assets/sigil-generic.js";
+    global.document.head.appendChild(s);
   }
 
   // rings, train index t (0..25), the digit list and the suffix dot count of a build.
   function parse(build) {
     var m = APPLE.exec(String(build));
-    if (!m) return generic(build);
+    if (!m) {
+      return generic ? generic(build) : { pending: true, rings: 0, dots: 0 };
+    }
     return {
       rings: 1 + (Number(m[1]) % SPEC.ringMod),
       t: m[2].charCodeAt(0) - 65,
@@ -184,10 +181,19 @@
     opts = opts || {};
     var size = opts.size || 64, prev = host.getAttribute("data-build");
     if (!build) {
+      host.sigilWant = "";
       host.textContent = "";
       host.removeAttribute("data-build");
       return;
     }
+    if (!APPLE.test(build) && !generic) {
+      host.textContent = "";
+      host.removeAttribute("data-build");
+      host.sigilWant = build;
+      ready(function () { if (host.sigilWant === build) draw(host, build, opts); });
+      return;
+    }
+    host.sigilWant = build;
     if (prev === build && host.getAttribute("data-size") === String(size) && host.firstChild) return;
     host.textContent = "";
     host.appendChild(svg(build, size, {
@@ -197,7 +203,11 @@
     host.setAttribute("data-size", String(size));
   }
 
-  var api = { SPEC: SPEC, parse: parse, generic: generic, prims: prims, svg: svg, draw: draw };
-  if (typeof module !== "undefined" && module.exports) module.exports = api;
-  else global.Sigil = api;
+  var api = { SPEC: SPEC, parse: parse, prims: prims, svg: svg, draw: draw, use: use, ready: ready };
+  if (typeof module !== "undefined" && module.exports) {
+    require("./sigil-generic.js")(api);
+    module.exports = api;
+  } else {
+    global.Sigil = api;
+  }
 })(typeof window !== "undefined" ? window : this);

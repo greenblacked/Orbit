@@ -2,7 +2,7 @@
    its last one, as a quiet row under the dial and as a slow breathing of the family's ring.
    The breath's period is the median gap scaled down: half a second per day, between 2 and 14
    seconds (CSS reads it from --breath; it is off under reduced motion). Both follow the time
-   machine: the numbers are as of the chosen day. Gaps count distinct UTC days, so a beta and
+   machine: the numbers are as of the chosen day. The page loads this file once it has painted (home.js). Gaps count distinct UTC days, so a beta and
    a release candidate on one day are one release day. */
 (function () {
   "use strict";
@@ -78,10 +78,13 @@
     });
   }
 
-  document.addEventListener("ro:asof", function (e) {
-    asOf = e.detail && typeof e.detail.t === "number" ? e.detail.t : null;
+  function at(t) {
+    asOf = typeof t === "number" ? t : null;
     paint();
-  });
+  }
+  document.addEventListener("ro:asof", function (e) { at(e.detail && e.detail.t); });
+  // Loaded after the first paint, so the page hands over the day the hand points at (at).
+  window.Cadence = { at: at };
   // The dial draws its rings after the data arrives, and again when it changes.
   document.addEventListener("ro:orbit", paint);
   RO.on(function (data) {
