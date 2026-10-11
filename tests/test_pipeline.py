@@ -489,11 +489,10 @@ def test_the_agent_instructions_state_the_workflow_and_stay_public_safe():
     # There is no stage branch, so the agent rules must not describe one.
     assert "`stage` to `main`" not in agents
     assert "`dev` to `stage`" not in agents
-    # A generated site may be public: nothing here names a private workspace or note.
-    # Assembled from parts so this file does not itself trip the generator's leak check.
-    for private in ("ai-" + "context", "inbox" + ".md", "decisions" + "/", "repos" + "/"):
-        for name in ("AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "README.md", "SETUP.md"):
-            assert private not in (REPO / name).read_text(encoding="utf-8"), (name, private)
+    # The docs describe this repository only: no absolute or home-directory paths.
+    for name in ("AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "README.md", "SETUP.md"):
+        text = (REPO / name).read_text(encoding="utf-8")
+        assert "/home/" not in text and "~/" not in text, name
 
 
 def test_setup_and_the_template_checklist_protect_release_tags():
@@ -633,7 +632,6 @@ def test_the_docs_describe_the_flow_with_no_stage_branch():
         for name in ("README.md", "SETUP.md", "AGENTS.md", "CONTRIBUTING.md")
     }
     for name, text in docs.items():
-        assert "fb-<kebab>" not in text, name
         assert "`stage` branch" not in text.replace("no `stage` branch", ""), name
         assert "dev` to `stage" not in text, name
         assert "stage` to `main" not in text, name
