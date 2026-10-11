@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import urllib.error
 import urllib.request
 
@@ -76,3 +77,45 @@ def test_headers_parser_reads_blocks_and_splats():
     rules = serve.parse_headers("# c\n/*\n  A: 1\n  B: two: parts\n/assets/*\n  C: 3\n")
     assert [p.pattern for p, _ in rules] == ["^/.*$", "^/assets/.*$"]
     assert rules[0][1] == [("A", "1"), ("B", "two: parts")]
+
+
+def test_the_releases_api_is_answered_from_the_snapshot(base_url):
+    status, headers, body = get(base_url, "/api/releases.json")
+    assert status == 200
+    assert headers["Content-Type"].startswith("application/json")
+    assert body == get(base_url, "/data/releases.json")[2]
+    assert "default-src 'self'" in headers["Content-Security-Policy"]
+
+
+def test_the_health_path_answers_ok_json(base_url):
+    status, headers, body = get(base_url, "/api/health")
+    assert status == 200
+    assert headers["Content-Type"].startswith("application/json")
+    assert body == b'{"ok":true}'
+
+
+def test_other_api_paths_are_not_found(base_url):
+    assert get(base_url, "/api/nothing")[0] == 404
+
+
+def test_the_vendor_filter_keeps_only_that_vendor(base_url):
+    status, headers, body = get(base_url, "/api/releases.json?vendor=apple")
+    assert status == 200
+    assert headers["Content-Type"].startswith("application/json")
+    releases = json.loads(body)["releases"]
+    assert releases
+    assert {release["vendor"] for release in releases} == {"apple"}
+
+
+def test_an_unknown_or_empty_vendor_is_a_400_that_lists_the_known_ones(base_url):
+    for query in ("vendor=nope", "vendor=", "vendor=Apple"):
+        status, headers, body = get(base_url, f"/api/releases.json?{query}")
+        assert status == 400, query
+        assert headers["Content-Type"].startswith("application/json")
+        assert json.loads(body) == {"error": "unknown vendor", "vendors": ["apple"]}
+
+
+def test_releases_answer_passes_an_unreadable_snapshot_through():
+    assert serve.releases_answer(b"not json", "vendor=apple") == (200, b"not json")
+    assert serve.releases_answer(b"[]", "vendor=apple") == (200, b"[]")
+    assert serve.releases_answer(b'{"releases":[]}', "") == (200, b'{"releases":[]}')

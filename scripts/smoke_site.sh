@@ -8,7 +8,9 @@
 # fail a healthy deploy. The other paths are required once it matches, since they
 # were uploaded in the same version: the front page must carry the same version in its
 # site-version meta tag, the icon must be served, and a path that does not exist must
-# answer 404 (the Worker's not_found_handling), not the front page.
+# answer 404 (the Worker's not_found_handling), not the front page. The releases API must
+# answer: /api/health is JSON with "ok": true (served by the Worker's own code, so this also
+# proves the Worker script deployed, not only the static assets).
 #
 # The wait is bounded by elapsed time, not by a count of attempts: each request's
 # own timeout is cut to what is left, so a host that accepts and then stalls cannot
@@ -19,7 +21,10 @@
 # Test hook: with SMOKE_SITE_TEST_MODE=1 the script also accepts exactly
 # http://127.0.0.1:<port>, waits 0.1s between attempts and gives up after 3s, so a
 # test can serve versions from a local socket. Unset by default; it changes nothing
-# else, and every other URL still has to be https.
+# else, and every other URL still has to be https, except that it skips the /api/health check:
+# the loopback servers (python -m http.server, scripts/serve_site.py) serve files only and
+# do not run the Worker. SMOKE_SITE_CHECK_API=1, with test mode, keeps that check on, so
+# tests/test_smoke_site.py can exercise it against a fake server.
 set -Eeuo pipefail
 
 if [ "$#" -ne 2 ]; then
@@ -110,4 +115,12 @@ code=$(curl -sS --max-time 20 -o /dev/null --write-out '%{http_code}' "$url/no-s
 if [ "$code" != 404 ]; then
   echo "a path that does not exist answered HTTP ${code:-none}, expected 404" >&2
   exit 1
+fi
+if [ "$loopback_ok" -ne 1 ] || [ "${SMOKE_SITE_CHECK_API:-}" = 1 ]; then
+  curl -fsS --max-time 30 -o "$tmp" "$url/api/health"
+  if ! python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get("ok") is True else 1)' \
+    "$tmp" 2>/dev/null; then
+    echo "/api/health did not answer JSON with ok true" >&2
+    exit 1
+  fi
 fi

@@ -6,6 +6,10 @@ redirect and no response headers. This one answers a missing path with ``404.htm
 status 404 (the Worker's ``not_found_handling``), redirects ``/about`` to ``/about/``,
 hides the files Cloudflare does not publish, and applies the ``_headers`` file, so the
 Content-Security-Policy a browser enforces here is the one it will enforce in production.
+It does not run the Worker, but it answers the two API paths the pages call from the files
+the Worker falls back on: ``/api/releases.json`` is ``data/releases.json`` (with ``?vendor=``
+applied) and ``/api/health`` is ``{"ok": true}``, so a local page loads its data the way a
+live one does.
 
     python scripts/serve_site.py --dir dist/site --port 8000
     python scripts/serve_site.py --port 0        # pick a free port; the first line says which
@@ -17,17 +21,40 @@ from __future__ import annotations
 
 import argparse
 import http.server
+import json
 import mimetypes
 import re
 import sys
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 # Present in the build output but never served: the sentinel and Wrangler's ignore list,
 # and the _headers rules themselves, which Cloudflare reads and does not publish.
 HIDDEN = frozenset({".site-build", ".assetsignore", "_headers"})
 LOOPBACK = {"127.0.0.1", "localhost"}
+
+
+def releases_answer(body: bytes, query: str) -> tuple[int, bytes]:
+    """The status and body of ``/api/releases.json?<query>`` from the snapshot's bytes.
+
+    Like the Worker: ``vendor=X`` keeps only that vendor's releases, and a vendor the
+    snapshot does not hold (or an empty one) is a 400 that lists the known ones.
+    """
+    asked = parse_qs(query, keep_blank_values=True).get("vendor")
+    if asked is None:
+        return 200, body
+    try:
+        payload = json.loads(body)
+        releases = payload["releases"]
+        known = sorted({release["vendor"] for release in releases})
+    except (ValueError, KeyError, TypeError):
+        return 200, body
+    if asked[0] not in known:
+        error = {"error": "unknown vendor", "vendors": known}
+        return 400, json.dumps(error, separators=(",", ":")).encode("utf-8")
+    payload["releases"] = [release for release in releases if release["vendor"] == asked[0]]
+    return 200, json.dumps(payload, separators=(",", ":")).encode("utf-8")
 
 
 def parse_headers(text: str) -> list[tuple[re.Pattern[str], list[tuple[str, str]]]]:
@@ -104,6 +131,15 @@ def make_handler(root: Path):
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return
+            if path == "/api/health":
+                self._send(200, b'{"ok":true}', "application/json; charset=utf-8", path, head)
+                return
+            if path == "/api/releases.json":
+                snapshot = self._locate("/data/releases.json")
+                if snapshot is not None:
+                    status, body = releases_answer(snapshot.read_bytes(), parts.query)
+                    self._send(status, body, "application/json; charset=utf-8", path, head)
+                    return
             target = self._locate(path)
             if target is not None:
                 kind = mimetypes.guess_type(target.name)[0] or "application/octet-stream"

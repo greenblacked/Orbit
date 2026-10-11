@@ -61,7 +61,7 @@ def test_the_other_security_headers_are_set():
 def test_hsts_is_left_to_the_zone():
     # Sent from _headers it would reach every host the Worker answers on, workers.dev and
     # the preview hosts included, and a long max-age with includeSubDomains or preload
-    # cannot be taken back. It is a zone setting; the README says when to turn it on.
+    # cannot be taken back. It is a zone setting; SETUP.md says when to turn it on.
     assert "Strict-Transport-Security" not in HEADERS
 
 

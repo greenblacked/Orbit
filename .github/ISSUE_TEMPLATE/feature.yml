@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do and cannot, or find hard.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What you would like to see. Sketches and examples help.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: markdown
+    attributes:
+      value: |
+        The site has no framework or bundler, a strict Content-Security-Policy and size budgets. Ideas that fit those constraints are the easiest to take on.

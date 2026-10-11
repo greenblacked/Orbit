@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import re
 import shutil
 import subprocess
@@ -39,14 +40,24 @@ def test_the_output_is_one_file_under_five_megabytes(preview):
 
 def test_every_page_of_the_build_is_in_the_file(text, built):
     routes = re.findall(r'<template data-route="([^"]+)"', text)
-    assert routes == ["/", "/about/", "/404.html"], "front page, the rest, then the 404 page"
+    assert routes == ["/", "/about/", "/compare/", "/timeline/", "/404.html"], (
+        "front page, the rest, then the 404"
+    )
     assert len(list(built.rglob("*.html"))) == len(routes)
     for needle in (
-        "Say what this site is",
-        "About this template",
+        "Every OS release",
+        "About Release Orbit",
         "There is nothing at this address",
     ):
         assert needle in text
+
+
+def test_the_front_page_runs_below_js_after_home_js_as_the_bundle_cannot_load_it(text):
+    tag = re.search(r'<template data-route="/"[^>]*data-scripts="([^"]*)"', text)
+    assert tag
+    names = tag.group(1).split()
+    assert names.index("/assets/below.js") == names.index("/assets/home.js") + 1
+    assert 'data-page-script="/assets/below.js"' in text
 
 
 def test_nothing_is_fetched_from_outside_the_file(text):
@@ -72,7 +83,7 @@ def test_links_between_pages_are_hash_routes_and_external_links_are_left_alone(t
     assert 'href="#/"' in text
     assert 'href="/about/"' not in text
     assert 'href="/"' not in text
-    assert 'href="#design"' in text  # an in-page anchor stays an anchor
+    assert 'href="#what"' in text  # an in-page anchor stays an anchor
     assert re.search(r'href="https://github\.com/[^"]+"', text)
 
 
@@ -247,7 +258,7 @@ def test_a_new_page_and_a_local_image_are_bundled_without_editing_the_script(tmp
         (dist / "blog").mkdir()
         page = (dist / "about" / "index.html").read_text()
         page = page.replace(
-            '<h1 class="title">About this template</h1>', '<h1 class="title">Blog</h1>'
+            '<h1 class="title">About Release Orbit</h1>', '<h1 class="title">Blog</h1>'
         )
         page = page.replace("</main>", '<img src="/favicon.png" alt="logo"></main>')
         (dist / "blog" / "index.html").write_text(page)
@@ -723,10 +734,10 @@ def heading(tab, expected: str) -> None:
 @pytest.mark.browser
 def test_the_pages_switch_by_hash_and_the_title_follows(tab, served):
     tab.goto(served + "/")
-    heading(tab, re.compile("^Say what this site is"))
+    heading(tab, re.compile("^Every OS release"))
     tab.get_by_role("navigation", name="Primary").get_by_role("link", name="About").click()
     assert tab.evaluate("() => location.hash") == "#/about/"
-    heading(tab, "About this template")
+    heading(tab, "About Release Orbit")
     assert "About" in tab.title()
     tab.goto(served + "/#/nope/")
     heading(tab, "Not found")
@@ -739,10 +750,10 @@ def test_the_pages_switch_by_hash_and_the_title_follows(tab, served):
 @pytest.mark.browser
 def test_an_in_page_anchor_scrolls_without_leaving_the_page(tab, served):
     tab.goto(served + "/#/about/")
-    tab.locator('a[href="#checks"]').click()
+    tab.locator('a[href="#disclaimer"]').click()
     assert tab.evaluate("() => location.hash") == "#/about/"
     assert tab.evaluate("() => window.scrollY") > 200
-    tab.goto(served + "/#/about/#deploy")
+    tab.goto(served + "/#/about/#privacy")
     assert tab.evaluate("() => window.scrollY") > 200
 
 
@@ -904,7 +915,7 @@ def tour(browser, bundle_file) -> dict[str, dict[str, list[str]]]:
     the requests that were neither the file nor a ``data:`` URI, the console errors, and
     the policy violations."""
     routes = re.findall(r'<template data-route="([^"]+)"', bundle_file.read_text(encoding="utf-8"))
-    assert routes == ["/", "/about/", "/404.html"]
+    assert routes == ["/", "/about/", "/compare/", "/timeline/", "/404.html"]
     report = {}
     for theme in THEMES:
         context = browser.new_context(viewport={"width": 1280, "height": 800})
@@ -1705,6 +1716,22 @@ def test_a_get_form_to_another_page_lands_on_its_route_without_a_policy_violatio
     page.click("#go button")
     page.wait_for_function("() => location.hash === '#/about/'")
     assert page.locator("h1").inner_text().strip()
-    assert "About this template" in page.content()
+    assert "About Release Orbit" in page.content()
     page.close()
     assert problems == []
+
+
+def test_every_data_file_is_embedded_as_a_seed_a_page_reads_instead_of_fetching(text, built):
+    seeds = dict(
+        re.findall(
+            r'<script type="application/json" data-seed="([^"]+)">(.*?)</script>', text, re.S
+        )
+    )
+    files = sorted((built / "data").glob("*.json"))
+    assert files, "the build ships data files"
+    assert sorted(seeds) == [f"/data/{path.name}" for path in files]
+    for path in files:
+        body = seeds[f"/data/{path.name}"]
+        assert "<" not in body, "a '<' could close the block early"
+        # The < escape is plain JSON, so the seed parses back to the file's own data.
+        assert json.loads(body) == json.loads(path.read_text(encoding="utf-8"))

@@ -1,0 +1,58 @@
+[
+  {
+    "vendor": "apple",
+    "family": "iOS",
+    "major": 27,
+    "title": "Foundation Models framework",
+    "summary": "The on-device model API for Swift now accepts images as well as text.",
+    "source": "https://developer.apple.com/ios/"
+  },
+  {
+    "vendor": "apple",
+    "family": "iOS",
+    "major": 27,
+    "title": "View Annotations API",
+    "summary": "Apps can describe what is on screen so people can refer to it in conversation.",
+    "source": "https://developer.apple.com/ios/"
+  },
+  {
+    "vendor": "apple",
+    "family": "iOS",
+    "major": 27,
+    "title": "Game Porting Toolkit 4",
+    "summary": "Newer tooling for moving games over, with more command-line Metal tools.",
+    "source": "https://developer.apple.com/ios/"
+  },
+  {
+    "vendor": "apple",
+    "family": "iPadOS",
+    "major": 27,
+    "title": "PencilKit handwriting recognition",
+    "summary": "Handwriting can be recognised on the device, in many languages.",
+    "source": "https://developer.apple.com/ipados/"
+  },
+  {
+    "vendor": "apple",
+    "family": "macOS",
+    "major": 27,
+    "title": "Video Effects API",
+    "summary": "Machine-learning effects for video, such as motion blur and super resolution.",
+    "source": "https://developer.apple.com/macos/"
+  },
+  {
+    "vendor": "apple",
+    "family": "macOS",
+    "major": 27,
+    "title": "Live Activities on the Mac",
+    "summary": "Live Activities from a nearby iPhone show up in the menu bar.",
+    "source": "https://developer.apple.com/macos/"
+  },
+  {
+    "vendor": "apple",
+    "family": "watchOS",
+    "major": 27,
+    "title": "Widget previews across watch faces",
+    "summary": "Preview one widget on several watch faces at once while designing it.",
+    "source": "https://developer.apple.com/watchos/"
+  }
+]
