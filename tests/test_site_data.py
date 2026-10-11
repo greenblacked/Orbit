@@ -171,3 +171,9 @@ def test_the_timeline_offers_all_and_each_family_in_the_order_of_the_config():
     assert re.findall(r'data-v="([A-Za-z]+)"', block) == ["all", *APPLE]
     stages = re.search(r'id="chips-stage">(.*?)</div>', html, re.DOTALL).group(1)
     assert re.findall(r'data-v="([a-z]+)"', stages) == ["all", "release", "beta", "rc"]
+
+
+def test_the_compare_page_offers_each_family_in_the_order_of_the_config():
+    html = page("compare/index.html")
+    block = re.search(r'<select id="c-family">(.*?)</select>', html, re.DOTALL).group(1)
+    assert re.findall(r'<option value="([A-Za-z]+)">\1</option>', block) == APPLE

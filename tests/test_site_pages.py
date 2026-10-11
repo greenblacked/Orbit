@@ -9,6 +9,7 @@ motion, so what is read is the settled state.
 from __future__ import annotations
 
 import copy
+import datetime
 import json
 import os
 import re
@@ -429,3 +430,188 @@ def test_a_poll_with_nothing_new_leaves_the_timeline_and_its_focus_alone(page, b
     page.evaluate("RO.refresh()")
     assert page.evaluate("document.activeElement.dataset.mark") == "kept"
     assert page.evaluate("document.querySelector('.tl-item a').dataset.mark") == "kept"
+
+
+# --- compare ----------------------------------------------------------------------------
+
+
+def default_from(entries):
+    """The compare page's first From: the newest public release of the newest entry's line,
+    else the newest earlier public release, else the oldest entry."""
+    public = [r for r in entries[1:] if r["stage"] == "release"]
+    same = [r for r in public if r["major"] == entries[0]["major"]]
+    return (same or public or entries[-1:])[0]
+
+
+def stat_values(page):
+    return [
+        (s.locator(".stat-v").text_content(), s.locator(".stat-k").text_content())
+        for s in page.locator(".stat").all()
+    ]
+
+
+def test_compare_counts_the_days_and_what_lies_between(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    older = next(r for r in ios if r["version"] == "15.8.8")
+    newer = next(r for r in ios if r["version"] == "27.0.1")
+    page.select_option("#c-from", older["id"])
+    page.select_option("#c-to", newer["id"])
+    between = ios[ios.index(newer) + 1 : ios.index(older)]
+    days = (
+        datetime.date.fromisoformat(newer["date"][:10])
+        - datetime.date.fromisoformat(older["date"][:10])
+    ).days
+    stats = stat_values(page)
+    assert stats[0] == (str(days), "days between")
+    assert stats[1][0] == str(sum(r["stage"] != "release" for r in between))
+    assert stats[2] == (
+        str(sum(r["stage"] == "release" for r in between)),
+        "public releases in between",
+    )
+    assert page.locator(".cmp-result ol.tl li").count() == len(between)
+    cards = page.locator(".cmp-card").all_inner_texts()
+    assert older["build"] in cards[0] and newer["build"] in cards[1]
+    # Picked the other way round, the older one is still the older one.
+    page.select_option("#c-from", newer["id"])
+    page.select_option("#c-to", older["id"])
+    assert page.locator(".cmp-card").all_inner_texts() == cards
+
+
+def test_compare_counts_betas_in_between_and_changes_family(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    page.select_option("#c-family", "macOS")
+    mac = releases("macOS")
+    assert page.locator("#c-to option").count() == len(mac)
+    assert page.input_value("#c-to") == mac[0]["id"]
+    assert page.input_value("#c-from") == default_from(mac)["id"]
+    page.select_option("#c-from", mac[-1]["id"])
+    between = mac[1:-1]
+    assert stat_values(page)[2][0] == str(sum(r["stage"] == "release" for r in between))
+    assert stat_values(page)[1][0] == str(sum(r["stage"] != "release" for r in between))
+    page.select_option("#c-from", mac[0]["id"])
+    assert "different releases" in page.inner_text("#cmp-result")
+
+
+def test_compare_counts_betas_and_rcs_between_two_releases(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    base = {
+        "vendor": "apple",
+        "family": "iOS",
+        "major": 27,
+        "build": "b",
+        "url": "https://developer.apple.com/x",
+    }
+    data["releases"] = [
+        {
+            **base,
+            "id": "d",
+            "version": "27.1",
+            "stage": "release",
+            "beta": None,
+            "title": "iOS 27.1",
+            "date": "2026-10-10T00:00:00Z",
+        },
+        {
+            **base,
+            "id": "c",
+            "version": "27.1",
+            "stage": "rc",
+            "beta": 2,
+            "title": "iOS 27.1 RC 2",
+            "date": "2026-10-05T00:00:00Z",
+        },
+        {
+            **base,
+            "id": "b",
+            "version": "27.1",
+            "stage": "beta",
+            "beta": 1,
+            "title": "iOS 27.1 beta 1",
+            "date": "2026-10-01T00:00:00Z",
+        },
+        {
+            **base,
+            "id": "a",
+            "version": "27.0",
+            "stage": "release",
+            "beta": None,
+            "title": "iOS 27.0",
+            "date": "2026-09-20T00:00:00Z",
+        },
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    assert stat_values(page) == [
+        ("20", "days between"),
+        ("2", "betas and RCs in between"),
+        ("0", "public releases in between"),
+    ]
+    assert page.locator(".pin").count() == 4
+    # By default the newest entry is compared with the public release of its own line.
+    assert page.input_value("#c-to") == "d"
+    assert page.input_value("#c-from") == "a"
+
+
+def test_compare_does_not_start_with_two_unrelated_lines(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    chosen = next(r for r in ios if r["id"] == page.input_value("#c-from"))
+    assert chosen["stage"] == "release"
+    assert chosen["major"] == ios[0]["major"] or ios[0]["major"] not in {
+        r["major"] for r in ios[1:] if r["stage"] == "release"
+    }
+    assert page.input_value("#c-to") == ios[0]["id"]
+
+
+def test_a_poll_with_nothing_new_leaves_the_compare_page_alone(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    page.evaluate(
+        "document.getElementById('cmp-result').firstChild.dataset.mark = 'kept';"
+        "document.getElementById('c-from').dataset.mark = 'kept';"
+        "document.querySelector('#c-from option').dataset.mark = 'kept'"
+    )
+    page.focus(".rel-apple")
+    page.evaluate("RO.refresh()")
+    assert page.evaluate("document.getElementById('cmp-result').firstChild.dataset.mark") == "kept"
+    assert page.evaluate("document.querySelector('#c-from option').dataset.mark") == "kept"
+    assert page.evaluate("document.activeElement.className") == "rel-apple"
+
+
+def test_a_failed_poll_keeps_the_live_data_instead_of_the_older_snapshot(page, base_url):
+    newest = copy.deepcopy(SNAPSHOT["releases"][0])
+    newest.update(
+        id="https://developer.apple.com/news/releases/?id=live-only",
+        version="99.1",
+        major=99,
+        title="iOS 99.1",
+        family="iOS",
+        stage="release",
+        beta=None,
+        date="2099-01-01T00:00:00Z",
+    )
+    live = copy.deepcopy(SNAPSHOT) | {"snapshot": False, "stale": False}
+    live["releases"] = [newest, *SNAPSHOT["releases"]]
+    answers = {"body": json.dumps(live), "status": 200}
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=answers["status"], content_type="application/json", body=answers["body"]
+        ),
+    )
+    page.goto(base_url + "/")
+    cards_ready(page)
+    assert page.inner_text("#latest-grid [data-family=iOS] [data-f=ver]") == "iOS 99.1"
+    answers.update(status=502, body="{}")
+    page.evaluate("RO.refresh()")
+    page.wait_for_function("() => document.getElementById('live').dataset.state === 'stale'")
+    assert page.inner_text("#latest-grid [data-family=iOS] [data-f=ver]") == "iOS 99.1"
+    assert "Could not reach the tracker" in page.inner_text("#live-text")
+    answers.update(status=200, body=json.dumps(live))
+    page.evaluate("RO.refresh()")
+    page.wait_for_function("() => document.getElementById('live').dataset.state === 'live'")

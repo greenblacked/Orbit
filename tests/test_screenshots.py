@@ -138,7 +138,7 @@ def test_it_writes_one_png_per_page_viewport_and_theme(need_browser, tmp_path, b
     result = run_script("--dist", str(built), "--out", str(out), *browser_args())
     assert result.returncode == 0, result.stderr
     names = sorted(p.name for p in out.glob("*.png"))
-    assert len(names) == 4 * 3 * 3  # four pages x phone, tablet, desktop x 3 themes
+    assert len(names) == 5 * 3 * 3  # five pages x phone, tablet, desktop x 3 themes
     assert "index-phone-day.png" in names
     assert "about-tablet-night.png" in names
     assert "404.html-desktop-reactor.png" in names
