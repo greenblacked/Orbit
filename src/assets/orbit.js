@@ -285,6 +285,14 @@
   function hide(force) {
     window.clearTimeout(hideTimer);
     if (pinned && !force) return;
+    // Focus inside the card would fall to the page start when the card goes: give it back to
+    // the notch the card belongs to, or to the roving one.
+    if (force && !card.hidden && card.contains(document.activeElement)) {
+      var id = card.getAttribute("data-id");
+      var home = notches.filter(function (n) { return n.rel.id === id; })[0] ||
+        notches.filter(function (n) { return n.getAttribute("tabindex") === "0"; })[0];
+      if (home) rove(home);
+    }
     pinned = "";
     card.hidden = true;
     card.removeAttribute("data-id");

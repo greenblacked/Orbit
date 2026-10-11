@@ -201,6 +201,7 @@ def test_a_notch_opens_a_card_with_its_sigil_build_date_and_link(page, base_url)
     open_front_page(page, base_url)
     notch = page.locator("#orbit-dial .notch[aria-label*='24B5099f']").first
     assert notch.get_attribute("role") == "button"
+    notch_id = notch.get_attribute("data-id")
     notch.focus()
     page.wait_for_selector("#orbit-card:not([hidden])")
     card = page.locator("#orbit-card")
@@ -217,6 +218,9 @@ def test_a_notch_opens_a_card_with_its_sigil_build_date_and_link(page, base_url)
     assert page.locator("#orbit-card").is_visible()
     page.keyboard.press("Escape")
     assert page.locator("#orbit-card").is_hidden()
+    # Focus goes back to the notch the card belonged to, not to the top of the page.
+    assert page.evaluate("() => document.activeElement.getAttribute('data-id')") == notch_id
+    assert page.locator("#orbit-dial .notch[tabindex='0']").get_attribute("data-id") == notch_id
 
 
 def test_hovering_a_notch_shows_its_card(page, base_url):
