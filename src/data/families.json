@@ -1,0 +1,10 @@
+{
+  "families": [
+    { "id": "iOS", "vendor": "apple", "name": "iOS", "accent": "#0a84ff" },
+    { "id": "iPadOS", "vendor": "apple", "name": "iPadOS", "accent": "#5e5ce6" },
+    { "id": "macOS", "vendor": "apple", "name": "macOS", "accent": "#bf5af2" },
+    { "id": "watchOS", "vendor": "apple", "name": "watchOS", "accent": "#ff375f" },
+    { "id": "tvOS", "vendor": "apple", "name": "tvOS", "accent": "#ff9f0a" },
+    { "id": "visionOS", "vendor": "apple", "name": "visionOS", "accent": "#30d158" }
+  ]
+}
