@@ -1,6 +1,6 @@
 /* Site stylesheet: the shared design, as three sets of variables on :root (day, night
    and the console theme) and the rules that use them. Site-specific rules go under
-   "Template additions" at the end. See README.md, "The design". */
+   "Template additions" at the end. */
 :root {
   --bg: #f4f1ea;
   --ink: #141413;
