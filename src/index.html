@@ -59,7 +59,9 @@
 </div>
 <div class="orbit-side">
 <p class="orbit-asof" id="orbit-asof">Loading the dial…</p>
+<button type="button" class="pill orbit-back" id="orbit-back" hidden>Back to now</button>
 <ul class="orbit-key" id="orbit-key" aria-label="Platforms and the releases of each in the window"></ul>
+<p class="small" id="orbit-help">Drag the hand round the dial, or focus it and press the arrow keys (a day), Page Up and Page Down (a week), Home and End to travel in time. Press Enter on a notch to keep its card open.</p>
 </div>
 </div>
 <p class="sr-only" id="orbit-live" role="status" aria-live="polite"></p>
@@ -69,6 +71,7 @@
 <section class="wrap latest" aria-labelledby="latest-h">
 <div class="sec-head">
 <h2 id="latest-h" class="title">Latest per platform</h2>
+<p class="notice asof-note" id="latest-asof" hidden></p>
 <p class="small">The newest release or beta for each platform family. Source: <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>.</p>
 </div>
 <ul class="grid" id="latest-grid">

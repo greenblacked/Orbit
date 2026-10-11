@@ -106,7 +106,13 @@
       item.appendChild(a);
       recent.appendChild(item);
     });
-    if (!r) { text(sec, "latest", "No " + family + " release in the data yet."); return; }
+    if (!r) {
+      text(sec, "latest", "No " + family + " release in the data" + (asOf === null ? " yet." : " by then."));
+      text(sec, "name", family);
+      ["stage", "build", "date"].forEach(function (name) { text(sec, name, ""); });
+      text(sec, "version", "None");
+      return;
+    }
     text(sec, "latest", "Newest: " + r.title + ", " + RO.day(r.t));
     text(sec, "name", r.family + " " + RO.short(r));
     text(sec, "stage", RO.stageLabel(r) + " ·");
@@ -228,17 +234,36 @@
     paintFeatures(all[0]);
   }, function () {});
 
-  RO.on(function (data, fresh, failed) {
-    paintLive(data, failed);
-    if (!data) return;
-    var next = data.releases.map(function (r) { return r.id; }).join("|");
+  // The time machine (orbit.js) sets asOf: the releases after that day are left out of
+  // everything below the dial, as if it were that day. null is now.
+  var all = [];
+  var asOf = null;
+  function render() {
+    var list = asOf === null ? all : all.filter(function (r) { return r.t <= asOf; });
+    var next = list.map(function (r) { return r.id; }).join("|");
+    var note = document.getElementById("latest-asof");
+    if (note) {
+      note.hidden = asOf === null;
+      note.textContent = asOf === null ? "" : "Time machine: showing the releases as of " + RO.day(asOf) + ".";
+    }
     if (next === signature) return;
     signature = next;
     for (var i = 0; i < cards.length; i++) {
-      paintCard(cards[i], RO.latest(data.releases, cards[i].getAttribute("data-family"), false));
+      paintCard(cards[i], RO.latest(list, cards[i].getAttribute("data-family"), false));
     }
-    releases = data.releases;
-    for (var j = 0; j < sections.length; j++) paintSection(sections[j], data.releases);
+    releases = list;
+    for (var j = 0; j < sections.length; j++) paintSection(sections[j], list);
     paintMocks();
+  }
+  document.addEventListener("ro:asof", function (e) {
+    asOf = e.detail && typeof e.detail.t === "number" ? e.detail.t : null;
+    render();
+  });
+
+  RO.on(function (data, fresh, failed) {
+    paintLive(data, failed);
+    if (!data) return;
+    all = data.releases;
+    render();
   });
 })();

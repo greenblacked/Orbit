@@ -5,7 +5,10 @@
    (pass, warn, fail; untested until a verdict exists). A notch is a button: hover, focus or a tap
    opens a card with the build's sigil, version, build, date and a link. The dial is a stack of
    SVG layers (base, one per ring, hand) so the rings can separate in 3D (see "Signature" in
-   site.css). Text goes in with textContent and attributes only. */
+   site.css). The hand is a slider and the time machine: drag it (pointer or touch) or use the
+   arrow keys, Page Up and Page Down, Home and End, and the page below shows the releases that
+   had landed by that day; "Back to now" is the only way back, so nothing springs on its own.
+   Text goes in with textContent and attributes only. */
 (function () {
   "use strict";
   var RO = window.RO;
@@ -132,26 +135,91 @@
     if (notches.length) notches[notches.length - 1].setAttribute("tabindex", "0");
 
     var top = layer("hand-layer");
-    top.setAttribute("aria-hidden", "true");
-    ui.hand = el("g", { "class": "hand", transform: "rotate(360)" }, top);
+    // The hand is the dial's slider: it sets the date the page shows (the time machine).
+    ui.hand = el("g", {
+      "class": "hand", transform: "rotate(360)", role: "slider", tabindex: "0",
+      "aria-label": "Time machine hand", "aria-valuemin": 0, "aria-valuemax": weeks * 7,
+      "aria-valuenow": weeks * 7, "aria-describedby": "orbit-help"
+    }, top);
+    el("line", { "class": "hit", x1: 0, y1: -90, x2: 0, y2: -(OUTER + 24), "stroke-width": 20 }, ui.hand);
+    el("circle", { "class": "hit", cx: 0, cy: -(OUTER + 24), r: 22 }, ui.hand);
     el("line", { "class": "hl", x1: 0, y1: -110, x2: 0, y2: -(OUTER + 20) }, ui.hand);
     el("circle", { "class": "hk", cx: 0, cy: -(OUTER + 24), r: 6 }, ui.hand);
     el("circle", { "class": "hk", cx: 0, cy: -110, r: 4 }, ui.hand);
 
-    paintCentre();
+    if (asOf !== null) asOf = Math.max(asOf, snap(start));
     paintKey(fams, counts);
+    paintView();
     document.dispatchEvent(new CustomEvent("ro:orbit"));
   }
 
-  function paintCentre() {
-    ui.date.textContent = RO.day(now);
-    ui.note.textContent = "NOW";
+  // The time machine. asOf is null for now, else the end of a UTC day the hand points at; the
+  // page below the dial listens for "ro:asof" and shows the releases that had landed by then.
+  var asOf = null, announceTimer = 0;
+  function snap(t) { return Math.floor(t / DAY) * DAY + DAY - 1; }
+  function paintView() {
+    var t = asOf === null ? now : asOf;
+    ui.hand.setAttribute("transform", "rotate(" + r2(angle(t)) + ")");
+    ui.hand.setAttribute("aria-valuenow", String(Math.round((t - start) / DAY)));
+    ui.hand.setAttribute("aria-valuetext", asOf === null ? "Now, " + RO.day(now) : "As of " + RO.day(asOf));
+    ui.date.textContent = RO.day(t);
+    ui.note.textContent = asOf === null ? "NOW" : "TIME MACHINE";
+    var landed = 0;
+    notches.forEach(function (g) {
+      var later = asOf !== null && g.rel.t > asOf;
+      g.classList.toggle("later", later);
+      if (!later) landed++;
+    });
     var out = document.getElementById("orbit-asof");
-    var inWindow = notches.length;
-    out.textContent = "Today, " + RO.day(now) + ": " + inWindow + (inWindow === 1 ? " release" : " releases") +
-      " in the last " + weeks + " weeks.";
+    var plural = function (n) { return n + (n === 1 ? " release" : " releases"); };
+    out.textContent = asOf === null
+      ? "Today, " + RO.day(now) + ": " + plural(notches.length) + " in the last " + weeks + " weeks."
+      : "As of " + RO.day(asOf) + ": " + landed + " of " + plural(notches.length) +
+        " in the window had landed. The cards and sections below show that day.";
     var w = document.getElementById("orbit-weeks");
     if (w) w.textContent = String(weeks);
+    var back = document.getElementById("orbit-back");
+    if (back) back.hidden = asOf === null;
+  }
+  function announce() {
+    window.clearTimeout(announceTimer);
+    announceTimer = window.setTimeout(function () {
+      var live = document.getElementById("orbit-live");
+      if (!live) return;
+      if (asOf === null) { live.textContent = "Showing the latest releases."; return; }
+      var have = families().filter(function (f) {
+        return all.some(function (r) { return r.family === f.id && r.t <= asOf; });
+      }).length;
+      live.textContent = "Showing releases as of " + RO.day(asOf) + ". " + have + " of " +
+        families().length + " platforms have a release.";
+    }, 200);
+  }
+  // Move the hand to a time; a time at or after now means now.
+  function setAsOf(t) {
+    var next = t === null || snap(t) >= now ? null : Math.max(snap(t), snap(start));
+    if (next === asOf) return;
+    asOf = next;
+    paintView();
+    announce();
+    document.dispatchEvent(new CustomEvent("ro:asof", { detail: { t: asOf } }));
+  }
+  function stepHand(e) {
+    var t = asOf === null ? now : asOf, to = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") to = t + DAY;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") to = t - DAY;
+    else if (e.key === "PageUp") to = t + 7 * DAY;
+    else if (e.key === "PageDown") to = t - 7 * DAY;
+    else if (e.key === "End") to = now;
+    else if (e.key === "Home") to = start;
+    else return;
+    e.preventDefault();
+    setAsOf(to);
+  }
+  var drag = null, moved = false;
+  function pointerFraction(e) {
+    var r = stage.getBoundingClientRect();
+    var deg = Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * 180 / Math.PI;
+    return (deg < 0 ? deg + 360 : deg) / 360;
   }
 
   function paintKey(fams, counts) {
@@ -251,13 +319,54 @@
     later();
   });
   stage.addEventListener("click", function (e) {
-    if (card.contains(e.target)) return;
+    if (moved || card.contains(e.target) || (e.target.closest && e.target.closest(".hand"))) return;
     var g = notchOf(e.target) || nearest(e.clientX, e.clientY, 22);
     if (!g) { hide(true); return; }
     if (pinned === g.rel.id) hide(true);
     else show(g, true);
   });
+  // Dragging the hand, with a mouse, a pen or a finger. The hand follows the pointer's angle by
+  // its change since the press, so it never jumps, and it cannot be taken past now or the start.
+  stage.addEventListener("pointerdown", function (e) {
+    if (!e.target.closest || !e.target.closest(".hand") || (e.button !== undefined && e.button > 0)) return;
+    var t = asOf === null ? now : asOf;
+    drag = { id: e.pointerId, frac: (t - start) / span, last: pointerFraction(e) };
+    moved = false;
+    try { stage.setPointerCapture(e.pointerId); } catch (err) { /* the drag still works inside the dial */ }
+    ui.hand.focus();
+    e.preventDefault();
+  });
+  stage.addEventListener("pointermove", function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var f = pointerFraction(e), d = f - drag.last;
+    if (d > 0.5) d -= 1;
+    else if (d < -0.5) d += 1;
+    drag.frac = Math.min(1, Math.max(0, drag.frac + d));
+    drag.last = f;
+    moved = true;
+    setAsOf(start + drag.frac * span);
+  });
+  function drop(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag = null;
+    // The click that follows a drag must not open a card.
+    window.setTimeout(function () { moved = false; }, 60);
+  }
+  stage.addEventListener("pointerup", drop);
+  stage.addEventListener("pointercancel", drop);
+  // A finger that starts on the hand moves the hand, not the page.
+  stage.addEventListener("touchstart", function (e) {
+    if (e.target.closest && e.target.closest(".hand")) e.preventDefault();
+  }, { passive: false });
+  var back = document.getElementById("orbit-back");
+  if (back) {
+    back.addEventListener("click", function () {
+      setAsOf(null);
+      if (ui.hand) ui.hand.focus();
+    });
+  }
   stage.addEventListener("keydown", function (e) {
+    if (e.target.closest && e.target.closest(".hand")) { stepHand(e); return; }
     var g = notchOf(e.target);
     if (!g) return;
     var i = notches.indexOf(g), to = -1;
