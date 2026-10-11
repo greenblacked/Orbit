@@ -83,9 +83,7 @@ def when(text: str) -> datetime:
 def in_window(weeks: int, data=SNAPSHOT) -> int:
     start = NOW - timedelta(weeks=weeks)
     return sum(
-        1
-        for r in data["releases"]
-        if r["family"] in FAMILIES and start <= when(r["date"]) <= NOW
+        1 for r in data["releases"] if r["family"] in FAMILIES and start <= when(r["date"]) <= NOW
     )
 
 
@@ -109,9 +107,7 @@ def show_stage(page):
 
 
 def pending(page):
-    page.wait_for_function(
-        "() => /as of/i.test(document.getElementById('orbit-live').textContent)"
-    )
+    page.wait_for_function("() => /as of/i.test(document.getElementById('orbit-live').textContent)")
 
 
 def text(page, selector):
@@ -452,9 +448,7 @@ def test_a_notch_under_the_hand_can_still_be_hovered(page, base_url):
     target = release_of("macOS", "27.0.1")
     x, y = centre_of(page, target["id"])
     # The hand points at the day the release landed; it must not sit on top of the notch.
-    assert page.evaluate(
-        "([x, y]) => !!document.elementFromPoint(x, y).closest('.notch')", [x, y]
-    )
+    assert page.evaluate("([x, y]) => !!document.elementFromPoint(x, y).closest('.notch')", [x, y])
     page.mouse.move(x, y)
     page.wait_for_selector("#orbit-card:not([hidden])")
     assert page.get_attribute("#orbit-card", "data-id") == target["id"]
@@ -480,7 +474,7 @@ def test_releases_stamped_at_one_moment_each_have_their_own_notch_to_open(page, 
         for i, a in enumerate(centres):
             for b in centres[i + 1 :]:
                 assert abs(a[0] - b[0]) + abs(a[1] - b[1]) > 4, "the notches overlap"
-        for release, (x, y) in zip(group, centres):
+        for release, (x, y) in zip(group, centres, strict=True):
             page.mouse.move(1, 1)
             page.mouse.move(x, y)
             page.wait_for_function(
@@ -648,6 +642,91 @@ def test_the_dial_tilts_back_as_it_scrolls_away_and_is_flat_while_in_view(browse
         )
     finally:
         context.close()
+
+
+# --- the lazily loaded sigil rule and cadence ----------------------------------------------
+
+OTHER_BUILD = "UP1A.231005.007"
+FAILED_REQUEST = "Failed to load resource"
+
+
+def with_other_build(family="iOS"):
+    """The snapshot with the newest release of a family on a non-Apple build string."""
+    data = json.loads(json.dumps(SNAPSHOT))
+    newest = max((r for r in data["releases"] if r["family"] == family), key=lambda r: r["date"])
+    newest["build"] = OTHER_BUILD
+    return data
+
+
+def test_a_non_apple_build_draws_a_generic_sigil_once_its_rule_has_loaded(page, base_url):
+    serve(page, with_other_build())
+    errors = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.goto(base_url + "/")
+    page.wait_for_selector(f"{IOS} .sigil svg")
+    assert page.get_attribute(f"{IOS} .sigil", "data-build") == OTHER_BUILD
+    assert page.evaluate("() => typeof window.Sigil.generic") == "function"
+    page.wait_for_function(
+        "(sel) => /^Build sigil: \\d/.test(document.querySelector(sel).textContent)",
+        arg=f"{IOS} [data-f=sigtxt]",
+    )
+    assert page.is_visible(f"{IOS} .rel-sig")
+    assert errors == []
+
+
+def test_a_blocked_generic_rule_leaves_the_build_string_and_stops_waiting(page, base_url):
+    serve(page, with_other_build())
+    requests = []
+    page.route(
+        "**/assets/sigil-generic.js",
+        lambda route: (requests.append(route.request.url), route.abort())[1],
+    )
+    errors = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.goto(base_url + "/")
+    page.wait_for_selector("#orbit-dial .notch")
+    page.wait_for_function(
+        "([sel, build]) => document.querySelector(sel).textContent === build",
+        arg=[f"{IOS} .sigil", OTHER_BUILD],
+    )
+    assert page.locator(f"{IOS} .sigil svg").count() == 0
+    assert text(page, f"{IOS} [data-f=sigtxt]") == ""
+    assert page.evaluate("() => typeof window.Sigil.generic") == "undefined"
+    # The browser logs the aborted request itself; that is the one thing ignored here.
+    assert [e for e in errors if FAILED_REQUEST not in e] == [], errors
+    assert requests, "the generic rule was never requested"
+
+
+def test_the_cadence_row_starts_on_the_day_the_hand_points_at_after_a_late_load(page, base_url):
+    held = []
+    page.route("**/assets/cadence.js", lambda route: held.append(route))
+    open_front_page(page, base_url)
+    page.focus(HAND)
+    page.keyboard.press("PageDown")
+    page.keyboard.press("PageDown")
+    pending(page)
+    assert page.get_attribute(HAND, "aria-valuetext") == "As of Sep 28, 2026"
+    for _ in range(100):
+        if held:
+            break
+        page.wait_for_timeout(100)
+    assert held, "cadence.js was never requested"
+    assert page.locator("#cadence li").count() == 0
+    held[0].continue_()
+    page.wait_for_selector("#cadence li")
+    as_of = datetime(2026, 9, 28, 23, 59, 59, tzinfo=timezone.utc)  # noqa: UP017
+    days = sorted(
+        {
+            when(r["date"]).date()
+            for r in SNAPSHOT["releases"]
+            if r["family"] == "iOS" and when(r["date"]) <= as_of
+        }
+    )
+    since = (as_of.date() - days[-1]).days
+    ios_row = text(page, "#cadence li.fam-ios")
+    assert f"last {since} day" in ios_row, ios_row
 
 
 # --- layout and security ---------------------------------------------------------------
