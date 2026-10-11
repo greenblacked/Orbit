@@ -1,0 +1,209 @@
+---
+# Checks the site Cloudflare will serve, and previews it.
+#
+# A pull request builds the site and runs `wrangler deploy --dry-run`. That needs
+# no credential, and this file's dry-run job never names one: a pull request,
+# including one from a fork, cannot read the token by editing a step that already
+# holds it, because no step here holds it.
+#
+# A push to the stage branch, or Run workflow from that branch, uploads a Preview
+# named stage of the Worker orbit, served at https://stage.orbit.szolotov.com. A Preview
+# is a separate version of the Worker, so production is untouched. Production is
+# not this file: release.yml deploys the Worker orbit after a vX.Y.Z tag has
+# published its GitHub Release. The token for each lives on that GitHub
+# environment, not in the repository (SETUP.md).
+name: Deploy
+
+on:
+  pull_request:
+  push:
+    branches: [stage]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: >-
+    deploy-${{ github.event.pull_request.number || github.ref }}
+  # Stage runs are not cancelled: they queue and take turns. Right before it uploads, the
+  # preview job checks that its commit is still the tip of stage and skips otherwise. The
+  # gap left is that GitHub keeps one pending run per group, so a re-run of an older run
+  # can replace a newer one still waiting; stage then stays on the previous upload until
+  # the next push to stage or a manual dispatch of this workflow from stage.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.149.0'
+  # wrangler 4 refuses to run below Node 22. Not a *_VERSION name: a freshness check
+  # that compares those to the newest release would compare Node to a different major
+  # from the one wrangler supports.
+  WRANGLER_SEND_METRICS: 'false'
+
+jobs:
+  dry-run:
+    name: dry-run deploy
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Build the site
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+          version="pr-${GIT_SHA:0:7}"
+          python scripts/build_site.py --version "$version"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: '22.23.3'
+          # The package-manager cache is a download Wrangler does not need, and
+          # this job's node_modules has to be the lockfile's, not a cache entry.
+          package-manager-cache: false
+      - name: Check the Wrangler pin against the lockfile
+        run: |
+          set -Eeuo pipefail
+          python scripts/check_wrangler_pin.py
+      - name: Install Wrangler
+        working-directory: deploy
+        run: |
+          set -Eeuo pipefail
+          npm ci --ignore-scripts
+          installed=$(./node_modules/.bin/wrangler --version)
+          if [ "$installed" != "$WRANGLER_VERSION" ]; then
+            echo "::error::installed wrangler is ${installed}, pin is ${WRANGLER_VERSION}"
+            exit 1
+          fi
+      - name: Check the Worker without deploying it
+        working-directory: deploy
+        # --no-autoconfig: wrangler 4 turns framework detection on by default and
+        # will rewrite a project it does not recognise. --no-install-skills: the
+        # same release can install agent skills into the checkout; the default is
+        # off, and naming it keeps a later default from doing that in CI.
+        run: |
+          set -Eeuo pipefail
+          ./node_modules/.bin/wrangler deploy --dry-run --config wrangler.json \
+            --no-autoconfig --no-install-skills
+
+  preview:
+    name: preview
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    environment:
+      name: staging
+      url: ${{ vars.DEPLOY_URL }}
+    steps:
+      - name: The stage Preview uploads from the stage branch only
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -Eeuo pipefail
+          if [ "$REF_TYPE" != branch ] || [ "$REF_NAME" != stage ]; then
+            echo "::error::the stage Preview uploads from the stage branch only, not ${REF_TYPE} ${REF_NAME}"
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Build the site
+        id: build
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+          version="stage-${GIT_SHA:0:7}"
+          python scripts/build_site.py --version "$version" --noindex
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
+      - name: Check the Wrangler pin against the lockfile
+        run: |
+          set -Eeuo pipefail
+          python scripts/check_wrangler_pin.py
+      - name: Install Wrangler
+        working-directory: deploy
+        # No token in this step. --ignore-scripts so a dependency script does not
+        # run in the job that is about to receive one.
+        run: |
+          set -Eeuo pipefail
+          npm ci --ignore-scripts
+          installed=$(./node_modules/.bin/wrangler --version)
+          if [ "$installed" != "$WRANGLER_VERSION" ]; then
+            echo "::error::installed wrangler is ${installed}, pin is ${WRANGLER_VERSION}"
+            exit 1
+          fi
+      - name: Skip the upload when a newer push superseded this run
+        id: tip
+        # Read the tip now, from the API, not from the checkout: it may predate a newer
+        # push. A run that is not the tip stops without uploading and without failing, so
+        # the older run cannot leave stage on code that is not the branch.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+          tip=$(gh api "repos/${GH_REPO}/git/ref/heads/stage" --jq .object.sha)
+          python "$GITHUB_WORKSPACE/scripts/check_stage_tip.py" "$GIT_SHA" "$tip" >> "$GITHUB_OUTPUT"
+      - name: Upload the stage Preview
+        id: deploy
+        if: steps.tip.outputs.current == 'true'
+        working-directory: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GIT_SHA: ${{ github.sha }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.jsonl
+        run: |
+          set -Eeuo pipefail
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID on the staging environment (SETUP.md)"
+            exit 1
+          fi
+          # wrangler preview takes no --no-autoconfig; --no-install-skills is a
+          # global flag and keeps a later default from installing into the checkout.
+          # The Preview is a version of the Worker orbit, so it cannot roll production
+          # back and there is nothing to roll back here.
+          ./node_modules/.bin/wrangler preview --config wrangler.json --name stage \
+            --no-install-skills \
+            --message "stage ${GIT_SHA:0:7}" --tag "$GIT_SHA"
+          python "$GITHUB_WORKSPACE/scripts/read_wrangler_deploy.py" --preview \
+            "$WRANGLER_OUTPUT_FILE_PATH" >> "$GITHUB_OUTPUT"
+      - name: Check the stage Preview's address
+        if: steps.tip.outputs.current == 'true'
+        # Stage is meant to sit behind Cloudflare Access, which serves its login page on
+        # the workers.dev Preview URL and redirects stage.orbit.szolotov.com to it, so nothing
+        # on stage is fetched. The upload step already failed if wrangler preview did or if it
+        # reported no acceptable URL; this checks Wrangler reported the stage host,
+        # which proves the domain is enabled for Preview traffic.
+        env:
+          CUSTOM_URL: ${{ steps.deploy.outputs.custom_url }}
+          WORKERS_DEV_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -Eeuo pipefail
+          stage_url=https://stage.orbit.szolotov.com
+          if [ "$CUSTOM_URL" != "$stage_url" ]; then
+            # Preview traffic on a custom domain is a setting on the domain, which
+            # wrangler preview does not change.
+            echo "::error::Wrangler did not report ${stage_url} for this Preview"
+            echo "::error::reported: custom '${CUSTOM_URL}', workers.dev '${WORKERS_DEV_URL}'"
+            echo "::error::the owner must enable orbit.szolotov.com for Preview traffic (SETUP.md)"
+            exit 1
+          fi
+          echo "Wrangler reported ${stage_url} for this Preview"

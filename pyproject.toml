@@ -1,0 +1,19 @@
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers --import-mode=importlib"
+markers = [
+    "browser: drives the built site in Chromium; needs playwright (tests/test_site_browser.py)",
+]
+testpaths = ["tests"]
+
+# "S" is flake8-bandit, the security rules the security workflow's python job relies on.
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "S", "N"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert; that is the whole point of them.
+"tests/*" = ["S101"]

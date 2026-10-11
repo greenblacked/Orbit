@@ -1,0 +1,281 @@
+---
+# Actions are pinned to a full-length commit SHA, which is the only immutable
+# reference: a tag can be moved. The comment names the exact release tag that SHA
+# belongs to, which is what lets Dependabot recognise and bump them; a floating
+# `# v7` goes stale the moment upstream moves the major tag.
+name: CI
+
+on:
+  push:
+    branches: [main, stage, dev]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+# Deliberately no `paths:` filter. A workflow skipped by a path filter leaves its
+# check Pending forever, and a pull request that requires that check can then never
+# merge.
+
+permissions: {}
+
+concurrency:
+  group: >-
+    ${{ github.workflow }}-${{ github.event_name == 'pull_request'
+    && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Every tool this workflow installs or downloads, pinned, so that a tool which changes
+# its rules underneath you cannot turn a green build into a statement about the tool.
+env:
+  ACTIONLINT_VERSION: '1.7.12'
+  ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+
+jobs:
+  build:
+    name: build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.13'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.cache/pip
+          key: >-
+            pip-site-browser-${{ runner.os }}-${{
+            hashFiles('.github/requirements/site-browser.txt') }}
+      - name: Install the test runner
+        # Every package and transitive dependency is hashed: a wheel that does not
+        # match the digest PyPI published is refused before any of its code runs.
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --require-hashes -r .github/requirements/site-browser.txt
+      - name: Build the site
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+          python scripts/build_site.py --version "ci-${GIT_SHA:0:7}"
+      - name: Check links and the size budget
+        # Every local href and src resolves in the build, and no page or image is over
+        # the budget (scripts/check_site.py documents the defaults).
+        run: |
+          set -Eeuo pipefail
+          python scripts/check_site.py dist/site
+      - name: Run the build tests
+        run: |
+          set -Eeuo pipefail
+          python -m pytest -m "not browser"
+
+  smoke:
+    name: smoke test the build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Build, serve and smoke-test the site
+        # The same script release.yml runs against workers.dev, here against the build
+        # served from this runner. SMOKE_SITE_TEST_MODE lets it accept a loopback URL.
+        env:
+          GIT_SHA: ${{ github.sha }}
+          SMOKE_SITE_TEST_MODE: '1'
+        run: |
+          set -Eeuo pipefail
+          version="ci-${GIT_SHA:0:7}"
+          python scripts/build_site.py --version "$version"
+          port=8765
+          python -m http.server "$port" --bind 127.0.0.1 --directory dist/site \
+            >"$RUNNER_TEMP/server.log" 2>&1 &
+          server=$!
+          trap 'kill "$server"' EXIT
+          scripts/smoke_site.sh "http://127.0.0.1:${port}" "$version"
+
+  site-browser:
+    name: test site in a browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.13'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.cache/pip
+          key: >-
+            pip-site-browser-${{ runner.os }}-${{
+            hashFiles('.github/requirements/site-browser.txt') }}
+      # Playwright ships a driver that launches a browser, so it is installed from a lock
+      # file with every package and transitive dependency hashed. It drives the Chrome
+      # the runner image already ships, so no browser is downloaded.
+      - name: Install the test runner and the browser driver
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --require-hashes -r .github/requirements/site-browser.txt
+      # The page script is a file of JavaScript, so the text of the HTML cannot say it
+      # works. These load the real build in Chrome and act on it: Back, the bar, To top,
+      # anchors, theme and the layout on a phone. REQUIRE_BROWSER turns a missing package
+      # into a failure, so the job can never pass by skipping the tests it exists to run.
+      - name: Drive the built site in the runner's Chrome
+        env:
+          REQUIRE_BROWSER: '1'
+          BROWSER_CHANNEL: chrome
+        run: |
+          set -Eeuo pipefail
+          python -m pytest -m browser tests
+      # The loop an author runs before a pull request, run here too so it cannot rot:
+      # build, serve with the real headers, smoke-test, screenshot every page at phone,
+      # tablet and desktop size in every theme (failing on a console error or a CSP
+      # violation), and bundle the site into one file.
+      - name: Run the preview loop
+        env:
+          GIT_SHA: ${{ github.sha }}
+          BROWSER_CHANNEL: chrome
+        run: |
+          set -Eeuo pipefail
+          bash scripts/preview.sh --version "ci-${GIT_SHA:0:7}" --commit "${GIT_SHA:0:7}"
+      - name: Keep the screenshots and the bundle
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: preview
+          path: dist/preview
+          if-no-files-found: warn
+          retention-days: 14
+
+  branch-name:
+    name: check branch name
+    # Only a pull request has a head branch. On a push or a merge group the job is
+    # skipped, and the aggregate `ci` job is told that is allowed for this job alone.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Working branches are named fb-<kebab>
+        # The head ref is chosen by whoever opens the pull request, so it reaches the
+        # script through the environment and is never expanded inside the shell text.
+        # main, stage, dev and dependabot/* are exempt, which lets a promotion pull
+        # request (head dev or stage) through.
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -Eeuo pipefail
+          python3 scripts/check_branch_name.py
+
+  lint-actions:
+    name: lint workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run actionlint
+        # actionlint also runs shellcheck over every inline `run:` block, which is
+        # where all of this repository's shell lives.
+        #
+        # Downloaded at a pinned version and checked against a recorded digest rather
+        # than piped from a script on a moving branch.
+        run: |
+          set -Eeuo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 --retry-connrefused --retry-delay 2 --retry-max-time 150 \
+            --connect-timeout 20 --max-time 60 -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check --status
+          tar -xzf "$archive" actionlint
+          ./actionlint -color
+
+  lint-markdown:
+    name: lint markdown
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff  # v24.2.0
+        with:
+          globs: '**/*.md'
+
+  links:
+    name: check links
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check in-repository links
+        # `--offline` only resolves local paths. External links flake, and a gate
+        # that flakes is a gate people learn to ignore.
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2.9.0
+        with:
+          args: --offline --no-progress './**/*.md'
+          fail: true
+          # The guard against the glob matching nothing: without it lychee reports zero
+          # links, zero broken, and exits 0, and the check passes having read no file.
+          failIfEmpty: true
+
+  ci:
+    # One of the two required status checks; `security` in security.yml is the other.
+    # Requiring the individual jobs instead would break the moment a job is added or
+    # renamed, because the branch ruleset names checks, not workflows.
+    name: ci
+    if: always()
+    needs:
+      - build
+      - branch-name
+      - smoke
+      - site-browser
+      - lint-actions
+      - lint-markdown
+      - links
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify every required CI job passed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          # branch-name runs only on a pull request; a skipped result passes for it and
+          # for no other job.
+          SKIPPABLE: branch-name
+        run: |
+          set -Eeuo pipefail
+          python3 scripts/check_job_results.py \
+            build branch-name smoke site-browser lint-actions lint-markdown links

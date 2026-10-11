@@ -1,0 +1,123 @@
+---
+# Cuts a release from the Actions tab: run it on `main` with a version. It creates the
+# annotated tag `vX.Y.Z` through the API and then dispatches release.yml on that tag.
+# It does not publish anything itself, because the `production` environment admits only
+# `v*` tags and a run on `main` could not deploy.
+#
+# The dispatch is not a convenience. A tag created with GITHUB_TOKEN does not start
+# release.yml's tag-push trigger, and `workflow_dispatch` is one of the two events
+# (with `repository_dispatch`) a GITHUB_TOKEN call does start. release.yml then runs with
+# a tag ref, so every check there (ancestor of main, the environment rule) is unchanged.
+#
+# A hand-pushed `vX.Y.Z` tag on a commit that is on main still works and reaches the
+# same workflow.
+name: Cut release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, X.Y.Z, with no leading v'
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: cut-release
+  cancel-in-progress: false
+
+jobs:
+  cut:
+    name: cut
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Spent on creating one annotated tag object and its refs/tags/vX.Y.Z ref through
+      # the API, never on pushing code.
+      contents: write
+      # Spent on dispatching release.yml on that new tag, nothing else.
+      actions: write
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Refuse to run anywhere but main
+        # A dispatch can be pointed at any branch; only main may cut a release. This is a
+        # failing step, not a job-level `if`: a skipped job reports success, which would
+        # make a dispatch from the wrong branch look like a release that went ahead.
+        run: |
+          set -Eeuo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::releases are cut from main, not $GITHUB_REF" >&2
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check the version is ready to release
+        # Strict X.Y.Z first, so nothing later builds a ref name or a request from free
+        # text. Then: no such tag yet, a version greater than every existing tag, and the
+        # dispatched commit equal to the tip of main as this run fetched it.
+        run: |
+          set -Eeuo pipefail
+          if ! [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::version must be X.Y.Z with no leading v or leading zeros, got: $VERSION" >&2
+            exit 1
+          fi
+          if [ -n "$(git tag --list "v$VERSION")" ]; then
+            echo "::error::v$VERSION already exists" >&2
+            exit 1
+          fi
+          # Compared as numbers by the same script Release runs before it deploys, so a
+          # hand-pushed v01.2.3 counts as 1.2.3 and a version sort never disagrees with it.
+          git tag --list 'v[0-9]*.[0-9]*.[0-9]*' \
+            | python3 "$GITHUB_WORKSPACE/scripts/check_release_order.py" --include-equal "v$VERSION"
+          if [ "$(git rev-parse refs/remotes/origin/main)" != "$GITHUB_SHA" ]; then
+            echo "::error::$GITHUB_SHA is not the tip of main" >&2
+            exit 1
+          fi
+
+      - name: Create the annotated tag object
+        # The tagger is whoever dispatched the run.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          ACTOR_ID: ${{ github.actor_id }}
+        run: |
+          set -Eeuo pipefail
+          tag_sha=$(gh api "repos/$GH_REPO/git/tags" \
+            -f "tag=v$VERSION" -f "message=Release v$VERSION" \
+            -f "object=$GITHUB_SHA" -f type=commit \
+            -f "tagger[name]=$ACTOR" \
+            -f "tagger[email]=$ACTOR_ID+$ACTOR@users.noreply.github.com" \
+            --jq .sha)
+          echo "TAG_SHA=$tag_sha" >> "$GITHUB_ENV"
+
+      - name: Create the tag ref
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          gh api "repos/$GH_REPO/git/refs" \
+            -f ref="refs/tags/v$VERSION" -f sha="$TAG_SHA" --silent
+          echo "::notice::created v$VERSION at $GITHUB_SHA"
+
+      - name: Dispatch the release workflow on the tag
+        # A tag made with GITHUB_TOKEN starts nothing by itself; see the header.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          if ! gh workflow run release.yml --ref "v$VERSION"; then
+            echo "::error::v$VERSION exists but release.yml was not dispatched." >&2
+            echo "::error::The tag is in place; do not cut again. Dispatch it with:" >&2
+            echo "::error::gh workflow run release.yml --repo $GH_REPO --ref v$VERSION" >&2
+            exit 1
+          fi
+          runs="$GITHUB_SERVER_URL/$GH_REPO/actions/workflows/release.yml"
+          echo "::notice::dispatched release.yml on v$VERSION: $runs"

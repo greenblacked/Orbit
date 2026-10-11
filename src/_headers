@@ -1,0 +1,12 @@
+# Response headers Cloudflare Workers static assets applies to every path.
+# https://developers.cloudflare.com/workers/static-assets/headers/
+#
+# The pages carry no inline script or style, so the policy needs no 'unsafe-inline' and
+# no hash. A page that adds an inline <style>, a style="" attribute or an inline script
+# is blocked by the browser until the policy is widened on purpose. Google Fonts is the
+# one outside origin. HSTS is left to the Cloudflare zone (SSL/TLS > Edge Certificates).
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

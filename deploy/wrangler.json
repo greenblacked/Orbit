@@ -1,0 +1,19 @@
+{
+  "name": "orbit",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "preview_urls": true,
+  "routes": [
+    {
+      "pattern": "orbit.szolotov.com",
+      "custom_domain": true,
+      "previews_enabled": true
+    }
+  ],
+  "previews": {},
+  "assets": {
+    "directory": "../dist/site",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
+}

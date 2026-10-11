@@ -1,0 +1,8 @@
+{
+  "name": "orbit-deploy",
+  "private": true,
+  "description": "Pinned Wrangler for the site deploy. Not a published package.",
+  "dependencies": {
+    "wrangler": "4.149.0"
+  }
+}

@@ -1,0 +1,638 @@
+/* Site stylesheet: the shared design, as three sets of variables on :root (day, night
+   and the console theme) and the rules that use them. Site-specific rules go under
+   "Template additions" at the end. See README.md, "The design". */
+:root {
+  --bg: #f4f1ea;
+  --ink: #141413;
+  --muted: #5e5a54;
+  --line: #e3ddd3;
+  --card: #ebe6dc;
+  --glass-tint: rgba(235, 230, 220, 0.62);
+  --glass-edge: rgba(255, 255, 255, 0.85);
+  --glass-sheen: rgba(255, 255, 255, 0.45);
+  --glass-shadow: rgba(20, 20, 19, 0.12);
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", "Iowan Old Style", Palatino, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  color-scheme: light;
+}
+html[data-theme="night"] {
+  --bg: #000000;
+  --ink: #f3efe6;
+  --muted: #a39e94;
+  --line: #2a2724;
+  --card: #141413;
+  --glass-tint: rgba(36, 34, 31, 0.58);
+  --glass-edge: rgba(255, 255, 255, 0.22);
+  --glass-sheen: rgba(255, 255, 255, 0.08);
+  --glass-shadow: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+html[data-theme="reactor"] {
+  --bg: #070807;
+  --ink: #d2f07a;
+  --muted: #8aa36a;
+  --line: #24321c;
+  --card: #10170e;
+  --glass-tint: rgba(22, 34, 18, 0.6);
+  --glass-edge: rgba(210, 240, 122, 0.28);
+  --glass-sheen: rgba(210, 240, 122, 0.07);
+  --glass-shadow: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+*, ::before, ::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid var(--line);
+}
+[hidden] { display: none !important; }
+html {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }
+a { color: inherit; text-decoration: inherit; }
+ul, ol { list-style: none; }
+svg { display: block; }
+button, input {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border-radius: 0;
+  text-align: left;
+}
+button:not(:disabled) { cursor: pointer; }
+input[type="search"] { -webkit-appearance: none; appearance: none; }
+::placeholder { color: var(--muted); opacity: 1; }
+table { border-collapse: collapse; }
+code, pre { font-family: var(--font-mono); font-size: 1em; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+main { flex: 1; }
+
+html[data-theme="reactor"] body {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background-image:
+    linear-gradient(rgba(210, 240, 122, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(210, 240, 122, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+html[data-theme="reactor"] h1, html[data-theme="reactor"] h2 {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+html[data-theme="reactor"] .card {
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+html[data-theme="reactor"]::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: repeating-linear-gradient(
+    to bottom, transparent 0, transparent 2px, rgba(0, 0, 0, 0.16) 3px
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  a, button {
+    transition: color 160ms ease, background-color 160ms ease, opacity 160ms ease;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.skip:focus {
+  position: fixed;
+  left: 1rem;
+  top: 1rem;
+  z-index: 20;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip-path: none;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+/* Header: sticky, hides while scrolling down. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.site-header.away { transform: translateY(-100%); }
+@media (prefers-reduced-motion: no-preference) {
+  .site-header { transition: transform 200ms; }
+}
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+.bar nav {
+  display: none;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4286;
+}
+@media (min-width: 64rem) {
+  .bar nav { display: flex; }
+}
+.bar nav a, .foot nav a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+}
+.bar nav a:hover, .foot nav a:hover { color: var(--muted); }
+a[aria-current="page"] { text-decoration: underline; text-underline-offset: 4px; }
+#home {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  line-height: 1.4286;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+.tools { margin-left: auto; display: flex; align-items: center; }
+.tool {
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+}
+#console-theme { color: var(--muted); }
+#console-theme[aria-pressed="true"] { color: var(--ink); }
+#console-theme svg { width: 1rem; height: 1rem; }
+.track {
+  display: flex;
+  align-items: center;
+  width: 3.25rem;
+  height: 2rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: #cfc8bc;
+  box-shadow: inset 0 1px 2px rgba(20, 20, 19, 0.18);
+}
+html[data-theme="night"] .track { background: var(--ink); }
+html[data-theme="reactor"] .track { background: #1c2816; }
+.knob {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.35), 0 2px 6px rgba(20, 20, 19, 0.2);
+}
+html[data-theme="night"] .knob {
+  transform: translateX(1.25rem);
+  background: var(--bg);
+  color: var(--ink);
+}
+.knob svg { width: 0.875rem; height: 0.875rem; }
+.moon { display: none; }
+html[data-theme="night"] .moon { display: block; }
+html[data-theme="night"] .sun { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .track { transition: background-color 300ms cubic-bezier(0.2, 0, 0, 1); }
+  .knob { transition: transform 300ms cubic-bezier(0.2, 0, 0, 1); }
+}
+
+/* Footer. */
+.site-footer {
+  border-top: 1px solid var(--line);
+  /* Room below the last line, so the footer can scroll clear of To top. */
+  padding-bottom: 4rem;
+}
+.foot {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.4286;
+}
+.foot .mark { font-weight: 500; letter-spacing: 0.1em; }
+.foot .tag { margin-top: 0.5rem; max-width: 24rem; color: var(--muted); }
+.foot .credit { margin-top: 0.75rem; color: var(--muted); }
+.foot .credit a { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.foot nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+@media (min-width: 40rem) {
+  .foot { flex-direction: row; align-items: flex-end; justify-content: space-between; }
+}
+
+/* The index. */
+.wrap { max-width: 72rem; margin: 0 auto; padding: 0 1.25rem; }
+.hero { display: grid; gap: 2.5rem; padding-top: 4rem; padding-bottom: 2rem; }
+.hero h1 {
+  font-size: 3rem;
+  line-height: 1.05;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.hero h1 span {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 8px;
+}
+.lede {
+  font-size: 1.125rem;
+  line-height: 1.5556;
+  text-wrap: pretty;
+  color: var(--muted);
+}
+.small { font-size: 0.875rem; line-height: 1.4286; color: var(--muted); }
+.pill {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  margin-top: 2rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.875rem;
+  line-height: 1.4286;
+  white-space: nowrap;
+}
+.pill:hover { opacity: 0.8; }
+@media (min-width: 40rem) {
+  .hero { padding-top: 6rem; }
+  .hero h1 { font-size: 3.75rem; }
+}
+@media (min-width: 64rem) {
+  .hero { grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: end; gap: 4rem; }
+  .hero h1 { grid-column: span 7; }
+  .hero .side { grid-column: span 5; }
+}
+.listing { padding-bottom: 5rem; }
+.card {
+  border-radius: 1.5rem;
+  background: var(--card);
+  padding: 2.5rem 1.5rem;
+}
+.card p {
+  max-width: 48rem;
+  font-family: var(--font-serif);
+  font-size: 1.875rem;
+  line-height: 1.375;
+  text-wrap: balance;
+}
+@media (min-width: 40rem) {
+  .card { padding: 3.5rem 2.5rem; }
+  .card p { font-size: 2.25rem; }
+}
+/* Plugin, skill and the other pages. */
+.page { width: 100%; max-width: 72rem; margin: 0 auto; padding: 3rem 1.25rem; }
+.page.narrow { max-width: 48rem; }
+@media (min-width: 40rem) {
+  .page { padding-top: 4rem; padding-bottom: 4rem; }
+}
+.crumbs a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+/* Back and To top: Material Design 3's button with a leading icon (full pill, 1.125rem
+   icon, 14px medium label, 44px target, state layers of the label colour at 8% on
+   hover and 12% pressed), made of Liquid Glass: a translucent tint that blurs and
+   saturates what is behind it, a bright specular edge along the top, a soft sheen, a
+   hairline rim and a floating shadow. Pressed, it gives a little. */
+.back {
+  position: relative;
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1.25rem 0 1rem;
+  border-radius: 999px;
+  background-color: var(--glass-tint);
+  background-image: linear-gradient(180deg, var(--glass-sheen), transparent 65%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  box-shadow: inset 0 1px 0 0 var(--glass-edge),
+    inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent),
+    0 1px 2px var(--glass-shadow), 0 6px 16px -4px var(--glass-shadow);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.4286;
+  font-weight: 500;
+  letter-spacing: 0.00625rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.back svg { width: 1.125rem; height: 1.125rem; flex: none; }
+.back:hover {
+  background-image: linear-gradient(180deg, var(--glass-sheen), transparent 65%),
+    linear-gradient(color-mix(in srgb, var(--ink) 8%, transparent),
+      color-mix(in srgb, var(--ink) 8%, transparent));
+}
+.back:active {
+  background-image: linear-gradient(180deg, var(--glass-sheen), transparent 65%),
+    linear-gradient(color-mix(in srgb, var(--ink) 12%, transparent),
+      color-mix(in srgb, var(--ink) 12%, transparent));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .back { transition: transform 120ms ease, box-shadow 120ms ease; }
+  .back:active { transform: scale(0.97); }
+}
+.back + .crumbs { margin-top: 1rem; }
+/* The bar Back moves into once the page has scrolled past its own Back: a
+   top app bar on the solid page colour, so text scrolls under it and never shows
+   behind a button. It sits below the header while the header shows, and at the top when the
+   header has slid away. Hidden, and out of the tab order, until then. */
+.dock {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-0.5rem);
+  pointer-events: none;
+}
+.site-header:not(.away) ~ .dock { top: calc(4rem + 1px); }
+.dock.on { visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .dock {
+    transition: opacity 150ms ease, transform 150ms ease, top 200ms ease,
+      visibility 0s linear 150ms;
+  }
+  .dock.on { transition: opacity 150ms ease, transform 150ms ease, top 200ms ease; }
+}
+.dock-in {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.5rem max(1.25rem, env(safe-area-inset-right)) 0.5rem
+    max(1.25rem, env(safe-area-inset-left));
+}
+/* To top floats at the bottom right: Material's place for a page's one floating
+   action, and the one place Liquid Glass is meant for, a control over the content.
+   Round with only the arrow on a narrow screen, where the column is all text, and
+   labelled once the margin beside the 72rem column can hold the label. Its tint is
+   denser than Back's, because it sits over running text rather than the solid bar,
+   and glyphs showing through compete with the arrow. Hidden, and out of the tab
+   order, until the script shows it. */
+.fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 9;
+  justify-content: center;
+  background-color: color-mix(in srgb, var(--glass-tint) 55%, var(--bg));
+  width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(0.5rem);
+  pointer-events: none;
+}
+.fab span { display: none; }
+.fab.on { visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .fab {
+    transition: opacity 150ms ease, transform 150ms ease, box-shadow 120ms ease,
+      visibility 0s linear 150ms;
+  }
+  .fab.on { transition: opacity 150ms ease, transform 150ms ease, box-shadow 120ms ease; }
+  .fab.on:active { transform: scale(0.97); }
+}
+@media (min-width: 40rem) {
+  .fab {
+    right: max(1.5rem, env(safe-area-inset-right));
+    bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+}
+@media (min-width: 90rem) {
+  .fab { width: auto; padding: 0 1.25rem 0 1rem; }
+  .fab span { display: inline; }
+}
+/* A jump to a heading (an in-page link, a shared deep link, the finder) lands below
+   both bars rather than under them. A jump upwards brings the header back with the
+   bar stacked beneath it: 4rem and a border, then 0.5rem, a 2.75rem button, 0.5rem and
+   a border, 7.875rem in all, so 8.5rem leaves a gap. Zero specificity, so a rule that
+   sets its own margin wins. */
+:where([id]) { scroll-margin-top: 8.5rem; }
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 2rem;
+  font-size: 0.875rem;
+  line-height: 1.4286;
+}
+.crumbs a.quiet { color: var(--muted); }
+.title-xl {
+  max-width: 48rem;
+  margin-top: 1.5rem;
+  font-size: 3rem;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+@media (min-width: 40rem) {
+  .title-xl { font-size: 3.75rem; }
+}
+.title {
+  font-size: 2.25rem;
+  line-height: 1.1111;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.page .lede { max-width: 42rem; margin-top: 1.5rem; }
+.page-body { margin-top: 2.5rem; }
+.back + .title { margin-top: 1.5rem; }
+.title + .lede { margin-top: 1rem; }
+.page .small.count { margin-top: 1rem; }
+
+/* Rendered Markdown. */
+.prose-lab {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.prose-lab h1, .prose-lab h2, .prose-lab h3 {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  line-height: 1.15;
+}
+.prose-lab h1 {
+  font-family: var(--font-serif);
+  font-size: 2.75rem;
+  font-weight: 450;
+  margin: 0 0 1.25rem;
+}
+.prose-lab h2 {
+  font-size: 1.5rem;
+  margin: 2.5rem 0 0.75rem;
+}
+.prose-lab h3 {
+  font-size: 1.15rem;
+  margin: 1.75rem 0 0.5rem;
+}
+.prose-lab p {
+  margin: 0 0 1rem;
+  text-wrap: pretty;
+}
+.prose-lab ul, .prose-lab ol {
+  margin: 0 0 1.25rem;
+  padding-left: 1.25rem;
+}
+.prose-lab li {
+  margin: 0.35rem 0;
+}
+.prose-lab a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.prose-lab code {
+  font-family: var(--font-sans);
+  font-size: 0.86em;
+  background: var(--card);
+  padding: 0.08em 0.35em;
+  border-radius: 0.3rem;
+}
+/* A path, a flag or an identifier in running text has no break opportunity of its own,
+   so on a phone one long one pushed the whole page wider than the screen. It may break
+   anywhere; a code block keeps its lines and scrolls inside its own box instead. */
+.prose-lab :not(pre) > code { overflow-wrap: anywhere; }
+.prose-lab pre {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: var(--card);
+  border-radius: 1rem;
+}
+.prose-lab pre code {
+  background: none;
+  padding: 0;
+}
+.prose-lab blockquote {
+  margin: 0 0 1.25rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--ink);
+  color: var(--muted);
+}
+.prose-lab hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 2rem 0;
+}
+.prose-lab .table-wrap {
+  margin: 0 0 1.5rem;
+  overflow-x: auto;
+}
+.prose-lab table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+.prose-lab th, .prose-lab td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.7rem 1rem 0.7rem 0;
+  text-align: left;
+  vertical-align: top;
+}
+.prose-lab th {
+  font-weight: 500;
+}
+/* Additions the design's own list does not cover: the reset above removes bullets and
+   the monospace of code blocks, and the pages here use both. */
+.prose-lab ul { list-style: disc; }
+.prose-lab ol { list-style: decimal; }
+.prose-lab pre code { font-family: var(--font-mono); font-size: 0.875rem; }
+.prose-lab a.pill { color: var(--bg); text-decoration: none; font-family: var(--font-sans); }
+.prose-lab .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0 0 1.5rem; }
+.prose-lab .actions .pill { margin-top: 0; }
+.prose-lab .lead {
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.prose-lab .al-r { text-align: right; }
+.prose-lab .al-c { text-align: center; }
+.prose-lab td.num, .prose-lab th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.prose-lab .say { color: var(--muted); }
+
+/* Template additions. The home link carries the site title, which may be long, so it
+   stays on one line and gives way before it can run under the header's controls. A long unbroken title or word
+   breaks instead of widening the page on a phone. */
+.hero h1, .title { overflow-wrap: anywhere; }
+#home {
+  display: block;
+  max-width: calc(100% - 13rem);
+  overflow: hidden;
+  line-height: 2.75rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
