@@ -6,16 +6,16 @@
 <meta name="site-version" content="{{version}}">
 <meta name="theme-color" content="#f4f1ea">
 <title>Release Orbit</title>
-<meta name="description" content="Release Orbit">
+<meta name="description" content="Release Orbit tracks operating system releases and betas as they land, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, with a timeline and a version compare.">
 <link rel="canonical" href="https://orbit.szolotov.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Release Orbit">
 <meta property="og:title" content="Release Orbit">
-<meta property="og:description" content="Release Orbit">
+<meta property="og:description" content="Release Orbit tracks operating system releases and betas as they land, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, with a timeline and a version compare.">
 <meta property="og:url" content="https://orbit.szolotov.com/">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Release Orbit">
-<meta name="twitter:description" content="Release Orbit">
+<meta name="twitter:description" content="Release Orbit tracks operating system releases and betas as they land, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, with a timeline and a version compare.">
 <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +28,7 @@
 <a class="sr-only skip" href="#content">Skip to content</a>
 <header class="site-header" id="banner">
 <div class="bar">
-<nav aria-label="Primary"><a href="/">Home</a><a href="/about/">About</a><a href="https://github.com/greenblacked/orbit" target="_blank" rel="noopener noreferrer">Source</a></nav>
+<nav aria-label="Primary"><a href="/" aria-current="page">Home</a><a href="/timeline/">Timeline</a><a href="/compare/">Compare</a><a href="/about/">About</a><a href="https://github.com/greenblacked/orbit" target="_blank" rel="noopener noreferrer">Source</a></nav>
 <a id="home" href="/">Release Orbit</a>
 <div class="tools">
 <button type="button" id="console-theme" class="tool" aria-pressed="false" aria-label="Console theme"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M2.5 2.5h4.2v4.2H2.5zM9.3 2.5h4.2v4.2H9.3zM2.5 9.3h4.2v4.2H2.5zM9.3 9.3h4.2v4.2H9.3z"/></svg></button>
@@ -37,28 +37,298 @@
 </div>
 </header>
 <main id="content">
+<div class="hero-wrap">
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 <section class="wrap hero">
-<h1>Say what this site is <span>in one line</span>.</h1>
+<h1>Every OS release, <span>as it lands.</span></h1>
 <div class="side">
-<p class="lede">A starting point: the shared design, the header, footer, theme switch, Back bar and To top button, ready for your content.</p>
-<a class="pill" href="/about/">About this template</a>
+<p class="lede">Release Orbit follows operating system releases and betas, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, refreshed while you read.</p>
+<p class="live" id="live" data-state="loading"><span class="dot" aria-hidden="true"></span><span id="live-text" aria-live="polite">Loading releases…</span></p>
+<div class="actions"><a class="pill" href="/timeline/">Timeline</a><a class="pill" href="/compare/">Compare</a><a class="pill" href="/about/">About</a></div>
 </div>
 </section>
-<section class="wrap listing">
-<div class="card"><p>Edit <code>src/index.html</code>. The build copies <code>src/</code> to <code>dist/site/</code> and nothing else.</p></div>
+</div>
+<section class="wrap latest" aria-labelledby="latest-h">
+<div class="sec-head">
+<h2 id="latest-h" class="title">Latest per platform</h2>
+<p class="small">The newest release or beta for each platform family. Source: <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>.</p>
+</div>
+<ul class="grid" id="latest-grid">
+<li class="rel fam-ios reveal" data-family="iOS">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#ios">iOS</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+</li>
+<li class="rel fam-ipados reveal" data-family="iPadOS">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#ipados">iPadOS</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+</li>
+<li class="rel fam-macos reveal" data-family="macOS">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#macos">macOS</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+</li>
+<li class="rel fam-watchos reveal" data-family="watchOS">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#watchos">watchOS</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+</li>
+<li class="rel fam-tvos reveal" data-family="tvOS">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#tvos">tvOS</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+</li>
+<li class="rel fam-visionos reveal" data-family="visionOS">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#visionos">visionOS</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+</li>
+</ul>
+<noscript><p class="notice">The release cards need JavaScript. Read the releases at <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a> directly.</p></noscript>
+</section>
+<section id="ios" class="fam fam-ios" data-family="iOS" aria-labelledby="ios-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">iPhone</p>
+<h2 id="ios-h" class="fam-title">iOS</h2>
+<p class="fam-lede">The system software that runs iPhone.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=iOS">All iOS releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-phone">
+<span class="phone-island" aria-hidden="true"></span>
+<div class="screen m-ios">
+<p class="m-bar" aria-hidden="true"><span>9:41</span><span class="m-batt"></span></p>
+<p class="m-title">Latest build</p>
+<div class="m-card">
+<p class="m-name" data-f="name">iOS</p>
+<p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
+<p class="m-sub" data-f="date"></p>
+</div>
+<button type="button" class="m-btn" data-act="check">Check the data</button>
+<p class="m-result" data-f="result" aria-live="polite"></p>
+<ul class="m-rows" aria-hidden="true">
+<li><span>Platform</span><span>iOS</span></li>
+<li><span>Newest beta</span><span data-f="betarow">None</span></li>
+<li><span>Latest release</span><span data-f="pubrow"></span></li>
+</ul>
+</div>
+</div>
+<figcaption class="small">A drawn iPhone showing the newest iOS release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
+<section id="ipados" class="fam fam-ipados fam-flip" data-family="iPadOS" aria-labelledby="ipados-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">iPad</p>
+<h2 id="ipados-h" class="fam-title">iPadOS</h2>
+<p class="fam-lede">The system software built for iPad.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=iPadOS">All iPadOS releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-ipad">
+<span class="ipad-cam" aria-hidden="true"></span>
+<div class="screen m-ipad">
+<ul class="m-side" aria-hidden="true"><li class="on">Latest</li><li>Betas</li><li>History</li></ul>
+<div class="m-main">
+<p class="m-title">Release info</p>
+<div class="m-card">
+<p class="m-name" data-f="name">iPadOS</p>
+<p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
+<p class="m-sub" data-f="date"></p>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="small">A drawn iPad showing the newest iPadOS release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
+<section id="macos" class="fam fam-macos" data-family="macOS" aria-labelledby="macos-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">Mac</p>
+<h2 id="macos-h" class="fam-title">macOS</h2>
+<p class="fam-lede">The operating system for Mac.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=macOS">All macOS releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-mac">
+<div class="mac-lid">
+<div class="screen m-mac">
+<p class="m-menu" aria-hidden="true"><b>Release info</b></p>
+<div class="m-win">
+<span class="m-orb" aria-hidden="true"></span>
+<p class="m-name" data-f="name">macOS</p>
+<div class="m-info" aria-live="polite">
+<p><span class="k">Version</span><span data-f="version"></span></p>
+<p><span class="k">Build</span><span data-f="build"></span></p>
+<p><span class="k">Released</span><span data-f="date"></span></p>
+</div>
+<div class="m-seg" role="group" aria-label="Release channel">
+<button type="button" class="m-segb" aria-pressed="true" data-ch="release">Release</button>
+<button type="button" class="m-segb" aria-pressed="false" data-ch="beta">Beta</button>
+</div>
+</div>
+</div>
+</div>
+<span class="mac-base" aria-hidden="true"></span>
+</div>
+<figcaption class="small">A drawn Mac showing the newest macOS release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
+<section id="watchos" class="fam fam-watchos fam-flip" data-family="watchOS" aria-labelledby="watchos-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">Apple Watch</p>
+<h2 id="watchos-h" class="fam-title">watchOS</h2>
+<p class="fam-lede">The operating system for Apple Watch.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=watchOS">All watchOS releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-watch">
+<span class="w-strap w-top" aria-hidden="true"></span>
+<div class="w-case">
+<span class="w-crown" aria-hidden="true"></span>
+<div class="screen m-watch">
+<p class="m-time" aria-hidden="true">10:09</p>
+<button type="button" class="m-comp" data-act="cycle"><span class="k" data-f="k">Version</span><span class="v" data-f="v"></span></button>
+<p class="sr-only" data-f="said" aria-live="polite"></p>
+<p class="m-name" data-f="name">watchOS</p>
+</div>
+</div>
+<span class="w-strap w-bottom" aria-hidden="true"></span>
+</div>
+<figcaption class="small">A drawn Apple Watch showing the newest watchOS release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
+<section id="tvos" class="fam fam-tvos" data-family="tvOS" aria-labelledby="tvos-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">Apple TV</p>
+<h2 id="tvos-h" class="fam-title">tvOS</h2>
+<p class="fam-lede">The operating system for Apple TV.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=tvOS">All tvOS releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-tv">
+<div class="tv-panel">
+<div class="screen m-tv">
+<p class="m-title">Release info</p>
+<div class="m-card">
+<p class="m-name" data-f="name">tvOS</p>
+<p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
+<p class="m-sub" data-f="date"></p>
+</div>
+</div>
+</div>
+<span class="tv-stand" aria-hidden="true"></span>
+</div>
+<figcaption class="small">A drawn Apple TV screen showing the newest tvOS release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
+<section id="visionos" class="fam fam-visionos fam-flip" data-family="visionOS" aria-labelledby="visionos-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">Apple Vision Pro</p>
+<h2 id="visionos-h" class="fam-title">visionOS</h2>
+<p class="fam-lede">The operating system for Apple Vision Pro.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=visionOS">All visionOS releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-vision">
+<span class="v-strap v-left" aria-hidden="true"></span>
+<span class="v-strap v-right" aria-hidden="true"></span>
+<div class="v-visor">
+<div class="screen m-vision">
+<p class="m-title">Release info</p>
+<div class="m-card">
+<p class="m-name" data-f="name">visionOS</p>
+<p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
+<p class="m-sub" data-f="date"></p>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="small">A drawn Vision Pro headset showing the newest visionOS release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
+<section id="features" class="wrap features" aria-labelledby="features-h" hidden>
+<div class="sec-head">
+<h2 id="features-h" class="title">What's new for developers</h2>
+<p class="small">Short summaries, each linked to the vendor's own page.</p>
+</div>
+<div id="features-list"></div>
 </section>
 </main>
 <footer class="site-footer">
 <div class="foot">
 <div>
 <p class="mark">Release Orbit</p>
-<p class="tag">Replace this line with what the site is for.</p>
-<p class="credit">Source on <a href="https://github.com/greenblacked/orbit" target="_blank" rel="noopener noreferrer">GitHub</a></p>
+<p class="tag">Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, iPhone, iPad, Mac, Apple Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, tvOS and visionOS are trademarks of Apple Inc.</p>
+<p class="credit">Source: <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>. Code on <a href="https://github.com/greenblacked/orbit" target="_blank" rel="noopener noreferrer">GitHub<span class="sr-only"> (opens in a new tab)</span></a>.</p>
 </div>
-<nav aria-label="Footer"><a href="/" aria-current="page">Home</a><a href="/about/">About</a><a href="https://github.com/greenblacked/orbit" target="_blank" rel="noopener noreferrer">Source</a></nav>
+<nav aria-label="Footer"><a href="/" aria-current="page">Home</a><a href="/timeline/">Timeline</a><a href="/compare/">Compare</a><a href="/about/">About</a><a href="https://github.com/greenblacked/orbit" target="_blank" rel="noopener noreferrer">Source</a></nav>
 </div>
 </footer>
+<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <button type="button" class="back fab" id="to-top" aria-label="To top"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 20V5M5.5 11.5 12 5l6.5 6.5"/></svg><span>To top</span></button>
+<script src="/assets/releases.js" defer></script>
+<script src="/assets/home.js" defer></script>
 <script src="/assets/site.js" defer></script>
 </body>
 </html>

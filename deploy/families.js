@@ -1,4 +1,4 @@
-// The platform families the site knows, and the accent colour of each.
+// The platform families the site knows, the accent colours of each, and the vendors.
 //
 // The list lives in src/data/families.json, so the pages read the very same file the
 // build publishes at /data/families.json and the Worker and the snapshot script import
@@ -8,6 +8,9 @@
 import data from '../src/data/families.json' with { type: 'json' };
 
 export const FAMILIES = data.families;
+
+/** The vendors, each with the page its data comes from. */
+export const VENDORS = data.vendors;
 
 /** The ids of the families of one vendor, in display order. */
 export function familyIds(vendor) {
