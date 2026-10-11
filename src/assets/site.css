@@ -1488,3 +1488,30 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 .notch.later { opacity: 0.35; }
 .orbit-back { margin-top: 0; justify-self: start; }
 .asof-note { margin: 0; flex-basis: 100%; }
+
+/* The cadence pulse (cadence.js): a quiet row, and each ring breathes once per median gap
+   scaled down (--breath, set by the script). Motion is in the block below. */
+.cadence {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.cadence li { min-width: 0; font-size: 0.8125rem; line-height: 1.4; }
+.cadence .c-fam {
+  display: block;
+  color: var(--fam-text-card);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cadence .c-nums { display: block; color: var(--muted); font-family: var(--font-mono); }
+@media (prefers-reduced-motion: no-preference) {
+  .ring.breath { transform-box: fill-box; transform-origin: center; animation: breathe var(--breath, 6s) ease-in-out infinite; }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.012); opacity: 1; }
+  }
+}
