@@ -36,14 +36,13 @@
     var host = card.querySelector('[data-f="sigil"]');
     if (!row || !window.Sigil) return;
     var build = (r && r.build) || "";
-    // The build this card wants; a deferred paint for an earlier one must not land.
+    // A deferred paint for an earlier build must not land.
     card.setAttribute("data-sigil-want", build);
     row.hidden = !build;
     window.Sigil.draw(host, build, { size: 72 });
     var text = "";
     if (build) {
       var p = window.Sigil.parse(build);
-      // A generic build is described once its rule has loaded.
       if (p.pending) {
         window.Sigil.ready(function () {
           if (card.getAttribute("data-sigil-want") === build) paintSigil(card, r);

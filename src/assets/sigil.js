@@ -46,18 +46,15 @@
   var APPLE = /^(\d+)([A-Z])(\d+)([a-z]?)$/;
   var generic = null, waiting = [], loading = false;
 
-  // sigil-generic.js calls use() with the generic rule; a glyph that needs it waits (ready).
-  function use(fn) {
-    generic = fn;
+  // sigil-generic.js calls use() with the rule; a glyph that needs it waits (ready).
+  function flush(rule, name) {
+    generic = rule || generic;
     loading = false;
-    waiting.splice(0).forEach(function (w) { w.run(); });
+    waiting.splice(0).forEach(function (w) { if (w[name]) w[name](); });
   }
-  function failed() {
-    loading = false;
-    waiting.splice(0).forEach(function (w) { if (w.fail) w.fail(); });
-  }
-  // One request per host (key); a host off the page is dropped. fail runs if the rule cannot
-  // load, at once in the preview bundle (data-seed), which loads no files and queues nothing.
+  function use(fn) { flush(fn, "run"); }
+  // One request per host (key); hosts off the page are dropped. fail runs if the rule cannot
+  // load, at once in the preview bundle (data-seed), where nothing queues.
   function ready(run, key, fail) {
     if (generic) return run();
     var doc = global.document;
@@ -66,14 +63,14 @@
       return;
     }
     waiting = waiting.filter(function (w) {
-      return w.key !== key && !(w.key && w.key.nodeType === 1 && !w.key.isConnected);
+      return w.key !== key && !(w.key && !w.key.isConnected);
     });
     waiting.push({ run: run, key: key, fail: fail });
     if (loading) return;
     loading = true;
     var s = doc.createElement("script");
     s.src = "/assets/sigil-generic.js";
-    s.onerror = failed;
+    s.onerror = function () { flush(null, "fail"); };
     doc.head.appendChild(s);
   }
 
