@@ -1417,6 +1417,7 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .sigil { display: block; flex: none; width: 72px; height: 72px; color: var(--fam-a); }
 .sigil-svg { display: block; overflow: visible; }
 .rel { flex-wrap: wrap; }
+.rel .rel-body { flex: 1 1 0; }
 .rel-sig {
   display: flex;
   flex: 0 0 100%;
