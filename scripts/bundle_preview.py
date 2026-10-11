@@ -54,6 +54,10 @@ template (``String.raw``), which sees the ``<\\/`` escape that closing tags get 
 script. A script that is not written for
 one page per load needs a look here.
 
+The pages fetch their data (``/data/*.json``), which a bundle cannot do, so every JSON file
+under ``data/`` is embedded as ``<script type="application/json" data-seed="/data/NAME">``
+(a data block the browser never runs) and a page that finds its seed reads that instead.
+
 Standard library only. The file must stay under 5 MB.
 """
 
@@ -618,6 +622,12 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
         f'<script type="text/plain" data-page-script="{html.escape(path)}">{source}</script>'
         for path, source in page_scripts.items()
     )
+    seeds = "\n".join(
+        f'<script type="application/json" data-seed="/data/{html.escape(path.name)}">'
+        + path.read_text(encoding="utf-8").replace("<", "\\u003c")
+        + "</script>"
+        for path in sorted((dist / "data").glob("*.json"))
+    )
     label = (
         f"<strong>Preview</strong><span>{html.escape(site_name)}</span>"
         f"<span>version <code>{html.escape(version)}</code></span>"
@@ -652,6 +662,7 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
 <div id="app"></div>
 {chr(10).join(templates)}
 {scripts}
+{seeds}
 <script>{router_text}</script>
 </body>
 </html>
