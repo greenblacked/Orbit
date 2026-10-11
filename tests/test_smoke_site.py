@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import http.server
 import os
+import shutil
 import subprocess
 import threading
 
@@ -12,6 +13,7 @@ from helpers import REPO
 
 SCRIPT = REPO / "scripts" / "smoke_site.sh"
 VERSION = "9.9.9"
+BASH = shutil.which("bash")
 
 
 def handler_for(health_status: int, health_body: bytes):
@@ -44,13 +46,14 @@ def run_smoke(health_status: int, health_body: bytes, check_api: bool = True):
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    assert BASH, "bash is required to run smoke_site.sh"
     env = {**os.environ, "SMOKE_SITE_TEST_MODE": "1"}
     env.pop("SMOKE_SITE_CHECK_API", None)
     if check_api:
         env["SMOKE_SITE_CHECK_API"] = "1"
     try:
         return subprocess.run(  # noqa: S603 - our own script, loopback server
-            ["bash", str(SCRIPT), f"http://127.0.0.1:{server.server_port}", VERSION],
+            [BASH, str(SCRIPT), f"http://127.0.0.1:{server.server_port}", VERSION],
             env=env,
             capture_output=True,
             text=True,
