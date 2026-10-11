@@ -180,9 +180,9 @@ def test_a_notch_is_untested_until_a_verdict_exists(page, base_url):
     data = json.loads(json.dumps(SNAPSHOT))
     # Verdicts are for released builds, so these are two public releases inside the window.
     for family, status in (("iOS", "pass"), ("macOS", "fail")):
-        next(
-            r for r in data["releases"] if r["family"] == family and r["version"] == "27.0.1"
-        )["status"] = status
+        next(r for r in data["releases"] if r["family"] == family and r["version"] == "27.0.1")[
+            "status"
+        ] = status
     serve(page, data)
     open_front_page(page, base_url)
     total = page.locator("#orbit-dial .notch").count()
