@@ -1,69 +1,53 @@
 # Release Orbit
 
-The source of <https://orbit.szolotov.com>, a static site served by Cloudflare Workers static assets (Worker `orbit`).
+Every OS release, as it lands, with our own validation results, drawn as an orbit.
 
-## Layout
+[![Release Orbit: a dial of platform rings with one notch per release](src/og.png)](https://orbit.szolotov.com)
 
-| Path | What lives there |
-| --- | --- |
-| `src/` | The site: `index.html` (the latest release per platform, a section with a drawn device for each family, developer highlights), `timeline/`, `compare/`, `about/`, `404.html`, the icons, `_headers`, `og.png` (the share image), `assets/` (`site.css`, `theme.js`, `site.js`, the data scripts `releases.js`, `home.js`, `timeline.js`, `compare.js`, the signature scripts `sigil.js`, `orbit.js`, `cadence.js` and the lazily loaded effects `fx.js` and `aurora.js`) and `data/`: `releases.json`, the releases snapshot, `families.json`, the platform families with their accents and the vendors with their sources, and `features.json`, the developer highlights. Edit these. |
-| `scripts/build_site.py` | Copies `src/` to `dist/site/` and stamps every page and `version.txt` with a version. Standard library only. |
-| `scripts/check_branch_name.py` | The rule behind the `branch-name` CI job: `<type>/<kebab>` for working branches, with a tool-named prefix refused. |
-| `scripts/check_results.py` | Validates `results/`: the schema, and that only publicly released builds are there (a beta or an RC is refused). Run by CI and by the build. |
-| `scripts/check_site.py` | Offline check of a build: every local link, asset and `#fragment` resolves, and no page or image is over the size budget. Run by CI and by `preview.sh`. |
-| `scripts/serve_site.py` | Serves `dist/site` on loopback the way the Worker does: the 404 page, the trailing-slash redirect and the `_headers` file, so the CSP a browser enforces locally is the production one. |
-| `scripts/site_pages.py` | The page list and URL rules the other scripts share. |
-| `scripts/site_refs.py` | The one place that finds and judges what a page refers to (HTML references with `rel` tokens and head or body position; CSS `url()`, `image-set()` and `@import` after decoding escapes), and the one policy for it. `check_site.py` and `bundle_preview.py` use only this, so they cannot disagree about a page; `tests/test_tool_parity.py` holds them to it. |
-| `scripts/screenshots.py` | Full-page PNGs of every page at phone (390x844), tablet (820x1180) and desktop (1440x900) in every theme the CSS defines, into `dist/preview/screenshots/`. Fails on a console error, an uncaught exception, a CSP violation or a request outside the site. |
-| `scripts/bundle_preview.py` | The whole built site as ONE self-contained HTML file, `dist/preview/index.html`, for sharing as a private page: CSS and JS inlined, images as data URIs, every page switchable by hash route, labelled as a preview of a version and commit. Under 5 MB. Its first head element is a Content-Security-Policy `<meta>` that allows only the file's own inline code and `data:` URIs, so nothing can be fetched from outside the file; that policy is the boundary and applies to the preview only (the site keeps its `_headers` policy). The build also fails on a fetching construct it recognises, and on `<meta http-equiv=refresh>`, `ping` and `srcdoc`, which a policy does not stop; that scan is an early warning with a clear message, not the guarantee. |
-| `scripts/preview.sh` | The preview loop in one command: build, check, serve on loopback, smoke-test, screenshots, bundle. Run it before a pull request that changes anything visible. |
-| `scripts/check_release_order.py` | The guard the release deploy runs just before it deploys: fails when a greater `vX.Y.Z` tag exists, so an older release cannot overwrite a newer one. |
-| `scripts/check_stage_tip.py` | The guard the stage Preview runs just before it uploads: a run that is no longer the tip of `main` skips its upload, so an older push cannot overwrite a newer one. |
-| `scripts/smoke_site.sh` | Post-deploy check: the version is live, the front page carries it, the icon is served, a missing path answers 404, and `/api/health` answers JSON with `ok` true (skipped against a loopback server, which does not run the Worker). |
-| `deploy/snapshot_releases.mjs` | Refreshes `src/data/releases.json` from every source in the registry, merging into what the file already holds (it stops and leaves the file alone if that file exists but cannot be parsed). Node only, no dependencies: `node deploy/snapshot_releases.mjs`. |
-| `deploy/` | `wrangler.json` (assets, routes, the Worker script), the pinned, locked Wrangler, and the releases API: `worker.js` (`/api/releases.json` and `/api/health`, the only paths that run the script; everything else is the static assets), `releases.js` (the release contract, date parsing and merge), `families.js` (reads `src/data/families.json`) and `sources/` (one adapter per source and the registry `index.js`). |
-| `docs/` | `sigils.md`, the build sigil rule with its worked examples. |
-| `results/` | One JSON file per publicly released, tested build, and a README that says why only those. |
-| `tests/` | Build tests, and browser tests that drive the built site in Chrome. `parser.test.mjs`, `registry.test.mjs`, `worker.test.mjs`, `snapshot.test.mjs` and `sigil.test.mjs` (Node's own test runner: `node --test 'tests/*.test.mjs'`) cover the parser, the registry and the Worker, with the recorded feed in `tests/fixtures/releases.rss`. |
-| `.github/workflows/` | `ci`, `security`, `deploy` (dry run and the stage Preview from `main`), `release`, `cut-release`, `dependabot-auto-merge`. |
+[![CI](https://github.com/greenblacked/orbit/actions/workflows/ci.yml/badge.svg)](https://github.com/greenblacked/orbit/actions/workflows/ci.yml)
+[![Security](https://github.com/greenblacked/orbit/actions/workflows/security.yml/badge.svg)](https://github.com/greenblacked/orbit/actions/workflows/security.yml)
+[![Release](https://github.com/greenblacked/orbit/actions/workflows/release.yml/badge.svg)](https://github.com/greenblacked/orbit/actions/workflows/release.yml)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-## Working on the site
+Live site: <https://orbit.szolotov.com>. The `main` branch also uploads a Preview of the next release to <https://stage.orbit.szolotov.com>; that host sits behind Cloudflare Access and is for the owner only.
 
-```bash
-python scripts/build_site.py --version local       # writes dist/site/
-python -m http.server 8000 --directory dist/site   # look at it on http://127.0.0.1:8000
-python -m pip install --require-hashes -r .github/requirements/site-browser.txt
-python -m pytest -m "not browser"                  # build tests
-REQUIRE_BROWSER=1 BROWSER_CHANNEL=chrome python -m pytest -m browser   # needs Chrome
+## What it does
+
+- Shows the newest release or beta of each platform family, a timeline of everything released with platform and stage filters, and a side-by-side comparison of two releases.
+- Draws the releases as a dial: one ring per platform, one notch per release placed by date, and a time machine that shows the site as of any day in the window.
+- Gives every build a deterministic glyph, its sigil, so a build is recognisable at a glance ([docs/sigils.md](docs/sigils.md)).
+- Publishes the outcome of testing each publicly released build, and only those.
+- Works without JavaScript (placeholders and a link to the source), and falls back to a bundled snapshot when the live feed is unavailable.
+
+## How it works
+
+A Cloudflare Worker serves a static site and one small API. The API reads the vendor's public release feed, caches it per source, and falls back to a snapshot committed with the site. The browser draws everything from that data with plain JavaScript.
+
+```mermaid
+flowchart LR
+    feed["Apple Developer Releases feed"] --> worker
+    snapshot["Bundled snapshot<br/>data/releases.json"] -.->|fallback| worker
+    subgraph edge["Cloudflare Worker: orbit"]
+        worker["/api/* <br/>per-source cache, back-off,<br/>snapshot fallback"]
+        assets["Static assets<br/>HTML, CSS, JS, data"]
+    end
+    worker --> browser["Browser"]
+    assets --> browser
+    subgraph ci["GitHub Actions"]
+        pr["Pull request:<br/>build, tests, dry-run"]
+        stage["Push to main:<br/>Preview upload"]
+        release["Cut release:<br/>production, smoke, rollback"]
+    end
+    pr --> stage --> release
+    stage -.-> edge
+    release -.-> edge
 ```
 
-The header, footer, toast, Back bar and To top button are repeated on each page. When you change one, change it on every page; the browser tests check the behaviour on the front page and on `/about/`.
+[docs/architecture.md](docs/architecture.md) describes the components, the data flow, what happens on each failure and the limits. The decisions behind the design are in [docs/adr/](docs/adr/0001-no-framework-or-bundler.md).
 
-## The preview loop
+### Data contract
 
-```bash
-python -m pip install --require-hashes -r .github/requirements/site-browser.txt   # once
-bash scripts/preview.sh                                  # Playwright's own Chromium
-bash scripts/preview.sh --executable /opt/pw-browsers/chromium   # or any Chromium binary
-bash scripts/preview.sh --channel chrome                 # or an installed Chrome
-```
-
-It builds `dist/site`, runs `check_site.py`, serves the build on `127.0.0.1` with the real response headers, runs `smoke_site.sh` against it, and writes:
-
-- `dist/preview/screenshots/<page>-<viewport>-<theme>.png`: every page at phone (390x844), tablet (820x1180) and desktop (1440x900) in day, night and the console theme. The run fails on a console error, an uncaught exception or a CSP violation.
-- `dist/preview/index.html`: the whole site as one self-contained file (CSS and JS inlined, images as data URIs, every page reachable by hash route), labelled as a preview of a version and commit, to share as a private page. It uses system fonts, so it looks slightly different from the live site.
-
-`PLAYWRIGHT_BROWSERS_PATH` is honoured. CI runs the same loop in the `site-browser` job and keeps `dist/preview` as the `preview` artifact. `AGENTS.md` says what an agent does with the output.
-
-## The releases API
-
-`deploy/worker.js` answers `/api/releases.json` and `/api/health`. The releases come from **sources**, one adapter per feed in `deploy/sources/` (`{ id, vendor, urls, parse(text) }`, where `urls` is the allowlist the Worker may fetch) listed in the registry `deploy/sources/index.js`. The Worker iterates the registry and treats every source on its own: its own edge-cache entry (fresh for 10 minutes; a copy up to 24 hours old is served at once while a refresh runs in the background; kept for 7 days from the fetch; failed refreshes do not extend that), its own back-off (a failed refresh marks the copy `"stale": true` and the source is not asked again for 5 minutes; with nothing cached, a failed fetch leaves a short marker that holds the same back-off, and simultaneous requests share one fetch) and its own fallback to the bundled `data/releases.json`. A redirect from an allowlisted URL is never followed. One source failing never blanks the others: the response is built from the sources that have data and says `"stale": true` while any is missing or out of date. Only title, build, date and link are stored, never release-notes text. Adding a vendor is one new adapter and one line in the registry.
-
-```text
-GET /api/releases.json            every vendor
-GET /api/releases.json?vendor=apple   one vendor (400 and the list of known vendors otherwise)
-GET /api/health                   { ok, fetchedAt, stale, count, sources: [{ id, vendor, ok, stale, fetchedAt, count }] }
-```
+`/api/releases.json` (optionally `?vendor=apple`) answers one document, and `/api/health` reports each source.
 
 ```json
 {
@@ -90,55 +74,99 @@ GET /api/health                   { ok, fetchedAt, stale, count, sources: [{ id,
 }
 ```
 
-`stage` is `release`, `beta` or `rc`; `beta` is the iteration number of a beta or RC (null otherwise); `source` at the top lists the ids of the sources in the answer. `snapshot` is true when part of the answer is the bundled copy. The Worker identifies itself as `orbit (+https://orbit.szolotov.com)`. The families and their accents live in `src/data/families.json`, which the Worker and the pages both read.
+`stage` is `release`, `beta` or `rc`. `beta` is the iteration number of a beta or release candidate and null otherwise. `stale` is true when a failed refresh left an older copy in service, and `snapshot` is true when part of the answer is the bundled copy. A release may carry an optional `status` (`pass`, `warn` or `fail`); anything else is shown as untested.
 
-`serve_site.py` does not run the Worker, but it answers `/api/releases.json` (with `?vendor=`) from `data/releases.json` and `/api/health` with `{"ok":true}`, so the preview loop loads data the way a live page does. `python -m http.server` has no `/api/*` at all, and a client then falls back to `/data/releases.json`. Refresh the snapshot with `node deploy/snapshot_releases.mjs` and commit the result.
+### Validation results
 
-## The pages and their data
+`results/<vendor>/<family>/<build>.json` holds the outcome of testing one build. The schema is in [results/README.md](results/README.md) and `python scripts/check_results.py` enforces it.
 
-`/` shows the newest release or beta per platform family (cards), then one section per family with a CSS-drawn device and mock screen (the iPhone data check, the Mac release channel switch and the watch complication are interactive), then the developer highlights. `/timeline/` lists everything newest first by month with platform and stage filters, kept in the query string (`?family=iOS&stage=beta`). `/compare/` takes a platform and two of its releases.
+Only results for publicly released builds (stage `release`) are committed or published. A result for a beta or a release candidate is refused by the check, by CI and by the site build, so pre-release findings never reach the repository or the site. The reasoning is in [ADR 0005](docs/adr/0005-public-results-only-for-released-builds.md).
 
-Every page that shows releases loads `releases.js`. It reads `/data/families.json`, fetches `/api/releases.json`, falls back to `/data/releases.json` when that is missing or not JSON, polls every five minutes while the tab is visible, and shows a toast (an `aria-live` region) when ids it has not shown before appear. It keeps only entries whose family belongs to the entry's vendor in `families.json` and whose link is on a host that vendor's source allows, and it writes text with `textContent`. Without JavaScript the pages show placeholders and a link to the source. In the preview bundle, which cannot fetch, every `data/*.json` is embedded and read instead.
+### Build sigils
 
-Every page carries the notice that the site is independent of Apple Inc. and a "Source: Apple Developer Releases" link to <https://developer.apple.com/news/releases/>.
+A sigil is a glyph derived from a build string alone: the lead number sets the rings, the train letter the rotation and spoke lengths, the digits the spokes and the suffix the dots. The same build always draws the same sigil, and a build that is not in the Apple format is hashed into the same parameters. The rule, with worked examples, is in [docs/sigils.md](docs/sigils.md), and `tests/test_sigil_doc.py` keeps the document and `src/assets/sigil.js` in agreement.
 
-`data/features.json` is a list of `{vendor, family, major, title, summary, source}`: a short summary in your own words (no copied sentences) and the vendor page it refers to in `source`. Add an entry only for something you have read on that page now; never write one from memory. An empty list hides the section.
+## Quick start
 
-Each family has accent tokens (`--fam-text`, `--fam-text-card`, `--fam-a`, `--fam-b`, `--fam-on`) on a `.fam-<id>` class in `site.css`, taken from `accent` and `accentText` in `families.json`; `tests/test_palette.py` holds the values to that file and to WCAG AA in all three themes. A new family needs its accent rule there. Scroll reveals run only where `animation-timeline` exists and the visitor allows motion, with a class-only `IntersectionObserver` fallback in `releases.js`.
+```bash
+python scripts/build_site.py --version local     # build dist/site
+python scripts/check_site.py dist/site           # local links, fragments and the size budget
+python -m pytest -m "not browser"                # build, pipeline, header and bundle tests
+node --test 'tests/*.test.mjs'                  # parser, registry and Worker tests (Node 22)
+python scripts/check_results.py                  # the validation results under results/
+bash scripts/preview.sh                          # build, serve, smoke, screenshots, bundle
+ruff check . && ruff format --check .            # when ruff is installed
+```
 
-## The signature: sigils, the dial and the effects
+The browser tests and the screenshots need Playwright and a Chromium:
 
-The front page draws three things from the releases data, all in plain JavaScript with no library.
+```bash
+python -m pip install --require-hashes -r .github/requirements/site-browser.txt
+bash scripts/preview.sh --channel chrome         # or --executable PATH, or PLAYWRIGHT_BROWSERS_PATH
+```
 
-- **Build sigils** (`assets/sigil.js`, rule in [`docs/sigils.md`](docs/sigils.md)). A deterministic glyph per build string: the lead number sets the rings, the train letter the rotation and the spoke lengths, the digits the spokes, the suffix the dots, with a micro form under 40px. A build that is not an Apple build is hashed into the same parameters. The page and the script share their constants (`tests/test_sigil_doc.py`) and `tests/sigil.test.mjs` pins the geometry of the worked examples and of three generic builds.
-- **The dial** (`assets/orbit.js`). One SVG ring per family from `families.json` (the first outermost), one notch per release placed by date over the last 26 weeks (52 when the data spans more), long for a release and shorter and thinner for a beta or release candidate in the same accent, with a hand at now, month ticks and a marker for the validation status (a release may carry `status` as `pass`, `warn` or `fail`; anything else is untested). Hover, focus or a tap opens a card with the sigil, version, build, date and a link. The hand is a slider and the **time machine**: drag it, or use the arrow keys (a day), Page Up and Page Down (a week), Home and End, and the cards, sigils and platform sections below show the releases as of that day, announced in an `aria-live` region. Only the Back to now button returns it. `assets/cadence.js` adds a quiet row of each family's median gap between releases and days since the last, and makes each ring breathe once per median gap scaled down (`--breath`).
-- **Effects** (`assets/fx.js`, `assets/aurora.js`), loaded as modules by `home.js` once the page has loaded and the browser is idle, never from the HTML: the dial's rings separate and tilt as it scrolls away (CSS scroll-driven animation inside `@supports (animation-timeline: view())`, with an `IntersectionObserver` fallback that only adds a class), a pointer-following highlight and a slight refraction on the cards, and a WebGL aurora behind the hero that renders only while visible, stops with the tab, and is skipped under Save-Data, with four or fewer cores, without WebGL or when its first second of frames is slow, leaving the CSS gradient. Every one of them is off under `prefers-reduced-motion: reduce`. Sigils also draw themselves in when they first appear.
+`scripts/preview.sh` builds the site, checks it, serves it on loopback with the production response headers, smoke-tests it and writes screenshots of every page at phone, tablet and desktop in the day, night and console themes. It also writes `dist/preview/index.html`, the whole site as one self-contained file for sharing as a private page. It fails on a console error, a CSP violation, a broken link or a page over budget.
 
-The scripts a page loads for first paint stay under 60,000 bytes (`tests/test_site_data.py`); the two effect modules are counted apart. `tests/test_orbit_browser.py` drives the dial, the time machine, reduced motion, the no-WebGL fallback, a clean CSP and 320px width.
+To refresh the bundled snapshot, run `node deploy/snapshot_releases.mjs` and commit the result.
 
-## Validation results
+## Engineering standards
 
-`results/<vendor>/<family>/<build>.json` holds the outcome of testing one build. Only results for publicly released builds (stage `release`) are committed: pre-release software results stay private until the build is publicly released. `python scripts/check_results.py` enforces it, CI runs it in the build job and the build copies the files to `data/results/` in the site. `results/README.md` has the schema.
+- **Performance budgets.** The scripts a page loads for first paint stay under 60,000 bytes, and the two lazily loaded effect modules are budgeted apart (`tests/test_site_data.py`). A page with everything it loads stays under 500,000 bytes and any image under 200,000 bytes (`scripts/check_site.py`). Effects load on idle, never from the HTML.
+- **Accessibility.** One `h1` per page, landmarks, a working skip link, `alt` on every image, a name on every control, visible focus, controls of at least 44px and labels that contain their visible text. `tests/test_accessibility.py` audits every built page in a browser. Colour contrast of every family accent is held to WCAG AA in all three themes by `tests/test_palette.py`.
+- **Security model.** A strict Content-Security-Policy with no inline script or style and no `unsafe-eval`, scripts and styles only from the site's own origin, `frame-ancestors 'none'`, `nosniff`, a strict referrer policy and a permissions policy that turns the camera, microphone and geolocation off (`src/_headers`). The Worker may fetch only the URLs on each source's allowlist. The repository holds no secrets and a secret scan runs on every change. Every workflow sets minimal top-level permissions, every job a timeout, and every third-party action is pinned to a full commit SHA. Cloudflare credentials live in environment-scoped secrets: production's is reachable only from release tags. See [SECURITY.md](SECURITY.md).
+- **Tests.** Python tests cover the build, the headers, the pipeline, the preview bundle and the browser behaviour; Node's own test runner covers the feed parser, the source registry, the Worker and the sigils. The site has no runtime dependency, and `scripts/` use the Python standard library only.
 
-## The design
+## Browser support and motion fallbacks
 
-`src/assets/site.css` holds the whole design. The day, night and console (reactor) themes are three sets of variables on `:root`; the theme follows the visitor's clock (night 20:00 to 06:00) until they choose, and the choice is stored in `localStorage`. Every control is at least 44px, every transition sits inside `prefers-reduced-motion: no-preference`, focus is always visible, and a heading reached by a link lands below the header and the bar. Site-specific rules go in the "Template additions" block at the end of the file, so a later change to the shared design can be diffed against the rest. `src/assets/site.js` runs the theme control, the header that hides while reading down, Back, the bar and To top; `theme.js` runs in the head so the page never flashes the wrong theme.
+The site targets current evergreen browsers (Chrome, Edge, Firefox and Safari on desktop, iOS and Android) and degrades by feature detection, not by version.
 
-## Accessibility
+- Without JavaScript, pages show placeholders and a link to the source.
+- Scroll-driven effects run only where `animation-timeline` exists; elsewhere an `IntersectionObserver` only adds a class.
+- Every transition and animation sits inside `prefers-reduced-motion: no-preference`, so reduced motion turns them all off, including the effects modules and the aurora.
+- The WebGL aurora behind the hero is skipped under Save-Data, on four or fewer cores, without WebGL, or when its first second of frames is slow, and the CSS gradient stays.
+- Time-machine controls work by pointer, touch and keyboard (arrow keys, Page Up and Page Down, Home and End).
 
-The home link in the header is named by its visible text (the site title), so the accessible name contains what a sighted user reads (WCAG 2.5.3, label in name). Focus rings are always visible, and every transition and animation sits inside `prefers-reduced-motion: no-preference`. `tests/test_accessibility.py` keeps that true without any extra dependency: a source check for label-in-name, reduced motion and focus styles, and a browser audit of every built page for landmarks, exactly one `h1`, heading order, image `alt`, a name on every link and button, unique ids, a skip link that lands, a focus ring on everything the keyboard reaches, and no motion under reduced motion. It does not measure colour contrast.
+## Release and rollback
 
-## Security headers, SEO and budgets
+Work lands on `dev` through pull requests, and `dev` is promoted to `main` with one pull request and a merge commit. A push to `main` uploads a Preview. A release is cut from `main` by running the **Cut release** workflow with a version such as `1.0.0`: it tags `v1.0.0`, and the **Release** workflow deploys production, smoke-tests it on `workers.dev` and rolls back automatically if a check fails.
 
-- `src/_headers` sets, on every path: a Content-Security-Policy with no `'unsafe-inline'` or `'unsafe-eval'` (scripts and styles only from this origin, Google Fonts the single outside origin, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'none'`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a `Permissions-Policy` that turns the camera, microphone and geolocation off. Because the policy forbids inline code, a page that adds a `<style>`, a `style=""` attribute or an inline script is blocked until the policy is widened on purpose; `tests/test_headers.py` fails first, and the screenshot run fails on a CSP violation.
-- HSTS is deliberately not in `_headers`. These headers reach every host the Worker answers on, `workers.dev` and the Preview hosts included, and a long `max-age` with `includeSubDomains` or `preload` cannot be taken back. Turn it on in the Cloudflare zone (SSL/TLS, Edge Certificates, HTTP Strict Transport Security) once every subdomain of the domain serves HTTPS, starting with a short `max-age`.
-- `build_site.py` writes `robots.txt` and `sitemap.xml` from the pages in `src/` and the production domain, so a new page appears in the sitemap without editing anything. A Preview build (`--noindex`) blocks crawlers and has no sitemap. Each page head carries a description, a canonical link and Open Graph and Twitter Card meta (`og:title`, `og:description`, `og:url`, `og:image`, `twitter:card` and `twitter:image`; the share image is `src/og.png`, 1200x630, under the image budget); copy the block when you add a page and change the three values. A page's path may use only `a-z`, `0-9`, `.`, `_` and `-` in each directory and file name, starting with a letter or digit; the build refuses any other and names the file. `404.html` is `noindex`.
-- `scripts/check_site.py` fails the build on a broken local link, asset or `#fragment`, on a local reference whose path climbs above the site root (`../../x` from `/about/`; a browser would clamp it at the root, but the preview bundler refuses it, so the check does too), on a page whose HTML plus the stylesheets, scripts and images it loads, and every local file those stylesheets pull in through `url()` (background images, fonts), is over 500,000 bytes, on any `@import` (link stylesheets directly; `@import` is not supported, here or in the preview bundle), and on any image over 200,000 bytes (uncompressed; `--page-budget` and `--image-budget` change them). The defaults are a tripwire for a commit that adds an unoptimised photograph, not a target.
+To roll back by hand, from `deploy/` after `npm ci --ignore-scripts`, with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` set:
 
-## Branches and releases
+```bash
+./node_modules/.bin/wrangler deployments list --config wrangler.json
+./node_modules/.bin/wrangler rollback <version-id> --config wrangler.json --yes
+```
 
-Working branches are named `<type>/<kebab>`, with a type of `feat`, `fix`, `chore`, `docs`, `ci` or `test` (`feat/contact-form`, `chore/bump-node-22.4`). The `branch-name` job in `ci.yml` fails a pull request from any other name, and refuses a tool-named prefix (`claude/`, `codex/`, `copilot/`, `ai/`, `bot/`). `main`, `dev` and `dependabot/*` are exempt, so the promotion pull request passes. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The preferred rollback is a new patch release with the change reverted. The one-time Cloudflare and GitHub setup is in [SETUP.md](SETUP.md); the reasoning is in [ADR 0004](docs/adr/0004-dev-main-flow-with-tagged-releases.md).
 
-Work lands on `dev` through pull requests, and `dev` is promoted to `main` with one pull request and a merge commit. There is no `stage` branch: a push to `main` uploads a Preview named `stage` at <https://stage.orbit.szolotov.com> (the `staging` environment admits `main` only), so the Preview shows what the next release will ship. A release is cut from `main`: run the __Cut release__ workflow with a version such as `1.0.0`. It tags `v1.0.0`, and the __Release__ workflow deploys production at <https://orbit.szolotov.com>, checks it on `workers.dev`, and rolls back if the checks fail.
+## Project layout
 
-The one-time setup (GitHub environments, Cloudflare secrets, required checks, custom domain) and the rollback steps are in [SETUP.md](SETUP.md).
+```text
+.
+├── src/                   the site: pages, assets/, data/, _headers, og.png
+│   ├── assets/            site.css, theme.js, site.js, releases.js, home.js,
+│   │                      timeline.js, compare.js, sigil.js, orbit.js,
+│   │                      cadence.js, fx.js, aurora.js
+│   └── data/              releases.json (snapshot), families.json, features.json
+├── deploy/                the Worker (worker.js, releases.js, families.js,
+│   └── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs
+├── scripts/               build, checks, preview and screenshots (standard library only)
+├── results/               one JSON file per publicly released, tested build
+├── tests/                 Python and Node tests, fixtures
+├── docs/                  sigils.md, architecture.md, adr/
+└── .github/               workflows, issue and pull request templates, CODEOWNERS
+```
+
+Edit `src/` and `results/`. The header, footer, toast, Back bar and To top button are repeated on each page; change one on every page. A new page is a copy of an existing `src/<name>/index.html` with its head values changed, and the build adds it to the sitemap.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the flow, branch names and commit style, and [AGENTS.md](AGENTS.md) for the rules every change follows, including the preview loop. Branches are named `<type>/<kebab>` (for example `feat/contact-form`). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md), and report a vulnerability privately as [SECURITY.md](SECURITY.md) describes.
+
+## Licence
+
+[MIT](LICENSE), copyright (c) 2026 Serhii Zolotov. The Contributor Covenant text in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) is licensed under CC BY 4.0.
+
+## Notice
+
+Release Orbit is an independent project. It is not affiliated with, endorsed by or sponsored by Apple Inc. or any other platform vendor. Apple, iOS, iPadOS, macOS, watchOS, tvOS, visionOS and other product names are trademarks of their respective owners and are used only to identify the software whose releases are listed. Release data comes from the vendors' public release pages, linked from every page of the site, and the descriptions are written in our own words.
