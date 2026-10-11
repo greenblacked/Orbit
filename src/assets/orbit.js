@@ -166,9 +166,16 @@
     el("circle", { "class": "hk", cx: 0, cy: -(OUTER + 24), r: 6 }, ui.hand);
     el("circle", { "class": "hk", cx: 0, cy: -110, r: 4 }, ui.hand);
 
+    // The window start moved on: the hand cannot stay before it. Say so, so the cards, the
+    // sections and the cadence row below show the same day as the dial.
+    var before = asOf;
     if (asOf !== null) asOf = Math.max(asOf, snap(start));
     paintKey(fams, counts);
     paintView();
+    if (asOf !== before) {
+      announce();
+      document.dispatchEvent(new CustomEvent("ro:asof", { detail: { t: asOf } }));
+    }
     document.dispatchEvent(new CustomEvent("ro:orbit"));
   }
 

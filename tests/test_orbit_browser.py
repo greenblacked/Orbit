@@ -302,6 +302,27 @@ def test_keyboard_scrub_changes_the_grid_and_announces_then_back_to_now_restores
     assert page.get_attribute(HAND, "aria-valuetext") == "Now, Oct 12, 2026"
 
 
+def test_the_page_follows_the_hand_when_the_window_moves_past_it(page, base_url):
+    open_front_page(page, base_url)
+    page.focus(HAND)
+    page.keyboard.press("Home")
+    assert page.get_attribute(HAND, "aria-valuetext") == "As of Apr 13, 2026"
+    # Three days later the window starts later than the day the hand was left on.
+    page.evaluate(
+        """() => {
+          window.__days = [];
+          document.addEventListener('ro:asof', (e) => window.__days.push(e.detail.t));
+          document.activeElement.blur();
+          const t = Date.parse('2026-10-15T12:00:00Z');
+          Date.now = () => t;
+          RO.refresh();
+        }"""
+    )
+    page.wait_for_function("() => window.__days.length > 0")
+    assert page.get_attribute(HAND, "aria-valuetext") == "As of Apr 16, 2026"
+    assert "Apr 16, 2026" in text(page, "#latest-asof")
+
+
 def test_the_hand_moves_by_a_day_a_week_and_to_the_ends(page, base_url):
     open_front_page(page, base_url)
     page.focus(HAND)
