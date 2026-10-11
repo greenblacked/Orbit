@@ -1427,3 +1427,55 @@ html[data-theme="reactor"] select { border-radius: 0; }
 }
 .rel-sigtxt { margin: 0; }
 .r-sig { display: block; flex: none; width: 28px; height: 28px; color: var(--fam-text-card); }
+
+/* The dial (orbit.js). A stack of square SVG layers: the base (month ticks, centre label),
+   one per ring and the hand. Only the notches and the hand take the pointer. */
+.hero-wrap .orbit { position: relative; z-index: 1; padding-top: 1rem; padding-bottom: 3rem; }
+.orbit-body { display: grid; gap: 1.5rem; }
+@media (min-width: 64rem) {
+  .orbit-body { grid-template-columns: minmax(0, 34rem) minmax(0, 1fr); align-items: center; gap: 4rem; }
+}
+.orbit-stage { position: relative; width: min(100%, 34rem); aspect-ratio: 1; margin: 0 auto; }
+@media (min-width: 64rem) { .orbit-stage { margin: 0; } }
+.dial3d { position: absolute; inset: 0; }
+.layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.lane { color: var(--fam-a); }
+.ring { fill: none; stroke: var(--muted); stroke-opacity: 0.4; stroke-width: 1; }
+.tick { stroke: var(--muted); stroke-width: 1.2; }
+.mlabel { fill: var(--muted); font: 11px var(--font-mono); letter-spacing: 0.06em; text-anchor: middle; dominant-baseline: central; }
+.c-date { fill: var(--ink); font: 500 22px var(--font-mono); text-anchor: middle; }
+.c-note { fill: var(--muted); font: 11px var(--font-mono); letter-spacing: 0.14em; text-anchor: middle; }
+.notch { cursor: pointer; }
+.notch .hit { pointer-events: stroke; stroke: transparent; fill: none; }
+.notch .nl { stroke: currentColor; stroke-linecap: butt; }
+.notch:focus-visible .nl, .notch:hover .nl { stroke-width: 7; }
+.mk { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.mk-pass, .mk-warn { fill: currentColor; }
+.mk-fail { stroke-width: 2; }
+.hl { stroke: var(--ink); stroke-width: 2; }
+.hk { fill: var(--ink); }
+.orbit-card {
+  position: absolute;
+  left: var(--cx, 0);
+  top: var(--cy, 0);
+  z-index: 3;
+  display: flex;
+  gap: 0.75rem;
+  width: min(17rem, 100%);
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow: 0 12px 28px -12px var(--glass-shadow);
+}
+.orbit-card .sigil { width: 64px; height: 64px; }
+.oc-text { min-width: 0; }
+.oc-title { font-weight: 500; line-height: 1.25; overflow-wrap: anywhere; }
+.oc-build { color: var(--muted); font: 0.8125rem var(--font-mono); overflow-wrap: anywhere; }
+.orbit-side { display: grid; gap: 1.25rem; align-content: center; }
+.orbit-asof { font-size: 1.0625rem; font-weight: 500; line-height: 1.35; }
+.orbit-key { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; max-width: 22rem; }
+.orbit-key li { display: flex; align-items: center; gap: 0.5rem; min-height: 1.75rem; font-size: 0.9375rem; }
+.orbit-key .sw { flex: none; width: 1.25rem; height: 0.25rem; background: var(--fam-a); }
+.orbit-key .k-n { margin-left: auto; color: var(--muted); font: 0.8125rem var(--font-mono); }
+html[data-theme="reactor"] .orbit-card { border-radius: 0; }
