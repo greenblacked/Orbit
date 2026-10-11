@@ -30,9 +30,35 @@
     else setLive("live", "Live: fetched at " + when);
   }
 
+  // The sigil of a build and a line that reads two of its parameters.
+  function paintSigil(card, r) {
+    var row = card.querySelector(".rel-sig");
+    var host = card.querySelector('[data-f="sigil"]');
+    if (!row || !window.Sigil) return;
+    var build = r && r.build;
+    row.hidden = !build;
+    window.Sigil.draw(host, build || "", { size: 72 });
+    var text = "";
+    if (build) {
+      var p = window.Sigil.parse(build);
+      text = "Build sigil: " + p.rings + (p.rings === 1 ? " ring" : " rings") +
+        (p.dots ? ", " + p.dots + (p.dots === 1 ? " dot" : " dots") : "");
+    }
+    card.querySelector('[data-f="sigtxt"]').textContent = text;
+  }
+
   function paintCard(card, r) {
     var set = function (name, text) { card.querySelector('[data-f="' + name + '"]').textContent = text; };
-    if (!r) { set("ver", "No release yet"); return; }
+    paintSigil(card, r);
+    if (!r) {
+      set("ver", "No release yet");
+      ["stage", "build", "when"].forEach(function (name) { set(name, ""); });
+      set("major", "—");
+      card.removeAttribute("data-stage");
+      card.querySelector('[data-f="badge"]').hidden = true;
+      card.querySelector('[data-f="link"]').hidden = true;
+      return;
+    }
     set("ver", r.family + " " + r.version);
     set("stage", RO.stageLabel(r));
     set("build", r.build ? "Build " + r.build : "");
@@ -67,6 +93,11 @@
     shown.forEach(function (x) {
       var item = RO.h("li");
       var a = RO.h("a", "", null, { href: x.url });
+      if (x.build && window.Sigil) {
+        var mark = RO.h("span", "r-sig");
+        window.Sigil.draw(mark, x.build, { size: 28, birth: false });
+        a.appendChild(mark);
+      }
       a.appendChild(RO.h("span", "r-ver", x.version));
       a.appendChild(RO.h("span", "r-stage", RO.stageLabel(x)));
       if (x.build) a.appendChild(RO.h("span", "r-build", x.build));

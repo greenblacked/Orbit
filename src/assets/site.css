@@ -1411,3 +1411,19 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .cmp-result .month-h { margin-top: 2rem; }
 .cmp-result .notice { margin-bottom: 1rem; }
 
+
+/* Build sigils (sigil.js, docs/sigils.md): drawn in the family colour and never rotated, since
+   12 o'clock is north. The card shows the full form, the recent lists the micro form. */
+.sigil { display: block; flex: none; width: 72px; height: 72px; color: var(--fam-a); }
+.sigil-svg { display: block; overflow: visible; }
+.rel { flex-wrap: wrap; }
+.rel-sig {
+  display: flex;
+  flex: 0 0 100%;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+.rel-sigtxt { margin: 0; }
+.r-sig { display: block; flex: none; width: 28px; height: 28px; color: var(--fam-text-card); }
