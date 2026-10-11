@@ -18,7 +18,7 @@ The source of <https://orbit.szolotov.com>, a static site served by Cloudflare W
 | `scripts/preview.sh` | The preview loop in one command: build, check, serve on loopback, smoke-test, screenshots, bundle. Run it before a pull request that changes anything visible. |
 | `scripts/check_release_order.py` | The guard the release deploy runs just before it deploys: fails when a greater `vX.Y.Z` tag exists, so an older release cannot overwrite a newer one. |
 | `scripts/check_stage_tip.py` | The guard the stage Preview runs just before it uploads: a run that is no longer the tip of `main` skips its upload, so an older push cannot overwrite a newer one. |
-| `scripts/smoke_site.sh` | Post-deploy check: the version is live, the front page carries it, the icon is served, a missing path answers 404. |
+| `scripts/smoke_site.sh` | Post-deploy check: the version is live, the front page carries it, the icon is served, a missing path answers 404, and `/api/health` answers JSON with `ok` true (skipped against a loopback server, which does not run the Worker). |
 | `deploy/` | `wrangler.json` (assets, routes) and the pinned, locked Wrangler. |
 | `tests/` | Build tests, and browser tests that drive the built site in Chrome. |
 | `.github/workflows/` | `ci`, `security`, `deploy` (dry run and the stage Preview from `main`), `release`, `cut-release`, `dependabot-auto-merge`. |
