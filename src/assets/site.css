@@ -1300,3 +1300,14 @@ button.m-comp:active { filter: brightness(1.2); }
   .m-orb { display: none; }
 }
 
+/* Developer highlights; the section is hidden until the data has entries. */
+.features { padding-top: 1rem; padding-bottom: 5rem; }
+.feat-group { margin-top: 2rem; }
+.feat-fam { color: var(--fam-text); font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
+.feat-list { display: grid; gap: 1rem; margin-top: 1rem; }
+@media (min-width: 40rem) { .feat-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 64rem) { .feat-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.feat { padding: 1.25rem; border: 1px solid var(--line); border-left: 0.25rem solid var(--fam-a); border-radius: 1.25rem; background: var(--card); }
+.feat-title { font-size: 1.0625rem; font-weight: 500; line-height: 1.3; }
+.feat-sum { margin-top: 0.5rem; color: var(--muted); font-size: 0.9375rem; }
+.prose-lab a { overflow-wrap: anywhere; }

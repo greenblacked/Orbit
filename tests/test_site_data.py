@@ -151,3 +151,15 @@ def test_the_front_page_has_one_section_per_family_in_the_order_of_the_config():
 def test_the_mock_buttons_do_not_animate_their_colour():
     rule = re.search(r"\.m-btn, \.m-segb, \.m-comp \{ transition: ([^;]+);", CSS)
     assert rule and "color" not in rule.group(1)
+
+
+def test_every_feature_is_a_short_summary_that_names_a_developer_apple_com_page():
+    items = json.loads((SRC / "data" / "features.json").read_text(encoding="utf-8"))
+    assert isinstance(items, list) and items
+    for item in items:
+        assert set(item) == {"vendor", "family", "major", "title", "summary", "source"}
+        assert item["vendor"] == "apple" and item["family"] in APPLE
+        assert isinstance(item["major"], int)
+        assert 0 < len(item["title"]) <= 60, item
+        assert 0 < len(item["summary"]) <= 100, item
+        assert re.fullmatch(r"https://developer\.apple\.com/[a-z0-9/._-]*", item["source"]), item

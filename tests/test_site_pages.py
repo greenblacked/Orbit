@@ -350,3 +350,19 @@ def test_without_scroll_driven_animation_a_script_only_adds_classes(browser, bas
         assert page.evaluate(opacity) == "1"
     finally:
         context.close()
+
+
+# --- developer highlights ---------------------------------------------------------------
+
+
+def test_the_highlights_section_shows_with_sources_and_hides_when_empty(page, base_url):
+    page.goto(base_url + "/")
+    page.wait_for_selector("#features:not([hidden])")
+    links = page.locator("#features a").evaluate_all("els => els.map(a => a.href)")
+    assert links and all(href.startswith("https://developer.apple.com/") for href in links)
+    empty = page.context.new_page()
+    serve_json(empty, "**/data/features.json", "[]")
+    empty.goto(base_url + "/")
+    cards_ready(empty)
+    empty.wait_for_timeout(300)
+    assert empty.locator("#features").is_hidden()

@@ -1,4 +1,5 @@
-/* Front page: the live indicator and, per platform family, its latest release and section. */
+/* Front page: the live indicator and, per platform family, its latest release and section,
+   and the developer highlights. */
 (function () {
   "use strict";
   var RO = window.RO;
@@ -158,6 +159,43 @@
     });
   }
   wire();
+
+  // Developer highlights from data/features.json: a short summary of each, linked to the
+  // vendor's own page. The section stays hidden when the file is empty or unreadable.
+  function paintFeatures(items) {
+    var box = document.getElementById("features");
+    var host = document.getElementById("features-list");
+    var ids = RO.familyIds();
+    var good = (Array.isArray(items) ? items : []).filter(function (f) {
+      return f && ids.indexOf(f.family) >= 0 && typeof f.title === "string" &&
+        typeof f.summary === "string" && typeof f.vendor === "string" &&
+        typeof f.source === "string" && RO.allowed(f.vendor, f.source);
+    });
+    if (!box || !good.length) return;
+    host.textContent = "";
+    ids.forEach(function (family) {
+      var mine = good.filter(function (f) { return f.family === family; });
+      if (!mine.length) return;
+      var group = RO.h("div", "feat-group fam-" + family.toLowerCase());
+      group.appendChild(RO.h("h3", "feat-fam", family + " " + mine[0].major));
+      var ul = RO.h("ul", "feat-list");
+      mine.forEach(function (f) {
+        var li = RO.h("li", "feat");
+        li.appendChild(RO.h("p", "feat-title", f.title));
+        li.appendChild(RO.h("p", "feat-sum", f.summary));
+        var a = RO.h("a", "rel-apple", "Read more", { href: f.source, target: "_blank", rel: "noopener noreferrer" });
+        a.appendChild(RO.h("span", "sr-only", " about " + f.title + " (opens in a new tab)"));
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+      group.appendChild(ul);
+      host.appendChild(group);
+    });
+    box.hidden = false;
+  }
+  Promise.all([RO.loadJson("/data/features.json"), RO.ready()]).then(function (all) {
+    paintFeatures(all[0]);
+  }, function () {});
 
   RO.on(function (data, fresh, failed) {
     paintLive(data, failed);
