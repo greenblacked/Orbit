@@ -235,6 +235,14 @@ describe('the Worker: /api/releases.json', () => {
     assert.equal(body.snapshot, true);
   });
 
+  it('never follows a redirect away from the allowlisted URL', async () => {
+    stubUpstream(() => new Response(null, { status: 302, headers: { location: 'https://evil.example/' } }));
+    const body = await (await call('/api/releases.json', fakeEnv())).json();
+    assert.equal(state.upstream.calls[0].init.redirect, 'manual');
+    assert.equal(body.snapshot, true, 'a 3xx is a failure, not a feed');
+    assert.equal(state.upstream.calls.length, 1, 'and nothing else was fetched');
+  });
+
   it('answers 503 only when nothing at all is available', async () => {
     stubUpstream(() => new Response('', { status: 500 }));
     const res = await call('/api/releases.json', fakeEnv(null));

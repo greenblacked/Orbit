@@ -147,6 +147,8 @@ async function fetchLive(source, env, request) {
   const found = [];
   for (const url of source.urls) {
     const res = await fetch(url, {
+      // The allowlist covers the URL itself: a redirect would leave it, so none is followed.
+      redirect: 'manual',
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         'user-agent': USER_AGENT,
