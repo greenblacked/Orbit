@@ -587,6 +587,67 @@ def test_compare_does_not_start_with_two_unrelated_lines(page, base_url):
     assert page.input_value("#c-to") == ios[0]["id"]
 
 
+FIELD_BOXES = (
+    "[...document.querySelectorAll('.cmp-form .field')]"
+    ".map(f => { const b = f.getBoundingClientRect(); return [b.left, b.top, b.width]; })"
+)
+LONGEST_LABEL = """() => [...document.querySelectorAll('.cmp-form select')].map(select => {
+  const style = getComputedStyle(select);
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = style.font;
+  const widest = Math.max(...[...select.options].map(o => ctx.measureText(o.text).width));
+  const room = select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  return [widest, room];
+})"""
+
+
+@pytest.mark.parametrize(("width", "height"), [(390, 844), (820, 1180), (899, 900)])
+def test_compare_selects_stack_and_show_their_longest_label_below_900px(
+    page, base_url, width, height
+):
+    page.set_viewport_size({"width": width, "height": height})
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    boxes = page.evaluate(FIELD_BOXES)
+    assert len(boxes) == 3
+    assert len({round(left) for left, _, _ in boxes}) == 1, "the fields share one left edge"
+    tops = [round(top) for _, top, _ in boxes]
+    assert tops == sorted(set(tops)), "the fields sit one below the other"
+    assert len({round(w) for _, _, w in boxes}) == 1
+    for widest, room in page.evaluate(LONGEST_LABEL):
+        assert widest <= room, "the longest option label is cut off"
+
+
+def test_compare_selects_sit_in_three_columns_from_900px(page, base_url):
+    page.set_viewport_size({"width": 1024, "height": 800})
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    boxes = page.evaluate(FIELD_BOXES)
+    assert len({round(top) for _, top, _ in boxes}) == 1, "the fields share one row"
+    lefts = [round(left) for left, _, _ in boxes]
+    assert lefts == sorted(set(lefts))
+
+
+def test_compare_states_where_the_history_starts_only_for_the_oldest_pick(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    page.select_option("#c-to", ios[0]["id"])
+    page.select_option("#c-from", ios[-1]["id"])
+    oldest_day = page.locator("#c-from option:checked").inner_text().split(" · ")[-1]
+    assert page.locator("p.data-range").count() == 1
+    assert page.inner_text("p.data-range") == f"History in this data starts {oldest_day}."
+    # Picked the other way round, the oldest entry is still the oldest end of the pair.
+    page.select_option("#c-from", ios[0]["id"])
+    page.select_option("#c-to", ios[-1]["id"])
+    assert page.inner_text("p.data-range") == f"History in this data starts {oldest_day}."
+    # A pair that stops short of the oldest entry says nothing about where the data starts.
+    page.select_option("#c-to", ios[0]["id"])
+    page.select_option("#c-from", ios[-2]["id"])
+    assert page.locator(".stat").count() == 3
+    assert page.locator("p.data-range").count() == 0
+
+
 def test_a_poll_with_nothing_new_leaves_the_compare_page_alone(page, base_url):
     page.goto(base_url + "/compare/")
     page.wait_for_selector(".cmp-cards")
