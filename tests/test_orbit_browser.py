@@ -83,9 +83,7 @@ def when(text: str) -> datetime:
 def in_window(weeks: int, data=SNAPSHOT) -> int:
     start = NOW - timedelta(weeks=weeks)
     return sum(
-        1
-        for r in data["releases"]
-        if r["family"] in FAMILIES and start <= when(r["date"]) <= NOW
+        1 for r in data["releases"] if r["family"] in FAMILIES and start <= when(r["date"]) <= NOW
     )
 
 
@@ -109,9 +107,7 @@ def show_stage(page):
 
 
 def pending(page):
-    page.wait_for_function(
-        "() => /as of/i.test(document.getElementById('orbit-live').textContent)"
-    )
+    page.wait_for_function("() => /as of/i.test(document.getElementById('orbit-live').textContent)")
 
 
 def text(page, selector):
@@ -433,9 +429,7 @@ def test_a_notch_under_the_hand_can_still_be_hovered(page, base_url):
     target = release_of("macOS", "27.0.1")
     x, y = centre_of(page, target["id"])
     # The hand points at the day the release landed; it must not sit on top of the notch.
-    assert page.evaluate(
-        "([x, y]) => !!document.elementFromPoint(x, y).closest('.notch')", [x, y]
-    )
+    assert page.evaluate("([x, y]) => !!document.elementFromPoint(x, y).closest('.notch')", [x, y])
     page.mouse.move(x, y)
     page.wait_for_selector("#orbit-card:not([hidden])")
     assert page.get_attribute("#orbit-card", "data-id") == target["id"]
@@ -461,7 +455,7 @@ def test_releases_stamped_at_one_moment_each_have_their_own_notch_to_open(page, 
         for i, a in enumerate(centres):
             for b in centres[i + 1 :]:
                 assert abs(a[0] - b[0]) + abs(a[1] - b[1]) > 4, "the notches overlap"
-        for release, (x, y) in zip(group, centres):
+        for release, (x, y) in zip(group, centres, strict=True):
             page.mouse.move(1, 1)
             page.mouse.move(x, y)
             page.wait_for_function(
