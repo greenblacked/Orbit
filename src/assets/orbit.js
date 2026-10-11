@@ -55,6 +55,13 @@
       "class": "layer " + cls, focusable: "false"
     }, dial);
   }
+  // The knob's grab area is at least 44 CSS px across at any stage width: its radius in
+  // viewBox units is 22 CSS px times the units per pixel.
+  function sizeKnob() {
+    if (!ui.knob) return;
+    var w = stage.clientWidth;
+    ui.knob.setAttribute("r", String(r2(w > 0 ? Math.max(22, 22 * 2 * HALF / w) : 22)));
+  }
   function label(r) {
     return r.title.replace(/ \(.*\)$/, "") + (r.build ? ", build " + r.build : "") + ", " +
       RO.day(r.t) + ", validation " + VERDICT[r.status];
@@ -141,8 +148,11 @@
       "aria-label": "Time machine hand", "aria-valuemin": 0, "aria-valuemax": weeks * 7,
       "aria-valuenow": weeks * 7, "aria-describedby": "orbit-help"
     }, top);
-    el("line", { "class": "hit", x1: 0, y1: -90, x2: 0, y2: -(OUTER + 24), "stroke-width": 20 }, ui.hand);
-    el("circle", { "class": "hit", cx: 0, cy: -(OUTER + 24), r: 22 }, ui.hand);
+    // Only the knob outside the rings takes the pointer: a line hit area over the rings would
+    // sit on top of every notch the hand points at. Its radius is sized in CSS pixels.
+    ui.knob = el("circle", { "class": "hit", cx: 0, cy: -(OUTER + 24), r: 22 }, ui.hand);
+    ui.hand.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
+    sizeKnob();
     el("line", { "class": "hl", x1: 0, y1: -110, x2: 0, y2: -(OUTER + 20) }, ui.hand);
     el("circle", { "class": "hk", cx: 0, cy: -(OUTER + 24), r: 6 }, ui.hand);
     el("circle", { "class": "hk", cx: 0, cy: -110, r: 4 }, ui.hand);
@@ -215,7 +225,7 @@
     e.preventDefault();
     setAsOf(to);
   }
-  var drag = null, moved = false;
+  var drag = null, moved = false, pressed = false;
   function pointerFraction(e) {
     var r = stage.getBoundingClientRect();
     var deg = Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * 180 / Math.PI;
@@ -286,6 +296,17 @@
   function notchOf(target) {
     return target && target.closest ? target.closest(".notch") : null;
   }
+  function inHand(target) {
+    return !!(target && target.closest && target.closest(".hand"));
+  }
+  // Tapping or hovering the knob opens the notch beneath it, if there is one: the knob is bigger
+  // than a notch, and the notches the hand points at are the ones worth opening.
+  function toggleNearest(e) {
+    var g = nearest(e.clientX, e.clientY, 22);
+    if (!g) return;
+    if (pinned === g.rel.id) hide(true);
+    else show(g, true);
+  }
   // The notch nearest to a point, within a tap's reach: the dial is small on a phone.
   function nearest(x, y, reach) {
     var best = null, bestD = reach;
@@ -307,7 +328,7 @@
     else if (card.contains(e.target)) window.clearTimeout(hideTimer);
   });
   stage.addEventListener("pointerout", function (e) {
-    if (notchOf(e.target) || card.contains(e.target)) later();
+    if (notchOf(e.target) || card.contains(e.target) || inHand(e.target)) later();
   });
   stage.addEventListener("focusin", function (e) {
     var g = notchOf(e.target);
@@ -319,7 +340,8 @@
     later();
   });
   stage.addEventListener("click", function (e) {
-    if (moved || card.contains(e.target) || (e.target.closest && e.target.closest(".hand"))) return;
+    // A press that began on the hand is settled on pointer up (see drop).
+    if (moved || pressed || card.contains(e.target) || inHand(e.target)) return;
     var g = notchOf(e.target) || nearest(e.clientX, e.clientY, 22);
     if (!g) { hide(true); return; }
     if (pinned === g.rel.id) hide(true);
@@ -328,16 +350,25 @@
   // Dragging the hand, with a mouse, a pen or a finger. The hand follows the pointer's angle by
   // its change since the press, so it never jumps, and it cannot be taken past now or the start.
   stage.addEventListener("pointerdown", function (e) {
-    if (!e.target.closest || !e.target.closest(".hand") || (e.button !== undefined && e.button > 0)) return;
+    if (!inHand(e.target) || (e.button !== undefined && e.button > 0)) return;
     var t = asOf === null ? now : asOf;
     drag = { id: e.pointerId, frac: (t - start) / span, last: pointerFraction(e) };
     moved = false;
+    pressed = true;
     try { stage.setPointerCapture(e.pointerId); } catch (err) { /* the drag still works inside the dial */ }
     ui.hand.focus();
     e.preventDefault();
   });
   stage.addEventListener("pointermove", function (e) {
-    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag) {
+      // Hovering the knob shows the card of a notch under it, as hovering the notch would.
+      if (e.pointerType !== "touch" && inHand(e.target)) {
+        var under = nearest(e.clientX, e.clientY, 22);
+        if (under) show(under, false);
+      }
+      return;
+    }
+    if (e.pointerId !== drag.id) return;
     var f = pointerFraction(e), d = f - drag.last;
     if (d > 0.5) d -= 1;
     else if (d < -0.5) d += 1;
@@ -348,16 +379,17 @@
   });
   function drop(e) {
     if (!drag || e.pointerId !== drag.id) return;
+    var still = !moved && e.type === "pointerup";
     drag = null;
     // The click that follows a drag must not open a card.
-    window.setTimeout(function () { moved = false; }, 60);
+    window.setTimeout(function () { moved = false; pressed = false; }, 60);
+    if (still) toggleNearest(e);
   }
   stage.addEventListener("pointerup", drop);
   stage.addEventListener("pointercancel", drop);
-  // A finger that starts on the hand moves the hand, not the page.
-  stage.addEventListener("touchstart", function (e) {
-    if (e.target.closest && e.target.closest(".hand")) e.preventDefault();
-  }, { passive: false });
+  // A finger that starts on the hand moves the hand, not the page: that listener is on the hand
+  // itself (see build), so a touch anywhere else on the dial scrolls without waiting for script.
+  window.addEventListener("resize", sizeKnob, { passive: true });
   var back = document.getElementById("orbit-back");
   if (back) {
     back.addEventListener("click", function () {
@@ -366,7 +398,7 @@
     });
   }
   stage.addEventListener("keydown", function (e) {
-    if (e.target.closest && e.target.closest(".hand")) { stepHand(e); return; }
+    if (inHand(e.target)) { stepHand(e); return; }
     var g = notchOf(e.target);
     if (!g) return;
     var i = notches.indexOf(g), to = -1;

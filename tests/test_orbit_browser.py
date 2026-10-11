@@ -343,6 +343,69 @@ def test_the_hand_can_be_dragged_and_stays_where_it_is_put(page, base_url):
     assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.2"
 
 
+def release_of(family: str, version: str):
+    return next(
+        r for r in SNAPSHOT["releases"] if r["family"] == family and r["version"] == version
+    )
+
+
+def centre_of(page, release_id):
+    return page.evaluate(
+        """(id) => {
+          const g = [...document.querySelectorAll('#orbit-dial .notch')]
+            .find((n) => n.getAttribute('data-id') === id);
+          const b = g.getBoundingClientRect();
+          return [b.x + b.width / 2, b.y + b.height / 2];
+        }""",
+        release_id,
+    )
+
+
+@pytest.mark.parametrize("width", [320, 390, 1280])
+def test_the_hands_grab_area_is_at_least_44_css_pixels(browser, base_url, width):
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        open_front_page(page, base_url)
+        assert page.locator(f"{HAND} .hit").count() == 1, "only the knob takes the pointer"
+        box = page.locator(f"{HAND} .hit").bounding_box()
+        assert box["width"] >= 43.9 and box["height"] >= 43.9
+    finally:
+        context.close()
+
+
+def test_a_notch_under_the_hand_can_still_be_hovered(page, base_url):
+    open_front_page(page, base_url)
+    page.focus(HAND)
+    page.keyboard.press("PageDown")
+    page.keyboard.press("PageDown")
+    pending(page)
+    assert page.get_attribute(HAND, "aria-valuetext") == "As of Sep 28, 2026"
+    show_stage(page)
+    target = release_of("macOS", "27.0.1")
+    x, y = centre_of(page, target["id"])
+    # The hand points at the day the release landed; it must not sit on top of the notch.
+    assert page.evaluate(
+        "([x, y]) => !!document.elementFromPoint(x, y).closest('.notch')", [x, y]
+    )
+    page.mouse.move(x, y)
+    page.wait_for_selector("#orbit-card:not([hidden])")
+    assert page.get_attribute("#orbit-card", "data-id") == target["id"]
+
+
+def test_hovering_the_knob_opens_the_notch_beneath_it(page, base_url):
+    open_front_page(page, base_url)
+    page.focus(HAND)
+    page.keyboard.press("PageDown")
+    page.keyboard.press("PageDown")
+    pending(page)
+    show_stage(page)
+    knob = page.locator(f"{HAND} .hit").bounding_box()
+    page.mouse.move(knob["x"] + knob["width"] / 2, knob["y"] + knob["height"] / 2)
+    page.wait_for_selector("#orbit-card:not([hidden])")
+    assert page.get_attribute("#orbit-card", "data-id") == release_of("iOS", "27.0.1")["id"]
+
+
 # --- reduced motion, the effects and the fallback --------------------------------------
 
 
