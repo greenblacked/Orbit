@@ -71,9 +71,30 @@ def test_the_front_page_has_one_card_per_family_in_the_order_of_the_config():
     assert cards == APPLE
 
 
-def test_the_scripts_stay_small():
-    total = sum(path.stat().st_size for path in ASSETS.glob("*.js"))
-    assert total < 48_000, total
+# The effects are separate modules that load after the first paint; no page names them.
+LAZY = ("fx.js", "aurora.js")
+FIRST_PAINT_BUDGET = 60_000
+LAZY_BUDGET = 16_000
+
+
+@pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])
+def test_the_scripts_a_page_loads_stay_under_the_first_paint_budget(name):
+    loaded = re.findall(r'<script src="/assets/([a-z.-]+\.js)"', page(name))
+    assert loaded, name
+    assert not set(LAZY) & set(loaded), "the effects load after first paint, not from the page"
+    total = sum((ASSETS / script).stat().st_size for script in loaded)
+    assert total < FIRST_PAINT_BUDGET, (name, total)
+
+
+def test_the_lazily_loaded_effects_stay_small_and_are_only_loaded_by_the_scripts():
+    total = sum((ASSETS / name).stat().st_size for name in LAZY)
+    assert total < LAZY_BUDGET, total
+    named = [
+        script.name
+        for script in ASSETS.glob("*.js")
+        if any(f"/assets/{name}" in script.read_text(encoding="utf-8") for name in LAZY)
+    ]
+    assert named == ["home.js"]
 
 
 @pytest.mark.parametrize("script", sorted(ASSETS.glob("*.js")), ids=lambda p: p.name)
