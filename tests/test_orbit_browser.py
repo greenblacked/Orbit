@@ -323,6 +323,29 @@ def test_the_page_follows_the_hand_when_the_window_moves_past_it(page, base_url)
     assert "Apr 16, 2026" in text(page, "#latest-asof")
 
 
+def test_a_family_id_with_a_quote_does_not_stop_the_cadence_row(page, base_url):
+    odd = dict(SNAPSHOT["releases"][0])
+    odd.update(
+        id=odd["id"] + "-odd",
+        url=odd["url"] + "-odd",
+        family='Odd"One\\',
+        date="2026-10-11T00:00:00Z",
+    )
+    data = json.loads(json.dumps(SNAPSHOT))
+    data["releases"].insert(0, odd)
+    serve(page, data)
+    # Without the families config the ids come straight from the release data.
+    page.route("**/data/families.json", lambda route: route.fulfill(status=404, body="no"))
+    errors = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    open_front_page(page, base_url)
+    page.wait_for_selector("#cadence li")
+    names = {r["family"] for r in data["releases"]}
+    assert page.locator("#cadence li").count() == len(names)
+    assert page.locator("#orbit-dial .ring.breath").count() >= 1
+    assert not [e for e in errors if "selector" in e], errors
+
+
 def test_the_hand_moves_by_a_day_a_week_and_to_the_ends(page, base_url):
     open_front_page(page, base_url)
     page.focus(HAND)

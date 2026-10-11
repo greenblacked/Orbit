@@ -63,7 +63,10 @@
       else if (s.count > 1) text = "Every " + plural(Math.round(s.median), "day") + ", last " + plural(s.since, "day") + " ago";
       li.appendChild(RO.h("span", "c-nums", text));
       row.appendChild(li);
-      var ring = document.querySelector('.ring[data-family="' + fam.id + '"]');
+      // Compared, not put into a selector: an id may hold a quote or a backslash.
+      var ring = Array.prototype.filter.call(document.querySelectorAll(".ring"), function (n) {
+        return n.getAttribute("data-family") === fam.id;
+      })[0];
       if (!ring) return;
       if (s.median === null) {
         ring.classList.remove("breath");
