@@ -104,7 +104,7 @@ def test_a_tool_word_inside_a_typed_name_is_not_a_tool_prefix(name):
 
 
 def test_there_is_no_stage_branch_and_no_untyped_prefix():
-    assert gate.LONG_LIVED == frozenset({"main", "dev"})
+    assert frozenset({"main", "dev"}) == gate.LONG_LIVED
     assert not gate.is_allowed("stage")
     assert not gate.is_allowed("feature-contact-form")
     assert gate.TYPES == ("feat", "fix", "chore", "docs", "ci", "test")
