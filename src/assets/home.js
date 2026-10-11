@@ -84,7 +84,7 @@
     text(sec, "version", r.version);
   }
 
-  // The mock screens: a Software Update check on iPhone, About This Mac, a watch complication.
+  // The mock screens: a data check on iPhone, a release channel switch on Mac, a watch complication.
   function sec(family) { return document.querySelector('section.fam[data-family="' + family + '"]'); }
   function label(r) { return r.family + " " + RO.short(r) + (r.build ? " (" + r.build + ")" : ""); }
   function newestBeta(family) {
@@ -101,9 +101,9 @@
     var latestPub = RO.latest(releases, "iOS", true);
     var latestBeta = newestBeta("iOS");
     text(box, "pubrow", latestPub ? latestPub.version : "None");
-    text(box, "betarow", latestBeta && (!latestPub || latestBeta.t > latestPub.t) ? RO.short(latestBeta) : "Off");
+    text(box, "betarow", latestBeta && (!latestPub || latestBeta.t > latestPub.t) ? RO.short(latestBeta) : "None");
     btn.removeAttribute("aria-busy");
-    btn.textContent = iosChecked ? "Check Again" : "Check for Updates";
+    btn.textContent = iosChecked ? "Check again" : "Check the data";
     if (!iosChecked) { out.textContent = ""; return; }
     var pub = RO.latest(releases, "iOS", true);
     var beta = newestBeta("iOS");
@@ -144,7 +144,7 @@
       var out = sec("iOS").querySelector('[data-f="result"]');
       ios.setAttribute("aria-busy", "true");
       ios.textContent = "Checking…";
-      out.textContent = "Checking for updates…";
+      out.textContent = "Checking the data…";
       window.setTimeout(function () { iosChecked = true; paintIos(); }, RO.reduced() ? 0 : 900);
     });
     var seg = sec("macOS").querySelectorAll("[data-ch]");

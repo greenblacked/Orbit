@@ -170,7 +170,7 @@ def test_each_family_has_a_section_with_a_device_and_recent_releases(page, base_
         assert page.locator(link).count() == 1
 
 
-def test_the_software_update_mock_reports_the_real_latest_release(page, base_url):
+def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
     page.click("[data-act=check]")
@@ -182,7 +182,7 @@ def test_the_software_update_mock_reports_the_real_latest_release(page, base_url
     assert public["version"] in text and public["build"] in text
     assert "newest beta is iOS 27.2 beta 3" in text
     assert page.get_attribute("[data-f=result]", "aria-live") == "polite"
-    assert page.inner_text("[data-act=check]") == "Check Again"
+    assert page.inner_text("[data-act=check]") == "Check again"
 
 
 def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
@@ -195,7 +195,7 @@ def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
     assert rows.locator("[data-f=pubrow]").inner_text() == public["version"]
     beta = next((r for r in ios if r["stage"] != "release"), None)
     newer_beta = beta and beta["date"] > public["date"]
-    assert (rows.locator("[data-f=betarow]").inner_text() != "Off") == bool(newer_beta)
+    assert (rows.locator("[data-f=betarow]").inner_text() != "None") == bool(newer_beta)
     screen = page.locator(".m-ios").bounding_box()
     below = rows.bounding_box()
     assert below["y"] + below["height"] > screen["y"] + screen["height"] * 0.8

@@ -1051,7 +1051,6 @@ html[data-theme="reactor"] .chip-link {
 }
 .m-bar { position: absolute; top: 0.9em; left: 1.6em; right: 1.6em; display: flex; justify-content: space-between; font-size: 0.85em; font-weight: 600; }
 .m-batt { width: 1.6em; height: 0.8em; margin-top: 0.15em; border-radius: 0.25em; background: rgba(255, 255, 255, 0.85); }
-.m-nav { margin-bottom: 0.6em; color: rgba(255, 255, 255, 0.85); }
 .m-title + .m-card { margin-top: 0.8em; }
 
 .dev-ipad {
@@ -1096,7 +1095,6 @@ html[data-theme="reactor"] .chip-link {
   font-size: max(0.6875rem, 2.2cqw);
 }
 .m-menu { display: flex; align-items: center; gap: 1em; padding: 0.35em 0.9em; background: rgba(0, 0, 0, 0.45); font-size: 0.9em; }
-.m-logo { width: 0.8em; height: 0.8em; border-radius: 50%; background: #fff; }
 .m-win {
   width: 78%;
   margin: auto;
@@ -1106,10 +1104,6 @@ html[data-theme="reactor"] .chip-link {
   text-align: center;
   box-shadow: 0 1em 2em rgba(0, 0, 0, 0.45);
 }
-.m-dots { display: flex; gap: 0.4em; }
-.m-dots i { width: 0.8em; height: 0.8em; border-radius: 50%; background: #ff5f57; }
-.m-dots i:nth-child(2) { background: #febc2e; }
-.m-dots i:nth-child(3) { background: #28c840; }
 .m-orb {
   display: block;
   width: 3.6em;
@@ -1147,7 +1141,6 @@ html[data-theme="reactor"] .chip-link {
   font-size: 0.75rem;
   font-size: max(0.75rem, 2.8cqw);
 }
-.m-crumb { color: rgba(255, 255, 255, 0.78); }
 .m-tv .m-title { font-size: 1.5em; }
 .m-tv .m-card { margin-top: 0.7em; max-width: 70%; box-shadow: 0 0 0 0.15em #fff; }
 .tv-stand {
@@ -1240,7 +1233,7 @@ html[data-theme="reactor"] .chip-link {
 .m-vision .m-card { margin-top: 0.5em; }
 
 
-/* The interactive mocks: a Software Update check, an About This Mac channel switch and a
+/* The interactive mocks: a data check, a release channel switch and a
    watch complication. Every control is a real button of at least 44px. */
 .m-btn {
   display: block;

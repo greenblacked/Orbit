@@ -95,7 +95,7 @@ GET /api/health                   { ok, fetchedAt, stale, count, sources: [{ id,
 
 ## The pages and their data
 
-`/` shows the newest release or beta per platform family (cards), then one section per family with a CSS-drawn device and mock screen (the iPhone Software Update check, the Mac About This Mac window and the watch complication are interactive), then the developer highlights. `/timeline/` lists everything newest first by month with platform and stage filters, kept in the query string (`?family=iOS&stage=beta`). `/compare/` takes a platform and two of its releases.
+`/` shows the newest release or beta per platform family (cards), then one section per family with a CSS-drawn device and mock screen (the iPhone data check, the Mac release channel switch and the watch complication are interactive), then the developer highlights. `/timeline/` lists everything newest first by month with platform and stage filters, kept in the query string (`?family=iOS&stage=beta`). `/compare/` takes a platform and two of its releases.
 
 Every page that shows releases loads `releases.js`. It reads `/data/families.json`, fetches `/api/releases.json`, falls back to `/data/releases.json` when that is missing or not JSON, polls every five minutes while the tab is visible, and shows a toast (an `aria-live` region) when ids it has not shown before appear. It keeps only entries whose family belongs to the entry's vendor in `families.json` and whose link is on a host that vendor's source allows, and it writes text with `textContent`. Without JavaScript the pages show placeholders and a link to the source. In the preview bundle, which cannot fetch, every `data/*.json` is embedded and read instead.
 
