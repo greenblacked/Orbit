@@ -213,9 +213,17 @@ def test_the_worker_serves_a_404_page_and_keeps_workers_dev():
     assert config["assets"]["directory"] == "../dist/site"
     # The release is verified on workers.dev; without it the release fails by design.
     assert config["workers_dev"] is True
+    # The stage Preview is served only on the custom domain, never on a workers.dev URL.
+    assert config["preview_urls"] is False
     (route,) = config["routes"]
     assert route["custom_domain"] is True
     assert route["previews_enabled"] is True
+
+
+def test_a_custom_domain_only_preview_log_reports_the_stage_host_and_no_workers_dev_url():
+    reader = load_script("read_wrangler_deploy")
+    log = '{"type": "preview", "preview_urls": ["https://stage.orbit.szolotov.com"]}\n'
+    assert reader.parse_preview(log) == ("", "https://stage.orbit.szolotov.com")
 
 
 def test_the_stage_preview_uploads_from_the_main_branch_only():

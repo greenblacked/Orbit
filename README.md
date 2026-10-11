@@ -9,7 +9,7 @@ Every OS release, as it lands, with our own validation results, drawn as an orbi
 [![Release](https://github.com/greenblacked/orbit/actions/workflows/release.yml/badge.svg)](https://github.com/greenblacked/orbit/actions/workflows/release.yml)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-Live site: <https://orbit.szolotov.com>. The `main` branch also uploads a Preview of the next release to <https://stage.orbit.szolotov.com>; that host sits behind Cloudflare Access and is for the owner only.
+Live site: <https://orbit.szolotov.com>. The `main` branch also uploads a Preview of the next release to <https://stage.orbit.szolotov.com>; that host sits behind Cloudflare Access and is for the owner only. The Preview has no `workers.dev` URL (`preview_urls` is `false` in `deploy/wrangler.json`); it needs `orbit.szolotov.com` attached to the Worker with Preview enabled ([SETUP.md](SETUP.md)).
 
 ## What it does
 

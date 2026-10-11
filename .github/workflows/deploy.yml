@@ -189,7 +189,7 @@ jobs:
       - name: Check the stage Preview's address
         if: steps.tip.outputs.current == 'true'
         # Stage is meant to sit behind Cloudflare Access, which serves its login page on
-        # the workers.dev Preview URL and redirects stage.orbit.szolotov.com to it, so nothing
+        # stage.orbit.szolotov.com (the Preview has no workers.dev URL), so nothing
         # on stage is fetched. The upload step already failed if wrangler preview did or if it
         # reported no acceptable URL; this checks Wrangler reported the stage host,
         # which proves the domain is enabled for Preview traffic.
