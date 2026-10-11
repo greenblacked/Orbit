@@ -1,0 +1,351 @@
+---
+# Security checks. They aggregate into a `security` gate job at the bottom, which is a
+# required status check alongside `ci`: a check nobody is required to pass is a check
+# that gets ignored.
+#
+# Tool versions are pinned explicitly rather than floated: a scanner that silently
+# changes its rule set between runs turns a green build into a statement about the
+# scanner rather than about the code.
+name: Security
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: >-
+    ${{ github.workflow }}-${{ github.event_name == 'pull_request'
+    && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GITLEAKS_VERSION: '8.30.1'
+  # The digest gitleaks publishes in `gitleaks_<version>_checksums.txt` on the release.
+  # It is what turns a pinned version into a pinned artefact: a tag and a release asset
+  # are both mutable, and the download is otherwise whatever that URL serves.
+  GITLEAKS_SHA256: '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
+  ZIZMOR_VERSION: '1.30.1'
+  # Pinned for the same reason: a new ruff release can add a rule and redden the build
+  # on code nobody touched.
+  RUFF_VERSION: '0.16.10'
+
+jobs:
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          # gitleaks reads history, not just the working tree: a secret that was
+          # committed and then removed is still a leaked secret.
+          fetch-depth: 0
+      - name: Install gitleaks
+        # Downloaded to disk and checked against a recorded digest before it is
+        # unpacked, the way `lint-actions` fetches actionlint in ci.yml. Piping a
+        # release straight into tar runs whatever that URL served this minute, which
+        # is what `image-hardening` calls an unreviewed commit author in your build.
+        # Bumping the version means bumping the digest beside it; if the two disagree
+        # the job fails before the binary executes, which is the whole point.
+        run: |
+          set -Eeuo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL --retry 3 --retry-connrefused --retry-delay 2 --retry-max-time 150 \
+            --connect-timeout 20 --max-time 60 -o "$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check --status
+          tar -xzf "$archive" gitleaks
+          ./gitleaks version
+      - name: Scan the working tree and history
+        run: |
+          set -Eeuo pipefail
+          ./gitleaks dir . --redact --no-banner
+          ./gitleaks git . --redact --no-banner
+
+  workflows:
+    name: workflow audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.13'
+      # Keyed on the job as well as on the file that records the pins: setup-python's
+      # own pip cache carries no job identity, so the two jobs here would share one
+      # entry and only the first to finish would ever populate it.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.cache/pip
+          key: pip-zizmor-${{ runner.os }}-${{ hashFiles('.github/workflows/security.yml') }}
+      - name: Audit workflows with zizmor
+        # zizmor looks for the things that actually compromise a repository through
+        # CI: template injection into `run:` blocks, over-broad token permissions,
+        # unpinned third-party actions, and `pull_request_target` used with a
+        # checkout of untrusted code.
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --quiet "zizmor==${ZIZMOR_VERSION}"
+          zizmor --persona=regular --min-severity=medium .
+        env:
+          # Lets zizmor check whether a pinned SHA has drifted from its tag. Without a
+          # token it silently runs the offline audits only.
+          GH_TOKEN: ${{ github.token }}
+
+  python:
+    name: python security lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.13'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.cache/pip
+          key: pip-ruff-${{ runner.os }}-${{ hashFiles('.github/workflows/security.yml') }}
+      - run: |
+          set -Eeuo pipefail
+          python -m pip install "ruff==${RUFF_VERSION}"
+      - name: Lint, including the bandit security rules
+        run: |
+          set -Eeuo pipefail
+          ruff check --output-format=github .
+          ruff format --check .
+
+  codeql:
+    name: codeql
+    # Code scanning is not available on a private repository without Advanced
+    # Security, so this job runs once the repository is public. The `security` job
+    # accepts it as skipped only in that same private case.
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2  # v4.38.2
+        with:
+          # The site's own code: the page script and the build scripts. Code scanning
+          # needs GitHub Advanced Security on a private repository, so the job is
+          # skipped there and runs by itself once the repository is public.
+          languages: javascript-typescript,python
+          queries: security-extended
+      - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2  # v4.38.2
+
+  permissions-audit:
+    name: permissions audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Every workflow must set a top-level permissions block that grants nothing
+        # An absent `permissions:` block means the job inherits the repository default,
+        # which is usually read and write on everything — but so does one that is
+        # present and over-broad. Checking only that the line existed let
+        # `permissions: write-all` through with the same silent, permanent effect as
+        # having no block at all, so this also rejects that shorthand, its `read-all`
+        # sibling, a single-line flow map granting `write` on any scope
+        # (`{contents: write}`), and the block form of the same thing - quoted or not.
+        # A trailing comment is stripped from the value first, and a comment at column
+        # zero no longer ends the block scan, so `permissions:  # least privilege`
+        # followed by `  contents: write` cannot hide the grant behind either one.
+        run: |
+          set -Eeuo pipefail
+          bad=0
+          shopt -s nullglob
+          for file in .github/workflows/*.yml .github/workflows/*.yaml; do
+            line_no=$(grep -nE '^permissions:' "$file" | head -n1 | cut -d: -f1) || true
+            if [ -z "$line_no" ]; then
+              echo "::error file=$file,title=no permissions block::$file does not set top-level permissions"
+              bad=1
+              continue
+            fi
+            value=$(sed -n "${line_no}s/^permissions:[[:space:]]*//p" "$file")
+            value=$(printf '%s\n' "$value" | sed -E 's/[[:space:]]*#.*$//')
+            # Quotes stripped before every comparison below, so `write`, `"write"` and
+            # 'write' are judged the same way whether they sit in a flow map or a block.
+            normalised=$(printf '%s\n' "$value" | sed -E 's/["'"'"']//g')
+            if printf '%s\n' "$normalised" | grep -qiE '^(write-all|read-all)[[:space:]]*$'; then
+              echo "::error file=$file,title=over-broad permissions::$file sets top-level permissions: ${value}"
+              bad=1
+              continue
+            fi
+            if [ -n "$value" ]; then
+              if [ "$value" = "{}" ]; then
+                continue  # grants nothing
+              fi
+              if printf '%s\n' "$normalised" |
+                grep -qE '(^\{|[,{])[[:space:]]*[A-Za-z_-]+[[:space:]]*:[[:space:]]*write[[:space:]]*($|[,}])'; then
+                echo "::error file=$file,title=over-broad permissions::$file grants write at the top level: ${value}"
+                bad=1
+              fi
+              continue
+            fi
+            block=$(awk -v start="$line_no" '
+              NR <= start { next }
+              /^[^[:space:]#]/ { exit }
+              { print }
+            ' "$file")
+            writes=$(printf '%s\n' "$block" |
+              sed -E 's/["'"'"']//g' |
+              grep -E '^[[:space:]]+[A-Za-z_-]+:[[:space:]]*write[[:space:]]*(#.*)?$') || true
+            if [ -n "$writes" ]; then
+              echo "::error file=$file,title=over-broad permissions::$file grants write at the top level: ${writes}"
+              bad=1
+            fi
+          done
+          exit "$bad"
+      - name: Every third-party action must be pinned to a commit SHA
+        # Matching known-bad shapes let the likeliest regression through: this repo's
+        # own convention is `uses: x@<sha>  # v7.0.1`, so keeping the comment and pasting a
+        # tag over the SHA passed a check anchored at end-of-line. Inverted now - a ref
+        # that is not forty hex characters fails, whatever it looks like.
+        run: |
+          set -Eeuo pipefail
+          unpinned=0
+          while IFS= read -r line; do
+            file="${line%%:*}"
+            echo "::error file=$file,title=unpinned action::${line#*:}"
+            unpinned=1
+          done < <(
+            grep -nE '^[[:space:]]*(- )?uses: [^@]+@' .github/workflows/*.y*ml \
+              | grep -vE '@[0-9a-f]{40}([[:space:]]|$)' || true
+          )
+          exit "$unpinned"
+      - name: Every job must set timeout-minutes
+        # Without one a hung job runs to the six-hour platform default, which reads as
+        # slow CI rather than broken CI and holds a runner the whole time. The
+        # convention has held by habit since the workflows were written, and a habit is
+        # not a gate: the job that forgets it is green, and stays green.
+        #
+        # Jobs are the two-space keys under `jobs:`; a job's own keys sit at four. The
+        # walk refuses to vouch for a file it found no job in, because a parse that
+        # silently matches nothing is the failure this whole job exists to avoid.
+        run: |
+          set -Eeuo pipefail
+          missing=0
+          shopt -s nullglob
+          for file in .github/workflows/*.yml .github/workflows/*.yaml; do
+            seen=0
+            while IFS=$'\t' read -r line job has; do
+              seen=$((seen + 1))
+              if [ "$has" -eq 0 ]; then
+                echo "::error file=$file,line=$line,title=no timeout::job $job sets no timeout-minutes"
+                missing=1
+              fi
+            done < <(
+              awk '
+                /^jobs:[[:space:]]*(#.*)?$/ { injobs = 1; next }
+                injobs && /^[^[:space:]#]/ {
+                  if (job != "") print jobline "\t" job "\t" has
+                  job = ""; injobs = 0
+                }
+                injobs && /^  [A-Za-z0-9_.-]+:[[:space:]]*(#.*)?$/ {
+                  if (job != "") print jobline "\t" job "\t" has
+                  job = $1; sub(/:$/, "", job); jobline = NR; has = 0; next
+                }
+                injobs && /^    timeout-minutes:[[:space:]]/ { has = 1 }
+                END { if (job != "") print jobline "\t" job "\t" has }
+              ' "$file"
+            )
+            if [ "$seen" -eq 0 ]; then
+              echo "::error file=$file,title=no jobs found::found no job here, so this check cannot vouch for it"
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: Every checkout must set persist-credentials false
+        # actions/checkout writes the job token into .git/config by default, where any
+        # later step — including anything a script it runs pulls in — can read it and
+        # push with it. Nothing here pushes from CI, so nothing here needs the
+        # credential to survive the checkout step.
+        #
+        # The awk walk is cross-checked against a plain grep count: if the two disagree
+        # the file has a shape this does not understand, and it fails rather than
+        # reporting a clean run over steps it never saw.
+        run: |
+          set -Eeuo pipefail
+          persisted=0
+          shopt -s nullglob
+          for file in .github/workflows/*.yml .github/workflows/*.yaml; do
+            expected=$(grep -cE 'uses:[[:space:]]*actions/checkout@' "$file" || true)
+            found=0
+            while IFS=$'\t' read -r line ok; do
+              found=$((found + 1))
+              if [ "$ok" -eq 0 ]; then
+                msg='does not set persist-credentials: false'
+                echo "::error file=$file,line=$line,title=credential persisted::checkout $msg"
+                persisted=1
+              fi
+            done < <(
+              awk '
+                /uses:[[:space:]]*actions\/checkout@/ { pending = 1; at = NR; ok = 0; next }
+                pending && /persist-credentials:[[:space:]]*false/ { ok = 1 }
+                pending && /^[[:space:]]*- / { print at "\t" ok; pending = 0 }
+                END { if (pending) print at "\t" ok }
+              ' "$file"
+            )
+            if [ "$found" -ne "$expected" ]; then
+              echo "::error file=$file,title=unparsed checkout::saw $found checkout step(s) where grep counts $expected"
+              persisted=1
+            fi
+          done
+          exit "$persisted"
+
+  security:
+    # The required status check for this workflow. `ci` in ci.yml is the other one;
+    # between them they cover every job, and neither name changes when the jobs
+    # behind it do.
+    name: security
+    if: always()
+    needs:
+      - secrets
+      - workflows
+      - python
+      - codeql
+      - permissions-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify every required security job passed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          # codeql may be skipped only while the repository is private; once it is
+          # public the job runs, and a skipped result fails the gate.
+          SKIPPABLE: ${{ github.event.repository.private && 'codeql' || '' }}
+        run: |
+          set -Eeuo pipefail
+          python3 scripts/check_job_results.py \
+            secrets workflows python codeql permissions-audit

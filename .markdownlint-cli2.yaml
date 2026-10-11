@@ -1,0 +1,13 @@
+---
+config:
+  # Prose is not hard-wrapped at a fixed column; it makes diffs worse, not better.
+  MD013: false
+  MD024:
+    siblings_only: true
+  MD033: false
+  MD041: false
+globs:
+  - "**/*.md"
+ignores:
+  - "**/node_modules/**"
+  - "dist/**"

@@ -1,0 +1,10 @@
+# Build output, never committed.
+dist/
+# Wrangler lives under deploy/ once `npm ci` has run.
+node_modules/
+__pycache__/
+.pytest_cache/
+.venv/
+.dev.vars
+.env
+.wrangler/

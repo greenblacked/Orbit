@@ -1,0 +1,322 @@
+---
+# Cuts a GitHub Release from a `vX.Y.Z` tag, with generated notes. The cloudflare job
+# then uploads that same site to the production Worker. It runs only after the release
+# job has succeeded, holds contents: read, and takes its Cloudflare token from the
+# production environment. Cutting the tag itself is a maintainer step, either
+# `git tag -a` and a push, or the Cut release workflow; this workflow only publishes
+# what a tag that already exists on main describes.
+#
+# It starts on a pushed tag, or on a `workflow_dispatch` that Cut release sends once it
+# has created the tag through the API (a tag made with GITHUB_TOKEN starts no push
+# trigger). A dispatch is only ever accepted on a `vX.Y.Z` tag ref: the first step of
+# each job refuses anything else, so a dispatch on a branch publishes nothing.
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The one job here that can write to the repository, and it is bounded three ways:
+    # it only runs on a `vX.Y.Z` tag ref (a push, or a dispatch the first step checks),
+    # and it refuses a tagged commit that is not an ancestor of `main` — see the steps
+    # below and SETUP.md release section.
+    permissions:
+      contents: write  # spent on creating the release via gh, never on pushing code
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Refuse anything but a vX.Y.Z tag
+        # A dispatch can be pointed at a branch; only a tag ref may publish. The tag
+        # push trigger already guarantees this, so the check is for the dispatch.
+        run: |
+          set -Eeuo pipefail
+          if [ "$GITHUB_REF_TYPE" != "tag" ] || \
+            ! [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::release runs on a vX.Y.Z tag, not $GITHUB_REF_TYPE $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Verify the tagged commit is on main
+        # A tag pushed at an unreviewed branch commit must not be able to publish. This
+        # is the check that makes that true regardless of what the tag's message claims.
+        # The checkout above fetched every branch (fetch-depth 0), so origin/main is the
+        # branch as of this run and no credential is needed here.
+        run: |
+          set -Eeuo pipefail
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            echo "::error::$TAG points at $GITHUB_SHA, which is not on main" >&2
+            exit 1
+          fi
+
+      - name: Create the GitHub release
+        # A re-run after a partial failure has to be safe to repeat rather than erroring
+        # on "release already exists": if the release exists there is nothing to do.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists"
+          else
+            gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes
+          fi
+
+  cloudflare:
+    name: cloudflare
+    needs: release
+    # All tags deploy and potentially roll back the same production Worker.
+    concurrency:
+      group: production-cloudflare
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    environment:
+      name: production
+      url: ${{ vars.DEPLOY_URL }}
+    env:
+      WRANGLER_VERSION: '4.149.0'
+      WRANGLER_SEND_METRICS: 'false'
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Refuse anything but a vX.Y.Z tag
+        # A dispatch can be pointed at a branch; only a tag ref may publish. The tag
+        # push trigger already guarantees this, so the check is for the dispatch.
+        run: |
+          set -Eeuo pipefail
+          if [ "$GITHUB_REF_TYPE" != "tag" ] || \
+            ! [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::release runs on a vX.Y.Z tag, not $GITHUB_REF_TYPE $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify the tagged commit is on main
+        # Repeated from the release job. needs: means that job succeeded, and this
+        # is the same check again so a later edit cannot drop it there and still
+        # upload whatever the tag points at. The checkout fetched every branch.
+        run: |
+          set -Eeuo pipefail
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            echo "::error::$TAG points at $GITHUB_SHA, which is not on main" >&2
+            exit 1
+          fi
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.13'
+          # No cache. The release job's comment is the reason: a tag-triggered
+          # workflow must not restore a dependency cache another run wrote.
+      - name: Build the site
+        run: |
+          set -Eeuo pipefail
+          python scripts/build_site.py --version "$TAG"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
+      - name: Check the Wrangler pin against the lockfile
+        run: |
+          set -Eeuo pipefail
+          python scripts/check_wrangler_pin.py
+      - name: Install Wrangler
+        working-directory: deploy
+        run: |
+          set -Eeuo pipefail
+          npm ci --ignore-scripts
+          installed=$(./node_modules/.bin/wrangler --version)
+          if [ "$installed" != "$WRANGLER_VERSION" ]; then
+            echo "::error::installed wrangler is ${installed}, pin is ${WRANGLER_VERSION}"
+            exit 1
+          fi
+      - name: Record the version production is serving
+        id: active
+        working-directory: deploy
+        # The rollback below returns to exactly this version. Without an ID,
+        # wrangler rollback picks the version uploaded before the newest one, which
+        # after an earlier failed release is that failed release.
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -Eeuo pipefail
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID"
+            echo "::error::on the production environment (SETUP.md)"
+            exit 1
+          fi
+          status="$RUNNER_TEMP/deployment-status.json"
+          errors="$RUNNER_TEMP/deployment-status.err"
+          if ./node_modules/.bin/wrangler deployments status --config wrangler.json --json \
+            >"$status" 2>"$errors"; then
+            if ! python "$GITHUB_WORKSPACE/scripts/read_wrangler_deploy.py" --active "$status" \
+              >> "$GITHUB_OUTPUT"; then
+              echo "::error::production is not serving one version in full"
+              echo "::error::not deploying without a version to roll back to"
+              exit 1
+            fi
+          elif grep -qE 'has no deployments|\[code: 10007\]' "$errors"; then
+            # The first release: nothing serves yet, so there is nothing to return to.
+            echo "::warning::Worker orbit has no production deployment yet"
+            echo "::warning::if this first release fails its smoke test it cannot roll back"
+          else
+            cat "$errors" >&2
+            echo "::error::could not read the version production is serving"
+            echo "::error::not deploying without a version to roll back to"
+            exit 1
+          fi
+      - name: Refuse to deploy over a newer release
+        # Two releases cut close together start two runs, and the concurrency group on
+        # this job queues them without ordering them: the older tag can get here second
+        # and would leave production on the older version. The tags are read from the API
+        # now, not from the checkout, which may predate the newer tag. A run that finds a
+        # greater vX.Y.Z tag stops before it deploys; re-run the newer release if it
+        # has not deployed.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          tags="$RUNNER_TEMP/release-tags.txt"
+          gh api "repos/${GH_REPO}/git/matching-refs/tags/v" --paginate --jq '.[].ref' >"$tags"
+          python "$GITHUB_WORKSPACE/scripts/check_release_order.py" "$TAG" <"$tags"
+      - name: Deploy the production Worker
+        id: deploy
+        working-directory: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GIT_SHA: ${{ github.sha }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.jsonl
+        run: |
+          set -Eeuo pipefail
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID"
+            echo "::error::on the production environment (SETUP.md)"
+            exit 1
+          fi
+          # Recorded before the deploy, not after: Wrangler makes the new version active
+          # before it attaches the custom domain, so a failure after that point would
+          # otherwise leave the new version live with no rollback.
+          echo "deployed=true" >> "$GITHUB_OUTPUT"
+          ./node_modules/.bin/wrangler deploy --config wrangler.json \
+            --no-autoconfig --no-install-skills \
+            --message "release ${TAG}" --tag "$GIT_SHA"
+          python "$GITHUB_WORKSPACE/scripts/read_wrangler_deploy.py" \
+            "$WRANGLER_OUTPUT_FILE_PATH" >> "$GITHUB_OUTPUT"
+      - name: Smoke-test the production Worker
+        id: smoke
+        # Bot Fight Mode on the zone answers a GitHub runner's request for
+        # orbit.szolotov.com with a 403, and no WAF rule can skip it, so the blocking
+        # check goes to the Worker's workers.dev address, which sits outside the zone.
+        # The same deployment serves both addresses; the next step proves it.
+        # vars.DEPLOY_URL is not smoked: it names the custom domain, so fetching it
+        # would put the 403 back.
+        env:
+          WORKERS_DEV_URL: ${{ steps.deploy.outputs.url }}
+          CUSTOM_URL: ${{ steps.deploy.outputs.custom_url }}
+        run: |
+          set -Eeuo pipefail
+          production_url=https://orbit.szolotov.com
+          if [ -z "$WORKERS_DEV_URL" ]; then
+            echo "::error::Wrangler reported no workers.dev address for this deploy"
+            echo "::error::workers_dev must stay true in deploy/wrangler.json (SETUP.md)"
+            exit 1
+          fi
+          if [ "$CUSTOM_URL" != "$production_url" ]; then
+            echo "::error::Wrangler did not report ${production_url} for this deploy"
+            echo "::error::reported custom domain: '${CUSTOM_URL}'; it was not attached"
+            exit 1
+          fi
+          scripts/smoke_site.sh "$WORKERS_DEV_URL" "$TAG"
+      - name: Confirm production serves the deployed version
+        working-directory: deploy
+        # Every address of a Worker serves its active deployment, so the version
+        # that passed the smoke test on workers.dev is what the custom domain serves
+        # exactly when the active deployment is that version at 100%. This is a read
+        # of the API, not a fetch through the zone. It runs before the rollback step,
+        # and a failure here rolls back like a failed smoke test.
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOYED_VERSION_ID: ${{ steps.deploy.outputs.version_id }}
+        run: |
+          set -Eeuo pipefail
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID"
+            echo "::error::on the production environment (SETUP.md)"
+            exit 1
+          fi
+          if [ -z "$DEPLOYED_VERSION_ID" ]; then
+            echo "::error::Wrangler reported no version ID for this deploy"
+            echo "::error::cannot confirm what production is serving"
+            exit 1
+          fi
+          status="$RUNNER_TEMP/serving-status.json"
+          errors="$RUNNER_TEMP/serving-status.err"
+          if ! ./node_modules/.bin/wrangler deployments status --config wrangler.json --json \
+            >"$status" 2>"$errors"; then
+            cat "$errors" >&2
+            echo "::error::could not read the version production is serving"
+            exit 1
+          fi
+          if ! python "$GITHUB_WORKSPACE/scripts/read_wrangler_deploy.py" \
+            --active-is "$DEPLOYED_VERSION_ID" "$status" >/dev/null; then
+            echo "::error::production is not serving ${DEPLOYED_VERSION_ID} at 100%"
+            exit 1
+          fi
+          echo "Production serves ${DEPLOYED_VERSION_ID} at 100%"
+      - name: Probe the custom domain (information only)
+        # Never fails the job: the 403 is Bot Fight Mode, which stays on, and a
+        # failure here after a good deploy would roll production back for nothing.
+        run: |
+          set -Eeuo pipefail
+          production_url=https://orbit.szolotov.com
+          code=$(curl --silent --output /dev/null --max-time 20 \
+            --write-out '%{http_code}' "${production_url}/version.txt" || true)
+          echo "GET ${production_url}/version.txt answered HTTP ${code:-none}"
+          if [ "$code" = 403 ]; then
+            echo "::notice::Bot Fight Mode blocks GitHub runners on orbit.szolotov.com," \
+              "so this release was verified through workers.dev and the active deployment"
+          fi
+      - name: Roll back the production Worker
+        if: failure() && steps.deploy.outputs.deployed == 'true'
+        working-directory: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_VERSION_ID: ${{ steps.active.outputs.version_id }}
+        run: |
+          set -Eeuo pipefail
+          echo "::warning::the production deploy did not pass its checks; rolling back"
+          if [ -z "$PREVIOUS_VERSION_ID" ]; then
+            echo "::error::no version was serving before this release, so there is none to"
+            echo "::error::roll back to. Fix forward, or roll back from the Cloudflare dashboard"
+            exit 1
+          fi
+          if ! ./node_modules/.bin/wrangler rollback "$PREVIOUS_VERSION_ID" \
+            --config wrangler.json --yes \
+            --message "Automatic rollback: failed release check in run ${GITHUB_RUN_ID}"; then
+            echo "::error::rollback failed. The failed version may still be serving"
+            echo "::error::roll it back from the Cloudflare dashboard"
+            exit 1
+          fi

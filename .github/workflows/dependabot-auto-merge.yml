@@ -1,0 +1,163 @@
+# Turns a green Dependabot pull request into a merged one, for patch and minor bumps
+# only, and only on a pull request into `dev`. It never decides whether the change is
+# safe — the branch ruleset on `dev` still requires `ci` and `security` to report
+# `success` before GitHub will complete the merge this job requests. A Dependabot
+# security update is raised against the default branch whatever `target-branch` says;
+# one into `main` is left for a person, so it cannot skip `dev`.
+# A major bump is left for a person, because a breaking change grouped or not is a
+# judgement call rather than a formality. Every commit's author login must be
+# dependabot[bot], and since that login can be spoofed through the author email, every
+# commit must also carry GitHub's own signature (verified). The decision is remade on
+# every push:
+# GitHub keeps auto-merge on across pushes by writers and Dependabot, so a push that
+# makes the pull request ineligible (a person's commit, a grouped update that now has a
+# major) turns auto-merge back off instead of leaving the earlier run's request in force.
+#
+# No third-party action, on purpose. Under `pull_request` the workflow file and every
+# `uses:` ref come from the pull request's merge commit, and Dependabot's github-actions
+# updates edit exactly those refs. A bump of an action used here would run the new,
+# unreviewed version with this job's write token, and a step-level `if:` does not stop it:
+# an action's `pre` entry runs at job start. With no `uses:` line there is nothing for
+# Dependabot to bump, so the only code this job runs is the shell below plus the `gh` CLI
+# the runner image ships. Dependabot's update type is read from the metadata block it
+# writes into each commit message, fetched through the API as data.
+#
+# `pull_request`, not `pull_request_target`. That trigger would run the default branch's
+# workflow, but from 2026-11-02 GitHub's default workflow execution protection blocks it
+# on public repositories that have no event policy, and auto-merge would silently stop:
+# https://github.blog/changelog/2025-11-07-actions-pull_request_target-and-environment-branch-protections-changes/
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/actions-policies/workflow-execution-protections
+name: Dependabot auto-merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+# Keyed on the pull request number so a second push while the first run is still
+# enabling auto-merge cancels the stale one rather than racing it; the job is
+# idempotent, so nothing here is lost by cancelling an in-progress run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    name: dependabot auto-merge
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # `user.login` is the pull request's author, which a person cannot choose;
+    # `github.actor` is whoever triggered the run, and zizmor rightly calls it spoofable.
+    # The head check excludes a fork: Dependabot itself never opens one. The base must be
+    # `dev`: that is where version updates are raised, and a security update into `main`
+    # would otherwise merge past `dev`.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.base.ref == 'dev'
+    # The only job that can write to repository contents or pull requests (`codeql` in
+    # security.yml also writes, but only `security-events`, to publish scan results).
+    # What this job can do with them is narrow: enable auto-merge on a Dependabot pull
+    # request, for this repository, for a patch or minor bump, after the two required
+    # gates already passed. No checkout and no action, so no source ever runs with this
+    # token.
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Enable auto-merge for a patch or minor update
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          # A repository with auto-merge switched off in Settings > General turns this
+          # into a permanently red check on every Dependabot pull request, which is
+          # worse than not running the job at all, so the owner is told once and the
+          # job still succeeds.
+          allowed=$(gh api "repos/${REPO}" --jq '.allow_auto_merge')
+          if [ "${allowed}" != "true" ]; then
+            echo "::warning title=auto-merge disabled::Enable Settings > General >" \
+              "Pull Requests > Allow auto-merge so Dependabot pull requests can merge" \
+              "on their own once required checks pass."
+            {
+              echo "Auto-merge is disabled for this repository, so ${PR_URL} was left"
+              echo "for a person. Enable it in Settings > General > Pull Requests >"
+              echo "Allow auto-merge."
+            } >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          # Every commit on the pull request, as one JSON object per line. A person's
+          # commit pushed onto a Dependabot branch changes who vouches for the content,
+          # so the whole pull request is left for a person unless Dependabot wrote all
+          # of it, and every commit must be verified by GitHub, because the login can be
+          # spoofed through the author email while the signature cannot. The verdict is a fixed phrase, never text from a commit message, so
+          # nothing a commit says can reach the log as a workflow command.
+          commits=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/commits" --paginate \
+            --jq '.[] | {login: .author.login, verified: .commit.verification.verified, message: .commit.message} | @json')
+          # Positive gate on purpose: a grouped pull request lists several updates, and
+          # Dependabot may not classify one. Only an explicit minor or patch for every
+          # listed dependency passes; a missing or unreadable block never does.
+          verdict=$(printf '%s\n' "${commits}" | python3 -I -c '
+          import json, re, sys
+
+          ALLOWED = {"version-update:semver-minor", "version-update:semver-patch"}
+
+
+          def stop(reason):
+              print(reason)
+              sys.exit(0)
+
+
+          seen = 0
+          for line in sys.stdin:
+              if not line.strip():
+                  continue
+              commit = json.loads(line)
+              if commit.get("login") != "dependabot[bot]":
+                  stop("a commit was not authored by dependabot[bot]")
+              if commit.get("verified") is not True:
+                  stop("a commit is not verified by GitHub")
+              message = (commit.get("message") or "").replace("\r\n", "\n")
+              found = re.search(r"^---\n(updated-dependencies:\n.*?)^\.\.\.$", message, re.S | re.M)
+              if not found:
+                  stop("a commit has no Dependabot metadata block")
+              names = re.findall(r"^- dependency-name: ", found.group(1), re.M)
+              kinds = re.findall(r"^  update-type: (\S+)[ \t]*$", found.group(1), re.M)
+              if not kinds or len(kinds) != len(names):
+                  stop("a metadata block could not be parsed")
+              if any(kind not in ALLOWED for kind in kinds):
+                  stop("not every update is a minor or patch bump")
+              seen += 1
+          stop("merge" if seen else "the pull request has no commits")
+          ' || echo "the commits could not be read")
+          if [ "${verdict}" != "merge" ]; then
+            echo "::notice title=left for a person::Not enabling auto-merge: ${verdict}."
+            echo "Auto-merge was not enabled for ${PR_URL}: ${verdict}." >> "${GITHUB_STEP_SUMMARY}"
+            # An earlier run (on opened, say) may have enabled auto-merge, and GitHub
+            # keeps it on across later pushes, so a refusal must switch it off. Failing
+            # to do so fails the step: a pull request that stays armed is the one outcome
+            # this job must never hide.
+            armed=$(gh pr view "${PR_URL}" --json autoMergeRequest \
+              --jq '.autoMergeRequest != null')
+            if [ "${armed}" = "true" ]; then
+              gh pr merge --disable-auto "${PR_URL}"
+              echo "::notice title=auto-merge turned off::Auto-merge was on and the pull" \
+                "request is no longer eligible, so it was turned off."
+              echo "Auto-merge on ${PR_URL} was turned off." >> "${GITHUB_STEP_SUMMARY}"
+            fi
+            exit 0
+          fi
+          # If the pull request is already mergeable — the required checks already
+          # reported before this job ran — `gh pr merge --auto` merges immediately
+          # rather than waiting for anything further. That is still safe: mergeable
+          # means the checks the branch ruleset on `dev` requires already passed.
+          #
+          # A merge made with GITHUB_TOKEN does not trigger a push-triggered workflow
+          # on main, so this does not chain into another run of `ci` or `security`; the
+          # pull request's own checks, already required and already green, are what
+          # gated the tree this creates.
+          gh pr merge --auto --squash "${PR_URL}"
