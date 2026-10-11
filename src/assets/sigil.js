@@ -46,21 +46,18 @@
   var APPLE = /^(\d+)([A-Z])(\d+)([a-z]?)$/;
   var generic = null, waiting = [], loading = false;
 
-  // The generic rule arrives from sigil-generic.js (use); a glyph that needs it waits for it.
+  // sigil-generic.js calls use() with the generic rule; a glyph that needs it waits (ready).
   function use(fn) {
     generic = fn;
     loading = false;
     waiting.splice(0).forEach(function (w) { w.run(); });
   }
-  // The rule could not be loaded: nobody keeps waiting, and each waiter shows its fallback.
   function failed() {
     loading = false;
     waiting.splice(0).forEach(function (w) { if (w.fail) w.fail(); });
   }
-  // Run when the generic rule is there. A host (key) waits once: asking again replaces its
-  // earlier request, and a host that has left the page is dropped, so the list stays short.
-  // fail runs instead when the rule cannot load; in the preview bundle (which embeds its data
-  // and loads no files) it runs at once and nothing is queued.
+  // One request per host (key); a host off the page is dropped. fail runs if the rule cannot
+  // load, at once in the preview bundle (data-seed), which loads no files and queues nothing.
   function ready(run, key, fail) {
     if (generic) return run();
     var doc = global.document;
