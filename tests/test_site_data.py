@@ -73,13 +73,14 @@ def test_the_front_page_has_one_card_per_family_in_the_order_of_the_config():
 
 # The effects are separate modules that load after the first paint; no page names them.
 LAZY = ("fx.js", "aurora.js")
-# Also off the first paint: the cadence row (home.js loads it once the page has painted) and
-# the generic sigil rule (sigil.js loads it when a build that is not an Apple build appears).
-# The script that loads each one is the only file that names it.
-AFTER_PAINT = {"cadence.js": "home.js", "sigil-generic.js": "sigil.js"}
+# Also off the first paint: below.js (the mock screens and the developer highlights) and the
+# cadence row, which home.js loads once the page has painted, and the generic sigil rule
+# (sigil.js loads it when a build that is not an Apple build appears). The script that loads
+# each one is the only file that names it.
+AFTER_PAINT = {"below.js": "home.js", "cadence.js": "home.js", "sigil-generic.js": "sigil.js"}
 FIRST_PAINT_BUDGET = 60_000
 LAZY_BUDGET = 16_000
-AFTER_PAINT_BUDGET = 8_000
+AFTER_PAINT_BUDGET = 16_000
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])

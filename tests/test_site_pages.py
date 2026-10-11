@@ -84,6 +84,11 @@ def cards_ready(page):
     )
 
 
+def mocks_ready(page):
+    """The mock screens are painted by below.js, which loads once the page has painted."""
+    page.wait_for_function("() => document.querySelector('[data-f=pubrow]').textContent !== ''")
+
+
 # --- the front page ---------------------------------------------------------------------
 
 
@@ -171,6 +176,7 @@ def test_each_family_has_a_section_with_a_device_and_recent_releases(page, base_
 def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     page.click("[data-act=check]")
     page.wait_for_function(
         "() => document.querySelector('[data-f=result]').textContent.length > 20"
@@ -183,9 +189,26 @@ def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     assert page.inner_text("[data-act=check]") == "Check again"
 
 
+def test_the_mock_screens_and_highlights_wait_for_their_script_and_then_paint(page, base_url):
+    held = []
+    page.route("**/assets/below.js", lambda route: held.append(route))
+    with page.expect_request("**/assets/below.js"):
+        page.goto(base_url + "/")
+    cards_ready(page)
+    assert held, "below.js was never requested"
+    assert page.inner_text("[data-f=pubrow]") == ""
+    assert page.locator("#features").is_hidden()
+    held[0].continue_()
+    mocks_ready(page)
+    page.wait_for_selector("#features:not([hidden])")
+    page.click("[data-ch=beta]")
+    assert page.get_attribute("[data-ch=beta]", "aria-pressed") == "true"
+
+
 def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     rows = page.locator(".m-ios .m-rows")
     assert rows.get_attribute("aria-hidden") == "true"
     ios = releases("iOS")
@@ -203,6 +226,7 @@ def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
 def test_the_about_this_mac_mock_switches_between_release_and_beta(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     public = next(r for r in releases("macOS") if r["stage"] == "release")
     beta = next(r for r in releases("macOS") if r["stage"] != "release")
     info = page.locator(".m-mac .m-info")
@@ -216,6 +240,7 @@ def test_the_about_this_mac_mock_switches_between_release_and_beta(page, base_ur
 def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     newest = releases("watchOS")[0]
     seen = [page.text_content(".m-comp .k")]
     assert page.text_content(".m-comp .v") == newest["version"]
@@ -231,6 +256,7 @@ def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
 def test_mock_controls_are_real_buttons_and_big_enough(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
+    mocks_ready(page)
     for selector in ("[data-act=check]", "[data-ch=release]", "[data-ch=beta]", ".m-comp"):
         size = page.locator(selector).bounding_box()
         assert size["width"] >= 44 and size["height"] >= 44, (selector, size)
