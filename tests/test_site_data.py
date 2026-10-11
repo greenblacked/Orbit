@@ -41,6 +41,8 @@ def test_the_snapshot_follows_the_data_contract():
         assert owner.get(r["family"]) == r["vendor"], r["id"]
         assert r["stage"] in {"release", "beta", "rc"}
         assert r["url"].startswith("https://developer.apple.com/")
+        # A verdict is for a released build only: the dial would show it to everyone.
+        assert "status" not in r or r["stage"] == "release", r["id"]
 
 
 @pytest.mark.parametrize("path", pages())
