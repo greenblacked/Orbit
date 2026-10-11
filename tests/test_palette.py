@@ -80,7 +80,7 @@ def mix(accent: str, base: str, share: float) -> str:
     """``color-mix(in srgb, accent share, base)`` as a hex colour."""
     a = [int(accent[i : i + 2], 16) for i in (1, 3, 5)]
     b = [int(base[i : i + 2], 16) for i in (1, 3, 5)]
-    return "#" + "".join(f"{round(x * share + y * (1 - share)):02x}" for x, y in zip(a, b))
+    return "#" + "".join(f"{round(x * share + y * (1 - share)):02x}" for x, y in zip(a, b, strict=True))
 
 
 @pytest.mark.parametrize("theme", THEMES)

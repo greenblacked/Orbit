@@ -96,9 +96,7 @@ def test_the_cards_show_the_newest_release_of_each_family(page, base_url):
         assert card.locator("[data-f=ver]").inner_text() == f"{name} {newest['version']}"
         assert newest["build"] in card.locator("[data-f=build]").inner_text()
         assert card.locator("[data-f=link]").get_attribute("href") == newest["url"]
-    assert (
-        page.locator("h1").inner_text().replace("\n", " ") == "Every OS release, as it lands."
-    )
+    assert page.locator("h1").inner_text().replace("\n", " ") == "Every OS release, as it lands."
 
 
 @pytest.mark.parametrize(
@@ -570,7 +568,8 @@ def test_compare_says_so_when_the_chosen_platform_has_no_releases(page, base_url
     serve_json(page, "**/api/releases.json", json.dumps(data))
     page.goto(base_url + "/compare/?family=visionOS")
     page.wait_for_function(
-        "() => document.getElementById('cmp-result').textContent.includes('No releases for this platform')"
+        "() => document.getElementById('cmp-result').textContent"
+        ".includes('No releases for this platform')"
     )
     assert "Loading" not in page.inner_text("#cmp-result")
 
