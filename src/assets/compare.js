@@ -11,7 +11,8 @@
   var out = document.getElementById("cmp-result");
   var all = [];
   var list = [];
-  var signature = "";
+  // null until the first data arrives, so an empty platform still renders once.
+  var signature = null;
 
   try {
     var wanted = new URLSearchParams(window.location.search).get("family");

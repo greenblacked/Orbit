@@ -564,6 +564,17 @@ def test_compare_counts_betas_and_rcs_between_two_releases(page, base_url):
     assert page.input_value("#c-from") == "a"
 
 
+def test_compare_says_so_when_the_chosen_platform_has_no_releases(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [r for r in data["releases"] if r["family"] != "visionOS"]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/compare/?family=visionOS")
+    page.wait_for_function(
+        "() => document.getElementById('cmp-result').textContent.includes('No releases for this platform')"
+    )
+    assert "Loading" not in page.inner_text("#cmp-result")
+
+
 def test_compare_does_not_start_with_two_unrelated_lines(page, base_url):
     page.goto(base_url + "/compare/")
     page.wait_for_selector(".cmp-cards")
