@@ -355,6 +355,13 @@ def test_with_motion_allowed_everything_still_ends_up_visible(browser, base_url)
         context.close()
 
 
+# True once every .reveal.pre in the observer's view (the viewport less 8% at the bottom) is .in.
+REVEALED_IN_VIEW = """() => [...document.querySelectorAll('.reveal.pre:not(.in)')].every((e) => {
+  const r = e.getBoundingClientRect();
+  return r.bottom <= 1 || r.top >= innerHeight * 0.92 - 1;
+})"""
+
+
 def test_without_scroll_driven_animation_a_script_only_adds_classes(browser, base_url):
     context = make_context(browser, base_url, motion="no-preference")
     context.add_init_script(
@@ -370,15 +377,22 @@ def test_without_scroll_driven_animation_a_script_only_adds_classes(browser, bas
             "() => [...document.querySelectorAll('.reveal.pre')]"
             ".every(e => getComputedStyle(e).opacity === '0')"
         )
-        page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
-        page.wait_for_function("() => document.querySelectorAll('.reveal.pre:not(.in)').length < 3")
-        for _ in range(12):
-            page.mouse.wheel(0, -600)
-            page.wait_for_timeout(50)
+        # Walk down the page in steps that overlap, jumping (the page scrolls smoothly otherwise,
+        # and a smooth scroll under load can skip an element between two frames, which an
+        # observer then never reports) and waiting at each stop until the observer has
+        # revealed what is in view. Every wait ends when its condition is true.
+        height = page.evaluate("() => document.documentElement.scrollHeight")
+        for y in range(0, height, 400):
+            page.evaluate("y => window.scrollTo({ top: y, behavior: 'instant' })", y)
+            page.wait_for_function(REVEALED_IN_VIEW)
         page.wait_for_function(
             "() => document.querySelectorAll('.reveal.pre:not(.in)').length === 0"
         )
-        page.wait_for_timeout(700)
+        # The reveal fades for 500 ms; wait for the end of the transitions, not for a guess.
+        page.wait_for_function(
+            "() => [...document.querySelectorAll('.reveal.pre')]"
+            ".every(e => getComputedStyle(e).opacity === '1')"
+        )
         opacity = "() => getComputedStyle(document.querySelector('#ios .fam-copy')).opacity"
         assert page.evaluate(opacity) == "1"
     finally:
