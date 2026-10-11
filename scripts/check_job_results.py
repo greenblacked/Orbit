@@ -30,8 +30,9 @@ def evaluate(
 
     `skippable` names the jobs the caller allows to be skipped on this run (the
     branch-name job outside pull requests, and codeql while the repository is
-    private). A `skipped` result passes for those and nothing else; every other job still has to succeed, and
-    a cancelled or failed job fails whether or not it is listed. A list naming a job the
+    private). A `skipped` result passes for those and nothing else; every other
+    job still has to succeed, and a cancelled or failed job fails whether or not
+    it is listed. A list naming a job the
     aggregate does not expect, or anything that is not a job id, fails the gate rather
     than being trimmed, because a wrong list means the caller and the workflow disagree.
     """
