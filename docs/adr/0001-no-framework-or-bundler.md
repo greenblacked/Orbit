@@ -6,7 +6,7 @@ The site is a handful of pages that show release data and a few interactive draw
 
 ## Decision
 
-The site is plain HTML, one stylesheet and small ES scripts, served as written. There is no framework, no bundler and no transpiler. Scripts that are not needed for first paint are loaded on idle as modules. The build only copies files and stamps a version. The scripts in `scripts/` use the Python standard library only.
+The site is plain HTML, one stylesheet and small ES scripts, served as written. There is no framework, no bundler and no transpiler. The scripts the first paint needs are classic scripts named in the page. Everything else is injected after the first paint: the cadence row once the browser is idle, the generic build sigil rule when the first build that is not an Apple build appears (a failed load leaves the build string as text), and the visual effects modules on idle, only when motion is allowed. A page that embeds its data, such as the preview bundle, loads none of them. The build only copies files and stamps a version. The scripts in `scripts/` use the Python standard library only.
 
 ## Consequences
 
