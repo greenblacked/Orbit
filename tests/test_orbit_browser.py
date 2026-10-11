@@ -201,6 +201,7 @@ def test_a_notch_opens_a_card_with_its_sigil_build_date_and_link(page, base_url)
     open_front_page(page, base_url)
     notch = page.locator("#orbit-dial .notch[aria-label*='24B5099f']").first
     assert notch.get_attribute("role") == "button"
+    notch_id = notch.get_attribute("data-id")
     notch.focus()
     page.wait_for_selector("#orbit-card:not([hidden])")
     card = page.locator("#orbit-card")
@@ -217,6 +218,9 @@ def test_a_notch_opens_a_card_with_its_sigil_build_date_and_link(page, base_url)
     assert page.locator("#orbit-card").is_visible()
     page.keyboard.press("Escape")
     assert page.locator("#orbit-card").is_hidden()
+    # Focus goes back to the notch the card belonged to, not to the top of the page.
+    assert page.evaluate("() => document.activeElement.getAttribute('data-id')") == notch_id
+    assert page.locator("#orbit-dial .notch[tabindex='0']").get_attribute("data-id") == notch_id
 
 
 def test_hovering_a_notch_shows_its_card(page, base_url):
@@ -298,6 +302,50 @@ def test_keyboard_scrub_changes_the_grid_and_announces_then_back_to_now_restores
     assert page.get_attribute(HAND, "aria-valuetext") == "Now, Oct 12, 2026"
 
 
+def test_the_page_follows_the_hand_when_the_window_moves_past_it(page, base_url):
+    open_front_page(page, base_url)
+    page.focus(HAND)
+    page.keyboard.press("Home")
+    assert page.get_attribute(HAND, "aria-valuetext") == "As of Apr 13, 2026"
+    # Three days later the window starts later than the day the hand was left on.
+    page.evaluate(
+        """() => {
+          window.__days = [];
+          document.addEventListener('ro:asof', (e) => window.__days.push(e.detail.t));
+          document.activeElement.blur();
+          const t = Date.parse('2026-10-15T12:00:00Z');
+          Date.now = () => t;
+          RO.refresh();
+        }"""
+    )
+    page.wait_for_function("() => window.__days.length > 0")
+    assert page.get_attribute(HAND, "aria-valuetext") == "As of Apr 16, 2026"
+    assert "Apr 16, 2026" in text(page, "#latest-asof")
+
+
+def test_a_family_id_with_a_quote_does_not_stop_the_cadence_row(page, base_url):
+    odd = dict(SNAPSHOT["releases"][0])
+    odd.update(
+        id=odd["id"] + "-odd",
+        url=odd["url"] + "-odd",
+        family='Odd"One\\',
+        date="2026-10-11T00:00:00Z",
+    )
+    data = json.loads(json.dumps(SNAPSHOT))
+    data["releases"].insert(0, odd)
+    serve(page, data)
+    # Without the families config the ids come straight from the release data.
+    page.route("**/data/families.json", lambda route: route.fulfill(status=404, body="no"))
+    errors = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    open_front_page(page, base_url)
+    page.wait_for_selector("#cadence li")
+    names = {r["family"] for r in data["releases"]}
+    assert page.locator("#cadence li").count() == len(names)
+    assert page.locator("#orbit-dial .ring.breath").count() >= 1
+    assert not [e for e in errors if "selector" in e], errors
+
+
 def test_the_hand_moves_by_a_day_a_week_and_to_the_ends(page, base_url):
     open_front_page(page, base_url)
     page.focus(HAND)
@@ -341,6 +389,98 @@ def test_the_hand_can_be_dragged_and_stays_where_it_is_put(page, base_url):
     assert text(page, f"{IOS} [data-f=ver]") == "iOS 18.7.10"
     page.click("#orbit-back")
     assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.2"
+
+
+def release_of(family: str, version: str):
+    return next(
+        r for r in SNAPSHOT["releases"] if r["family"] == family and r["version"] == version
+    )
+
+
+def centre_of(page, release_id):
+    return page.evaluate(
+        """(id) => {
+          const g = [...document.querySelectorAll('#orbit-dial .notch')]
+            .find((n) => n.getAttribute('data-id') === id);
+          const b = g.getBoundingClientRect();
+          return [b.x + b.width / 2, b.y + b.height / 2];
+        }""",
+        release_id,
+    )
+
+
+@pytest.mark.parametrize("width", [320, 390, 1280])
+def test_the_hands_grab_area_is_at_least_44_css_pixels(browser, base_url, width):
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        open_front_page(page, base_url)
+        assert page.locator(f"{HAND} .hit").count() == 1, "only the knob takes the pointer"
+        box = page.locator(f"{HAND} .hit").bounding_box()
+        assert box["width"] >= 43.9 and box["height"] >= 43.9
+    finally:
+        context.close()
+
+
+def test_a_notch_under_the_hand_can_still_be_hovered(page, base_url):
+    open_front_page(page, base_url)
+    page.focus(HAND)
+    page.keyboard.press("PageDown")
+    page.keyboard.press("PageDown")
+    pending(page)
+    assert page.get_attribute(HAND, "aria-valuetext") == "As of Sep 28, 2026"
+    show_stage(page)
+    target = release_of("macOS", "27.0.1")
+    x, y = centre_of(page, target["id"])
+    # The hand points at the day the release landed; it must not sit on top of the notch.
+    assert page.evaluate(
+        "([x, y]) => !!document.elementFromPoint(x, y).closest('.notch')", [x, y]
+    )
+    page.mouse.move(x, y)
+    page.wait_for_selector("#orbit-card:not([hidden])")
+    assert page.get_attribute("#orbit-card", "data-id") == target["id"]
+
+
+def stacked_releases():
+    """Groups of releases of one family stamped at the same moment, inside the window."""
+    start = NOW - timedelta(weeks=26)
+    groups: dict = {}
+    for r in SNAPSHOT["releases"]:
+        if r["family"] in FAMILIES and start <= when(r["date"]) <= NOW:
+            groups.setdefault((r["family"], r["date"]), []).append(r)
+    return [g for g in groups.values() if len(g) > 1]
+
+
+def test_releases_stamped_at_one_moment_each_have_their_own_notch_to_open(page, base_url):
+    stacks = stacked_releases()
+    assert stacks, "the snapshot is expected to hold several same-moment releases"
+    open_front_page(page, base_url)
+    show_stage(page)
+    for group in stacks:
+        centres = [centre_of(page, r["id"]) for r in group]
+        for i, a in enumerate(centres):
+            for b in centres[i + 1 :]:
+                assert abs(a[0] - b[0]) + abs(a[1] - b[1]) > 4, "the notches overlap"
+        for release, (x, y) in zip(group, centres):
+            page.mouse.move(1, 1)
+            page.mouse.move(x, y)
+            page.wait_for_function(
+                "(id) => document.getElementById('orbit-card').getAttribute('data-id') === id",
+                arg=release["id"],
+            )
+
+
+def test_hovering_the_knob_opens_the_notch_beneath_it(page, base_url):
+    open_front_page(page, base_url)
+    page.focus(HAND)
+    page.keyboard.press("PageDown")
+    page.keyboard.press("PageDown")
+    pending(page)
+    show_stage(page)
+    knob = page.locator(f"{HAND} .hit").bounding_box()
+    page.mouse.move(knob["x"] + knob["width"] / 2, knob["y"] + knob["height"] / 2)
+    page.wait_for_selector("#orbit-card:not([hidden])")
+    assert page.get_attribute("#orbit-card", "data-id") == release_of("iOS", "27.0.1")["id"]
 
 
 # --- reduced motion, the effects and the fallback --------------------------------------
@@ -422,6 +562,48 @@ def test_the_effects_load_after_the_page_and_the_page_stays_clean_while_they_run
         page.wait_for_timeout(300)
         assert errors == []
         assert page.evaluate("() => window.__csp") == []
+    finally:
+        context.close()
+
+
+def test_turning_on_reduce_motion_after_load_stops_the_effects(browser, base_url):
+    context = make_context(browser, base_url, motion="no-preference", scripts=[MANY_CORES])
+    try:
+        page = context.new_page()
+        open_front_page(page, base_url)
+        page.wait_for_function(
+            "() => document.documentElement.classList.contains('fx-glass')", timeout=15000
+        )
+        page.wait_for_timeout(1500)  # the aurora module, where WebGL exists, starts about now
+        page.emulate_media(reduced_motion="reduce")
+        page.wait_for_function("() => !document.documentElement.className.includes('fx-')")
+        page.wait_for_selector(".aurora canvas", state="detached")
+        assert page.locator(".aurora.gl").count() == 0
+    finally:
+        context.close()
+
+
+# Frames far apart, as on the slowest phones: about four in the aurora's first second.
+SLOW_FRAMES = """
+window.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 250);
+"""
+
+
+def test_a_device_that_draws_only_a_few_frames_in_the_first_second_loses_the_aurora(
+    browser, base_url
+):
+    context = make_context(
+        browser, base_url, motion="no-preference", scripts=[MANY_CORES, SLOW_FRAMES]
+    )
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        try:
+            page.wait_for_selector(".aurora canvas", state="attached", timeout=15000)
+        except Exception:
+            pytest.skip("this browser has no WebGL, so there is no aurora to judge")
+        page.wait_for_selector(".aurora canvas", state="detached", timeout=15000)
+        assert page.locator(".aurora.gl").count() == 0
     finally:
         context.close()
 

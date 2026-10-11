@@ -3,7 +3,9 @@
    where a cheap device can carry it. It draws at a quarter of the hero's size and lets the CSS
    scale it up (the glow is blurry by nature), renders only while the hero is on screen, stops
    while the tab is hidden, and gives itself up, putting the CSS gradient fallback back, when the
-   context is lost or when the frames in its first second take longer than 20 ms on average. */
+   context is lost, when its first visible second holds too few frames or the frames take longer
+   than 20 ms on average, or when the visitor turns on Reduce Motion. A module that gives itself
+   up also gives the WebGL context back. */
 const VERTEX = "attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
 const FRAGMENT = [
   "precision mediump float;",
@@ -26,6 +28,7 @@ const FRAGMENT = [
 const FALLBACK = ["#d7452f", "#a36f14", "#288b35", "#158591", "#7869d9", "#cc3fa1"];
 const PROBE_MS = 1000;
 const MAX_FRAME_MS = 20;
+const WARM_FRAMES = 4;
 const SCALE = 4;
 
 function rgb(hex) {
@@ -43,6 +46,7 @@ function compile(gl, type, source) {
 // Start the aurora in host (the .aurora element). Resolves to true when it is running, false when
 // the device cannot or should not run it; in the second case nothing has been added to the page.
 export default function start(host, colors) {
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return Promise.resolve(false);
   const canvas = document.createElement("canvas");
   const gl = canvas.getContext("webgl", { alpha: true, antialias: false, depth: false, stencil: false, powerPreference: "low-power" });
   if (!gl) return Promise.resolve(false);
@@ -91,32 +95,57 @@ export default function start(host, colors) {
   let frame = 0;
   let begin = 0;
   let previous = 0;
+  let probeBegin = 0;
   let frames = 0;
   let spent = 0;
   let probing = true;
   let stopped = false;
 
-  const stop = () => {
+  // Give the GPU resources back; a context that is already lost has nothing to give.
+  const release = () => {
+    try {
+      gl.deleteBuffer(buffer);
+      gl.deleteProgram(program);
+      gl.deleteShader(vs);
+      gl.deleteShader(fs);
+      const lose = gl.getExtension("WEBGL_lose_context");
+      if (lose) lose.loseContext();
+    } catch (e) { /* the page goes on without it */ }
+  };
+  const stop = (lost) => {
+    if (stopped) return;
     stopped = true;
     cancelAnimationFrame(frame);
     observer.disconnect();
     themes.disconnect();
     document.removeEventListener("visibilitychange", wake);
     window.removeEventListener("resize", resize);
+    if (reduce) {
+      if (reduce.removeEventListener) reduce.removeEventListener("change", onReduce);
+      else if (reduce.removeListener) reduce.removeListener(onReduce);
+    }
     host.classList.remove("gl");
+    if (lost !== true) release();
     canvas.remove();
   };
   const loop = (now) => {
     frame = 0;
     if (stopped || !visible || document.hidden) return;
     if (!begin) begin = now;
-    if (probing && previous) {
-      frames++;
-      // The first frames pay for the shader compile; the verdict counts the rest.
-      if (frames > 4) spent += now - previous;
-      if (now - begin >= PROBE_MS) {
+    if (probing) {
+      if (!probeBegin) probeBegin = now;
+      if (previous) {
+        frames++;
+        // The first frames pay for the shader compile; the verdict counts the rest.
+        if (frames > WARM_FRAMES) spent += now - previous;
+      }
+      // One continuous visible second, judged by time and not by how many frames it held: a
+      // device that draws a handful of frames in it is the slowest of all.
+      if (now - probeBegin >= PROBE_MS) {
         probing = false;
-        if (frames > 5 && spent / (frames - 4) > MAX_FRAME_MS) { stop(); return; }
+        const counted = frames - WARM_FRAMES;
+        const slow = frames < PROBE_MS / MAX_FRAME_MS / 2 || counted < 1 || spent / counted > MAX_FRAME_MS;
+        if (slow) { stop(); return; }
       }
     }
     previous = now;
@@ -126,8 +155,17 @@ export default function start(host, colors) {
   };
   const wake = () => {
     previous = 0;
+    // A pause during the probe starts it over, so it always measures a whole visible second.
+    if (probing) { probeBegin = 0; frames = 0; spent = 0; }
     if (!frame && !stopped && visible && !document.hidden) frame = requestAnimationFrame(loop);
   };
+  // Reduce Motion turned on after the page loaded: the aurora stops drifting.
+  const reduce = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+  const onReduce = (e) => { if (e.matches) stop(); };
+  if (reduce) {
+    if (reduce.addEventListener) reduce.addEventListener("change", onReduce);
+    else if (reduce.addListener) reduce.addListener(onReduce);
+  }
 
   // Render only while the hero is on screen and the tab is shown.
   const observer = new IntersectionObserver((entries) => {
@@ -140,7 +178,7 @@ export default function start(host, colors) {
   // A theme change changes how strong the glow is.
   const themes = new MutationObserver(readStrength);
   themes.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); stop(); });
+  canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); stop(true); });
   wake();
   return Promise.resolve(true);
 }

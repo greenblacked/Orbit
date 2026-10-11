@@ -13,6 +13,12 @@ const element = (tag) => ({
   tag,
   attrs: {},
   children: [],
+  style: {
+    props: {},
+    setProperty(key, value) {
+      this.props[key] = String(value);
+    },
+  },
   setAttribute(key, value) {
     this.attrs[key] = String(value);
   },
@@ -102,6 +108,10 @@ function checkFull(root, { rings, rot, dots, lengths }) {
     const [x, y] = polar(rot + (k * 360) / 11, 70);
     near(num(line, 'x1'), x, 0.002, `spoke ${k} x`);
     near(num(line, 'y1'), y, 0.002, `spoke ${k} y`);
+    // Outward, on the same ray: the tip lies at the start radius plus the length.
+    const [tx, ty] = polar(rot + (k * 360) / 11, 70 + lengths[k] * R);
+    near(num(line, 'x2'), tx, 0.06, `spoke ${k} tip x`);
+    near(num(line, 'y2'), ty, 0.06, `spoke ${k} tip y`);
     near(length(line), lengths[k] * R, 0.06, `spoke ${k} length`);
     near(num(line, 'stroke-width'), k === 0 ? 4 : 2, 0.001, `spoke ${k} width`);
   });
@@ -161,6 +171,81 @@ describe('the Apple rule, full form', () => {
     const plain = draw('24B5099f', 210);
     assert.equal(plain.attrs.class, 'sigil-svg');
     assert.equal(plain.children[0].attrs.pathLength, undefined);
+    for (const el of plain.children) assert.deepEqual(el.style.props, {});
+  });
+
+  it('marks every shape for the draw-in when asked, dots fading instead of drawing', () => {
+    const born = draw('24B5099f', 210, { birth: true });
+    assert.equal(born.attrs.class, 'sigil-svg birth');
+    assert.ok(born.children.length > 0);
+    born.children.forEach((el, index) => {
+      const isDot = el.attrs.cx !== undefined;
+      assert.equal(el.attrs.pathLength, isDot ? undefined : '1', `${el.tag} ${index} pathLength`);
+      assert.equal(el.style.props['--i'], String(index), `${el.tag} ${index} stagger`);
+    });
+    const { dots } = parts(born);
+    assert.ok(dots.every((dot) => dot.attrs.class === 'sd'));
+  });
+});
+
+// A host element just big enough for Sigil.draw.
+const hostElement = () => ({
+  ownerDocument: doc,
+  attrs: {},
+  children: [],
+  getAttribute(key) {
+    return this.attrs[key] ?? null;
+  },
+  setAttribute(key, value) {
+    this.attrs[key] = String(value);
+  },
+  removeAttribute(key) {
+    delete this.attrs[key];
+  },
+  set textContent(_value) {
+    this.children = [];
+  },
+  get firstChild() {
+    return this.children[0] ?? null;
+  },
+  appendChild(child) {
+    this.children.push(child);
+    return child;
+  },
+});
+
+describe('draw into a host', () => {
+  it('draws a new sigil in, and leaves the same build and size alone', () => {
+    const host = hostElement();
+    Sigil.draw(host, '24B5099f', { size: 64 });
+    const first = host.firstChild;
+    assert.equal(first.attrs.class, 'sigil-svg birth');
+    assert.equal(host.attrs['data-build'], '24B5099f');
+    assert.equal(host.attrs['data-size'], '64');
+    Sigil.draw(host, '24B5099f', { size: 64 });
+    assert.equal(host.firstChild, first, 'the same build is not redrawn');
+    assert.equal(host.children.length, 1);
+  });
+
+  it('redraws when the build or the size changes, and clears for no build', () => {
+    const host = hostElement();
+    Sigil.draw(host, '24B5099f', { size: 64 });
+    const first = host.firstChild;
+    Sigil.draw(host, '24A446', { size: 64 });
+    assert.notEqual(host.firstChild, first, 'a changed build is redrawn');
+    assert.equal(host.attrs['data-build'], '24A446');
+    const second = host.firstChild;
+    Sigil.draw(host, '24A446', { size: 96 });
+    assert.notEqual(host.firstChild, second, 'a changed size is redrawn');
+    Sigil.draw(host, '', { size: 96 });
+    assert.equal(host.firstChild, null);
+    assert.equal(host.attrs['data-build'], undefined);
+  });
+
+  it('skips the draw-in when birth is off', () => {
+    const host = hostElement();
+    Sigil.draw(host, '24B5099f', { size: 64, birth: false });
+    assert.equal(host.firstChild.attrs.class, 'sigil-svg');
   });
 });
 
@@ -178,6 +263,9 @@ describe('the micro form (under 40 px)', () => {
         const [x, y] = polar((example.t * 360) / 26 + (k * 360) / 11, 0.7 * unit);
         near(num(line, 'x1'), x, 0.002, `spoke ${k} x`);
         near(num(line, 'y1'), y, 0.002, `spoke ${k} y`);
+        const [tx, ty] = polar((example.t * 360) / 26 + (k * 360) / 11, (0.7 + example.micro[k]) * unit);
+        near(num(line, 'x2'), tx, 0.002, `spoke ${k} tip x`);
+        near(num(line, 'y2'), ty, 0.002, `spoke ${k} tip y`);
         near(length(line), example.micro[k] * unit, 0.002, `spoke ${k} length`);
         assert.equal(num(line, 'stroke-width'), k === 0 ? 2 : 1);
       });
