@@ -639,3 +639,305 @@ html[data-theme="night"] .sun { display: none; }
 
 /* The notice in the footer is long: keep its lines readable. */
 .site-footer .foot .tag { max-width: 40rem; }
+
+/* Release Orbit: per-family accent tokens, one rule per family and theme. The accents come
+   from src/data/families.json (the same file the Worker reads): "accent" is the colour
+   itself and "accentText" the darker one that reads on the light page. Each family has
+   --fam-text, for words on the page (at least 4.5:1 on --bg), --fam-text-card, for words
+   on a card (at least 4.5:1 on --card), --fam-a, the fill, and --fam-on, the text colour
+   that sits on that fill (at least 4.5:1). On night and the console theme the accent
+   itself is the text colour and the fill. --fam-b, the far end of a gradient, is
+   mixed from --fam-a. tests/test_palette.py holds the hex values to families.json and
+   every pair to those ratios. */
+.fam-ios { --fam-text: #c53b26; --fam-text-card: #a73220; --fam-a: #c53b26; --fam-on: #ffffff; }
+.fam-ipados { --fam-text: #926312; --fam-text-card: #7c540f; --fam-a: #926312; --fam-on: #ffffff; }
+.fam-macos { --fam-text: #247c2f; --fam-text-card: #1f6928; --fam-a: #247c2f; --fam-on: #ffffff; }
+.fam-watchos { --fam-text: #137883; --fam-text-card: #10666f; --fam-a: #137883; --fam-on: #ffffff; }
+.fam-tvos { --fam-text: #6a5ad5; --fam-text-card: #5a4db5; --fam-a: #6a5ad5; --fam-on: #ffffff; }
+.fam-visionos { --fam-text: #bd3293; --fam-text-card: #a12b7d; --fam-a: #bd3293; --fam-on: #ffffff; }
+.fam-ios, .fam-ipados, .fam-macos, .fam-watchos, .fam-tvos, .fam-visionos {
+  --fam-b: color-mix(in srgb, var(--fam-a) 72%, #000);
+}
+html[data-theme="night"] .fam-ios, html[data-theme="reactor"] .fam-ios { --fam-text: #d7452f; --fam-text-card: #dd614e; --fam-a: #d7452f; --fam-on: #000000; }
+html[data-theme="night"] .fam-ipados, html[data-theme="reactor"] .fam-ipados { --fam-text: #a36f14; --fam-text-card: #b18537; --fam-a: #a36f14; --fam-on: #000000; }
+html[data-theme="night"] .fam-macos, html[data-theme="reactor"] .fam-macos { --fam-text: #288b35; --fam-text-card: #489c53; --fam-a: #288b35; --fam-on: #000000; }
+html[data-theme="night"] .fam-watchos, html[data-theme="reactor"] .fam-watchos { --fam-text: #158591; --fam-text-card: #3897a2; --fam-a: #158591; --fam-on: #000000; }
+html[data-theme="night"] .fam-tvos, html[data-theme="reactor"] .fam-tvos { --fam-text: #7869d9; --fam-text-card: #8c80df; --fam-a: #7869d9; --fam-on: #000000; }
+html[data-theme="night"] .fam-visionos, html[data-theme="reactor"] .fam-visionos { --fam-text: #cc3fa1; --fam-text-card: #d45caf; --fam-a: #cc3fa1; --fam-on: #000000; }
+html[data-theme="night"] .fam-ios, html[data-theme="reactor"] .fam-ios,
+html[data-theme="night"] .fam-ipados, html[data-theme="reactor"] .fam-ipados,
+html[data-theme="night"] .fam-macos, html[data-theme="reactor"] .fam-macos,
+html[data-theme="night"] .fam-watchos, html[data-theme="reactor"] .fam-watchos,
+html[data-theme="night"] .fam-tvos, html[data-theme="reactor"] .fam-tvos,
+html[data-theme="night"] .fam-visionos, html[data-theme="reactor"] .fam-visionos {
+  --fam-b: color-mix(in srgb, var(--fam-a) 70%, #fff);
+}
+
+:root {
+  --aurora: 0.2;
+  --live: #1f9d55;
+  --warn: #c2750a;
+  --bad: #d4343a;
+}
+html[data-theme="night"] { --aurora: 0.42; --live: #3ddc84; --warn: #f5a524; --bad: #ff6369; }
+html[data-theme="reactor"] { --aurora: 0.3; --live: #3ddc84; --warn: #f5a524; --bad: #ff6369; }
+
+/* Front page hero. */
+.hero-wrap { position: relative; overflow: hidden; overflow: clip; }
+.aurora {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  mask-image: linear-gradient(#000 55%, transparent);
+}
+.aurora i {
+  position: absolute;
+  width: 40rem;
+  height: 40rem;
+  border-radius: 50%;
+  opacity: var(--aurora);
+  background: radial-gradient(circle, var(--c) 0, transparent 66%);
+}
+.aurora i:nth-child(1) { --c: #d7452f; left: -14rem; top: -18rem; }
+.aurora i:nth-child(2) { --c: #158591; right: -16rem; top: -12rem; }
+.aurora i:nth-child(3) { --c: #7869d9; left: 30%; top: -8rem; }
+.hero-wrap .hero { position: relative; z-index: 1; }
+.hero h1 span {
+  text-decoration: none;
+  padding-bottom: 0.06em;
+  background: linear-gradient(90deg, #d7452f, #a36f14, #288b35, #158591, #7869d9, #cc3fa1) 0 100% / 100% 0.14em no-repeat;
+}
+.hero .side .live { margin-top: 1.5rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+.actions .pill { margin-top: 0; }
+.live {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  max-width: 100%;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--card);
+  font-size: 0.875rem;
+  line-height: 1.4286;
+}
+.live .dot {
+  position: relative;
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-top: 0.4rem;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.live[data-state="live"] .dot { background: var(--live); }
+.live[data-state="stale"] .dot { background: var(--warn); }
+.live[data-state="error"] .dot { background: var(--bad); }
+.notice { margin-top: 1rem; font-size: 0.875rem; color: var(--muted); }
+.notice a { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+
+/* The latest release per platform. */
+.latest { padding-top: 2rem; padding-bottom: 4rem; }
+.sec-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 36rem) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 64rem) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.rel {
+  position: relative;
+  display: flex;
+  gap: 1rem;
+  overflow: hidden;
+  padding: 1.5rem 1.25rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: var(--card);
+}
+.rel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 0.25rem;
+  background: linear-gradient(90deg, var(--fam-a), var(--fam-b));
+}
+.tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--fam-a), var(--fam-b));
+  color: var(--fam-on);
+  font-size: 1.25rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.rel-body { min-width: 0; }
+.rel-fam {
+  color: var(--fam-text-card);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rel-fam a { display: inline-flex; min-height: 2.75rem; align-items: center; }
+.rel-fam a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.rel-ver {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.rel-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin-top: 0.5rem; }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.1rem 0.65rem;
+  border: 1px solid var(--fam-text-card);
+  border-radius: 999px;
+  color: var(--fam-text-card);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.badge .b-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--fam-text-card); }
+.badge[data-kind="beta"], [data-stage="beta"] .badge { border-style: dashed; }
+[data-stage="rc"] .badge { border-style: dotted; border-width: 2px; }
+.build { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--muted); }
+.rel-when { margin-top: 0.25rem; }
+.rel-apple {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  color: var(--fam-text-card);
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+html[data-theme="reactor"] .rel, html[data-theme="reactor"] .live, html[data-theme="reactor"] .tile {
+  border-radius: 0;
+}
+
+/* The console theme is square everywhere: the pages after the front page follow it too. */
+html[data-theme="reactor"] .cmp-card, html[data-theme="reactor"] .stat,
+html[data-theme="reactor"] .feat, html[data-theme="reactor"] .chip,
+html[data-theme="reactor"] .chip-link {
+  border-radius: 0;
+}
+
+/* The toast: new releases while the page is open. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  width: max-content;
+  max-width: min(32rem, calc(100% - 2rem));
+  padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+  border-radius: 1.5rem;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.875rem;
+  line-height: 1.4286;
+  box-shadow: 0 8px 24px var(--glass-shadow);
+  visibility: hidden;
+  opacity: 0;
+  transform: translate(-50%, 0.5rem);
+  pointer-events: none;
+}
+.toast.on { visibility: visible; opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast-close {
+  flex: none;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 18%, transparent);
+  color: var(--bg);
+  font-weight: 500;
+}
+.toast-close:focus-visible { outline-color: var(--bg); }
+
+/* Section links on the pages below the front page, for screens too narrow for the header's. */
+.subnav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }
+.chip-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.875rem;
+}
+.chip-link[aria-current="page"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+  text-decoration: none;
+}
+@media (min-width: 64rem) { .subnav { display: none; } }
+
+/* Motion: only transform and opacity move, only when the visitor has not asked for less,
+   and everything is on screen without it. Scroll-driven reveals where the browser has
+   animation-timeline; elsewhere a script adds .pre and .in classes (releases.js). */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  @view-transition { navigation: auto; }
+  .aurora i { animation: drift 22s ease-in-out infinite alternate; }
+  .aurora i:nth-child(2) { animation-duration: 28s; animation-direction: alternate-reverse; }
+  .aurora i:nth-child(3) { animation-duration: 25s; }
+  @keyframes drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(3rem, 2rem, 0) scale(1.12); }
+  }
+  .live[data-state="live"] .dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--live);
+    animation: ping 2s ease-out infinite;
+  }
+  @keyframes ping {
+    from { transform: scale(1); opacity: 0.6; }
+    to { transform: scale(3); opacity: 0; }
+  }
+  .toast { transition: opacity 200ms ease, transform 200ms ease, visibility 0s linear 200ms; }
+  .toast.on { transition: opacity 200ms ease, transform 200ms ease; }
+  .rel { transition: translate 200ms ease; }
+  .rel:hover { translate: 0 -3px; box-shadow: 0 12px 28px -12px var(--glass-shadow); }
+  @keyframes reveal-in {
+    from { opacity: 0; transform: translateY(2rem); }
+    to { opacity: 1; transform: none; }
+  }
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 45%;
+    }
+  }
+  .reveal.pre { opacity: 0; transform: translateY(2rem); }
+  .reveal.pre.in {
+    opacity: 1;
+    transform: none;
+    transition: opacity 500ms ease, transform 500ms ease;
+  }
+}
+
+.small a, .source a { text-decoration: underline; text-underline-offset: 4px; }

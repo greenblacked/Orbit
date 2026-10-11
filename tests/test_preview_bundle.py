@@ -43,7 +43,7 @@ def test_every_page_of_the_build_is_in_the_file(text, built):
     assert routes == ["/", "/about/", "/404.html"], "front page, the rest, then the 404 page"
     assert len(list(built.rglob("*.html"))) == len(routes)
     for needle in (
-        "Say what this site is",
+        "Every OS release",
         "About Release Orbit",
         "There is nothing at this address",
     ):
@@ -724,7 +724,7 @@ def heading(tab, expected: str) -> None:
 @pytest.mark.browser
 def test_the_pages_switch_by_hash_and_the_title_follows(tab, served):
     tab.goto(served + "/")
-    heading(tab, re.compile("^Say what this site is"))
+    heading(tab, re.compile("^Every OS release"))
     tab.get_by_role("navigation", name="Primary").get_by_role("link", name="About").click()
     assert tab.evaluate("() => location.hash") == "#/about/"
     heading(tab, "About Release Orbit")
