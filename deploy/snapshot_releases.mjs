@@ -21,11 +21,30 @@ const USER_AGENT = 'orbit (+https://orbit.szolotov.com)';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = resolve(root, 'src', 'data', 'releases.json');
 
+// Only a missing file means "no snapshot yet". A file that cannot be read or parsed, or has
+// no releases list, stops the script with the file untouched: starting from the feeds alone
+// would drop all the history a feed no longer carries.
 let existing = [];
+let text = null;
 try {
-  existing = JSON.parse(readFileSync(target, 'utf8')).releases ?? [];
-} catch {
-  // No snapshot yet, or an unreadable one: start from the feeds alone.
+  text = readFileSync(target, 'utf8');
+} catch (error) {
+  if (error.code !== 'ENOENT') {
+    console.error(`cannot read ${target}: ${error.message}`);
+    process.exit(1);
+  }
+}
+if (text !== null) {
+  try {
+    existing = JSON.parse(text).releases;
+  } catch (error) {
+    console.error(`${target} is not valid JSON (${error.message}); it is left untouched`);
+    process.exit(1);
+  }
+  if (!Array.isArray(existing)) {
+    console.error(`${target} has no releases list; it is left untouched`);
+    process.exit(1);
+  }
 }
 
 let releases = existing;

@@ -37,6 +37,14 @@ describe('deploy/snapshot_releases.mjs', () => {
     assert.match(source, /from '\.\/sources\/index\.js'/);
     assert.doesNotMatch(source, /developer\.apple\.com/);
   });
+
+  it('starts from nothing only when there is no snapshot file, and aborts otherwise', () => {
+    const source = readFileSync(script, 'utf8');
+    assert.match(source, /error\.code !== 'ENOENT'/);
+    assert.match(source, /is not valid JSON[^\n]*left untouched/);
+    assert.match(source, /Array\.isArray\(existing\)/);
+    assert.doesNotMatch(source, /\?\? \[\]/, 'no silent fallback to an empty list');
+  });
 });
 
 describe('src/data/releases.json', () => {
