@@ -933,7 +933,9 @@ html[data-theme="reactor"] .chip-link {
       animation-range: entry 0% entry 45%;
     }
   }
-  .reveal.pre { opacity: 0; transform: translateY(2rem); }
+  /* The script adds .pre only when it drives the reveal, so the scroll-driven animation must not
+     also run on the element: it would hold the opacity at its own progress and mask .in. */
+  .reveal.pre { animation: none; opacity: 0; transform: translateY(2rem); }
   .reveal.pre.in {
     opacity: 1;
     transform: none;
