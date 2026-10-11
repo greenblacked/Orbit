@@ -13,6 +13,7 @@ import datetime
 import json
 import os
 import re
+from pathlib import Path
 
 import pytest
 from helpers import REPO
@@ -27,7 +28,14 @@ except ImportError:
     pytest.skip("playwright is not installed", allow_module_level=True)
 
 SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
+AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
+LEGAL = (
+    "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, "
+    "iPhone, iPad, Mac, Apple Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, "
+    "tvOS and visionOS are trademarks of Apple Inc."
+)
+PAGES = ["/", "/timeline/", "/compare/", "/about/"]
 RECORD = """
 window.__csp = [];
 document.addEventListener("securitypolicyviolation", (e) => {
@@ -615,3 +623,92 @@ def test_a_failed_poll_keeps_the_live_data_instead_of_the_older_snapshot(page, b
     answers.update(status=200, body=json.dumps(live))
     page.evaluate("RO.refresh()")
     page.wait_for_function("() => document.getElementById('live').dataset.state === 'live'")
+
+
+# --- every page, every theme ------------------------------------------------------------
+
+
+def wait_for_data(page, path):
+    selector = {
+        "/": "#latest-grid [data-family=iOS] [data-f=link]:not([hidden])",
+        "/timeline/": ".tl-item",
+        "/compare/": ".cmp-cards",
+    }.get(path)
+    if selector:
+        page.wait_for_selector(selector)
+
+
+@pytest.mark.parametrize("theme", ["day", "night", "reactor"])
+def test_no_page_scrolls_sideways_at_320_and_nothing_logs_an_error(browser, base_url, theme):
+    context = make_context(browser, base_url, width=320, theme=theme)
+    try:
+        page = context.new_page()
+        errors: list[str] = []
+        page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        for path in PAGES:
+            page.goto(base_url + path)
+            wait_for_data(page, path)
+            assert page.evaluate("() => document.documentElement.scrollWidth") <= 320, path
+            assert page.evaluate("() => window.__csp") == [], path
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_the_pages_pass_the_audit_once_their_data_is_in(page, base_url):
+    for path in PAGES:
+        page.goto(base_url + path)
+        wait_for_data(page, path)
+        assert page.evaluate(AUDIT) == [], path
+
+
+def test_every_new_control_is_big_enough(browser, base_url):
+    context = make_context(browser, base_url, width=360)
+    try:
+        page = context.new_page()
+        for path, selector in (
+            ("/timeline/", ".chip, .tl-link"),
+            ("/compare/", "select"),
+            ("/", ".rel-apple, .rel-fam a, .recent a, .more"),
+        ):
+            page.goto(base_url + path)
+            wait_for_data(page, path)
+            small = page.evaluate(
+                """sel => [...document.querySelectorAll(sel)].filter(e => e.offsetParent !== null)
+                  .map(e => [e.className, e.getBoundingClientRect().height])
+                  .filter(([, h]) => h < 43.5)""",
+                selector,
+            )
+            assert small == [], (path, small)
+    finally:
+        context.close()
+
+
+def test_pages_say_what_they_are_before_any_script_runs(browser, base_url):
+    context = browser.new_context(java_script_enabled=False)
+    try:
+        page = context.new_page()
+        for path, heading in (
+            ("/", "Every OS release"),
+            ("/timeline/", "Release timeline"),
+            ("/compare/", "Compare versions"),
+        ):
+            page.goto(base_url + path)
+            assert heading in page.inner_text("h1")
+        page.goto(base_url + "/")
+        noscript = "noscript a[href='https://developer.apple.com/news/releases/']"
+        assert page.locator(noscript).count() == 1
+        footer = page.inner_text("footer")
+        assert footer.startswith("Release Orbit")
+        assert LEGAL in footer
+        assert "Source: Apple Developer Releases" in footer
+    finally:
+        context.close()
+
+
+def test_the_links_to_other_pages_are_in_the_header_and_footer(page, base_url):
+    page.goto(base_url + "/")
+    for label, href in (("Timeline", "/timeline/"), ("Compare", "/compare/"), ("About", "/about/")):
+        assert page.locator(f'header nav a[href="{href}"]').inner_text() == label
+        assert page.locator(f'footer nav a[href="{href}"]').inner_text() == label
