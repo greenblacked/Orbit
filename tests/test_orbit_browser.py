@@ -733,6 +733,34 @@ def test_a_failed_generic_rule_is_requested_once_however_often_the_sigil_redraws
     assert page.evaluate("() => window.__gaps") == 0
 
 
+def test_a_late_generic_rule_does_not_repaint_a_card_the_hand_has_moved_off(page, base_url):
+    serve(page, with_other_build())
+    held = []
+    page.route("**/assets/sigil-generic.js", lambda route: held.append(route))
+    page.goto(base_url + "/")
+    page.wait_for_selector("#orbit-dial .notch")
+    for _ in range(100):
+        if held:
+            break
+        page.wait_for_timeout(100)
+    assert held, "sigil-generic.js was never requested"
+    assert page.get_attribute(f"{IOS} .sigil", "data-build") is None
+    page.focus(HAND)
+    page.keyboard.press("PageDown")
+    page.keyboard.press("PageDown")
+    pending(page)
+    apple = "24A446"
+    assert page.get_attribute(f"{IOS} .sigil", "data-build") == apple
+    held[0].continue_()
+    page.wait_for_function("() => typeof window.Sigil.generic === 'function'")
+    # Give the late rule's queued repaints the chance to run before looking.
+    page.wait_for_timeout(300)
+    assert page.get_attribute(f"{IOS} .sigil", "data-build") == apple
+    assert page.locator(f"{IOS} .sigil svg").count() == 1
+    assert text(page, f"{IOS} [data-f=build]") == "Build " + apple
+    assert re.match(r"^Build sigil: \d", text(page, f"{IOS} [data-f=sigtxt]"))
+
+
 def test_the_cadence_row_starts_on_the_day_the_hand_points_at_after_a_late_load(page, base_url):
     held = []
     page.route("**/assets/cadence.js", lambda route: held.append(route))
