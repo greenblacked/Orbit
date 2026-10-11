@@ -49,16 +49,35 @@
   // The generic rule arrives from sigil-generic.js (use); a glyph that needs it waits for it.
   function use(fn) {
     generic = fn;
-    waiting.splice(0).forEach(function (run) { run(); });
+    loading = false;
+    waiting.splice(0).forEach(function (w) { w.run(); });
   }
-  function ready(run) {
+  // The rule could not be loaded: nobody keeps waiting, and each waiter shows its fallback.
+  function failed() {
+    loading = false;
+    waiting.splice(0).forEach(function (w) { if (w.fail) w.fail(); });
+  }
+  // Run when the generic rule is there. A host (key) waits once: asking again replaces its
+  // earlier request, and a host that has left the page is dropped, so the list stays short.
+  // fail runs instead when the rule cannot load; in the preview bundle (which embeds its data
+  // and loads no files) it runs at once and nothing is queued.
+  function ready(run, key, fail) {
     if (generic) return run();
-    waiting.push(run);
-    if (loading || !global.document || global.document.querySelector("script[data-seed]")) return;
+    var doc = global.document;
+    if (!doc || doc.querySelector("script[data-seed]")) {
+      if (fail) fail();
+      return;
+    }
+    waiting = waiting.filter(function (w) {
+      return w.key !== key && !(w.key && w.key.nodeType === 1 && !w.key.isConnected);
+    });
+    waiting.push({ run: run, key: key, fail: fail });
+    if (loading) return;
     loading = true;
-    var s = global.document.createElement("script");
+    var s = doc.createElement("script");
     s.src = "/assets/sigil-generic.js";
-    global.document.head.appendChild(s);
+    s.onerror = failed;
+    doc.head.appendChild(s);
   }
 
   // rings, train index t (0..25), the digit list and the suffix dot count of a build.
@@ -190,7 +209,8 @@
       host.textContent = "";
       host.removeAttribute("data-build");
       host.sigilWant = build;
-      ready(function () { if (host.sigilWant === build) draw(host, build, opts); });
+      ready(function () { if (host.sigilWant === build) draw(host, build, opts); }, host,
+        function () { if (host.sigilWant === build) host.textContent = build; });
       return;
     }
     host.sigilWant = build;

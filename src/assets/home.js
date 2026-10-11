@@ -35,15 +35,20 @@
     var row = card.querySelector(".rel-sig");
     var host = card.querySelector('[data-f="sigil"]');
     if (!row || !window.Sigil) return;
-    var build = r && r.build;
+    var build = (r && r.build) || "";
+    // The build this card wants now; a deferred paint for an earlier build must not land.
+    card.setAttribute("data-sigil-want", build);
     row.hidden = !build;
-    window.Sigil.draw(host, build || "", { size: 72 });
+    window.Sigil.draw(host, build, { size: 72 });
     var text = "";
     if (build) {
       var p = window.Sigil.parse(build);
       // A build that needs the generic rule is described once that rule has loaded.
-      if (p.pending) window.Sigil.ready(function () { paintSigil(card, r); });
-      else text = "Build sigil: " + p.rings + (p.rings === 1 ? " ring" : " rings") +
+      if (p.pending) {
+        window.Sigil.ready(function () {
+          if (card.getAttribute("data-sigil-want") === build) paintSigil(card, r);
+        }, card.querySelector('[data-f="sigtxt"]'));
+      } else text = "Build sigil: " + p.rings + (p.rings === 1 ? " ring" : " rings") +
         (p.dots ? ", " + p.dots + (p.dots === 1 ? " dot" : " dots") : "");
     }
     card.querySelector('[data-f="sigtxt"]').textContent = text;
