@@ -47,6 +47,6 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 - **Budgets.** First-paint scripts under 60,000 bytes per page, the effect modules budgeted apart, a page with everything it loads under 500,000 bytes, any image under 200,000 bytes.
 - **Dial window.** 26 weeks, widening to 52 when the data spans more.
 - **Security policy.** No inline script or style and no widening of the Content-Security-Policy to make a change work. The only outside origin is Google Fonts.
-- **Single Worker.** One Worker serves production and, as a Preview, the stage host. Environment-scoped secrets and branch and tag rulesets keep the two apart ([SETUP.md](../SETUP.md)).
+- **Single Worker.** One Worker serves production and, as a Preview, the stage host. Until the first release the stage job attaches the custom domain for Preview traffic only; the first release makes it Production and Preview. Environment-scoped secrets and branch and tag rulesets keep the two apart ([SETUP.md](../SETUP.md)).
 - **No runtime dependencies.** The site ships none, `scripts/` use the standard library only, and the Worker needs none beyond the platform.
 - **Public data only.** The site shows what vendors have published and results for builds already released ([ADR 0005](adr/0005-public-results-only-for-released-builds.md)).

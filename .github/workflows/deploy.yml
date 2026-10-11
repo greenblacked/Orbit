@@ -162,6 +162,48 @@ jobs:
           set -Eeuo pipefail
           tip=$(gh api "repos/${GH_REPO}/git/ref/heads/main" --jq .object.sha)
           python "$GITHUB_WORKSPACE/scripts/check_stage_tip.py" "$GIT_SHA" "$tip" >> "$GITHUB_OUTPUT"
+      - name: Attach the stage domain for Preview traffic until the first release
+        id: attach
+        if: steps.tip.outputs.current == 'true'
+        working-directory: deploy
+        # Stage is served at stage.orbit.szolotov.com, which needs orbit.szolotov.com
+        # attached to the Worker, and only a Wrangler deploy command attaches a route.
+        # Before the first release nothing has, so this attaches it for Preview traffic
+        # only (enabled false, previews_enabled true): Production traffic stays off.
+        # `wrangler triggers deploy` applies routes and uploads no version. Once any v*
+        # tag exists the release owns the domain (Production and Preview, from
+        # wrangler.json), so this does nothing and can never turn that back to Preview only.
+        # That guard reads Git tags, not Cloudflare, so it relies on the v* tag ruleset in
+        # SETUP.md that stops tags being deleted. A dry run first fails the step if this
+        # Wrangler pin does not know routes[].enabled (it would warn "Unexpected fields"
+        # and drop the key, attaching the domain for Production too).
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID on the staging environment (SETUP.md)"
+            exit 1
+          fi
+          tags=$(gh api "repos/${GH_REPO}/git/matching-refs/tags/v" --jq length)
+          if [ "$tags" != 0 ]; then
+            echo "::notice::a release exists, so the domain is the release's to manage; not touching it"
+            exit 0
+          fi
+          python "$GITHUB_WORKSPACE/scripts/write_preview_only_config.py" \
+            wrangler.json wrangler.preview-only.json
+          ./node_modules/.bin/wrangler triggers deploy --dry-run \
+            --config wrangler.preview-only.json --no-install-skills 2>&1 \
+            | tee "$RUNNER_TEMP/triggers-dry.txt"
+          if grep -Eqi 'unexpected fields|warning.*enabled' "$RUNNER_TEMP/triggers-dry.txt"; then
+            echo "::error::Wrangler did not accept the route's enabled key; not applying, as it could switch Production traffic on"
+            exit 1
+          fi
+          ./node_modules/.bin/wrangler triggers deploy --config wrangler.preview-only.json \
+            --no-install-skills
       - name: Upload the stage Preview
         id: deploy
         if: steps.tip.outputs.current == 'true'
@@ -189,7 +231,7 @@ jobs:
       - name: Check the stage Preview's address
         if: steps.tip.outputs.current == 'true'
         # Stage is meant to sit behind Cloudflare Access, which serves its login page on
-        # the workers.dev Preview URL and redirects stage.orbit.szolotov.com to it, so nothing
+        # stage.orbit.szolotov.com (the Preview has no workers.dev URL), so nothing
         # on stage is fetched. The upload step already failed if wrangler preview did or if it
         # reported no acceptable URL; this checks Wrangler reported the stage host,
         # which proves the domain is enabled for Preview traffic.
