@@ -397,6 +397,35 @@ def test_a_notch_under_the_hand_can_still_be_hovered(page, base_url):
     assert page.get_attribute("#orbit-card", "data-id") == target["id"]
 
 
+def stacked_releases():
+    """Groups of releases of one family stamped at the same moment, inside the window."""
+    start = NOW - timedelta(weeks=26)
+    groups: dict = {}
+    for r in SNAPSHOT["releases"]:
+        if r["family"] in FAMILIES and start <= when(r["date"]) <= NOW:
+            groups.setdefault((r["family"], r["date"]), []).append(r)
+    return [g for g in groups.values() if len(g) > 1]
+
+
+def test_releases_stamped_at_one_moment_each_have_their_own_notch_to_open(page, base_url):
+    stacks = stacked_releases()
+    assert stacks, "the snapshot is expected to hold several same-moment releases"
+    open_front_page(page, base_url)
+    show_stage(page)
+    for group in stacks:
+        centres = [centre_of(page, r["id"]) for r in group]
+        for i, a in enumerate(centres):
+            for b in centres[i + 1 :]:
+                assert abs(a[0] - b[0]) + abs(a[1] - b[1]) > 4, "the notches overlap"
+        for release, (x, y) in zip(group, centres):
+            page.mouse.move(1, 1)
+            page.mouse.move(x, y)
+            page.wait_for_function(
+                "(id) => document.getElementById('orbit-card').getAttribute('data-id') === id",
+                arg=release["id"],
+            )
+
+
 def test_hovering_the_knob_opens_the_notch_beneath_it(page, base_url):
     open_front_page(page, base_url)
     page.focus(HAND)

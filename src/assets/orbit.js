@@ -20,6 +20,7 @@
   var OUTER = 268, STEP = 30;                      // outermost ring radius, gap between rings
   var LEN = { release: 22, rc: 15, beta: 12 };     // notch length
   var WID = { release: 4.5, rc: 3, beta: 2.4 };    // notch width
+  var FAN = 12;                                    // spacing of notches stamped at one moment
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   var VERDICT = {
     pass: "passed", warn: "passed with warnings", fail: "failed", untested: "untested"
@@ -121,17 +122,25 @@
       var rad = OUTER - i * STEP;
       el("circle", { "class": "ring", r: rad, "data-family": fam.id }, lane);
       counts[fam.id] = 0;
-      all.forEach(function (r) {
-        if (r.family !== fam.id || r.t < start || r.t > now) return;
+      // Releases of one family stamped at the same moment would sit on one spot and only the
+      // top one could be opened. They fan out sideways around that spot, FAN units apart on
+      // the ring (a few days at most), each with a narrower grab area, so each has its own.
+      var mine = all.filter(function (r) { return r.family === fam.id && r.t >= start && r.t <= now; });
+      var stack = {}, seat = {};
+      mine.forEach(function (r) { stack[r.t] = (stack[r.t] || 0) + 1; });
+      mine.forEach(function (r) {
         counts[fam.id]++;
-        var len = LEN[r.stage], ang = angle(r.t);
+        var n = stack[r.t], k = seat[r.t] || 0;
+        seat[r.t] = k + 1;
+        var len = LEN[r.stage];
+        var ang = angle(r.t) + (n > 1 ? (k - (n - 1) / 2) * FAN * 180 / (Math.PI * rad) : 0);
         var a0 = xy(ang, rad - len / 2), a1 = xy(ang, rad + len / 2);
         var h0 = xy(ang, rad - len / 2 - 8), h1 = xy(ang, rad + len / 2 + 8);
         var g = el("g", {
           "class": "notch " + r.stage, role: "button", tabindex: "-1", "data-id": r.id,
           "data-status": r.status, "aria-label": label(r)
         }, lane);
-        el("line", { "class": "hit", x1: h0[0], y1: h0[1], x2: h1[0], y2: h1[1], "stroke-width": 26 }, g);
+        el("line", { "class": "hit", x1: h0[0], y1: h0[1], x2: h1[0], y2: h1[1], "stroke-width": n > 1 ? FAN - 2 : 26 }, g);
         el("line", { "class": "nl", x1: a0[0], y1: a0[1], x2: a1[0], y2: a1[1], "stroke-width": WID[r.stage] }, g);
         marker(g, xy(ang, rad + len / 2 + 9), r.status);
         notches.push(g);
