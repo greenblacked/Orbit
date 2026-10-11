@@ -566,6 +566,48 @@ def test_the_effects_load_after_the_page_and_the_page_stays_clean_while_they_run
         context.close()
 
 
+def test_turning_on_reduce_motion_after_load_stops_the_effects(browser, base_url):
+    context = make_context(browser, base_url, motion="no-preference", scripts=[MANY_CORES])
+    try:
+        page = context.new_page()
+        open_front_page(page, base_url)
+        page.wait_for_function(
+            "() => document.documentElement.classList.contains('fx-glass')", timeout=15000
+        )
+        page.wait_for_timeout(1500)  # the aurora module, where WebGL exists, starts about now
+        page.emulate_media(reduced_motion="reduce")
+        page.wait_for_function("() => !document.documentElement.className.includes('fx-')")
+        page.wait_for_selector(".aurora canvas", state="detached")
+        assert page.locator(".aurora.gl").count() == 0
+    finally:
+        context.close()
+
+
+# Frames far apart, as on the slowest phones: about four in the aurora's first second.
+SLOW_FRAMES = """
+window.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 250);
+"""
+
+
+def test_a_device_that_draws_only_a_few_frames_in_the_first_second_loses_the_aurora(
+    browser, base_url
+):
+    context = make_context(
+        browser, base_url, motion="no-preference", scripts=[MANY_CORES, SLOW_FRAMES]
+    )
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        try:
+            page.wait_for_selector(".aurora canvas", state="attached", timeout=15000)
+        except Exception:
+            pytest.skip("this browser has no WebGL, so there is no aurora to judge")
+        page.wait_for_selector(".aurora canvas", state="detached", timeout=15000)
+        assert page.locator(".aurora.gl").count() == 0
+    finally:
+        context.close()
+
+
 def test_the_dial_tilts_back_as_it_scrolls_away_and_is_flat_while_in_view(browser, base_url):
     context = make_context(browser, base_url, motion="no-preference")
     try:

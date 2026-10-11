@@ -3,6 +3,19 @@
    it, and every effect is gated on the visitor allowing motion and on the feature it needs. */
 const root = document.documentElement;
 const motionOk = !!window.matchMedia && matchMedia("(prefers-reduced-motion: no-preference)").matches;
+const reduce = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+const reduced = () => !!reduce && reduce.matches;
+
+// Reduce Motion turned on after the effects loaded: the pointer highlight and the refraction
+// stop at once (the aurora watches the setting itself).
+function onReduce(e) {
+  if (!e.matches) return;
+  root.classList.remove("fx-glass", "fx-refract");
+}
+if (reduce) {
+  if (reduce.addEventListener) reduce.addEventListener("change", onReduce);
+  else if (reduce.addListener) reduce.addListener(onReduce);
+}
 
 // Exploded orbit, fallback half. Where the browser has scroll-driven animations the CSS does the
 // whole effect (see "Exploded orbit" in site.css). Elsewhere this adds a class to the dial's
@@ -36,6 +49,7 @@ function glass() {
   let last = null;
   const paint = () => {
     frame = 0;
+    if (reduced()) return;
     const card = last.target.closest(GLASS);
     if (!card) return;
     const box = card.getBoundingClientRect();
