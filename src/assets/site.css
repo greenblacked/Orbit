@@ -636,3 +636,6 @@ html[data-theme="night"] .sun { display: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The notice in the footer is long: keep its lines readable. */
+.site-footer .foot .tag { max-width: 40rem; }
