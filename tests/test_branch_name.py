@@ -1,4 +1,4 @@
-"""The branch-name gate: fb-<kebab> for work, exemptions for the long-lived branches."""
+"""The branch-name gate: <type>/<kebab> for work, exemptions for the long-lived branches."""
 
 from __future__ import annotations
 
@@ -19,13 +19,17 @@ spec.loader.exec_module(gate)
 @pytest.mark.parametrize(
     "name",
     [
-        "fb-contact-form",
-        "fb-a",
-        "fb-2",
-        "fb-fix-404-page",
-        "fb-a--b",
+        "feat/contact-form",
+        "fix/contact-form",
+        "chore/bump-node-22.4",
+        "docs/setup-notes",
+        "ci/typed-branch-names",
+        "test/branch-gate",
+        "feat/a",
+        "feat/2",
+        "fix/404-page",
+        "feat/site-from-template",
         "main",
-        "stage",
         "dev",
         "dependabot/github_actions/actions-1",
         "dependabot/npm_and_yarn/deploy/wrangler-4.150.0",
@@ -39,28 +43,71 @@ def test_an_allowed_name_passes(name):
     "name",
     [
         "",
-        "fb-",
-        "fb--x",
-        "fb-Contact",
-        "fb-contact_form",
-        "fb-contact/form",
-        "fb-x y",
-        "fb-x\n",
+        "feat/",
+        "feat//x",
+        "feat/-x",
+        "feat/x-",
+        "feat/a--b",
+        "feat/a..1",
+        "feat/a.b",
+        "feat/.1",
+        "feat/Contact",
+        "feat/contact_form",
+        "feat/contact/form",
+        "feat/x y",
+        "feat/x\n",
+        "Feat/contact",
+        "xfeat/contact",
+        "feat-contact",
         "feature/contact-form",
-        "fix/contact-form",
+        "release/v1.0.0",
+        "fb-contact-form",
+        "fb/contact-form",
         "contact-form",
-        "FB-contact",
-        "xfb-contact",
         "main2",
+        "main/x",
         "dev/x",
+        "stage",
         "stage-x",
+        "stage/x",
         "dependabot",
         "dependabots/x",
-        "fb-" + "a" * 120,
+        "feat/" + "a" * 120,
     ],
 )
 def test_any_other_name_fails(name):
     assert not gate.is_allowed(name)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "claude/contact-form",
+        "codex/contact-form",
+        "copilot/contact-form",
+        "ai/contact-form",
+        "bot/contact-form",
+        "Claude/contact-form",
+        "claude/feat/contact-form",
+        "ai/feat-contact-form",
+    ],
+)
+def test_a_tool_named_prefix_is_rejected(name):
+    assert gate.is_tool_named(name)
+    assert not gate.is_allowed(name)
+
+
+@pytest.mark.parametrize("name", ["feat/ai-search", "fix/claude-md", "docs/bot-policy"])
+def test_a_tool_word_inside_a_typed_name_is_not_a_tool_prefix(name):
+    assert not gate.is_tool_named(name)
+    assert gate.is_allowed(name)
+
+
+def test_there_is_no_stage_branch_and_no_fb_prefix():
+    assert gate.LONG_LIVED == frozenset({"main", "dev"})
+    assert not gate.is_allowed("stage")
+    assert not gate.is_allowed("fb-contact-form")
+    assert gate.TYPES == ("feat", "fix", "chore", "docs", "ci", "test")
 
 
 def run(*args, env=None):
@@ -78,16 +125,27 @@ def run(*args, env=None):
 
 
 def test_the_script_reads_the_head_ref_from_the_environment():
-    assert run(env={"HEAD_REF": "fb-contact-form"}).returncode == 0
+    assert run(env={"HEAD_REF": "feat/contact-form"}).returncode == 0
     assert run(env={"HEAD_REF": "dev"}).returncode == 0
-    assert run(env={"HEAD_REF": "stage"}).returncode == 0
+    assert run(env={"HEAD_REF": "dependabot/github_actions/actions-1"}).returncode == 0
+    assert run(env={"HEAD_REF": "stage"}).returncode == 1
 
 
 def test_a_bad_name_fails_with_a_message_that_says_what_to_do():
     result = run(env={"HEAD_REF": "feature/contact-form"})
     assert result.returncode == 1
-    assert "fb-<kebab>" in result.stderr
+    assert "<type>/<kebab>" in result.stderr
+    assert "feat, fix, chore, docs, ci or test" in result.stderr
     assert "feature/contact-form" in result.stderr
+    assert result.stdout.startswith("::error")
+
+
+def test_a_tool_named_branch_fails_with_its_own_message():
+    result = run(env={"HEAD_REF": "claude/contact-form"})
+    assert result.returncode == 1
+    assert "tool-named prefix" in result.stderr
+    assert "tooling attribution" in result.stderr
+    assert "claude/contact-form" in result.stderr
     assert result.stdout.startswith("::error")
 
 
@@ -96,12 +154,12 @@ def test_no_head_ref_means_not_a_pull_request_and_passes():
 
 
 def test_the_first_argument_wins_and_two_arguments_are_a_usage_error():
-    assert run("fb-x", env={"HEAD_REF": "bad/name"}).returncode == 0
-    assert run("fb-x", "fb-y").returncode == 2
+    assert run("feat/x", env={"HEAD_REF": "bad/name"}).returncode == 0
+    assert run("feat/x", "feat/y").returncode == 2
 
 
 def test_a_hostile_name_cannot_forge_workflow_commands():
-    name = "fb-x\n::error::forged%0A"
+    name = "feat/x\n::error::forged%0A"
     result = run(name)
     assert result.returncode == 1
     assert "\n::error::forged" not in result.stdout.replace("::error title=Branch name::", "", 1)

@@ -6,9 +6,10 @@
 # including one from a fork, cannot read the token by editing a step that already
 # holds it, because no step here holds it.
 #
-# A push to the stage branch, or Run workflow from that branch, uploads a Preview
-# named stage of the Worker orbit, served at https://stage.orbit.szolotov.com. A Preview
-# is a separate version of the Worker, so production is untouched. Production is
+# A push to main, or Run workflow from main, uploads a Preview named stage of the
+# Worker orbit, served at https://stage.orbit.szolotov.com. There is no stage branch:
+# main is what the next release is cut from, so its Preview is what is about to ship.
+# A Preview is a separate version of the Worker, so production is untouched. Production is
 # not this file: release.yml deploys the Worker orbit after a vX.Y.Z tag has
 # published its GitHub Release. The token for each lives on that GitHub
 # environment, not in the repository (SETUP.md).
@@ -17,7 +18,7 @@ name: Deploy
 on:
   pull_request:
   push:
-    branches: [stage]
+    branches: [main]
   workflow_dispatch:
 
 permissions: {}
@@ -26,10 +27,10 @@ concurrency:
   group: >-
     deploy-${{ github.event.pull_request.number || github.ref }}
   # Stage runs are not cancelled: they queue and take turns. Right before it uploads, the
-  # preview job checks that its commit is still the tip of stage and skips otherwise. The
+  # preview job checks that its commit is still the tip of main and skips otherwise. The
   # gap left is that GitHub keeps one pending run per group, so a re-run of an older run
   # can replace a newer one still waiting; stage then stays on the previous upload until
-  # the next push to stage or a manual dispatch of this workflow from stage.
+  # the next push to main or a manual dispatch of this workflow from main.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -103,14 +104,14 @@ jobs:
       name: staging
       url: ${{ vars.DEPLOY_URL }}
     steps:
-      - name: The stage Preview uploads from the stage branch only
+      - name: The stage Preview uploads from the main branch only
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -Eeuo pipefail
-          if [ "$REF_TYPE" != branch ] || [ "$REF_NAME" != stage ]; then
-            echo "::error::the stage Preview uploads from the stage branch only, not ${REF_TYPE} ${REF_NAME}"
+          if [ "$REF_TYPE" != branch ] || [ "$REF_NAME" != main ]; then
+            echo "::error::the stage Preview uploads from the main branch only, not ${REF_TYPE} ${REF_NAME}"
             exit 1
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -152,14 +153,14 @@ jobs:
         id: tip
         # Read the tip now, from the API, not from the checkout: it may predate a newer
         # push. A run that is not the tip stops without uploading and without failing, so
-        # the older run cannot leave stage on code that is not the branch.
+        # the older run cannot leave stage on code that is not the tip of main.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           GIT_SHA: ${{ github.sha }}
         run: |
           set -Eeuo pipefail
-          tip=$(gh api "repos/${GH_REPO}/git/ref/heads/stage" --jq .object.sha)
+          tip=$(gh api "repos/${GH_REPO}/git/ref/heads/main" --jq .object.sha)
           python "$GITHUB_WORKSPACE/scripts/check_stage_tip.py" "$GIT_SHA" "$tip" >> "$GITHUB_OUTPUT"
       - name: Upload the stage Preview
         id: deploy

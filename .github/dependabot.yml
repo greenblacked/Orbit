@@ -4,8 +4,9 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     # Bot pull requests follow the same road as every other change: into dev, then
-    # promoted to stage and main. Without this they target the default branch (main),
-    # skip stage and its Preview, and leave dev behind. A security update is not
+    # promoted to main (whose push uploads the stage Preview). Without this they target
+    # the default branch (main) directly, skip the batch review on dev, and leave dev
+    # behind main. A security update is not
     # affected: GitHub raises those against the default branch whatever is set here.
     target-branch: dev
     # This is safe only because the `dev` branch ruleset (SETUP.md, GitHub step 6)

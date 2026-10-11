@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """Fail unless a pull request's head branch has an allowed name.
 
-Working branches are named ``fb-<kebab>`` (for example ``fb-contact-form``): lower-case
-letters, digits and single hyphens after the ``fb-`` prefix. The long-lived branches
-``main``, ``stage`` and ``dev`` and the bot namespace ``dependabot/`` are exempt, which
-also lets a promotion pull request (head ``dev`` or ``stage``) through.
+Working branches are named ``<type>/<kebab>`` with a type of ``feat``, ``fix``, ``chore``,
+``docs``, ``ci`` or ``test`` (for example ``feat/contact-form``). The kebab part is
+lower-case letters and digits in hyphen-separated words, and a ``.<digits>`` segment is
+allowed so a version can appear in a name (``chore/bump-node-22.4``). The long-lived
+branches ``main`` and ``dev`` and the bot namespace ``dependabot/`` are exempt, which also
+lets the promotion pull request (head ``dev``, into ``main``) through. A prefix that names
+a tool (``claude/``, ``codex/``, ``copilot/``, ``ai/``, ``bot/`` and similar) is rejected
+with its own message: branch names are published, and they carry no tooling attribution.
 
 The name comes from the environment (``HEAD_REF``) or the first argument, never from a
 workflow expression spliced into a shell line: a branch name is chosen by whoever opens
 the pull request.
 
-    HEAD_REF=fb-contact-form python scripts/check_branch_name.py
+    HEAD_REF=feat/contact-form python scripts/check_branch_name.py
     python scripts/check_branch_name.py dependabot/github_actions/actions-1
 """
 
@@ -20,16 +24,35 @@ import os
 import re
 import sys
 
-WORKING_BRANCH = re.compile(r"^fb-[a-z0-9][a-z0-9-]*$")
-LONG_LIVED = frozenset({"main", "stage", "dev"})
+TYPES = ("feat", "fix", "chore", "docs", "ci", "test")
+WORKING_BRANCH = re.compile(r"(?:" + "|".join(TYPES) + r")/[a-z0-9]+(?:-[a-z0-9]+|\.[0-9]+)*")
+LONG_LIVED = frozenset({"main", "dev"})
 BOT_PREFIXES = ("dependabot/",)
+# Prefixes that name a tool or an assistant. A branch name is published with the pull
+# request, so these are refused on purpose, and with a message that says why.
+TOOL_PREFIXES = (
+    "claude/",
+    "codex/",
+    "copilot/",
+    "ai/",
+    "bot/",
+    "cursor/",
+    "devin/",
+    "agent/",
+    "llm/",
+)
 # GitHub caps a ref at 255 bytes; nothing here needs more than a short name.
 MAX_LENGTH = 100
 
 
+def is_tool_named(name: str) -> bool:
+    """True when ``name`` starts with a tool-named prefix such as ``claude/``."""
+    return name.lower().startswith(TOOL_PREFIXES)
+
+
 def is_allowed(name: str) -> bool:
     """True when ``name`` may head a pull request."""
-    if len(name) > MAX_LENGTH:
+    if len(name) > MAX_LENGTH or is_tool_named(name):
         return False
     if name in LONG_LIVED or name.startswith(BOT_PREFIXES):
         return True
@@ -43,11 +66,18 @@ def printable(name: str) -> str:
 
 
 def message(name: str) -> str:
+    if is_tool_named(name):
+        return (
+            f"branch '{printable(name)}' starts with a tool-named prefix. Branch names are "
+            "published and carry no tooling attribution: use <type>/<kebab> with a type "
+            "of feat, fix, chore, docs, ci or test (for example feat/contact-form). "
+            "Rename the branch and reopen the pull request."
+        )
     return (
         f"branch '{printable(name)}' is not an allowed name. Working branches are "
-        "fb-<kebab> (lower-case letters, digits and hyphens, for example "
-        "fb-contact-form). main, stage, dev and dependabot/* are exempt. "
-        "Rename the branch and reopen the pull request."
+        "<type>/<kebab> with a type of feat, fix, chore, docs, ci or test (lower-case "
+        "letters, digits and hyphens, for example feat/contact-form). main, dev and "
+        "dependabot/* are exempt. Rename the branch and reopen the pull request."
     )
 
 

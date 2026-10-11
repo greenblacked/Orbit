@@ -8,7 +8,7 @@ The source of <https://orbit.szolotov.com>, a static site served by Cloudflare W
 | --- | --- |
 | `src/` | The site: `index.html`, `about/index.html`, `404.html`, the icons, `_headers`, and `assets/` (`site.css`, `theme.js`, `site.js`). Edit these. |
 | `scripts/build_site.py` | Copies `src/` to `dist/site/` and stamps every page and `version.txt` with a version. Standard library only. |
-| `scripts/check_branch_name.py` | The rule behind the `branch-name` CI job: `fb-<kebab>` for working branches. |
+| `scripts/check_branch_name.py` | The rule behind the `branch-name` CI job: `<type>/<kebab>` for working branches, with a tool-named prefix refused. |
 | `scripts/check_site.py` | Offline check of a build: every local link, asset and `#fragment` resolves, and no page or image is over the size budget. Run by CI and by `preview.sh`. |
 | `scripts/serve_site.py` | Serves `dist/site` on loopback the way the Worker does: the 404 page, the trailing-slash redirect and the `_headers` file, so the CSP a browser enforces locally is the production one. |
 | `scripts/site_pages.py` | The page list and URL rules the other scripts share. |
@@ -17,11 +17,11 @@ The source of <https://orbit.szolotov.com>, a static site served by Cloudflare W
 | `scripts/bundle_preview.py` | The whole built site as ONE self-contained HTML file, `dist/preview/index.html`, for sharing as a private page: CSS and JS inlined, images as data URIs, every page switchable by hash route, labelled as a preview of a version and commit. Under 5 MB. Its first head element is a Content-Security-Policy `<meta>` that allows only the file's own inline code and `data:` URIs, so nothing can be fetched from outside the file; that policy is the boundary and applies to the preview only (the site keeps its `_headers` policy). The build also fails on a fetching construct it recognises, and on `<meta http-equiv=refresh>`, `ping` and `srcdoc`, which a policy does not stop; that scan is an early warning with a clear message, not the guarantee. |
 | `scripts/preview.sh` | The preview loop in one command: build, check, serve on loopback, smoke-test, screenshots, bundle. Run it before a pull request that changes anything visible. |
 | `scripts/check_release_order.py` | The guard the release deploy runs just before it deploys: fails when a greater `vX.Y.Z` tag exists, so an older release cannot overwrite a newer one. |
-| `scripts/check_stage_tip.py` | The guard the stage Preview runs just before it uploads: a run that is no longer the tip of `stage` skips its upload, so an older push cannot overwrite a newer one. |
+| `scripts/check_stage_tip.py` | The guard the stage Preview runs just before it uploads: a run that is no longer the tip of `main` skips its upload, so an older push cannot overwrite a newer one. |
 | `scripts/smoke_site.sh` | Post-deploy check: the version is live, the front page carries it, the icon is served, a missing path answers 404. |
 | `deploy/` | `wrangler.json` (assets, routes) and the pinned, locked Wrangler. |
 | `tests/` | Build tests, and browser tests that drive the built site in Chrome. |
-| `.github/workflows/` | `ci`, `security`, `deploy` (dry run and stage preview), `release`, `cut-release`, `dependabot-auto-merge`. |
+| `.github/workflows/` | `ci`, `security`, `deploy` (dry run and the stage Preview from `main`), `release`, `cut-release`, `dependabot-auto-merge`. |
 
 ## Working on the site
 
@@ -68,8 +68,8 @@ The home link in the header is named by its visible text (the site title), so th
 
 ## Branches and releases
 
-Working branches are named `fb-<kebab>` (`fb-contact-form`); the `branch-name` job in `ci.yml` fails a pull request from any other name. `main`, `stage`, `dev` and `dependabot/*` are exempt, so promotion pull requests pass. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Working branches are named `<type>/<kebab>`, with a type of `feat`, `fix`, `chore`, `docs`, `ci` or `test` (`feat/contact-form`, `chore/bump-node-22.4`). The `branch-name` job in `ci.yml` fails a pull request from any other name, and refuses a tool-named prefix (`claude/`, `codex/`, `copilot/`, `ai/`, `bot/`). `main`, `dev` and `dependabot/*` are exempt, so the promotion pull request passes. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Work lands on `dev`, is promoted to `stage` (a push there uploads a Preview at <https://stage.orbit.szolotov.com>), then to `main`. A release is cut from `main`: run the __Cut release__ workflow with a version such as `1.0.0`. It tags `v1.0.0`, and the __Release__ workflow deploys production, checks it on `workers.dev`, and rolls back if the checks fail.
+Work lands on `dev` through pull requests, and `dev` is promoted to `main` with one pull request and a merge commit. There is no `stage` branch: a push to `main` uploads a Preview named `stage` at <https://stage.orbit.szolotov.com> (the `staging` environment admits `main` only), so the Preview shows what the next release will ship. A release is cut from `main`: run the __Cut release__ workflow with a version such as `1.0.0`. It tags `v1.0.0`, and the __Release__ workflow deploys production at <https://orbit.szolotov.com>, checks it on `workers.dev`, and rolls back if the checks fail.
 
 The one-time setup (GitHub environments, Cloudflare secrets, required checks, custom domain) and the rollback steps are in [SETUP.md](SETUP.md).

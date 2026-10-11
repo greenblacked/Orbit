@@ -20,9 +20,9 @@ The browser tests and the screenshots need Playwright (`python -m pip install --
 
 ## Branches
 
-- Work happens on `fb-<kebab>` branches (`fb-contact-form`): the prefix `fb-`, then lower-case letters, digits and hyphens. CI's `branch-name` job fails any other name. Exempt: `main`, `stage`, `dev` and `dependabot/*`.
-- Branch from `dev` and open the pull request into `dev`. Never push to `stage` or `main`.
-- The flow is `dev` to `stage` to `main`, each by pull request with a merge commit, never a squash. Only the owner merges.
+- Work happens on `<type>/<kebab>` branches (`feat/contact-form`): a type of `feat`, `fix`, `chore`, `docs`, `ci` or `test`, a slash, then lower-case letters, digits and hyphens. CI's `branch-name` job fails any other name, and a tool-named prefix such as `claude/` or `ai/`. Exempt: `main`, `dev` and `dependabot/*`.
+- Branch from `dev` and open the pull request into `dev`. Never push to `main`.
+- The flow is `dev` to `main`, by one pull request with a merge commit, never a squash. There is no `stage` branch. Only the owner merges.
 - Production is released only with the **Cut release** workflow on `main`. Never create a tag or deploy by hand.
 
 ## Before opening any pull request that changes what a visitor sees
@@ -43,9 +43,9 @@ directory and file name in a page's path must match `[a-z0-9][a-z0-9._-]*`: URLs
 emitted as written, so a space, `#`, `?`, `%` or a non-ASCII letter would break the
 sitemap and the preview routes. The build refuses such a path and names the file.
 
-## After a merge to `stage`
+## After a merge to `main`
 
-The merge uploads a Preview. Share <https://stage.orbit.szolotov.com> (behind Cloudflare Access) with the owner in the chat and say what to look at. It is a separate version of the same Worker, so production is untouched.
+The push to `main` uploads a Preview. Share <https://stage.orbit.szolotov.com> (behind Cloudflare Access) with the owner in the chat and say what to look at. It is a separate version of the same Worker, so production is untouched.
 
 ## Rules that keep the site safe
 

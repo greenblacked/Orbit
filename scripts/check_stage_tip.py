@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Say whether this run is still the tip of ``stage``, so a superseded one skips its upload.
+"""Say whether this run is still the tip of ``main``, so a superseded one skips its upload.
 
-Two pushes to ``stage`` close together start two Preview runs. A concurrency group orders
+Two pushes to ``main`` close together start two Preview runs. A concurrency group orders
 nothing it does not cancel, so the older run can reach the upload after the newer one and
-leave stage on code that is not the branch tip. Right before it uploads, the job reads the
-current tip of ``refs/heads/stage`` from the API and calls this with both SHAs.
+leave the stage Preview on code that is not the tip of main. Right before it uploads, the
+job reads the current tip of ``refs/heads/main`` from the API and calls this with both SHAs.
 
 Usage: ``check_stage_tip.py RUN_SHA TIP_SHA``. Prints ``current=true`` or ``current=false``
 on stdout, for ``$GITHUB_OUTPUT``; a superseded run is not a failure, so the status is 0
@@ -40,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if not current:
         print(
-            f"::notice::{args[0][:7]} is no longer the tip of stage ({args[1][:7]}); "
+            f"::notice::{args[0][:7]} is no longer the tip of main ({args[1][:7]}); "
             "skipping its upload, the newer push uploads instead",
             file=sys.stderr,
         )

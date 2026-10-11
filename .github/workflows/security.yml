@@ -10,7 +10,7 @@ name: Security
 
 on:
   push:
-    branches: [main, stage, dev]
+    branches: [main, dev]
   pull_request:
   merge_group:
     types: [checks_requested]

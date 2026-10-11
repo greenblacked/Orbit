@@ -3,7 +3,7 @@
 # safe — the branch ruleset on `dev` still requires `ci` and `security` to report
 # `success` before GitHub will complete the merge this job requests. A Dependabot
 # security update is raised against the default branch whatever `target-branch` says;
-# one into `main` is left for a person, so it cannot skip `dev`, `stage` and the Preview.
+# one into `main` is left for a person, so it cannot skip `dev`.
 # A major bump is left for a person, because a breaking change grouped or not is a
 # judgement call rather than a formality. Every commit's author login must be
 # dependabot[bot], and since that login can be spoofed through the author email, every
@@ -51,7 +51,7 @@ jobs:
     # `github.actor` is whoever triggered the run, and zizmor rightly calls it spoofable.
     # The head check excludes a fork: Dependabot itself never opens one. The base must be
     # `dev`: that is where version updates are raised, and a security update into `main`
-    # would otherwise merge past `dev` and `stage`.
+    # would otherwise merge past `dev`.
     if: >-
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository &&

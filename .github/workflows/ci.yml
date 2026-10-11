@@ -7,7 +7,7 @@ name: CI
 
 on:
   push:
-    branches: [main, stage, dev]
+    branches: [main, dev]
   pull_request:
     types: [opened, synchronize, reopened]
   merge_group:
@@ -175,11 +175,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - name: Working branches are named fb-<kebab>
+      - name: Working branches are named <type>/<kebab>
         # The head ref is chosen by whoever opens the pull request, so it reaches the
         # script through the environment and is never expanded inside the shell text.
-        # main, stage, dev and dependabot/* are exempt, which lets a promotion pull
-        # request (head dev or stage) through.
+        # main, dev and dependabot/* are exempt, which lets the promotion pull request
+        # (head dev, into main) through. A tool-named prefix such as claude/ is refused.
         env:
           HEAD_REF: ${{ github.head_ref }}
         run: |

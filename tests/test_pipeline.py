@@ -179,15 +179,19 @@ def test_the_worker_serves_a_404_page_and_keeps_workers_dev():
     assert route["previews_enabled"] is True
 
 
-def test_the_stage_preview_uploads_from_the_stage_branch_only():
+def test_the_stage_preview_uploads_from_the_main_branch_only():
     deploy = workflow("deploy.yml")
-    assert re.search(r"^  push:\n    branches: \[stage\]$", deploy, flags=re.MULTILINE)
+    assert re.search(r"^  push:\n    branches: \[main\]$", deploy, flags=re.MULTILINE)
     preview = job_block(deploy, "preview")
     assert "github.event_name == 'push' || github.event_name == 'workflow_dispatch'" in preview
-    assert '[ "$REF_TYPE" != branch ] || [ "$REF_NAME" != stage ]' in preview
+    assert '[ "$REF_TYPE" != branch ] || [ "$REF_NAME" != main ]' in preview
     assert "name: staging" in preview
     assert "--name stage" in preview
     assert "--noindex" in preview
+    # There is no stage branch: nothing in the file triggers on, checks or reads one.
+    assert "branches: [stage]" not in deploy
+    assert '"$REF_NAME" != stage' not in deploy
+    assert "heads/stage" not in deploy
 
 
 def test_a_pull_request_only_dry_runs_and_holds_no_credential():
@@ -202,12 +206,22 @@ def test_a_pull_request_only_dry_runs_and_holds_no_credential():
     assert "CLOUDFLARE_API_TOKEN" in job_block(deploy, "preview")
 
 
-def test_there_is_no_deploy_branch():
+def test_there_is_no_deploy_branch_and_no_stage_branch():
     for path in sorted(WORKFLOWS.glob("*.yml")):
         text = path.read_text(encoding="utf-8")
         for branches in re.findall(r"branches: \[([^\]]*)\]", text):
             names = {name.strip() for name in branches.split(",")}
-            assert names <= {"main", "stage", "dev"}, (path.name, names)
+            assert names <= {"main", "dev"}, (path.name, names)
+        assert "heads/stage" not in text, path.name
+
+
+def test_ci_and_security_run_on_pushes_to_main_and_dev_and_on_pull_requests():
+    for name in ("ci.yml", "security.yml"):
+        text = workflow(name)
+        head = text.split("\njobs:\n", 1)[0]
+        assert re.search(r"^  push:\n    branches: \[main, dev\]$", head, flags=re.MULTILINE), name
+        assert re.search(r"^  pull_request:", head, flags=re.MULTILINE), name
+        assert "pull_request_target" not in head, name
 
 
 def test_cut_release_runs_on_main_only_and_dispatches_release_on_the_tag():
@@ -218,9 +232,10 @@ def test_cut_release_runs_on_main_only_and_dispatches_release_on_the_tag():
     assert "VERSION: ${{ inputs.version }}" in cut
 
 
-def test_dependabot_follows_dev_stage_main():
+def test_dependabot_follows_dev_then_main():
     config = (REPO / ".github" / "dependabot.yml").read_text(encoding="utf-8")
     assert re.search(r"^    target-branch: dev$", config, flags=re.MULTILINE)
+    assert not re.search(r"^\s*target-branch: (?!dev$)", config, flags=re.MULTILINE)
 
 
 def test_auto_merge_only_acts_on_a_pull_request_into_dev():
@@ -462,8 +477,8 @@ def test_the_agent_instructions_state_the_workflow_and_stay_public_safe():
     agents = (REPO / "AGENTS.md").read_text(encoding="utf-8")
     assert (REPO / "CLAUDE.md").read_text(encoding="utf-8").strip() == "@AGENTS.md"
     for needle in (
-        "fb-<kebab>",
-        "`dev` to `stage` to `main`",
+        "<type>/<kebab>",
+        "`dev` to `main`",
         "bash scripts/preview.sh",
         "phone, tablet and desktop",
         "dist/preview/index.html",
@@ -471,6 +486,9 @@ def test_the_agent_instructions_state_the_workflow_and_stay_public_safe():
         "Cut release",
     ):
         assert needle in agents, needle
+    # There is no stage branch, so the agent rules must not describe one.
+    assert "`stage` to `main`" not in agents
+    assert "`dev` to `stage`" not in agents
     # A generated site may be public: nothing here names a private workspace or note.
     # Assembled from parts so this file does not itself trip the generator's leak check.
     for private in ("ai-" + "context", "inbox" + ".md", "decisions" + "/", "repos" + "/"):
@@ -556,7 +574,7 @@ def test_the_release_order_check_include_equal_flag(monkeypatch, capsys):
     assert order.main(["v1.2.3"]) == 0
 
 
-# --- a superseded stage run must not upload over the branch tip -----------------------
+# --- a superseded stage run must not upload over the tip of main ----------------------
 
 
 def test_only_pull_request_runs_are_cancelled_and_stage_runs_queue():
@@ -564,7 +582,7 @@ def test_only_pull_request_runs_are_cancelled_and_stage_runs_queue():
     head = deploy.split("\njobs:\n", 1)[0]
     assert "group: >-\n    deploy-${{ github.event.pull_request.number || github.ref }}" in head
     assert "cancel-in-progress: ${{ github.event_name == 'pull_request' }}" in head
-    assert "refs/heads/stage" not in head.split("cancel-in-progress:", 1)[1]
+    assert "refs/heads/main" not in head.split("cancel-in-progress:", 1)[1]
 
 
 def test_the_stage_upload_waits_on_a_tip_check_made_right_before_it():
@@ -577,7 +595,7 @@ def test_the_stage_upload_waits_on_a_tip_check_made_right_before_it():
     assert "id: tip" in text
     assert "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in text
     assert "GIT_SHA: ${{ github.sha }}" in text
-    assert 'gh api "repos/${GH_REPO}/git/ref/heads/stage" --jq .object.sha' in text
+    assert 'gh api "repos/${GH_REPO}/git/ref/heads/main" --jq .object.sha' in text
     assert 'python "$GITHUB_WORKSPACE/scripts/check_stage_tip.py" "$GIT_SHA" "$tip"' in text
     assert '>> "$GITHUB_OUTPUT"' in text
     assert "set -Eeuo pipefail" in text and "${{" not in text.split("run:", 1)[1]
@@ -586,12 +604,12 @@ def test_the_stage_upload_waits_on_a_tip_check_made_right_before_it():
         assert "if: steps.tip.outputs.current == 'true'" in step, step.split("\n", 1)[0]
 
 
-def test_the_stage_tip_check_says_current_only_for_the_tip(capsys):
+def test_the_stage_tip_check_says_current_only_for_the_tip_of_main(capsys):
     tip = load_script("check_stage_tip")
     a, b = "a" * 40, "b" * 40
     assert tip.is_current(a, a) is True
     assert tip.is_current(a, b) is False
-    for bad in ("", "abc", "A" * 40, "g" * 40, "a" * 41, "refs/heads/stage"):
+    for bad in ("", "abc", "A" * 40, "g" * 40, "a" * 41, "refs/heads/main"):
         with pytest.raises(ValueError):
             tip.is_current(a, bad)
         with pytest.raises(ValueError):
@@ -604,3 +622,35 @@ def test_the_stage_tip_check_says_current_only_for_the_tip(capsys):
     assert tip.main([a, ""]) == 2, "an empty read of the tip is an error, not 'current'"
     assert capsys.readouterr().out == ""
     assert tip.main([a]) == 2
+
+
+# --- the flow: typed branches into dev, dev into main, stage previews from main -------
+
+
+def test_the_docs_describe_the_flow_with_no_stage_branch():
+    docs = {
+        name: (REPO / name).read_text(encoding="utf-8")
+        for name in ("README.md", "SETUP.md", "AGENTS.md", "CONTRIBUTING.md")
+    }
+    for name, text in docs.items():
+        assert "fb-<kebab>" not in text, name
+        assert "`stage` branch" not in text.replace("no `stage` branch", ""), name
+        assert "dev` to `stage" not in text, name
+        assert "stage` to `main" not in text, name
+        assert "<type>/<kebab>" in text, name
+    setup = docs["SETUP.md"]
+    # The staging environment admits the main branch only, and Access guards the stage host.
+    assert "`staging`: deployment branch policy **Selected branches**, `main` only" in setup
+    assert "Cloudflare Access on `stage.orbit.szolotov.com`" in setup
+    assert "git merge-base --is-ancestor origin/main origin/dev" in setup
+    assert "a branch ruleset on `main` and one on `dev`" in setup
+    assert "refs/tags/v*" in setup
+    for name in ("README.md", "AGENTS.md", "CONTRIBUTING.md"):
+        assert "https://stage.orbit.szolotov.com" in docs[name], name
+
+
+def test_the_staging_environment_and_the_stage_host_are_named_consistently():
+    deploy = workflow("deploy.yml")
+    assert "stage_url=https://stage.orbit.szolotov.com" in deploy
+    assert "name: staging" in job_block(deploy, "preview")
+    assert "environment:" not in workflow("ci.yml")

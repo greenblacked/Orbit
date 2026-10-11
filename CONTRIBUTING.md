@@ -4,23 +4,24 @@ This is a small static site. Changes arrive as pull requests, and the checks tha
 
 ## Naming a branch
 
-Every working branch is named `fb-<kebab>`: the prefix `fb-`, then lower-case letters, digits and hyphens, for example `fb-contact-form` or `fb-fix-footer-link`. The `branch-name` job in `ci.yml` rejects a pull request from any other name, and prints the rule, so a rename costs one command:
+Every working branch is named `<type>/<kebab>`: a type of `feat`, `fix`, `chore`, `docs`, `ci` or `test`, a slash, then lower-case letters and digits in hyphen-separated words (a `.<digits>` segment is allowed for versions), for example `feat/contact-form` or `fix/footer-link`. The `branch-name` job in `ci.yml` rejects a pull request from any other name, and prints the rule, so a rename costs one command:
 
 ```bash
-git branch -m fb-contact-form
-git push --set-upstream origin fb-contact-form   # then reopen the pull request
+git branch -m feat/contact-form
+git push --set-upstream origin feat/contact-form   # then reopen the pull request
 ```
 
-Exempt, because they are not working branches: the long-lived branches `main`, `stage` and `dev`, and the bot namespace `dependabot/`. A promotion pull request, whose head is `dev` or `stage`, therefore passes. `scripts/check_branch_name.py` is the whole rule; run it yourself with `python scripts/check_branch_name.py fb-my-change`.
+A branch whose prefix names a tool (`claude/`, `codex/`, `copilot/`, `ai/`, `bot/`) is refused with its own message: branch names are published and carry no tooling attribution.
+
+Exempt, because they are not working branches: the long-lived branches `main` and `dev`, and the bot namespace `dependabot/`. The promotion pull request, whose head is `dev`, therefore passes. `scripts/check_branch_name.py` is the whole rule; run it yourself with `python scripts/check_branch_name.py feat/my-change`.
 
 ## From change to production
 
-1. Branch from `dev`: `git switch -c fb-my-change dev`.
+1. Branch from `dev`: `git switch -c feat/my-change dev`.
 2. Make the change and run the checks below.
 3. Open a pull request into `dev`. `ci` and `security` must be green.
-4. When a batch is ready, promote `dev` to `stage` with a pull request (merge commit). The merge uploads a Preview at `https://stage.orbit.szolotov.com`, behind Cloudflare Access.
-5. Promote `stage` to `main` the same way.
-6. Release from `main` with the **Cut release** workflow. Nothing else deploys production.
+4. When a batch is ready, promote `dev` to `main` with a pull request (merge commit). The push to `main` uploads a Preview at `https://stage.orbit.szolotov.com`, behind Cloudflare Access. There is no `stage` branch.
+5. Release from `main` with the **Cut release** workflow. Nothing else deploys production.
 
 ## Checks
 
