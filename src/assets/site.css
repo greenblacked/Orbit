@@ -1311,3 +1311,53 @@ button.m-comp:active { filter: brightness(1.2); }
 .feat-title { font-size: 1.0625rem; font-weight: 500; line-height: 1.3; }
 .feat-sum { margin-top: 0.5rem; color: var(--muted); font-size: 0.9375rem; }
 .prose-lab a { overflow-wrap: anywhere; }
+/* The timeline and the filter chips. */
+.page .filters { display: grid; gap: 1.25rem; margin-top: 2rem; }
+.filter { min-width: 0; }
+.f-label { margin-bottom: 0.5rem; color: var(--muted); font-size: 0.8125rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.chip {
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 0.875rem;
+  text-align: center;
+}
+.chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.page .count { margin-top: 1.5rem; }
+.timeline { margin-top: 1rem; }
+.month { margin-top: 2rem; }
+.month-h { position: relative; padding-left: 1.25rem; font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
+.month-h::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3491f4, #f4344d);
+}
+.tl { margin: 0.5rem 0 0 0.2rem; border-left: 2px solid var(--line); }
+.tl-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.tl-link:hover .tl-ver { text-decoration: underline; text-underline-offset: 4px; }
+.tl-day { width: 6.75rem; color: var(--muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.tl-fam { min-width: 4.5rem; color: var(--fam-text); font-size: 0.875rem; font-weight: 500; }
+.tl-ver { font-weight: 500; }
+@media (max-width: 36rem) { .tl-day { width: 100%; } }
+@media (min-width: 40rem) { .page .filters { grid-template-columns: repeat(2, auto); justify-content: start; gap: 2rem 3rem; } }
+

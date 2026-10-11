@@ -366,3 +366,66 @@ def test_the_highlights_section_shows_with_sources_and_hides_when_empty(page, ba
     cards_ready(empty)
     empty.wait_for_timeout(300)
     assert empty.locator("#features").is_hidden()
+
+
+# --- the timeline -----------------------------------------------------------------------
+
+
+def test_the_timeline_lists_everything_newest_first_grouped_by_month(page, base_url):
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    assert page.locator(".tl-item").count() == len(SNAPSHOT["releases"])
+    months = page.locator(".month-h").all_inner_texts()
+    assert months[0] == "October 2026" and months[-1] == "May 2026"
+    assert len(months) == len(set(months))
+    assert page.inner_text("#count") == f"{len(SNAPSHOT['releases'])} releases"
+    hrefs = page.locator(".tl-link").evaluate_all("els => els.map(a => a.href)")
+    assert sorted(hrefs) == sorted(r["url"] for r in SNAPSHOT["releases"])
+    by_url = {r["url"]: r["date"] for r in SNAPSHOT["releases"]}
+    dates = [by_url[href] for href in hrefs]
+    assert dates == sorted(dates, reverse=True)
+
+
+def test_the_filter_chips_narrow_by_os_and_by_stage(page, base_url):
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.click("#chips-family [data-v=iOS]")
+    assert page.get_attribute("#chips-family [data-v=iOS]", "aria-pressed") == "true"
+    assert page.get_attribute("#chips-family [data-v=all]", "aria-pressed") == "false"
+    assert set(page.locator(".tl-fam").all_inner_texts()) == {"iOS"}
+    assert page.locator(".tl-item").count() == len(releases("iOS"))
+    page.click("#chips-stage [data-v=beta]")
+    betas = [r for r in releases("iOS") if r["stage"] == "beta"]
+    assert page.locator(".tl-item").count() == len(betas)
+    noun = "beta" if len(betas) == 1 else "betas"
+    assert page.inner_text("#count") == f"{len(betas)} iOS {noun}"
+    assert page.url.endswith("?family=iOS&stage=beta")
+    page.click("#chips-stage [data-v=release]")
+    finals = [r for r in releases("iOS") if r["stage"] == "release"]
+    assert page.inner_text("#count") == f"{len(finals)} iOS public " + (
+        "release" if len(finals) == 1 else "releases"
+    )
+    page.click("#chips-stage [data-v=rc]")
+    assert page.locator(".tl-item").count() == 0
+    assert page.inner_text("#count") == "No iOS release candidates in the data."
+    page.click("#chips-family [data-v=all]")
+    page.click("#chips-stage [data-v=all]")
+    assert page.locator(".tl-item").count() == len(SNAPSHOT["releases"])
+
+
+def test_a_filtered_address_opens_filtered(page, base_url):
+    page.goto(base_url + "/timeline/?family=macOS&stage=release")
+    page.wait_for_selector(".tl-item")
+    expected = [r for r in releases("macOS") if r["stage"] == "release"]
+    assert page.locator(".tl-item").count() == len(expected)
+    assert page.get_attribute("#chips-family [data-v=macOS]", "aria-pressed") == "true"
+
+
+def test_a_poll_with_nothing_new_leaves_the_timeline_and_its_focus_alone(page, base_url):
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.focus(".tl-item a")
+    page.evaluate("document.querySelector('.tl-item a').dataset.mark = 'kept'")
+    page.evaluate("RO.refresh()")
+    assert page.evaluate("document.activeElement.dataset.mark") == "kept"
+    assert page.evaluate("document.querySelector('.tl-item a').dataset.mark") == "kept"

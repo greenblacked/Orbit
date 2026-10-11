@@ -40,7 +40,7 @@ def test_the_output_is_one_file_under_five_megabytes(preview):
 
 def test_every_page_of_the_build_is_in_the_file(text, built):
     routes = re.findall(r'<template data-route="([^"]+)"', text)
-    assert routes == ["/", "/about/", "/404.html"], "front page, the rest, then the 404 page"
+    assert routes == ["/", "/about/", "/timeline/", "/404.html"], "front, the rest, the 404"
     assert len(list(built.rglob("*.html"))) == len(routes)
     for needle in (
         "Every OS release",
@@ -905,7 +905,7 @@ def tour(browser, bundle_file) -> dict[str, dict[str, list[str]]]:
     the requests that were neither the file nor a ``data:`` URI, the console errors, and
     the policy violations."""
     routes = re.findall(r'<template data-route="([^"]+)"', bundle_file.read_text(encoding="utf-8"))
-    assert routes == ["/", "/about/", "/404.html"]
+    assert routes == ["/", "/about/", "/timeline/", "/404.html"]
     report = {}
     for theme in THEMES:
         context = browser.new_context(viewport={"width": 1280, "height": 800})

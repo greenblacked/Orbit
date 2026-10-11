@@ -163,3 +163,11 @@ def test_every_feature_is_a_short_summary_that_names_a_developer_apple_com_page(
         assert 0 < len(item["title"]) <= 60, item
         assert 0 < len(item["summary"]) <= 100, item
         assert re.fullmatch(r"https://developer\.apple\.com/[a-z0-9/._-]*", item["source"]), item
+
+
+def test_the_timeline_offers_all_and_each_family_in_the_order_of_the_config():
+    html = page("timeline/index.html")
+    block = re.search(r'id="chips-family">(.*?)</div>', html, re.DOTALL).group(1)
+    assert re.findall(r'data-v="([A-Za-z]+)"', block) == ["all", *APPLE]
+    stages = re.search(r'id="chips-stage">(.*?)</div>', html, re.DOTALL).group(1)
+    assert re.findall(r'data-v="([a-z]+)"', stages) == ["all", "release", "beta", "rc"]

@@ -190,7 +190,7 @@ def test_the_sitemap_lists_every_page_but_the_404_on_the_production_domain(tmp_p
     site.build(REPO / "src", out, "v1")
     text = (out / "sitemap.xml").read_text(encoding="utf-8")
     locs = re.findall(r"<loc>([^<]+)</loc>", text)
-    assert locs == [f"https://{DOMAIN}/", f"https://{DOMAIN}/about/"]
+    assert locs == [f"https://{DOMAIN}{path}" for path in ("/", "/about/", "/timeline/")]
     assert text.startswith('<?xml version="1.0" encoding="UTF-8"?>')
     assert "404" not in text
 
