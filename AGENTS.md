@@ -12,6 +12,8 @@ A static site (plain HTML in `src/`, one stylesheet, two small scripts) served b
 python scripts/build_site.py --version local     # build dist/site
 python scripts/check_site.py dist/site           # local links, fragments and the size budget
 python -m pytest -m "not browser"                # build, pipeline, header and bundle tests
+node --test 'tests/*.test.mjs'                  # parser, registry and Worker tests (Node 22)
+python scripts/check_results.py                  # the validation results under results/
 bash scripts/preview.sh                          # build, serve, smoke, screenshots, bundle
 ruff check . && ruff format --check .            # when ruff is installed
 ```
