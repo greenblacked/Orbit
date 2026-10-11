@@ -1,6 +1,6 @@
 # Release Orbit
 
-The source of <https://orbit.szolotov.com>, a static site served by Cloudflare Workers static assets (Worker `orbit`). It was started from the shared web template, so its design and its CI and CD pipeline match every other site made from it.
+The source of <https://orbit.szolotov.com>, a static site served by Cloudflare Workers static assets (Worker `orbit`).
 
 ## Layout
 
