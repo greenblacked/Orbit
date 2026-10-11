@@ -1580,3 +1580,8 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   .fx-glass .rel:hover::after, .fx-glass .orbit-card:hover::after { opacity: 1; }
   .fx-refract .rel:hover { filter: url(#fx-refract); }
 }
+
+/* Aurora (aurora.js): the WebGL canvas takes the place of the CSS gradient blobs, which stay
+   as the fallback whenever the canvas is not there. */
+.aurora-gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.aurora.gl i { display: none; }

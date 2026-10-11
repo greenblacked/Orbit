@@ -69,7 +69,22 @@ function refraction() {
   root.classList.add("fx-refract");
 }
 
+// Aurora: a WebGL canvas behind the hero, its own lazily imported module. Skipped when the
+// visitor asked to save data, on a device that reports four or fewer cores, and (inside the
+// module) when there is no WebGL or the first second of frames is slow; the CSS gradient blobs
+// stay as the fallback.
+function aurora() {
+  const host = document.querySelector(".hero-wrap .aurora");
+  if (!host) return;
+  const link = navigator.connection;
+  if (link && link.saveData) return;
+  if (navigator.hardwareConcurrency <= 4) return;
+  const colors = window.RO ? RO.families().map((f) => f.accent) : [];
+  import("./aurora.js").then((m) => m.default(host, colors)).catch(() => {});
+}
+
 if (motionOk) {
   glass();
   refraction();
+  aurora();
 }
