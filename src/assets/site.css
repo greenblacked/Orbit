@@ -1381,7 +1381,8 @@ select {
   text-overflow: ellipsis;
 }
 html[data-theme="reactor"] select { border-radius: 0; }
-@media (min-width: 48rem) { .cmp-form { grid-template-columns: 12rem repeat(2, minmax(0, 1fr)); } }
+/* Below 900px each select takes the full width, so a long option label is not cut off. */
+@media (min-width: 56.25rem) { .cmp-form { grid-template-columns: 12rem repeat(2, minmax(0, 1fr)); } }
 .cmp-result { margin-top: 2rem; }
 .cmp-cards { display: grid; gap: 1rem; }
 @media (min-width: 40rem) { .cmp-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

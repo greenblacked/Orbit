@@ -76,6 +76,11 @@
     var pub = between.length - pre;
     dl.appendChild(stat(pub, pub === 1 ? "public release in between" : "public releases in between"));
     out.appendChild(dl);
+    // The oldest pick is the oldest entry of the data: say where the data begins, so a count
+    // of what lies in between is not read as the whole history.
+    if (olderAt === list.length - 1) {
+      out.appendChild(RO.h("p", "small data-range", "History in this data starts " + RO.day(older.t) + "."));
+    }
 
     var track = RO.h("div", "track-line", null, { "aria-hidden": "true" });
     [older].concat(between, [newer]).forEach(function (r, n, arr) {
