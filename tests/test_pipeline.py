@@ -642,7 +642,7 @@ def test_the_docs_describe_the_flow_with_no_stage_branch():
     # The staging environment admits the main branch only, and Access guards the stage host.
     assert "`staging`: deployment branch policy **Selected branches**, `main` only" in setup
     assert "Cloudflare Access on `stage.orbit.szolotov.com`" in setup
-    assert "git merge-base --is-ancestor origin/main origin/dev" in setup
+    assert "git diff --quiet origin/dev...origin/main" in setup
     assert "a branch ruleset on `main` and one on `dev`" in setup
     assert "refs/tags/v*" in setup
     for name in ("README.md", "AGENTS.md", "CONTRIBUTING.md"):
