@@ -266,7 +266,7 @@
   function show(g, pin) {
     window.clearTimeout(hideTimer);
     var r = g.rel;
-    if (!r) return;
+    if (!r || (pinned && !pin && pinned !== r.id)) return;
     if (card.getAttribute("data-id") !== r.id) fill(r);
     card.hidden = false;
     place(g);
