@@ -1017,7 +1017,7 @@ MAX_RATE = 2
 # The buttons under the newest list may move by this many pixels once the data lands.
 MAX_MOVE = 1
 CLS_LIMIT = 0.02
-EXTRA_ID = "https://developer.apple.com/news/releases/?id=09082026z"
+EXTRA_ID = "https://developer.apple.com/news/releases/?id=orbit-test-extra"
 
 
 def serve_live(page, answers):
