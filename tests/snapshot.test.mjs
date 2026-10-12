@@ -78,7 +78,8 @@ describe('src/data/releases.json', () => {
       );
       assert.ok(['release', 'beta', 'rc'].includes(r.stage), r.id);
       assert.match(r.date, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
-      assert.ok(r.build.length > 0 && r.title.length > 0, r.id);
+      // Only Apple posts always carry a build; other sources may have none.
+      assert.ok((r.vendor !== 'apple' || r.build.length > 0) && r.title.length > 0, r.id);
     }
   });
 

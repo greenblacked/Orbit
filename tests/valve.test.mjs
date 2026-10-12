@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { isSource } from '../deploy/sources/index.js';
 import steamos, {
   FALLBACK_URL,
   ID,
@@ -44,6 +45,7 @@ describe('the Valve adapter', () => {
     assert.match(NEWS_URL, /^https:\/\/api\.steampowered\.com\/ISteamNews\/GetNewsForApp\/v2\/\?appid=1675200&/);
     assert.equal(FALLBACK_URL, 'https://store.steampowered.com/feeds/news/app/1675200');
     assert.equal(typeof steamos.parse, 'function');
+    assert.ok(isSource(steamos));
   });
 });
 
@@ -62,11 +64,20 @@ describe('parseTitle', () => {
     assert.equal(parseTitle('SteamOS 3.8.0', ['betachannel']).stage, 'beta');
   });
 
-  it('lets a pre-release tag win over a stable one, and falls back to the title words', () => {
-    assert.equal(parseTitle('SteamOS 3.7.13', ['stablechannel', 'betachannel']).stage, 'beta');
+  it('lets the stable tag win over the pre-release tags, and falls back to the title words', () => {
+    assert.equal(parseTitle('SteamOS 3.7.13', ['stablechannel', 'betachannel', 'previewchannel']).stage, 'release');
+    assert.equal(parseTitle('SteamOS 3.7.13', ['betachannel', 'previewchannel']).stage, 'beta');
     assert.equal(parseTitle('SteamOS 3.7.14 Preview').stage, 'beta');
     assert.equal(parseTitle('SteamOS 3.7.14 Beta').stage, 'beta');
     assert.equal(parseTitle('SteamOS 3.7.13 Stable').stage, 'release');
+  });
+
+  it('reads a title with punctuation after the version', () => {
+    assert.equal(parseTitle('SteamOS 3.7.13 Stable: Steam Deck update').stage, 'release');
+    assert.equal(parseTitle('SteamOS 3.7.14 Preview, now with fixes').stage, 'beta');
+    assert.equal(parseTitle('SteamOS 3.7.14: fixes', ['stablechannel']).version, '3.7.14');
+    assert.equal(parseTitle(`SteamOS 3.7.13 Stable ${'x'.repeat(200)}`), null);
+    assert.equal(parseTitle('SteamOS 3.7.13.1.2 Stable'), null);
   });
 
   it('takes a build id only from the title', () => {
@@ -134,15 +145,13 @@ describe('parseNews', () => {
       'https://evil.example/store.steampowered.com',
       'javascript:alert(1)',
       'steamcommunity.com/x',
+      'https://steamcommunity.com/games/1675200/announcements/detail/1',
+      ['https://store.steampowered.com/x'],
       undefined,
       42,
     ]) {
       assert.equal(parseNews(doc(post({ url })))[0].url, NEWS_PAGE, String(url));
     }
-    assert.equal(
-      parseNews(doc(post({ url: 'https://steamcommunity.com/games/1675200/announcements/detail/1' })))[0].url,
-      'https://steamcommunity.com/games/1675200/announcements/detail/1',
-    );
   });
 
   it('never keeps the post text', () => {
@@ -166,6 +175,8 @@ describe('parseNews', () => {
         post({ date: 1.5 }),
         post({ date: 1e20 }),
         post({ title: 7 }),
+        post({ title: ['SteamOS 3.7.15'] }),
+        post({ title: { toString: 1 } }),
         post({ title: 'Steam Client Update' }),
         post({ tags: 'stablechannel' }),
         post({ gid: '1846018067940010', tags: ['stablechannel'] }),

@@ -21,35 +21,39 @@ export const NEWS_URL =
 export const FALLBACK_URL = 'https://store.steampowered.com/feeds/news/app/1675200';
 export const NEWS_PAGE = 'https://store.steampowered.com/news/app/1675200';
 export const FAMILIES = familyIds(VENDOR);
-export const LINK_HOSTS = ['store.steampowered.com', 'steamcommunity.com', 'steamstore-a.akamaihd.net'];
+export const LINK_HOSTS = ['store.steampowered.com', 'steamstore-a.akamaihd.net'];
 
 const MAX_ITEMS = 500;
 
-// "SteamOS 3.7.13", "SteamOS 3.7.13 Beta", "SteamOS 3.8.1 Preview (20250522.1)".
-const TITLE_RE = new RegExp(
-  `^(${FAMILIES.join('|')})\\s+(\\d+(?:\\.\\d+){1,3})` + '(?:\\s+[A-Za-z0-9 .()/-]{0,80})?$',
-  'i',
-);
+// "SteamOS 3.7.13", "SteamOS 3.8.1 Preview (20250522.1)", "SteamOS 3.7.13 Stable: Deck update".
+// The prefix is strict; the rest of the title is read loosely (see TITLE_OK).
+const TITLE_RE = new RegExp(`^(${FAMILIES.join('|')})\\s+(\\d+(?:\\.\\d+){1,3})(?=$|[\\s:,(])`, 'i');
+// A title is at most 200 characters with no markup or control characters.
+const TITLE_OK = /^[^<>\u0000-\u001f]{1,200}$/;
 const BUILD_RE = /(?:^|[\s(])(\d{8}\.\d{1,3})(?=$|[\s)])/;
 const GID_RE = /^\d{1,24}$/;
 
 /**
  * Parse a post title and its tags; null when it is not a SteamOS release. The channel comes
- * from the tags (`stablechannel`, `betachannel`, `previewchannel`), else from the words
- * Stable, Beta or Preview in the title. A post that names no channel is skipped rather than
- * guessed, and a pre-release tag wins over a stable one.
+ * from the tags, else from the words in the title. A build on the stable channel is released,
+ * so `stablechannel` (or the word Stable) decides first, even when Valve also tags the post
+ * for the beta and preview channels it rolls out to. Otherwise `betachannel`,
+ * `previewchannel` or the words Beta and Preview mean a beta. A post that names no channel is
+ * skipped rather than guessed. This rule is unverified against a real SteamOS post (ADR 0006).
  */
 export function parseTitle(title, tags = []) {
-  const text = String(title ?? '').trim();
+  if (typeof title !== 'string') return null;
+  const text = title.trim();
+  if (!TITLE_OK.test(text)) return null;
   const m = TITLE_RE.exec(text);
   if (!m) return null;
   const set = new Set((Array.isArray(tags) ? tags : []).filter((t) => typeof t === 'string'));
   const words = text.toLowerCase();
   let stage = null;
-  if (set.has('betachannel') || set.has('previewchannel')) stage = 'beta';
-  else if (set.has('stablechannel')) stage = 'release';
-  else if (/\b(beta|preview)\b/.test(words)) stage = 'beta';
+  if (set.has('stablechannel')) stage = 'release';
+  else if (set.has('betachannel') || set.has('previewchannel')) stage = 'beta';
   else if (/\bstable\b/.test(words)) stage = 'release';
+  else if (/\b(beta|preview)\b/.test(words)) stage = 'beta';
   if (!stage) return null;
   const build = BUILD_RE.exec(text);
   return {
@@ -64,7 +68,7 @@ export function parseTitle(title, tags = []) {
 }
 
 function linkOf(value) {
-  return LINK_HOSTS.some((host) => isHttpsOn(value, host)) ? value : NEWS_PAGE;
+  return typeof value === 'string' && LINK_HOSTS.some((host) => isHttpsOn(value, host)) ? value : NEWS_PAGE;
 }
 
 /** Releases in a GetNewsForApp JSON document, newest first; [] for anything unreadable. */
@@ -80,7 +84,9 @@ export function parseNews(jsonText) {
   const releases = [];
   for (const item of items.slice(0, MAX_ITEMS)) {
     if (!item || typeof item !== 'object') continue;
-    const parsed = parseTitle(item.title, item.tags);
+    if (typeof item.title !== 'string') continue;
+    const title = item.title.trim();
+    const parsed = parseTitle(title, item.tags);
     const gid = typeof item.gid === 'string' ? item.gid : '';
     const seconds = item.date;
     if (!parsed || !GID_RE.test(gid)) continue;
@@ -90,7 +96,7 @@ export function parseNews(jsonText) {
     releases.push({
       id: gid,
       ...parsed,
-      title: item.title.trim(),
+      title,
       date: time.toISOString().replace('.000Z', 'Z'),
       url: linkOf(item.url),
       source: ID,
