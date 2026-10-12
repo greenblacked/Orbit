@@ -14,7 +14,7 @@
   // A validation verdict may come with a released build once results exist; a beta, a release
   // candidate and anything without a verdict is untested (see docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
-  // Used when the families config cannot be read: Apple is the only vendor with a feed so far.
+  // Used when the families config cannot be read.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
 
   var config = { families: [], vendors: [] };
@@ -47,7 +47,7 @@
     for (var i = 0; i < config.families.length; i++) if (config.families[i].id === id) return config.families[i];
     return null;
   }
-  // The source a vendor's data comes from: its name, page and the hosts its links may use.
+  // A vendor's source: its name, page and allowed link hosts.
   function source(vendor) {
     for (var i = 0; i < config.vendors.length; i++) {
       if (config.vendors[i].id === vendor && config.vendors[i].source) return config.vendors[i].source;
@@ -60,7 +60,7 @@
       return u.protocol === "https:" && source(vendor).hosts.indexOf(u.hostname) >= 0;
     } catch (e) { return false; }
   }
-  // The config only orders and accents: without it any family name is accepted, with its vendor's links only.
+  // The config only orders and accents: without it any family name is accepted.
   function knownFamily(r) {
     if (!config.families.length) return typeof r.family === "string" && r.family !== "";
     var f = familyOf(r.family);
@@ -100,7 +100,7 @@
     };
   }
 
-  // The preview bundle cannot fetch: it embeds data/*.json as data-seed blocks instead.
+  // The preview bundle cannot fetch: it embeds data/*.json as data-seed.
   function seeded(url) {
     var key = url === API ? SNAPSHOT : url;
     var el = document.querySelector('script[data-seed="' + key + '"]');
@@ -211,7 +211,7 @@
     if (r.stage === "release") return /\b(long[- ]term|lts)\b/i.test(title) ? "Long-term" : "Stable";
     return "Release";
   }
-  // What a sigil is drawn from: the build when there is one, else a stable key of the release.
+  // What a sigil is drawn from: the build, else a stable key.
   function sigilKey(r) {
     return r.build || r.family + " " + r.version + (r.stage === "release" ? "" : " " + r.stage + (r.beta || ""));
   }
@@ -219,11 +219,18 @@
   function short(r) {
     return r.version + (r.stage === "release" ? "" : " " + stageLabel(r).toLowerCase());
   }
+  var NUM = /^\d+(\.\d+)*$/;
+  // Higher version (date if not plain dotted numbers), then stage, iteration, date.
+  function better(a, b) {
+    return ((NUM.test(a.version) && NUM.test(b.version) ? compareVersions(a.version, b.version) : a.t - b.t) ||
+      (RANK[a.stage] - RANK[b.stage]) || ((a.beta || 0) - (b.beta || 0)) || (a.t - b.t)) > 0;
+  }
   function latest(list, family, publicOnly) {
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].family === family && (!publicOnly || list[i].stage === "release")) return list[i];
-    }
-    return null;
+    var best = null;
+    list.forEach(function (r) {
+      if (r.family === family && (!publicOnly || r.stage === "release") && (!best || better(r, best))) best = r;
+    });
+    return best;
   }
   function when(t) {
     var el = h("time", "when", ago(t), { datetime: new Date(t).toISOString() });
@@ -273,7 +280,7 @@
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
   };
-  // Scroll reveals: below-the-fold .reveal elements get .pre, then .in; the CSS does the rest.
+  // Scroll reveals: below-fold .reveal elements get .pre, then .in.
   (function reveal() {
     var els = document.querySelectorAll(".reveal");
     if (!els.length || !("IntersectionObserver" in window) || !window.matchMedia) return;

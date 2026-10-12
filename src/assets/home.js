@@ -111,7 +111,7 @@
     shown.forEach(function (x) {
       var item = RO.h("li");
       var a = RO.h("a", "", null, { href: x.url });
-      // Connected before it draws: a draw waiting for the sigil rule needs its mark in the document.
+      // Connected before it draws: a draw awaiting the sigil rule needs its mark in the document.
       item.appendChild(a);
       recent.appendChild(item);
       if (x.build && window.Sigil) {
@@ -125,7 +125,7 @@
       a.appendChild(RO.h("span", "r-date", RO.day(x.t)));
       external(a);
     });
-    // The mock screens' fields (name, stage, build, date, version) are below.js's to paint.
+    // The mock screens' fields are below.js's to paint.
     text(sec, "latest", r
       ? "Newest: " + r.title + ", " + RO.day(r.t)
       : "No " + family + " release in the data" + (asOf === null ? " yet." : " by then."));
