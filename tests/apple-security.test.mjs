@@ -6,9 +6,11 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { buildPayload, neededPages } from '../deploy/security/build.js';
+import { buildPayload, MAX_CVES_PER_NOTE, MAX_NOTES, neededPages } from '../deploy/security/build.js';
 import apple, {
+  covers,
   decode,
+  isNoteUrl,
   match,
   parseIndex,
   parseNote,
@@ -100,6 +102,17 @@ describe('parseIndex on the recorded index slice', () => {
       assert.deepEqual(parseIndex(cell('iOS 26.7.1', href)), [], href);
     }
     assert.equal(parseIndex(cell('iOS 26.7.1', 'https://support.apple.com/en-us/1')).length, 1);
+  });
+
+  it('resolves a relative link against the index and refuses a query or fragment', () => {
+    const cell = (href) =>
+      `<tr><td><p><a href="${href}">iOS 26.7.1</a></p></td><td><p>x</p></td><td><p>28 Sep 2026</p></td></tr>`;
+    assert.equal(parseIndex(cell('/en-us/149226'))[0].note, NOTE_URL);
+    for (const href of ['/en-us/149226#x', '/en-us/149226?a=1', '/other/1', '/en-us/abc']) {
+      assert.deepEqual(parseIndex(cell(href)), [], href);
+    }
+    assert.equal(isNoteUrl(`${NOTE_URL}#x`), false);
+    assert.equal(isNoteUrl(NOTE_URL), true);
   });
 
   it('drops a row without a valid date, a product, a link or a closing tag', () => {
@@ -236,6 +249,15 @@ describe('match', () => {
     assert.equal(found.size, releases.length - 1);
   });
 
+  it('matches a release the feed dates days before the index does', () => {
+    const rowsFor = parseIndex(
+      '<tr><td><p><a href="https://support.apple.com/en-us/1">iOS 26.7 and iPadOS 26.7</a></p></td>' +
+        '<td><p>x</p></td><td><p>14 Sep 2026</p></td></tr>',
+    );
+    const [item] = match([release('pad', 'iPadOS', '26.7', '2026-09-09T10:00:00Z')], rowsFor);
+    assert.equal(item.status, 'matched');
+  });
+
   it('treats 27.0 and 27 as one version', () => {
     const [item] = match([release('x', 'iOS', '27.0', '2026-09-14T17:00:00Z')], parseIndex(INDEX));
     assert.equal(item.status, 'matched');
@@ -343,8 +365,10 @@ describe('buildPayload', () => {
       now: '2026-10-13T10:00:00Z',
       sources: [{ adapter: apple, rows, pages: new Map() }],
     });
-    assert.deepEqual(failures, []);
+    assert.equal(failures.length, 1);
+    assert.match(failures[0], /was not read again/);
     assert.equal(payload.releases.ios.status, 'listed');
+    assert.equal(payload.releases.ios.checkedAt, NOW);
     assert.deepEqual(payload.notes, before.notes);
     assert.deepEqual(problems(payload, releases), []);
   });
@@ -353,6 +377,72 @@ describe('buildPayload', () => {
     const other = NOTE.replace(/iOS 26\.7\.1 and iPadOS 26\.7\.1/g, 'macOS Tahoe 26.7.1');
     const { payload } = build({ sources: [{ adapter: apple, rows, pages: new Map([[NOTE_URL, other]]) }] });
     assert.equal(payload.releases.ios.status, 'unavailable');
+  });
+
+  it('does not fall back to the previous note when a page was read and refused', () => {
+    const { payload: before } = build();
+    const unnamed = NOTE.replace(/iOS 26\.7\.1 and iPadOS 26\.7\.1/g, 'Security updates');
+    const wrong = NOTE.replace(/iOS 26\.7\.1 and iPadOS 26\.7\.1/g, 'macOS Tahoe 26.7.1');
+    const noCve = NOTE.replace(/CVE-\d{4}-\d{4,}/g, 'none');
+    for (const html of [unnamed, wrong, noCve]) {
+      const { payload, failures } = build({
+        previous: before,
+        sources: [{ adapter: apple, rows, pages: new Map([[NOTE_URL, html]]) }],
+      });
+      assert.equal(payload.releases.ios.status, 'unavailable');
+      assert.ok(failures.length > 0);
+    }
+  });
+
+  it('keeps a listed release and reports it when its row stops matching', () => {
+    const { payload: before } = build();
+    const { payload, failures } = build({
+      previous: before,
+      sources: [{ adapter: apple, rows: rows.filter((r) => r.note !== NOTE_URL), pages: new Map() }],
+    });
+    assert.deepEqual(payload.releases.ios, before.releases.ios);
+    assert.ok(failures.some((failure) => /no longer matches/.test(failure)));
+  });
+
+  it('refuses a page with more CVEs than the cap', () => {
+    const many = Array.from(
+      { length: MAX_CVES_PER_NOTE + 1 },
+      (_, i) => `<p>CVE-2026-${String(10000 + i)}: credit</p>`,
+    ).join('');
+    const pages = new Map([[NOTE_URL, NOTE + many]]);
+    const { payload, failures } = build({ sources: [{ adapter: apple, rows, pages }] });
+    assert.equal(payload.releases.ios.status, 'unavailable');
+    assert.ok(failures.length > 0);
+  });
+
+  it('throws instead of writing a payload over the byte or note cap', () => {
+    assert.throws(() => build({ maxBytes: 100 }), /over 100/);
+    const fake = {
+      id: 'fake',
+      vendor: 'fake',
+      index: 'https://example.com/',
+      parseNote: () => ({ title: 't', products: [], released: null, cves: ['CVE-2026-0001'] }),
+      match: (list) =>
+        list.map((r) => ({
+          id: r.id,
+          status: 'matched',
+          row: { note: `https://example.com/${r.id}`, noCveEntries: false },
+        })),
+    };
+    const many = Array.from({ length: MAX_NOTES + 1 }, (_, i) =>
+      row(`r${i}`, 'X', '1', 'release', '2026-09-28T00:00:00Z', 'fake'),
+    );
+    const pages = new Map(many.map((r) => [`https://example.com/${r.id}`, '<h1>t</h1>']));
+    assert.throws(
+      () =>
+        buildPayload({
+          previous: null,
+          releases: many,
+          sources: [{ adapter: fake, rows: [{}], pages }],
+          now: NOW,
+        }),
+      /more than/,
+    );
   });
 
   it('fails closed per source: keeps the old data, marks it failed, reports it', () => {
@@ -389,6 +479,17 @@ describe('buildPayload', () => {
     const { payload } = build({ previous: before, releases: releases.filter((r) => r.id !== 'ios') });
     assert.equal('ios' in payload.releases, false);
     assert.equal(payload.releases.ipad.status, 'listed');
+  });
+});
+
+describe('covers', () => {
+  const page = { products: [{ family: 'iOS', version: '27.0' }] };
+  it('needs a recognised product of the release\'s own family and version', () => {
+    assert.equal(covers(page, { family: 'iOS', version: '27' }), true);
+    assert.equal(covers(page, { family: 'iOS', version: '27.0.1' }), false);
+    assert.equal(covers(page, { family: 'macOS', version: '27' }), false);
+    assert.equal(covers({ products: [] }, { family: 'iOS', version: '27' }), false);
+    assert.equal(covers(null, { family: 'iOS', version: '27' }), false);
   });
 });
 

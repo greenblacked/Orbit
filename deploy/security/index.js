@@ -9,6 +9,7 @@
 //   parseIndex  (html) => rows, with no I/O
 //   parseNote   (html) => { title, released, cves, ... } or null, with no I/O
 //   match       (releases, rows) => [{ id, status, row }], with no I/O
+//   covers      optional (page, release) => boolean: whether a parsed note is the release's own
 // Nothing here runs in the Worker: the payload is parsed offline (ADR 0008).
 
 import apple from './apple.js';

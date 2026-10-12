@@ -86,3 +86,16 @@ An Android range with a missing bulletin is `unavailable` or `not-found`, never 
 - **Security fields on `releases.json`.** It changes the exact key set the release tests pin, `deploy/releases.js` and every client, ties a parser failure to the release list, and puts per-page data in a per-entry contract.
 - **A live fetch in the Worker.** It adds allowlist entries, a chain of fetches on the cold path, each with the Worker's 8-second timeout, and a body cap, since the Microsoft document may exceed the 2 MiB `MAX_BODY_BYTES` (not yet measured). Parsing it at request time is unsafe on the Worker's CPU and memory limits. The Worker's cached copy also expires after 7 days.
 - **Copying vendor text.** Impact descriptions are the vendors' wording. Storing ids, titles, dates, URLs and severity labels, and linking to the page, keeps the site within ADR 0006's rule of copying no release notes.
+
+## Update: the Apple adapter (2026-10-12)
+
+The first adapter, `deploy/security/apple.js`, reads Apple's "Apple security releases" index and the security content page behind each row. Its fixtures are in `tests/fixtures/apple-security/` with a provenance README, as [ADR 0006](0006-list-vendors-before-their-feeds.md) requires.
+
+- **Matching.** A release matches the index row with its family and version number (`27.0` and `27` are one version). The date only chooses between rows of one version (the nearest wins) and refuses a row a week or more away, because the feed and the index date one release days apart (`iPadOS 26.7` is 2026-09-09 in the feed and 14 Sep 2026 in the index).
+- **CVEs.** A note's CVEs are the union of the ids that start a paragraph of the page, not the ids of one platform's section. A page counts for a release only if its heading names the release's own product and version (`covers`); a page that was read and refused is never replaced by the previous note.
+- **Links.** A row's link must resolve to `https://support.apple.com/en-us/<digits>`, with no port, credentials, query or fragment. A relative link is resolved against the index. A release that was `listed` or `no-cve-entries` and no longer matches keeps its old entry and is reported as a failure, because markup drift looks like that.
+- **Caps.** At most 40 pages a run, 150 notes, 500 CVEs a note and 2 MiB of payload; a page over the CVE cap is refused, and a payload over the notes or byte cap is not written. The values are generous against the fixtures and are to be tightened after the first real refresh.
+- **Failures.** A page that could not be read again keeps its previous note and its previous `checkedAt`, and the script exits non-zero.
+- **Grace window.** The 14-day wording of the table above is applied only in the page; the payload stores `not-found` either way.
+- **Deferred.** The check that each note host is in the vendor's `security.hosts` list (see the contract above) is not added in this pull request: it needs a `security.hosts` list in `families.json`, which changes `src/` and the preview loop. The adapter checks its own host (`support.apple.com`) in the meantime, and the contract check follows in its own pull request.
+- **Terms of use.** The owner has not yet checked Apple's terms for automated reads of these pages. `src/data/security.json` stays empty until that check and the first refresh.

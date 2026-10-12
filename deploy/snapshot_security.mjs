@@ -41,9 +41,20 @@ async function fetchPage(url) {
   if (!/^text\/html\b/i.test(res.headers.get('content-type') ?? '')) {
     throw new Error(`${url} is not HTML`);
   }
-  const body = new Uint8Array(await res.arrayBuffer());
-  if (body.byteLength > MAX_BYTES) throw new Error(`${url} is over ${MAX_BYTES} bytes`);
-  return new TextDecoder('utf-8').decode(body);
+  const declared = Number(res.headers.get('content-length'));
+  if (declared > MAX_BYTES) throw new Error(`${url} is over ${MAX_BYTES} bytes`);
+  // Read the body in chunks and stop at the cap, so a page without a length is not buffered whole.
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of res.body ?? []) {
+    size += chunk.byteLength;
+    if (size > MAX_BYTES) {
+      await res.body.cancel();
+      throw new Error(`${url} is over ${MAX_BYTES} bytes`);
+    }
+    chunks.push(chunk);
+  }
+  return new TextDecoder('utf-8').decode(Buffer.concat(chunks));
 }
 
 function readJson(path, required) {

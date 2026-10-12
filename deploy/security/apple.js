@@ -15,8 +15,10 @@ export const INDEX_URL = 'https://support.apple.com/en-us/100100';
 export const HOSTS = ['support.apple.com'];
 export const FAMILIES = familyIds(VENDOR);
 
-// A release date and a row date may differ by the time zone of the clock that wrote them.
-export const DATE_SLACK_DAYS = 2;
+// The release feed and the index can date one release days apart (iPadOS 26.7 is dated
+// 2026-09-09 in the feed and 14 Sep 2026 in the index). The version decides the match; the date
+// only picks between rows of one version (the nearest wins) and refuses one a week away or more.
+export const DATE_SLACK_DAYS = 7;
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 const NO_CVE_TEXT = 'This update has no published CVE entries.';
@@ -36,14 +38,27 @@ export function decode(text) {
   });
 }
 
+// Tags replaced by a space, found with indexOf so a page with many stray `<` stays linear.
+function stripTags(text) {
+  let out = '';
+  let at = 0;
+  for (;;) {
+    const open = text.indexOf('<', at);
+    const close = open < 0 ? -1 : text.indexOf('>', open);
+    if (close < 0) return out + text.slice(at);
+    out += `${text.slice(at, open)} `;
+    at = close + 1;
+  }
+}
+
 /** The text of a markup fragment: tags dropped, references decoded, spaces collapsed. */
 export function textOf(fragment) {
-  return decode(String(fragment).replace(/<[^>]*>/g, ' '))
+  return decode(stripTags(String(fragment)))
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-/** `https://support.apple.com/...` only: no other scheme, host, port or credentials. */
+/** `https://support.apple.com/en-us/<digits>` only: no port, credentials, query or fragment. */
 export function isNoteUrl(value) {
   try {
     const url = new URL(value);
@@ -52,7 +67,10 @@ export function isNoteUrl(value) {
       HOSTS.includes(url.hostname) &&
       url.port === '' &&
       url.username === '' &&
-      url.password === ''
+      url.password === '' &&
+      url.search === '' &&
+      url.hash === '' &&
+      /^\/en-us\/\d+$/.test(url.pathname)
     );
   } catch {
     return false;
@@ -128,8 +146,9 @@ function firstParagraph(cell) {
  * The rows of the "Apple security releases" table as
  * [{ name, products, note, noCveEntries, date }], newest first as on the page. A row that is not
  * closed (the table was cut), has no recognised product, no valid date or no usable note is
- * dropped. `note` is the https URL of the row's security page on support.apple.com, or null for a
- * row that says it has no CVE entries and links nowhere.
+ * dropped. A relative link is resolved against the index URL. `note` is the https URL of the
+ * row's security page on support.apple.com, or null for a row that says it has no CVE entries
+ * and links nowhere.
  */
 export function parseIndex(html) {
   const text = String(html);
@@ -153,7 +172,11 @@ export function parseIndex(html) {
     const noCveEntries = textOf(cells[0]).includes(NO_CVE_TEXT);
     let note = null;
     if (href) {
-      note = decode(href[1]);
+      try {
+        note = new URL(decode(href[1]), INDEX_URL).href;
+      } catch {
+        continue;
+      }
       if (!isNoteUrl(note)) continue;
     } else if (!noCveEntries) {
       continue;
@@ -202,14 +225,26 @@ export function parseNote(html) {
 }
 
 // "27.0" and "27" are one release; "27.0.1" is another.
-const normalise = (version) => String(version).replace(/(\.0)+$/, '');
+export const normalise = (version) => String(version).replace(/(\.0)+$/, '');
 
 const dayOf = (iso) => Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`);
 
 /**
+ * True when a parsed note page names the release's own product and version. A page whose heading
+ * names no recognised product is refused: it is not the release's security content.
+ */
+export function covers(page, release) {
+  const version = normalise(release.version);
+  return (
+    Array.isArray(page?.products) &&
+    page.products.some((p) => p.family === release.family && normalise(p.version) === version)
+  );
+}
+
+/**
  * What to do for each release of this vendor, as [{ id, status, row }]. A build that is not a
  * `release` is `not-applicable` (vendors publish security pages only for released builds). A
- * release is `matched` to the row with its family and version number, dated within two days of
+ * release is `matched` to the row with its family and version number, dated within a week of
  * it, and `not-found` when none is. If two rows fit, the nearer date wins, then the first.
  */
 export function match(releases, rows) {
@@ -250,4 +285,5 @@ export default {
   parseIndex,
   parseNote,
   match,
+  covers,
 };

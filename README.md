@@ -50,7 +50,7 @@ flowchart LR
 
 `/api/releases.json` (optionally `?vendor=apple`) answers one document, and `/api/health` reports each source.
 
-`/api/security.json` answers the bundled security notes from `src/data/security.json` (schema 1; Apple is the first source, refreshed by `node deploy/snapshot_security.mjs`). The document holds `schema`, `generatedAt`, `sources`, `notes` (keyed by an `https` note URL, each with a `source` and its sorted `cves`) and `releases` (keyed by a release id from `releases.json`, each with a `status`, sorted `notes` and `cves`, and a `count`). A `status` is one of `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` or `not-connected`; only a `release` is ever `listed` or `no-cve-entries`, and every other release is `not-applicable`. `tests/security.test.mjs` is the executable contract; the reasoning is in [ADR 0008](docs/adr/0008-security-notes-are-a-separate-payload.md).
+`/api/security.json` answers the bundled security notes from `src/data/security.json` (schema 1; Apple is the first adapter, refreshed by `node deploy/snapshot_security.mjs`; the file stays empty until the first refresh, after the owner has checked Apple's terms of use). The document holds `schema`, `generatedAt`, `sources`, `notes` (keyed by an `https` note URL, each with a `source` and its sorted `cves`) and `releases` (keyed by a release id from `releases.json`, each with a `status`, sorted `notes` and `cves`, and a `count`). A `status` is one of `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` or `not-connected`; only a `release` is ever `listed` or `no-cve-entries`, and every other release is `not-applicable`. `tests/security.test.mjs` is the executable contract; the reasoning is in [ADR 0008](docs/adr/0008-security-notes-are-a-separate-payload.md).
 
 ```json
 {
@@ -154,8 +154,9 @@ The preferred rollback is a new patch release with the change reverted. The one-
 │   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js
 │   └── data/              releases.json (snapshot), security.json, families.json, features.json
 ├── deploy/                the Worker (worker.js, releases.js, families.js,
-│   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs
-│   └── security/          security-notes adapters (offline), snapshot_security.mjs
+│   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs,
+│   │                      snapshot_security.mjs
+│   └── security/          security-notes adapters (offline)
 ├── scripts/               build, checks, preview, screenshots and the source probe (standard library only)
 ├── results/               one JSON file per publicly released, tested build
 ├── tests/                 Python and Node tests, fixtures

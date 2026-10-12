@@ -4,7 +4,13 @@
 // Per source, fail closed: if the index could not be read, the source keeps what the previous
 // payload held for it and is marked `failed`, so a broken page never turns into a made-up "0".
 
+// Caps, set well above the recorded fixtures (one note with one CVE; fifty index rows) and to be
+// tightened from the first real refresh. A page over the CVE cap is refused (its release is
+// `unavailable`); a payload over the notes or byte cap is not written at all.
 export const MAX_PAGES = 40;
+export const MAX_NOTES = 150;
+export const MAX_CVES_PER_NOTE = 500;
+export const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 
 const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -33,16 +39,11 @@ export function neededPages(adapter, releases, rows, cap = MAX_PAGES) {
 }
 
 // The note of one page, or null when the page does not read as the security content of the
-// release (no heading, no CVE id, or products that do not include the release's own).
+// release (no heading, no CVE id, too many ids, or an adapter that says it is not the release's).
 function noteOf(adapter, html, release) {
   const page = typeof html === 'string' ? adapter.parseNote(html) : null;
-  if (!page || page.cves.length === 0) return null;
-  const family = release.family;
-  const version = String(release.version).replace(/(\.0)+$/, '');
-  const names = page.products.some(
-    (p) => p.family === family && p.version.replace(/(\.0)+$/, '') === version,
-  );
-  if (page.products.length > 0 && !names) return null;
+  if (!page || page.cves.length === 0 || page.cves.length > MAX_CVES_PER_NOTE) return null;
+  if (typeof adapter.covers === 'function' && !adapter.covers(page, release)) return null;
   return {
     source: adapter.id,
     title: page.title,
@@ -59,10 +60,13 @@ function noteOf(adapter, html, release) {
  *   sources   [{ adapter, rows, pages }]: `rows` is the parsed index (null or empty when it could
  *             not be read) and `pages` maps a note URL to its HTML (a missing URL failed)
  *   now       the ISO timestamp to write as generatedAt and checkedAt
+ *   maxBytes  the size the written file may not pass
  *
- * Returns { payload, failures }: `failures` lists every source and page that could not be read.
+ * Returns { payload, failures }: `failures` lists every source and page that could not be read or
+ * was refused, and every release that lost its note. Throws when the payload is over the notes or
+ * byte cap, so nothing oversized is written.
  */
-export function buildPayload({ previous, releases, sources, now }) {
+export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_PAYLOAD_BYTES }) {
   const before = isObject(previous) && previous.schema === 1 ? previous : {};
   const ids = new Set(releases.map((release) => release.id));
   const failures = [];
@@ -94,6 +98,7 @@ export function buildPayload({ previous, releases, sources, now }) {
     }
 
     const kept = { ...outNotes };
+    const unread = new Set();
     for (const [url, note] of Object.entries(outNotes)) {
       if (note?.source === adapter.id) delete outNotes[url];
     }
@@ -103,17 +108,34 @@ export function buildPayload({ previous, releases, sources, now }) {
       if (found.status === 'not-applicable') {
         outReleases[found.id] = entry('not-applicable', now);
       } else if (found.status === 'not-found') {
-        outReleases[found.id] = entry('not-found', now);
+        const was = outReleases[found.id]?.status;
+        if (was === 'listed' || was === 'no-cve-entries') {
+          // Markup drift looks like this: a release with a note before has none now.
+          const title = release.title ?? found.id;
+          failures.push(`${adapter.id}: ${title} was ${was} and no longer matches`);
+        } else {
+          outReleases[found.id] = entry('not-found', now);
+        }
       } else if (found.row.noCveEntries) {
         outReleases[found.id] = entry('no-cve-entries', now, [], [], 0);
       } else {
         const url = found.row.note;
-        const note = noteOf(adapter, pages?.get(url), release) ?? outNotes[url] ?? kept[url];
+        const html = pages?.get(url);
+        const fetched = typeof html === 'string';
+        // A page that was read and refused is never replaced by the previous note; only a page
+        // that was not read at all falls back to it, and that is reported.
+        const reused = fetched ? null : (outNotes[url] ?? kept[url]);
+        const note = fetched ? noteOf(adapter, html, release) : reused;
         const usable = note && note.source === adapter.id && note.cves.length > 0;
         if (usable) {
           outNotes[url] = note;
           const cves = note.cves.map((cve) => cve.id);
-          outReleases[found.id] = entry('listed', now, [url], cves, cves.length);
+          const checkedAt = reused ? (outReleases[found.id]?.checkedAt ?? now) : now;
+          outReleases[found.id] = entry('listed', checkedAt, [url], cves, cves.length);
+          if (reused && !unread.has(url)) {
+            unread.add(url);
+            failures.push(`${adapter.id}: ${url} was not read again; the previous note is kept`);
+          }
         } else {
           failures.push(`${adapter.id}: no usable note for ${release.title ?? found.id} (${url})`);
           outReleases[found.id] = entry('unavailable', now);
@@ -128,14 +150,17 @@ export function buildPayload({ previous, releases, sources, now }) {
     if (!used.has(url)) delete outNotes[url];
   }
 
-  return {
-    payload: {
-      schema: 1,
-      generatedAt: now,
-      sources: sortedMap(outSources),
-      notes: sortedMap(outNotes),
-      releases: sortedMap(outReleases),
-    },
-    failures,
+  if (Object.keys(outNotes).length > MAX_NOTES) {
+    throw new Error(`the payload would hold more than ${MAX_NOTES} notes`);
+  }
+  const payload = {
+    schema: 1,
+    generatedAt: now,
+    sources: sortedMap(outSources),
+    notes: sortedMap(outNotes),
+    releases: sortedMap(outReleases),
   };
+  const bytes = new TextEncoder().encode(JSON.stringify(payload, null, 2)).byteLength;
+  if (bytes > maxBytes) throw new Error(`the payload is ${bytes} bytes, over ${maxBytes}`);
+  return { payload, failures };
 }
