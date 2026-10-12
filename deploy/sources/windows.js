@@ -30,6 +30,7 @@ const MAX_TABLE = 256 * 1024; // the real first table is a few KB
 const MAX_ROWS = 64;
 const MAX_CELLS = 16;
 const MAX_CELL = 4000;
+const MAX_SKEW_MS = 24 * 60 * 60 * 1000; // a revision dated further ahead than this is not believed
 
 const VERSION_RE = /^(\d{2})H[12]$/;
 const BUILD_RE = /^\d{5}\.\d{1,5}$/;
@@ -58,20 +59,23 @@ export function kbUrl(href) {
 
 /** 11 or 10 from the page title "Windows 11 - release information | ..."; null otherwise. */
 export function productOf(html) {
-  const m = /<title[^>]*>\s*Windows (10|11) - release information\b/i.exec(
-    String(html ?? '').slice(0, MAX_HTML),
-  );
+  const text = String(html ?? '').slice(0, MAX_HTML);
+  // Walk to the title with indexOf and match a short slice only: a regex that scans the
+  // whole body for `<title[^>]*>` is quadratic on a body of unclosed `<title ` tags.
+  const start = findTag(asciiLower(text), 'title', 0);
+  if (start < 0) return null;
+  const m = /^\s*Windows (10|11) - release information\b/i.exec(text.slice(start, start + 200));
   return m ? m[1] : null;
 }
 
 /** The inner HTML of the first table in a document, or null when there is none. */
 export function firstTable(html) {
   const text = String(html ?? '').slice(0, MAX_HTML);
-  const open = /<table\b[^>]*>/i.exec(text);
-  if (!open) return null;
-  const rest = text.slice(open.index + open[0].length);
-  const close = /<\/table\s*>/i.exec(rest);
-  return close ? rest.slice(0, Math.min(close.index, MAX_TABLE)) : null;
+  const lower = asciiLower(text);
+  const start = findTag(lower, 'table', 0);
+  if (start < 0) return null;
+  const close = lower.indexOf('</table', start);
+  return close < 0 ? null : text.slice(start, Math.min(close, start + MAX_TABLE));
 }
 
 function cellText(html) {
@@ -160,8 +164,11 @@ function columns(header) {
   return ends.length > 0 && Object.values(single).every((i) => i >= 0) ? cols : null;
 }
 
-/** Releases in one release-information page (Windows 11 or 10), newest first. */
-export function parsePage(html) {
+/**
+ * Releases in one release-information page (Windows 11 or 10), newest first. The Worker calls
+ * parse(text, url), so the url is the second argument and ignored; `now` is for tests.
+ */
+export function parsePage(html, _url = '', now = Date.now()) {
   const text = String(html ?? '').slice(0, MAX_HTML);
   const product = productOf(text);
   const table = firstTable(text);
@@ -181,6 +188,8 @@ export function parsePage(html) {
     const build = row[cols.build].text;
     const date = parseIsoDay(row[cols.revised].text);
     if (!version || !BUILD_RE.test(build) || !date) continue;
+    // A revision date a day or more ahead of the clock is a typo on the page, not a release.
+    if (Date.parse(date) > now + MAX_SKEW_MS) continue;
     // The contract has no end-of-support field, so a version Microsoft has stopped
     // updating for every edition says so in its title.
     const ended = cols.ends.every((i) => row[i].text.toLowerCase() === 'end of updates');

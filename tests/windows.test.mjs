@@ -238,6 +238,26 @@ describe('the scanner on odd and hostile input', () => {
     assert.ok(performance.now() - started < 2000, 'unclosed tags are read once, not rescanned');
   });
 
+  it('costs linear work on a body of <table or <title tags that never end', () => {
+    const started = performance.now();
+    assert.deepEqual(parsePage('<table '.repeat(200000)), []);
+    assert.deepEqual(parsePage('<title '.repeat(200000)), []);
+    assert.equal(firstTable('<table '.repeat(200000)), null);
+    assert.equal(productOf('<title '.repeat(200000)), null);
+    assert.ok(performance.now() - started < 2000, 'an unclosed tag is not rescanned from every start');
+  });
+
+  it('refuses a revision date more than a day ahead of the clock', () => {
+    const html = page([
+      row({ version: '24H2', build: '26100.9550', revised: '2099-01-01' }),
+      row({ version: '25H2' }),
+    ]);
+    assert.deepEqual(parsePage(html).map((r) => r.version), ['25H2']);
+    // The url the Worker passes is the second argument and is not the clock.
+    assert.deepEqual(windows.parse(html, WINDOWS_11_URL).map((r) => r.version), ['25H2']);
+    assert.deepEqual(parsePage(html, '', Date.UTC(2099, 0, 1)).map((r) => r.version), ['24H2', '25H2']);
+  });
+
   it('reads only the first table', () => {
     const html = page([row({ version: '24H2', build: '26100.9550' })]).replace(
       '</body>',
