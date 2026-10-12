@@ -421,6 +421,15 @@
   });
   stage.addEventListener("pointermove", function (e) {
     if (!drag) {
+      // A card that has not closed yet can sit over the next notch (the rings are 16 units
+      // apart on a dial of ten, and a card opens 22 px below its notch). A pointer over such a
+      // card but at the heart of another notch opens that notch: the notch's own centre, not
+      // whatever lies on top of it, decides. A pinned card stays put.
+      if (e.pointerType !== "touch" && !pinned && card.contains(e.target)) {
+        var covered = nearest(e.clientX, e.clientY, 6);
+        if (covered && covered.rel.id !== card.getAttribute("data-id")) show(covered, false);
+        return;
+      }
       // Hovering the knob shows the card of a notch under it, as hovering the notch would.
       if (e.pointerType !== "touch" && inHand(e.target)) {
         var under = nearest(e.clientX, e.clientY, 22);
