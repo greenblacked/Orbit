@@ -258,6 +258,19 @@ describe('match', () => {
     assert.equal(item.status, 'matched');
   });
 
+  it('refuses a row exactly 7 days from the release and accepts one 6 days away', () => {
+    const rowsFor = parseIndex(
+      '<tr><td><p><a href="https://support.apple.com/en-us/1">iOS 26.7 and iPadOS 26.7</a></p></td>' +
+        '<td><p>x</p></td><td><p>14 Sep 2026</p></td></tr>',
+    );
+    const status = (date) => match([release('pad', 'iPadOS', '26.7', date)], rowsFor)[0].status;
+    assert.equal(status('2026-09-07T23:59:00Z'), 'not-found', '7 days, late in the day');
+    assert.equal(status('2026-09-07T00:00:00Z'), 'not-found', '7 days, start of the day');
+    assert.equal(status('2026-09-21T10:00:00Z'), 'not-found', '7 days after the row');
+    assert.equal(status('2026-09-08T23:59:00Z'), 'matched', '6 days');
+    assert.equal(status('2026-09-20T00:00:00Z'), 'matched', '6 days after the row');
+  });
+
   it('treats 27.0 and 27 as one version', () => {
     const [item] = match([release('x', 'iOS', '27.0', '2026-09-14T17:00:00Z')], parseIndex(INDEX));
     assert.equal(item.status, 'matched');

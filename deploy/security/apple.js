@@ -17,7 +17,8 @@ export const FAMILIES = familyIds(VENDOR);
 
 // The release feed and the index can date one release days apart (iPadOS 26.7 is dated
 // 2026-09-09 in the feed and 14 Sep 2026 in the index). The version decides the match; the date
-// only picks between rows of one version (the nearest wins) and refuses one a week away or more.
+// only picks between rows of one version (the nearest wins) and refuses one 7 or more days away
+// (UTC calendar dates, so the time of day never matters).
 export const DATE_SLACK_DAYS = 7;
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -244,7 +245,7 @@ export function covers(page, release) {
 /**
  * What to do for each release of this vendor, as [{ id, status, row }]. A build that is not a
  * `release` is `not-applicable` (vendors publish security pages only for released builds). A
- * release is `matched` to the row with its family and version number, dated within a week of
+ * release is `matched` to the row with its family and version number, dated less than 7 days (`DATE_SLACK_DAYS`, UTC dates) from
  * it, and `not-found` when none is. If two rows fit, the nearer date wins, then the first.
  */
 export function match(releases, rows) {
@@ -263,7 +264,7 @@ export function match(releases, rows) {
         (p) => p.family === release.family && normalise(p.version) === normalise(release.version),
       );
       const gap = Math.abs(dayOf(row.date) - day) / DAY_MS;
-      if (fits && gap <= DATE_SLACK_DAYS && gap < bestGap) {
+      if (fits && gap < DATE_SLACK_DAYS && gap < bestGap) {
         best = row;
         bestGap = gap;
       }
