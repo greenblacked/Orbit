@@ -156,7 +156,7 @@ The preferred rollback is a new patch release with the change reverted. The one-
 ├── deploy/                the Worker (worker.js, releases.js, families.js,
 │   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs,
 │   │                      snapshot_security.mjs
-│   └── security/          security-notes adapters (offline)
+│   └── security/          security-notes adapters (snapshot step only: Apple, Android)
 ├── scripts/               build, checks, preview, screenshots and the source probe (standard library only)
 ├── results/               one JSON file per publicly released, tested build
 ├── tests/                 Python and Node tests, fixtures

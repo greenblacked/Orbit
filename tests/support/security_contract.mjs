@@ -22,6 +22,13 @@ function isHttpsUrl(value) {
   }
 }
 
+// A real calendar day written YYYY-MM-DD (the form of a patch level).
+function isDay(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const at = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(at.getTime()) && at.toISOString().startsWith(value);
+}
+
 const sortedUnique = (list) => list.every((item, i) => i === 0 || list[i - 1] < item);
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
@@ -61,6 +68,9 @@ export function problems(payload, rows) {
     const stage = stages.get(id);
     if (stage === undefined) found.push(`${id} is not in releases.json`);
     if (!STATUSES.includes(entry.status)) found.push(`${id} has status ${entry.status}`);
+    if (entry.patchLevel !== undefined && entry.patchLevel !== null && !isDay(entry.patchLevel)) {
+      found.push(`${id} has a bad patchLevel`);
+    }
     const listsNotes = entry.status === 'listed' || entry.status === 'no-cve-entries';
     if (listsNotes && stage !== 'release') found.push(`${id} lists notes but is a ${stage}`);
     if (stage && stage !== 'release' && entry.status !== 'not-applicable') {

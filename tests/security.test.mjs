@@ -32,8 +32,14 @@ describe('src/data/security.json', () => {
       sources: { s: {} },
       notes: { 'https://example.org/n': { source: 's', cves: [{ id: 'CVE-2026-0001' }] } },
       releases: {
-        r1: { status: 'listed', notes: ['https://example.org/n'], cves: ['CVE-2026-0001'], count: 1 },
-        b1: { status: 'not-applicable', notes: [], cves: [], count: null },
+        r1: {
+          status: 'listed',
+          notes: ['https://example.org/n'],
+          cves: ['CVE-2026-0001'],
+          count: 1,
+          patchLevel: '2026-10-05',
+        },
+        b1: { status: 'not-applicable', notes: [], cves: [], count: null, patchLevel: null },
       },
     };
     assert.deepEqual(problems(good, rows), []);
@@ -83,6 +89,10 @@ describe('src/data/security.json', () => {
       return p;
     }, 'notes are not sorted');
     bad((p) => ((p.releases.r1 = 'x'), p), 'r1 is not an object');
+    for (const level of ['soon', '2026-13-01', '2026-02-30', '2026-10-5', 20261005, '']) {
+      bad((p) => ((p.releases.r1.patchLevel = level), p), 'r1 has a bad patchLevel');
+    }
+    bad((p) => ((p.releases.b1.patchLevel = 'soon'), p), 'b1 has a bad patchLevel');
   });
 });
 

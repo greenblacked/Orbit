@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Android Security Bulletin—October 2026 | Android Open Source Project</title></head>
+<body>
+<!-- Excerpt of https://source.android.com/docs/security/bulletin/2026/2026-10-01 as recorded by a read-only probe on 2026-10-12
+     (200, text/html, 189019 bytes, sha256 4f9e7c912fc1ac13e4860475ad32468ca2b8691a17083baa2bf828e9d6112973).
+     The h1 slice is the probe's 4000-character raw slice from the h1 on, cut mid-word; the tables
+     are the probe's raw tables, complete. Nothing else of the page is here. -->
+<table>
+  <colgroup>
+  <col width="21%">
+  <col width="21%">
+  <col width="14%">
+  <col width="14%">
+  <col width="30%">
+  </colgroup>
+  <tbody>
+    <tr>
+    <th>CVE</th>
+    <th>References</th>
+    <th>Type</th>
+    <th>Severity</th>
+      <th scope="col">Updated AOSP versions</th>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-58865
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/frameworks/base/+/60f9d9a0bcac12ff87eec843d42693a18164f5e0" rel="noreferrer">A-513582756</a>
+    </td>
+    <td>DoS</td>
+    <td>Critical</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-55270
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/frameworks/opt/telephony/+/ee04a37583c0a965cbf77aef36d6868c38c93f9d" rel="noreferrer">A-517377154</a>
+    </td>
+    <td>EoP</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-58815
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/frameworks/av/+/aff9120ec0b8cb6194b3772793cf6153f757980f" rel="noreferrer">A-514726373</a>
+    </td>
+    <td>EoP</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-58841
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/frameworks/base/+/3184e06e737abef4dc41d6c3d7ac5af81631ceb1" rel="noreferrer">A-515034370</a>
+    </td>
+    <td>EoP</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-58854
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/frameworks/av/+/183c2e3a419845e2b19792626b9493c59b133072" rel="noreferrer">A-514727559</a>
+    </td>
+    <td>EoP</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-58856
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/frameworks/av/+/6e240fe4061af5fae90974917dfd95efe2ab6a53" rel="noreferrer">A-514734206</a>
+    </td>
+    <td>EoP</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-58834
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/frameworks/base/+/f4e7001b21fb26b57d06c7e487de95fd6c63fe6e" rel="noreferrer">A-515158597</a>
+    </td>
+    <td>DoS</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+</tbody>
+</table>
+<table>
+  <colgroup>
+  <col width="21%">
+  <col width="21%">
+  <col width="14%">
+  <col width="14%">
+  <col width="30%">
+  </colgroup>
+  <tbody>
+  <tr>
+    <th>CVE</th>
+    <th>References</th>
+    <th>Type</th>
+    <th>Severity</th>
+      <th scope="col">Updated AOSP versions</th>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-55269
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Bluetooth/+/6effdf3d7c13342bbfe015b83914926a38024b78" rel="noreferrer">A-522372274</a>
+    </td>
+    <td>EoP</td>
+    <td>Critical</td>
+    <td>16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-55280
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Nfc/+/d6cb6aefb12713d2d470e680c01cd1688d75efa2" rel="noreferrer">A-522373576</a>
+    </td>
+    <td>EoP</td>
+    <td>Critical</td>
+    <td>16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-58835
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Bluetooth/+/91bef351ef64a6f5ce189c5d0493ba9434c436d5" rel="noreferrer">A-522371916</a>
+    </td>
+    <td>EoP</td>
+    <td>Critical</td>
+    <td>16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-58880
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Bluetooth/+/af2fe681d88de29a038f587036b6c222e64e06d1" rel="noreferrer">A-522373105</a>
+    </td>
+    <td>EoP</td>
+    <td>Critical</td>
+    <td>16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-49933
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Bluetooth/+/3d959c9229242fc0d327f940e53ff44da2664905" rel="noreferrer">A-522372651</a>
+    </td>
+    <td>DoS</td>
+    <td>Critical</td>
+    <td>16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-55265
+    </td>
+    <td>
+      A-517377150
+    </td>
+    <td>DoS</td>
+    <td>Critical</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-49878
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/external/wpa_supplicant_8/+/d131540379d631d7dcb09b0169e4462bc65abcca" rel="noreferrer">A-511544607</a>
+    </td>
+    <td>RCE</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-45513
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Nfc/+/2db7814d87baf726f01012eb32ffb79d5678fd88" rel="noreferrer">A-508389591</a>
+    </td>
+    <td>EoP</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-49880
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Nfc/+/4f214cca6dff82211c65ca43cc341d44d4e3bda3" rel="noreferrer">A-508390497</a>
+    </td>
+    <td>EoP</td>
+    <td>High</td>
+    <td>16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-49885
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Nfc/+/9c0ae67d8733d048e6e97cca1b8c520fdcb66870" rel="noreferrer">A-508389525</a>
+    </td>
+    <td>EoP</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-55286
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/hardware/st/nfc/+/bbb2d21c4d503006f8bb70e5863dfa03d78f2ef8" rel="noreferrer">A-522376740</a>
+    </td>
+    <td>EoP</td>
+    <td>High</td>
+    <td>17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-28667
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Nfc/+/144b34ba890627b56e5c2322097dd4cd30e8405c" rel="noreferrer">A-508389908</a>
+    </td>
+    <td>ID</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-45516
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/external/freetype/+/285b264bf272f4ba115b3ae05a0e4895ca0f82ca" rel="noreferrer">A-503542587</a>
+    </td>
+    <td>ID</td>
+    <td>High</td>
+    <td>15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-45524
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Wifi/+/78ed5791579271dd99f60d35700c4a6c8d966ed4" rel="noreferrer">A-514740359</a>
+    </td>
+    <td>ID</td>
+    <td>High</td>
+    <td>17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-49937
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/system/libfmq/+/3aa82fe2d0a829327ac132916c9a929edbbeb555" rel="noreferrer">A-514861024</a>
+    </td>
+    <td>ID</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-55266
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/system/libufdt/+/8dfd47aab1f20d4d08326932a4b80b36c2865a45" rel="noreferrer">A-509980995</a>
+    </td>
+    <td>DoS</td>
+    <td>High</td>
+    <td>14, 15, 16, 16-qpr2, 17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-55279
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/system/fs/fs_mgr/+/666f09f0529cadadd4994923faadb3c9f1542eb0" rel="noreferrer">A-514747079</a>
+    </td>
+    <td>DoS</td>
+    <td>High</td>
+    <td>17</td>
+  </tr>
+  <tr>
+    <td>
+      CVE-2026-58859
+    </td>
+    <td>
+      <a href="https://android.googlesource.com/platform/packages/modules/Telephony/+/e04c40c70a0827d88a59920c2284aa01ccecdaaa" rel="noreferrer">A-517377722</a>
+    </td>
+    <td>DoS</td>
+    <td>High</td>
+    <td>17</td>
+  </tr>
+</tbody>
+</table>
+<table>
+    <colgroup>
+    <col width="21%"/>
+    <col width="21%"/>
+    </colgroup>
+      <tbody>
+        <tr>
+      <th>Subcomponent</th>
+      <th>CVE</th>
+    </tr>
+    <tr>
+      <td>Telephonycore</td>
+      <td>CVE-2026-58859</td>
+    </tr>
+    <tr>
+      <td>WiFi</td>
+      <td>CVE-2026-45524, CVE-2026-49878</td>
+    </tr>
+  </tbody>
+</table>
+<table>
+      <colgroup>
+      <col width="25%"/>
+      <col width="75%"/>
+      </colgroup>
+       <tbody><tr>
+        <th>Abbreviation</th>
+        <th>Definition</th>
+      </tr>
+      <tr>
+        <td>RCE</td>
+        <td>Remote code execution</td>
+      </tr>
+      <tr>
+        <td>EoP</td>
+        <td>Elevation of privilege</td>
+      </tr>
+      <tr>
+        <td>ID</td>
+        <td>Information disclosure</td>
+      </tr>
+      <tr>
+        <td>DoS</td>
+        <td>Denial of service</td>
+      </tr>
+      <tr>
+        <td>N/A</td>
+        <td>Classification not available</td>
+      </tr>
+    </tbody>
+  </table>
+<table>
+      <colgroup>
+            <col width="25%"/>
+      <col width="75%"/>
+      </colgroup>
+              <tbody><tr>
+        <th>Prefix</th>
+        <th>Reference</th>
+      </tr>
+      <tr>
+        <td>A-</td>
+        <td>Android bug ID</td>
+      </tr>
+      <tr>
+        <td>QC-</td>
+        <td>Qualcomm reference number</td>
+      </tr>
+      <tr>
+        <td>M-</td>
+        <td>MediaTek reference number</td>
+      </tr>
+      <tr>
+        <td>N-</td>
+        <td>NVIDIA reference number</td>
+      </tr>
+      <tr>
+        <td>B-</td>
+        <td>Broadcom reference number</td>
+      </tr>
+      <tr>
+        <td>U-</td>
+        <td>UNISOC reference number</td>
+      </tr>
+    </tbody>
+  </table>
+<table>
+  <colgroup>
+  <col width="25%"/>
+  <col width="25%"/>
+  <col width="50%"/>
+  </colgroup>
+  <tbody>
+    <tr>
+    <th>Version</th>
+    <th>Date</th>
+    <th>Notes</th>
+  </tr>
+  <tr>
+    <td>1.0</td>
+    <td>October 5, 2026</td>
+    <td>Bulletin Published</td>
+  </tr>
+  <tr>
+    <td>1.1</td>
+    <td>October 8, 2026</td>
+    <td>AOSP links added</td>
+  </tr>
+</tbody>
+</table>
+<h1 class="devsite-page-title" tabindex="-1">
+      Android Security Bulletin—October 2026<devsite-actions hidden data-nosnippet><devsite-feature-tooltip
+      ack-key="AckCollectionsBookmarkTooltipDismiss"
+      analytics-category="Site-Wide Custom Events"
+      analytics-action-show="Callout Profile displayed"
+      analytics-action-close="Callout Profile dismissed"
+      analytics-label="Create Collection Callout"
+      class="devsite-page-bookmark-tooltip nocontent"
+      data-nosnippet
+      dismiss-button="true"
+      id="devsite-collections-dropdown"
+      
+      dismiss-button-text="Dismiss"
+
+      
+      close-button-text="Got it">
+
+    
+    
+      <devsite-bookmark></devsite-bookmark>
+    
+
+    <span slot="popout-heading">
+      
+      Stay organized with collections
+    </span>
+    <span slot="popout-contents">
+      
+      Save and categorize content based on your preferences.
+    </span>
+  </devsite-feature-tooltip></devsite-actions>
+  
+      
+    </h1>
+  <div class="devsite-page-title-meta"><devsite-view-release-notes></devsite-view-release-notes></div>
+  
+
+  <devsite-toc class="devsite-nav"
+    depth="2"
+    devsite-toc-embedded
+    >
+  </devsite-toc>
+  
+    
+  <div class="devsite-article-body clearfix
+  ">
+
+  
+    
+    
+<!--
+Copyright 2026 The Android Open Source Project
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+
+      <em>Published  October 5, 2026 | Updated October 8, 2026</em>
+    </p>
+    <p>This Android Security Bulletin contains details of security vulnerabilities
+    that affect Android devices. Security patch levels of
+    2026-10-01 or higher address all of these issues.
+    To learn how to check a device&#39;s security patch level, see
+    <a href="https://support.google.com/pixelphone/answer/4457705"
+    rel="noreferrer">Check and update your Android version</a>.</p>
+<p>
+  Source code patches for these issues have been released to the Android Open
+  Source Project (AOSP) repository and linked from this bulletin. This bulletin
+  also includes links to patches outside of AOSP.
+</p>
+
+<p>
+  The most severe of these issues is a critical security vulnerability in the System
+  component that could lead to local escalation of privilege with no additional execution
+  privileges needed. User interaction is not needed for exploitation.
+  The <a href="https://source.android.com/security/overview/updates-resources.html#severity"
+  rel="noreferrer">severity assessment</a> is based on the effect that exploiting
+  the vulnerability would possibly have on an affected device, assuming the
+  platform and service mitigations are turned off for development purposes or if
+  successfully bypassed.
+</p>
+    <p>For more details on the Android security platform protections and Google
+      Play Protect, which improve the security of the Android platform,
+      refer to the <a href="#mitigations">Android and Google Play Protect
+      mitigations</a> section.</p>
+    <p>We notify our Android partners of all issues at least a month before
+      publishing the bulletin.</p>
+    <h2 id="mitigations" data-text="Android and Google service mitigations" tabindex="-1">Android and Google service mitigations</h2>
+    <p>This is a summary of the mitigations provided by the
+    <a href="/security/enhancements" rel="noreferrer">Android security platform</a> and service
+    protections such as
+    <a href="https://developers.google.com/android/play-protect" rel="noreferrer">Google Play
+    Protect</a>. These capabilities reduce the likelihood that security
+    vulner
+</body>
+</html>
