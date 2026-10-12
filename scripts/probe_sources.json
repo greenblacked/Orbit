@@ -9,13 +9,18 @@
     "id": "apple-security-releases-index",
     "vendor": "Apple",
     "kind": "security",
-    "url": "https://support.apple.com/en-us/100100"
+    "url": "https://support.apple.com/en-us/100100",
+    "raw_slice": {"start": "<table", "chars": 30000}
   },
   {
     "id": "apple-security-note-ios-26-7-1",
     "vendor": "Apple",
     "kind": "security",
-    "url": "https://support.apple.com/en-us/149226"
+    "url": "https://support.apple.com/en-us/149226",
+    "raw_slice": [
+      {"start": "<h1", "chars": 27000},
+      {"start": "Published Date", "chars": 3000}
+    ]
   },
   {
     "id": "mikrotik-current-rss",
@@ -94,13 +99,16 @@
     "id": "android-security-bulletin-index",
     "vendor": "Android",
     "kind": "security",
-    "url": "https://source.android.com/docs/security/bulletin"
+    "url": "https://source.android.com/docs/security/bulletin",
+    "raw_slice": {"start": "<table", "chars": 20000}
   },
   {
     "id": "android-security-bulletin-2026-10",
     "vendor": "Android",
     "kind": "security",
-    "url": "https://source.android.com/docs/security/bulletin/2026/2026-10-01"
+    "url": "https://source.android.com/docs/security/bulletin/2026/2026-10-01",
+    "raw_tables": 6,
+    "raw_slice": {"start": "<h1", "chars": 4000}
   },
   {
     "id": "android-pixel-bulletin-index",
@@ -112,7 +120,9 @@
     "id": "android-pixel-bulletin-2026-10",
     "vendor": "Android",
     "kind": "security",
-    "url": "https://source.android.com/docs/security/bulletin/pixel/2026/2026-10-01"
+    "url": "https://source.android.com/docs/security/bulletin/pixel/2026/2026-10-01",
+    "raw_tables": 6,
+    "raw_slice": {"start": "<h1", "chars": 4000}
   },
   {
     "id": "android-versions",

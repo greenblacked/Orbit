@@ -10,6 +10,13 @@ Everything printed from a response is untrusted. Each line is prefixed with ``  
 and format characters are removed, ``::`` is written ``: :`` and ``##[`` is written ``# #[``,
 so neither workflow-command form can appear in an excerpt. Standard library only.
 
+Two options print raw HTML, for building parsers and fixtures from the real markup:
+``raw_tables`` (up to 10 tables of at most 6000 characters) and ``raw_slice`` (one object or a
+list of up to 3 objects ``{"start": <marker>, "chars": N}``: N raw characters from the first
+occurrence of the marker, or a plain "marker not found" line). The slices of one source add up
+to at most 30000 characters, so one source prints at most 60000 raw characters from tables
+and 30000 from slices. All of it goes through the same sanitising as the rest of the excerpt.
+
 Exit status: 0 when the list is valid (individual sources may fail and are reported), 1 when
 the list file is invalid.
 """
@@ -45,13 +52,16 @@ EXCERPT_CHARS = 4000
 MIN_GAP = 1.0  # seconds between two requests to one host
 KINDS = ("release", "security", "enrichment")
 REQUIRED_KEYS = {"id", "vendor", "kind", "url"}
-OPTIONAL_KEYS = {"raw_tables", "accept", "max_bytes", "match_titles"}
+OPTIONAL_KEYS = {"raw_tables", "raw_slice", "accept", "max_bytes", "match_titles"}
 ACCEPT_ALLOWED = ("application/json", "application/xml", "*/*")
 DEFAULT_ACCEPT = "*/*"
 MAX_RAW_TABLES = 10
 MATCH_TITLES_PATTERN = re.compile(r"^[A-Za-z0-9 ]{1,40}$")
 MAX_TITLE_MATCHES = 30
 RAW_TABLE_CHARS = 6000
+MAX_RAW_SLICES = 3
+MAX_RAW_SLICE_CHARS = 30000  # the most all slices of one source may print together
+MAX_SLICE_MARKER = 80
 ID_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # Query parameter names that would mean a secret in the URL.
 SECRET_PARAMS = {
@@ -112,13 +122,15 @@ def validate_sources(data: object) -> list[str]:
 
 
 def option_problems(entry: dict) -> list[str]:
-    """Problems with the optional raw_tables, accept, max_bytes and match_titles fields."""
+    """Problems with the optional raw_tables, raw_slice, accept, max_bytes, match_titles."""
     problems = []
     if "raw_tables" in entry:
         count = entry["raw_tables"]
         valid = isinstance(count, int) and not isinstance(count, bool)
         if not valid or not 1 <= count <= MAX_RAW_TABLES:
             problems.append(f"raw_tables must be an integer from 1 to {MAX_RAW_TABLES}")
+    if "raw_slice" in entry:
+        problems.extend(slice_problems(entry["raw_slice"]))
     if "accept" in entry and entry["accept"] not in ACCEPT_ALLOWED:
         problems.append(f"accept must be one of {', '.join(ACCEPT_ALLOWED)}")
     if "max_bytes" in entry:
@@ -130,6 +142,33 @@ def option_problems(entry: dict) -> list[str]:
         needle = entry["match_titles"]
         if not isinstance(needle, str) or not MATCH_TITLES_PATTERN.match(needle):
             problems.append("match_titles must be 1 to 40 letters, digits and spaces")
+    return problems
+
+
+def slice_problems(value: object) -> list[str]:
+    """Problems with a raw_slice value: one {start, chars} object or a list of up to 3."""
+    specs = value if isinstance(value, list) else [value]
+    if not 1 <= len(specs) <= MAX_RAW_SLICES:
+        return [f"raw_slice must have 1 to {MAX_RAW_SLICES} slices"]
+    problems = []
+    total = 0
+    for spec in specs:
+        if not isinstance(spec, dict) or set(spec) != {"start", "chars"}:
+            problems.append('raw_slice must be {"start": <text>, "chars": <integer>}')
+            continue
+        start, chars = spec["start"], spec["chars"]
+        if not isinstance(start, str) or not 1 <= len(start) <= MAX_SLICE_MARKER:
+            problems.append(f"raw_slice start must be 1 to {MAX_SLICE_MARKER} characters")
+        elif clean(start) != start or "\n" in start:
+            problems.append("raw_slice start must not contain control characters")
+        if not isinstance(chars, int) or isinstance(chars, bool) or chars < 1:
+            problems.append("raw_slice chars must be a positive integer")
+        elif chars > MAX_RAW_SLICE_CHARS:
+            problems.append(f"raw_slice chars must be at most {MAX_RAW_SLICE_CHARS}")
+        else:
+            total += chars
+    if total > MAX_RAW_SLICE_CHARS:
+        problems.append(f"raw_slice chars must add up to at most {MAX_RAW_SLICE_CHARS}")
     return problems
 
 
@@ -392,6 +431,25 @@ def tables_excerpt(text: str, count: int) -> str:
     return "\n".join(parts)
 
 
+def raw_slices(text: str, specs: object) -> list[str]:
+    """For each ``{start, chars}``: ``chars`` raw characters from the first ``start``."""
+    items = specs if isinstance(specs, list) else [specs]
+    out = []
+    for number, spec in enumerate(items, 1):
+        head = f"--- slice {number}: {one_line(spec['start'], MAX_SLICE_MARKER)!r} ---"
+        at = text.find(spec["start"])
+        if at < 0:
+            out += [head, "marker not found"]
+            continue
+        piece = text[at : at + spec["chars"]]
+        out += [f"{head} (offset {at}, {len(piece)} chars)", piece]
+    return out
+
+
+def slices_excerpt(text: str, specs: object) -> str:
+    return "\n".join(["raw slices:", *raw_slices(text, specs)])
+
+
 def text_excerpt(text: str) -> str:
     return cut(text.strip(), 1500)
 
@@ -409,10 +467,17 @@ def kind_of(content_type: str, text: str) -> str:
     return "text"
 
 
-def excerpt(content_type: str, text: str, tables: int = 0, match_titles: str | None = None) -> str:
+def excerpt(
+    content_type: str,
+    text: str,
+    tables: int = 0,
+    match_titles: str | None = None,
+    slices: object = None,
+) -> str:
     """A trimmed, unsanitised excerpt. A parse failure falls back to plain text.
 
     ``tables`` > 0 appends the raw outer HTML of that many tables to an HTML excerpt.
+    ``slices`` (a raw_slice value) appends raw slices of the body to an HTML excerpt.
     ``match_titles`` appends the matching titles of a JSON list of objects to a JSON excerpt.
     """
     kind = kind_of(content_type, text)
@@ -428,6 +493,11 @@ def excerpt(content_type: str, text: str, tables: int = 0, match_titles: str | N
                     out += "\n" + tables_excerpt(text, tables)
                 except Exception as exc:  # the excerpt that worked is kept
                     out += f"\nraw tables (parse failed: {type(exc).__name__})"
+            if slices:
+                try:
+                    out += "\n" + slices_excerpt(text, slices)
+                except Exception as exc:
+                    out += f"\nraw slices (failed: {type(exc).__name__})"
             return out
     except Exception as exc:  # best effort: a parser fault must not erase the report
         return f"{kind} (parse failed: {type(exc).__name__})\n" + text_excerpt(text)
@@ -550,6 +620,7 @@ def report(source: dict, result: dict | None, error: BaseException | None) -> st
                 decode(body, result["charset"]),
                 source.get("raw_tables", 0),
                 source.get("match_titles"),
+                source.get("raw_slice"),
             )
         ),
     ]
