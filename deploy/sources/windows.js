@@ -204,9 +204,13 @@ export function parsePage(html) {
   return mergeReleases([], releases);
 }
 
+// An HTML page: ask for it as one.
+export const ACCEPT = 'text/html, application/xhtml+xml;q=0.9, */*;q=0.1';
+
 export default {
   id: ID,
   vendor: VENDOR,
+  accept: ACCEPT,
   urls: [WINDOWS_11_URL, WINDOWS_10_URL],
   parse: parsePage,
 };

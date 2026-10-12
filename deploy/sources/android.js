@@ -230,9 +230,13 @@ export function parsePage(html, now = Date.now(), windowDays = WINDOW_DAYS) {
   return sorted.filter((release) => Date.parse(release.date) >= floor);
 }
 
+// An HTML page: ask for it as one.
+export const ACCEPT = 'text/html, application/xhtml+xml;q=0.9, */*;q=0.1';
+
 export default {
   id: ID,
   vendor: VENDOR,
+  accept: ACCEPT,
   urls: [PAGE_URL],
   parse: parsePage,
 };

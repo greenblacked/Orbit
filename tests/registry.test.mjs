@@ -12,7 +12,7 @@ import mikrotik from '../deploy/sources/mikrotik.js';
 import { isSource, SOURCES, vendorsOf } from '../deploy/sources/index.js';
 import steamos from '../deploy/sources/steamos.js';
 import windows from '../deploy/sources/windows.js';
-import { createWorker } from '../deploy/worker.js';
+import { createWorker, DEFAULT_ACCEPT } from '../deploy/worker.js';
 import {
   advance,
   ago,
@@ -297,5 +297,47 @@ describe('the vendor filter', () => {
     assert.equal(await head.text(), '');
     const other = await getJson('/api/releases.json?x=1');
     assert.deepEqual(vendors(other), ['acme', 'apple']);
+  });
+});
+
+describe('the Accept header of an upstream request', () => {
+  const askedWith = (url) => state.upstream.calls.find((c) => c.url === url).init.headers.accept;
+  const page = {
+    id: 'html-page',
+    vendor: 'acme',
+    accept: 'text/html',
+    urls: ['https://feed.example/page.html'],
+    parse: () => [acmeRelease('p1', '2026-10-05T10:00:00Z', '4.0')],
+  };
+
+  it('is the feeds-and-text default unless the adapter sets its own', async () => {
+    const mixed = createWorker([acme, page]);
+    stubUpstream(() => new Response(ACME_FEED));
+    const res = await mixed.fetch(new Request(`${ORIGIN}/api/releases.json`), fakeEnv(), fakeCtx());
+    assert.equal(res.status, 200);
+    assert.equal(askedWith(ACME_URL), DEFAULT_ACCEPT);
+    assert.equal(askedWith('https://feed.example/page.html'), 'text/html');
+  });
+
+  it('keeps plain text in the default, for the MikroTik NEWEST files', () => {
+    assert.match(DEFAULT_ACCEPT, /text\/plain/);
+    assert.equal(mikrotik.accept, undefined);
+  });
+
+  it('asks for HTML on the two HTML sources and for nothing special elsewhere', () => {
+    for (const source of [android, windows]) {
+      assert.match(source.accept, /^text\/html/, source.id);
+      assert.ok(isSource(source), source.id);
+    }
+    for (const source of [apple, mikrotik, steamos]) {
+      assert.equal(source.accept, undefined, source.id);
+    }
+  });
+
+  it('refuses an adapter whose accept is not a non-empty string', () => {
+    for (const accept of ['', 7, null, ['text/html']]) {
+      assert.equal(isSource({ ...acme, accept }), false, String(accept));
+    }
+    assert.equal(isSource({ ...acme, accept: 'text/html' }), true);
   });
 });
