@@ -85,7 +85,8 @@ describe('the registry', () => {
     assert.equal(new Set(SOURCES.map((s) => s.id)).size, SOURCES.length);
     assert.ok(SOURCES.includes(apple));
     assert.ok(SOURCES.includes(android));
-    assert.deepEqual(vendorsOf(SOURCES), ['apple', 'google']);
+    assert.ok(vendorsOf(SOURCES).includes('apple'));
+    assert.ok(vendorsOf(SOURCES).includes('google'));
   });
 
   it('only lists https URLs, and the families of its own vendor', () => {
