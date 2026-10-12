@@ -20,6 +20,7 @@ import android, {
   MAX_ROWS,
   PAGE_URL,
   parsePage,
+  WINDOW_DAYS,
   parseRow,
   tables,
   VENDOR,
@@ -51,6 +52,8 @@ const keys = [
   'beta', 'build', 'date', 'family', 'id', 'major', 'source', 'stage', 'title', 'url',
   'vendor', 'version',
 ];
+
+const parseAll = (html) => parsePage(html, Date.now(), Infinity);
 
 useHarness();
 
@@ -148,6 +151,33 @@ describe('the table scanner', () => {
     assert.ok(Date.now() - started < 5000);
   });
 
+  it('does not read markup inside script, style, template or textarea elements', () => {
+    const table = '<table><tr><td>a</td></tr></table>';
+    // Synthetic: a '<table' in an inline script must not nest the real table.
+    for (const name of ['script', 'style', 'template', 'textarea', 'SCRIPT']) {
+      const html = `<${name} type="x">var s = "<table>";</${name}>${table}`;
+      assert.deepEqual(tables(html), [[['a']]], name);
+    }
+    assert.deepEqual(tables(`<script>x</script ><script>"<table>"</script>${table}`), [[['a']]]);
+    // An element that is never closed hides the rest of the document: nothing is read.
+    assert.deepEqual(tables(`<script>${table}`), []);
+  });
+
+  it('does not take a hyphenated custom element for a table, row or cell', () => {
+    assert.deepEqual(tables('<table-x><tr><td>a</td></tr></table-x>'), []);
+    assert.deepEqual(
+      tables('<table><tr><td-x>no</td-x><td>a</td><th-x>no</th-x></tr><tr-x><td>b</td></tr-x></table>'),
+      [[['a']]],
+    );
+  });
+
+  it('stays linear on many raw-text elements', () => {
+    const started = Date.now();
+    tables('<script></script>'.repeat(100000));
+    tables('<script>'.repeat(100000));
+    assert.ok(Date.now() - started < 5000);
+  });
+
   it('copes with input that is not a string', () => {
     for (const bad of [undefined, null, 0, {}, []]) {
       assert.deepEqual(tables(bad), [], String(bad));
@@ -165,6 +195,19 @@ describe('buildDate', () => {
     assert.equal(buildDate('CP2A.260230.016', '2026-03-01'), '2026-03-01T00:00:00Z');
   });
 
+  it('refuses a day more than a day ahead of the clock, falling back to the patch level', () => {
+    const now = Date.UTC(2026, 9, 12, 12);
+    assert.equal(buildDate('CP2A.261012.001', '', now), '2026-10-12T00:00:00Z');
+    assert.equal(buildDate('CP2A.261013.001', '', now), '2026-10-13T00:00:00Z', 'a day of slack');
+    assert.equal(buildDate('CP2A.261014.001', '', now), null);
+    assert.equal(buildDate('CP2A.990605.016', '', now), null);
+    assert.equal(buildDate('CP2A.990605.016', '2026-06-05', now), '2026-06-05T00:00:00Z');
+    assert.equal(buildDate('CP2A.990605.016', '2099-06-05', now), null);
+    assert.equal(parsePage(page(row('CP2A.990605.016', 'android-17.0.0_r1', '')), now).length, 0);
+    assert.equal(parsePage(page(row('CP2A.990605.016', 'android-17.0.0_r1')), now)[0].date,
+      '2026-06-05T00:00:01Z');
+  });
+
   it('refuses a day that does not exist, and a date out of range', () => {
     for (const [build, patch] of [
       ['15848949', ''],
@@ -177,13 +220,14 @@ describe('buildDate', () => {
     ]) {
       assert.equal(buildDate(build, patch), null, `${build} ${patch}`);
     }
-    assert.equal(buildDate('CP2A.270229.001', ''), null, '2027 has no 29 February');
-    assert.equal(buildDate('CP2A.280229.001', ''), '2028-02-29T00:00:00Z');
+    const later = Date.UTC(2030, 0, 1);
+    assert.equal(buildDate('CP2A.270229.001', '', later), null, '2027 has no 29 February');
+    assert.equal(buildDate('CP2A.280229.001', '', later), '2028-02-29T00:00:00Z');
   });
 });
 
 describe('parsePage on the recorded page', () => {
-  const releases = parsePage(PAGE);
+  const releases = parseAll(PAGE);
   const byId = (id) => releases.find((r) => r.id === id);
 
   it('keeps one release per AOSP release tag and skips the security refreshes', () => {
@@ -213,7 +257,7 @@ describe('parsePage on the recorded page', () => {
       beta: null,
       build: 'CP2A.260605.016',
       title: 'Android 17 (android-17.0.0_r1)',
-      date: '2026-06-05T00:00:00Z',
+      date: '2026-06-05T00:00:01Z',
       url: 'https://source.android.com/docs/setup/reference/build-numbers',
       source: 'android-build-numbers',
     });
@@ -221,7 +265,7 @@ describe('parsePage on the recorded page', () => {
 
   it('reads the build shapes of the page, with a suffix or without', () => {
     assert.equal(byId('android-16.0.0_r2').build, 'BP2A.250605.031.A3');
-    assert.equal(byId('android-16.0.0_r2').date, '2025-06-05T00:00:00Z');
+    assert.equal(byId('android-16.0.0_r2').date, '2025-06-05T00:00:02Z');
     assert.equal(byId('android-15.0.0_r32').build, 'BP1A.250505.005');
     assert.equal(byId('android-15.0.0_r31').build, 'BD4A.250505.003');
     assert.equal(byId('android-15.0.0_r36').title, 'Android 15 (android-15.0.0_r36)');
@@ -232,8 +276,8 @@ describe('parsePage on the recorded page', () => {
   it('takes the date from the build id even when the patch level differs', () => {
     // The page lists patch level 2025-01-05 for this build, whose id says 2024-09-25.
     assert.equal(byId('android-15.0.0_r24').build, 'BD4A.240925.111');
-    assert.equal(byId('android-15.0.0_r24').date, '2024-09-25T00:00:00Z');
-    assert.equal(byId('android-15.0.0_r25').date, '2025-04-05T00:00:00Z');
+    assert.equal(byId('android-15.0.0_r24').date, '2024-09-25T00:00:24Z');
+    assert.equal(byId('android-15.0.0_r25').date, '2025-04-05T00:00:25Z');
   });
 
   it('marks every row a final release: the page lists no pre-release', () => {
@@ -261,6 +305,62 @@ describe('parsePage on the recorded page', () => {
   it('does not read the other tables of the page', () => {
     assert.equal(releases.some((r) => r.id.startsWith('android-3.')), false);
     assert.equal(releases.some((r) => r.build === 'HRI39'), false);
+  });
+});
+
+describe('the bound on what is emitted', () => {
+  // Synthetic: one release a month for ten years, r1 each, on the 5th.
+  const long = [];
+  for (let i = 0; i < 120; i += 1) {
+    const year = 2017 + Math.floor(i / 12);
+    const month = String((i % 12) + 1).padStart(2, '0');
+    long.push(row(`CP2A.${String(year).slice(2)}${month}05.016`, `android-${i + 1}.0.0_r1`));
+  }
+  const html = page(...long);
+  const now = Date.UTC(2027, 0, 1);
+
+  it('keeps only the rows within the window of the newest row', () => {
+    const releases = parsePage(html, now);
+    assert.ok(WINDOW_DAYS <= 182, 'no wider than the dial');
+    assert.equal(releases[0].id, 'android-120.0.0_r1');
+    // 2026-12-05, 11-05, 10-05, 09-05, 08-05, 07-05 (153 days back); 06-05 is 183 days back.
+    assert.equal(releases.length, 6);
+    const newest = Date.parse(releases[0].date);
+    assert.ok(releases.every((r) => newest - Date.parse(r.date) <= WINDOW_DAYS * 86400000));
+  });
+
+  it('can be widened or removed, and an empty table stays empty', () => {
+    assert.equal(parsePage(html, now, Infinity).length, 120);
+    assert.equal(parsePage(html, now, 0).length, 1);
+    assert.deepEqual(parsePage(page(), now), []);
+  });
+
+  it('is applied by the adapter the Worker calls', () => {
+    assert.equal(android.parse(PAGE).length, 1);
+  });
+});
+
+describe('releases on one day', () => {
+  it('put the higher revision first, so r36 is newer than r31 and r10 newer than r9', () => {
+    const rows = ['r31', 'r36', 'r9', 'r10', 'r100', 'r32'].map((r) =>
+      row('BP1A.250505.005', `android-15.0.0_${r}`),
+    );
+    const ids = parsePage(page(...rows)).map((r) => r.id.split('_r')[1]);
+    assert.deepEqual(ids, ['100', '36', '32', '31', '10', '9']);
+    const dates = parsePage(page(...rows)).map((r) => r.date);
+    assert.equal(new Set(dates).size, dates.length);
+    assert.ok(dates.every((d) => /^2025-05-05T00:\d\d:\d\dZ$/.test(d)));
+  });
+
+  it('keep the order on the recorded page: r36 is the newest of 2025-05-05', () => {
+    const ids = parseAll(PAGE).map((r) => r.id);
+    assert.ok(ids.indexOf('android-15.0.0_r36') < ids.indexOf('android-15.0.0_r31'));
+    assert.ok(ids.indexOf('android-15.0.0_r30') < ids.indexOf('android-15.0.0_r25'));
+  });
+
+  it('give revision 999 a valid time', () => {
+    const [r] = parsePage(page(row('CP2A.260605.016', 'android-17.0.0_r999')));
+    assert.equal(r.date, '2026-06-05T00:16:39Z');
   });
 });
 
@@ -295,7 +395,7 @@ describe('pre-release and unlisted tags', () => {
   it('accepts a numeric build id on a release tag and dates it by the patch level', () => {
     const [r] = parsePage(page(row('12345678', 'android-14.0.0_r1', '2023-10-05')));
     assert.equal(r.build, '12345678');
-    assert.equal(r.date, '2023-10-05T00:00:00Z');
+    assert.equal(r.date, '2023-10-05T00:00:01Z');
     assert.equal(r.version, '14.0.0');
   });
 });
@@ -339,7 +439,7 @@ describe('malformed and empty input', () => {
         good,
       ),
     );
-    assert.deepEqual(releases.map((r) => r.id), ['android-17.0.0_r1', 'android-17.0.0_r2']);
+    assert.deepEqual(releases.map((r) => r.id), ['android-17.0.0_r2', 'android-17.0.0_r1']);
   });
 
   it('returns a row once when the page repeats it', () => {
@@ -365,7 +465,7 @@ describe('hostile values', () => {
         '<tr><td>CP2A.260605.016</td><td><a href="javascript:alert(1)">android-17.0.0_r4</a></td><td></td><td></td><td>2026-06-05</td></tr>',
       ),
     );
-    assert.deepEqual(releases.map((r) => r.id), ['android-17.0.0_r2', 'android-17.0.0_r3', 'android-17.0.0_r4']);
+    assert.deepEqual(releases.map((r) => r.id), ['android-17.0.0_r4', 'android-17.0.0_r3', 'android-17.0.0_r2']);
     for (const r of releases) {
       assert.equal(r.url, PAGE_URL);
       assert.doesNotMatch(Object.values(r).join('|'), /[<>"]|evil|javascript|script|alert/);
@@ -408,10 +508,11 @@ describe('the Android adapter behind the Worker', () => {
     const body = await res.json();
     assert.equal(body.source, ID);
     assert.equal(body.stale, false);
-    assert.equal(body.releases.length, 22);
+    assert.equal(body.releases.length, 1);
     assert.ok(body.releases.every((r) => r.vendor === 'google' && r.source === ID));
     assert.deepEqual(state.upstream.calls.map((c) => c.url), [PAGE_URL]);
     assert.equal(state.upstream.calls[0].init.redirect, 'manual');
+    assert.match(state.upstream.calls[0].init.headers.accept, /text\/html/);
   });
 
   it('refuses a page whose layout changed instead of publishing nothing as fresh', async () => {
