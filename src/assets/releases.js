@@ -134,7 +134,7 @@
     if (state.busy) return Promise.resolve();
     state.busy = true;
     // The bundled snapshot is only for a first load: a later failed poll keeps the data
-    // already on screen (it may be newer than the snapshot) and says it could not refresh.
+    // already on screen (it may be newer than the snapshot).
     return loadConfig().then(function () { return getJson(API); }).catch(function (err) {
       if (state.data) throw err;
       return getJson(SNAPSHOT);
