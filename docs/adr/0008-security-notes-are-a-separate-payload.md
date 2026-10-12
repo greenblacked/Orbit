@@ -14,7 +14,7 @@ Security data differs from release data in four ways. It is per page, not per fe
 4. **Only rows we already show.** Notes are attached to ids that exist in `releases.json`. A release the feed omits gets no note; adding it is a release-adapter change.
 5. **Facts only.** The file stores CVE ids, page titles, dates, URLs and the vendor's own severity label. It never stores a vendor's impact or description text.
 6. **Careful wording.** Compare says `Listed in NEWER's notes, not in OLDER's`, never "newly fixed", because whether a vendor's page is cumulative is not verified. Counts read `N CVEs listed in VENDOR notes`, never an exposure figure.
-7. **Phasing.** Phase 1 is Apple and Android. RouterOS and SteamOS follow as notes-only (a vendor page is linked, with no CVE matching). Windows (MSRC CVRF) waits until a document is measured, and is parsed in CI with an explicit byte cap, never in the Worker. Each vendor's adapter is admitted only after a probe fixture with provenance is committed, as ADR 0006 requires, together with a check of the vendor's terms of use.
+7. **Phasing.** Phase 1 is Apple and Android. RouterOS and SteamOS follow as notes-only: a vendor page is matched and linked, with no CVE matching, and the row is `linked`. Windows (MSRC CVRF) waits until a document is measured, and is parsed in CI with an explicit byte cap, never in the Worker. Each vendor's adapter is admitted only after a probe fixture with provenance is committed, as ADR 0006 requires, together with a check of the vendor's terms of use.
 8. **Outside first paint.** The UI loads after paint, on the timeline and compare pages only. A line on the home cards is a later, optional change that needs its own budget decision.
 
 ### Data contract (schema 1)
@@ -33,7 +33,7 @@ Security data differs from release data in four ways. It is per page, not per fe
   },
   "releases": {
     "release id from releases.json": {
-      "status": "listed | no-cve-entries | not-found | not-applicable | unavailable | not-connected",
+      "status": "listed | linked | no-cve-entries | not-found | not-applicable | unavailable | not-connected",
       "notes": ["https url"], "cves": ["CVE-YYYY-NNNN"], "count": "number or null",
       "patchLevel": "YYYY-MM-DD or null", "checkedAt": "ISO timestamp"
     }
@@ -41,11 +41,11 @@ Security data differs from release data in four ways. It is per page, not per fe
 }
 ```
 
-- `releases[id].cves` is the sorted, de-duplicated union of the CVEs of that release's notes, and `notes` is sorted and de-duplicated too. For `listed`, `count` equals `cves.length` (at least 1) and `notes` is not empty. For `no-cve-entries`, `cves` is empty and `count` is 0. For every other status, `notes` and `cves` are empty and `count` is null.
+- `releases[id].cves` is the sorted, de-duplicated union of the CVEs of that release's notes, and `notes` is sorted and de-duplicated too. For `listed`, `count` equals `cves.length` (at least 1) and `notes` is not empty. For `linked`, a vendor page was matched but its CVEs are not counted: `count` is null, `cves` is empty and `notes` holds that page's URL (not empty). For `no-cve-entries`, `cves` is empty and `count` is 0. For every other status, `notes` and `cves` are empty and `count` is null.
 - Android stores its `patchLevel` and the URLs of its own bulletin only, not a union over every earlier bulletin (about 130 since 2015-08, which would put thousands of ids in each row). Compare takes the bulletins with a month in (older patch level, newer patch level] from `notes` and does the set difference in the page. A `count` for Android covers only the CVEs listed in the bulletin read, which can include vendor-component CVEs and CVEs for other Android versions.
 - If a release id has no key in `releases`, the page shows the Not connected state when the family has no adapter, and otherwise the No match state.
 - The join key is the release id from `releases.json`, never a URL.
-- `tests/security.test.mjs` enforces today: `schema` is 1 and `generatedAt` is a date; `sources`, `notes` and `releases` are objects; every note URL (a key of `notes`, and every entry of `releases[].notes`) is a parseable `https` URL with a host; every note names a source in `sources`; every CVE id matches `CVE-YYYY-NNNN` or more digits, and the lists are sorted and unique; every `releases[].notes` entry exists in `notes`, and every CVE of a release comes from its notes; every release key exists in `releases.json`; only `stage: "release"` rows are `listed` or `no-cve-entries`, and every other row is `not-applicable`, because vendors publish security pages only for released builds, following the same rule as [ADR 0005](0005-public-results-only-for-released-builds.md). Still to add with the first adapter: a check that each note host is in the vendor's `security.hosts` list in the families data (a separate list from `source.hosts`, which bounds release links; Apple's security pages are on support.apple.com, which release links must not gain).
+- `tests/security.test.mjs` enforces today: `schema` is 1 and `generatedAt` is a date; `sources`, `notes` and `releases` are objects; every note URL (a key of `notes`, and every entry of `releases[].notes`) is a parseable `https` URL with a host; every note names a source in `sources`; every CVE id matches `CVE-YYYY-NNNN` or more digits, and the lists are sorted and unique; every `releases[].notes` entry exists in `notes`, and every CVE of a release comes from its notes; every release key exists in `releases.json`; only `stage: "release"` rows are `listed` or `no-cve-entries`, and every other row is `not-applicable`, because vendors publish security pages only for released builds, following the same rule as [ADR 0005](0005-public-results-only-for-released-builds.md). Still to add with the first adapter: a check that each note host is in the vendor's `security.hosts` list in the families data (a separate list from `source.hosts`, which bounds release links; Apple's security pages are on support.apple.com, which release links must not gain). Also still to add: the `linked` status. The executable contract does not know it today (its status set and per-status shape checks stop at `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` and `not-connected`), so `linked` enters `tests/security.test.mjs` in the same pull request as the first notes-only adapter (RouterOS or SteamOS), with its shape (count null, `cves` empty, `notes` not empty) and the release-stage-only rule. Until then no row may use it.
 - Caps on notes, CVEs per note and total payload bytes are chosen from measured fixtures when the first adapter lands, and tested. `check_site.py` weighs only files a page loads directly, so the payload cap is a test, not a budget.
 
 ### Empty and unknown states
@@ -54,6 +54,7 @@ Security data differs from release data in four ways. It is per page, not per fe
 | --- | --- | --- | --- |
 | Pre-release | beta or release candidate | `not-applicable` | "Security notes cover released builds only." No count. |
 | Listed | page matched, at least one CVE | `listed` | "N CVEs listed in VENDOR notes", with a link |
+| Linked, CVEs not counted | page matched, notes-only adapter, no CVE matching | `linked` | "VENDOR security notes for this build (CVEs not counted)", with a link. No count. |
 | No CVE entries | the page says so | `no-cve-entries` | "VENDOR lists no CVE entries for this build", with a link. The only place a count of 0 appears. |
 | Recently shipped, no match | within a grace window (14 days, to be confirmed) of the release date | `not-found` | "Security notes not published yet (checked DATE)" |
 | Older, no match | past the grace window | `not-found` | "No matching security note found (checked DATE)", with the index link. Never 0. |
@@ -64,6 +65,7 @@ Security data differs from release data in four ways. It is per page, not per fe
 | Android, empty bulletin | its own bulletin read, no rows | `no-cve-entries` | "Bulletin lists no CVEs" |
 | Severity absent | the vendor gives none | unchanged | "Severity not published", never an invented value |
 | Compare, side unknown | either side has no known note | none | "Security comparison unavailable: no known note for SIDE" |
+| Compare, side linked | either side is `linked` | none | "Cannot compare: CVEs not counted for SIDE" |
 | Compare, Android inverted | the newer build's patch level is not greater | none | "Patch level is not newer; no CVEs listed beyond OLDER's" |
 
 An Android range with a missing bulletin is `unavailable` or `not-found`, never `listed`: the site shows a CVE list only when every bulletin it needs was read.
