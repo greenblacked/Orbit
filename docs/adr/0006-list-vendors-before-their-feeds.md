@@ -25,3 +25,17 @@ An adapter is added for a vendor only when all of these hold, in a session that 
 - Provenance of the source links. The four links below are the vendors' own landing pages for release information, shown as where to look. None was fetched and read when this change was prepared (mikrotik.com answered 403 to the research), so they are unverified: https://mikrotik.com/download/changelogs, https://developer.android.com/about/versions, https://learn.microsoft.com/en-us/windows/release-health/release-information and https://store.steampowered.com/news/app/1675200. Each must be checked by hand before its adapter lands, and the host lists in `families.json` stay at the single source host until then.
 - SteamOS is listed but shows no releases until a verified Steam source and adapter exist.
 - Open questions per vendor: MikroTik (which feed carries the stable and long-term channels, and the channel labels), Android (a machine-readable source for stable releases and monthly patch levels, since the developer pages cover betas), Windows (a structured source on Microsoft Learn or the update history pages, and how hotpatch and out-of-band updates are labelled) and Valve (the shape and channel labels of the Steam news data for the Steam Deck app).
+
+## Update 2026-10-12: MikroTik is connected
+
+A read-only probe fetched each vendor source from a GitHub runner on 2026-10-12 and recorded status, content type, size, SHA-256 and an excerpt. It settled the MikroTik open questions, and the adapter `deploy/sources/mikrotik.js` is registered:
+
+- `https://upgrade.mikrotik.com/routeros/NEWESTa7.stable`, `.../NEWESTa7.long-term` and `.../NEWESTa7.testing` answer 200 `text/plain` with one line, `<version> <unix-seconds>` (`7.24.5 1790691687`, `7.23.8 1791452776`, `7.25rc1 1790864328`). The channel is in the URL only.
+- `https://download.mikrotik.com/routeros/latest-stable-and-long-term.rss` answers 200 `application/rss+xml` with items titled `RouterOS <version> [<channel>]`, linking `https://mikrotik.com/download?v=<version>`, dated by `pubDate`.
+- Not used: `NEWEST7a.*` answers 404, and the plain `NEWEST7.*` files answer a stale `7.12.1` and `0.00`, so neither is a source. `https://mikrotik.com/current.rss` redirects to a stable-only feed that the RSS above already covers.
+- Channels map as follows: `stable` and `long-term` are `release`, with the channel kept in the title (`RouterOS 7.23.8 long-term`); `testing` carries `rc` or `beta` versions (`7.25rc1`) and is a pre-release with its iteration number. A pre-release version in a stable channel, or a plain version in testing, is skipped as malformed.
+- MikroTik has no build ids. A release's build is its version string, which the snapshot contract requires to be non-empty and which the build sigil hashes like any generic build.
+- The date of a NEWEST release is its unix timestamp in UTC. Where the feed and a NEWEST file name the same release, the NEWEST timestamp wins. The RSS item body (`content:encoded`, the release notes) is never read or kept.
+- The documents are fixtures under `tests/fixtures/mikrotik/`, copied from the probe excerpts.
+
+The terms of use for automated polling of these endpoints were not part of the probe and are still to be confirmed by hand; the Worker asks each URL at most once per cache window with the site's User-Agent. The vendor's source link in `families.json` stays the changelogs page. Android, Windows and Valve remain as described above.
