@@ -623,10 +623,10 @@ def test_turning_on_reduce_motion_after_load_stops_the_effects(browser, base_url
         page.wait_for_function(
             "() => document.documentElement.classList.contains('fx-glass')", timeout=15000
         )
-        try:
-            page.wait_for_selector(".aurora canvas", state="attached", timeout=15000)
-        except Exception:
+        has_webgl = page.evaluate("() => !!document.createElement('canvas').getContext('webgl')")
+        if not has_webgl:
             pytest.skip("this browser has no WebGL, so there is no aurora to stop")
+        page.wait_for_selector(".aurora canvas", state="attached", timeout=15000)
         page.emulate_media(reduced_motion="reduce")
         page.wait_for_function("() => !document.documentElement.className.includes('fx-')")
         page.wait_for_selector(".aurora canvas", state="detached")

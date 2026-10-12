@@ -754,8 +754,14 @@ def test_an_in_page_anchor_scrolls_without_leaving_the_page(tab, served):
     tab.locator('a[href="#disclaimer"]').click()
     assert tab.evaluate("() => location.hash") == "#/about/"
     assert tab.evaluate("() => window.scrollY") > 200
+    tab.evaluate("() => window.scrollTo(0, 0)")  # so the next wait cannot pass on the old scroll
     tab.goto(served + "/#/about/#privacy")  # only the fragment changes: a hashchange, not a load
     tab.wait_for_function("() => window.scrollY > 200")
+    tab.wait_for_function(  # the heading rests at the top, below the sticky header's scroll margin
+        "() => { const el = document.getElementById('privacy');"
+        " const margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;"
+        " return Math.abs(el.getBoundingClientRect().top - margin) < 5; }"
+    )
     assert tab.evaluate("() => window.scrollY") > 200
 
 
