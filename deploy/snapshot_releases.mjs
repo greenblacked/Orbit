@@ -61,7 +61,7 @@ for (const source of SOURCES) {
       if (res.status !== 200) {
         throw new Error(`${url} answered ${res.status}`);
       }
-      found.push(...source.parse(await res.text()));
+      found.push(...source.parse(await res.text(), url));
     }
     if (found.length === 0) {
       throw new Error('the source held no releases');

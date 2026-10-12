@@ -159,7 +159,7 @@ async function fetchLive(source, env, request) {
       await res.body?.cancel();
       throw new Error(`${source.id} answered ${res.status}`);
     }
-    found.push(...source.parse(await readCapped(res)));
+    found.push(...source.parse(await readCapped(res), url));
   }
   // Whatever an adapter says, a release belongs to the source and vendor that produced it.
   const live = found.map((release) => ({ ...release, vendor: source.vendor, source: source.id }));
