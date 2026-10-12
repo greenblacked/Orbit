@@ -7,9 +7,10 @@
 //   urls    the allowlist of https URLs the Worker may fetch for it
 //   parse   (text) => releases, with no I/O
 
+import android from './android.js';
 import apple from './apple.js';
 
-export const SOURCES = [apple];
+export const SOURCES = [apple, android];
 
 /** True when `source` has the shape the Worker relies on. */
 export function isSource(source) {
