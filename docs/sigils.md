@@ -51,7 +51,7 @@ all strokes and dots clamped to >= 1 px
 
 ## Generic builds
 
-A build string that is not an Apple build (an Android `BP2A.250605.031`, a Windows `26100.4351`, an Ubuntu `24.04.3`) is hashed into the same parameters the Apple rule reads from its grammar, and then drawn by the same geometry. The hash is integer arithmetic only, so every engine draws the same glyph. A vendor with no build ids uses its version string as the build: a RouterOS `7.24.5` is hashed like any other generic build.
+A build string that is not an Apple build (an Android `BP2A.250605.031`, a Windows `26100.4351`, an Ubuntu `24.04.3`) is hashed into the same parameters the Apple rule reads from its grammar, and then drawn by the same geometry. The hash is integer arithmetic only, so every engine draws the same glyph. A release with no build id is keyed by `<Family> <version>`, followed by a space and `<stage><beta>` for a beta or RC (`RO.sigilKey`), so a SteamOS `3.9.2` and its beta `SteamOS 3.9.2 beta` get different glyphs; that key is hashed like any other generic build.
 
 1. Normalise: upper-case the string and keep only `A-Z` and `0-9`. If nothing is left, use `0`.
 2. Checksum: start with `a = 1, b = 0`; for each character code `c`, `a = (a + c) mod 251` and then `b = (b + a) mod 251`.

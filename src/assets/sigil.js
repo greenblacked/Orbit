@@ -208,7 +208,11 @@
       host.removeAttribute("data-build");
       host.sigilWant = build;
       ready(function () { if (host.sigilWant === build) draw(host, build, opts); }, host,
-        function () { if (host.sigilWant === build) host.textContent = build; });
+        function () {
+          if (host.sigilWant !== build) return;
+          host.textContent = build;
+          if (opts.onfail) opts.onfail(host);
+        });
       return;
     }
     host.sigilWant = build;

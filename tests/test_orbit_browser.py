@@ -145,18 +145,22 @@ def test_the_dial_has_one_notch_per_release_in_the_window(page, base_url):
     assert [radius for _, radius in radii] == sorted((r for _, r in radii), reverse=True)
 
 
-def test_the_window_widens_to_52_weeks_when_the_data_spans_it(page, base_url):
+def test_the_dial_keeps_its_26_week_window_when_the_data_is_wider(page, base_url):
     data = json.loads(json.dumps(SNAPSHOT))
-    old = dict(data["releases"][-1])
-    old["id"] = old["id"] + "-old"
-    old["url"] = old["url"] + "-old"
-    old["date"] = "2026-01-12T17:00:00Z"
-    data["releases"].append(old)
+    dates = ("2026-01-12T17:00:00Z", "2025-03-05T00:00:36Z", "2024-06-01T00:00:00Z")
+    for n, date in enumerate(dates):
+        old = dict(data["releases"][-1])
+        old["id"] = f"{old['id']}-old{n}"
+        old["url"] = f"{old['url']}-old{n}"
+        old["date"] = date
+        data["releases"].append(old)
     serve(page, data)
     open_front_page(page, base_url)
-    assert page.get_attribute("#orbit-dial", "data-weeks") == "52"
-    assert page.locator("#orbit-dial .notch").count() == in_window(52, data)
-    assert "52" in text(page, "#orbit-weeks")
+    assert page.get_attribute("#orbit-dial", "data-weeks") == "26"
+    # Older releases are in the data but are neither drawn nor counted on the dial.
+    assert page.locator("#orbit-dial .notch").count() == in_window(26, data)
+    assert in_window(26, data) == in_window(26)
+    assert "26" in text(page, "#orbit-weeks")
 
 
 def test_betas_are_shorter_and_thinner_than_releases_in_the_same_full_colour(page, base_url):
@@ -222,6 +226,21 @@ def test_a_pre_release_never_shows_a_verdict_even_if_the_data_carries_one(page, 
         )
         assert set(statuses) <= {"untested"}, stage
     assert page.locator("#orbit-dial .mk-fail").count() == 0
+
+
+def test_a_release_without_a_build_still_shows_a_sigil_and_its_channel(page, base_url):
+    page.goto(base_url + "/")
+    page.wait_for_selector("#orbit-dial .notch")
+    notch = page.locator("#orbit-dial .notch[aria-label*='SteamOS 3.8.28']").first
+    notch.focus()
+    page.wait_for_selector("#orbit-card:not([hidden])")
+    card = page.locator("#orbit-card")
+    page.wait_for_selector("#orbit-card .sigil svg")
+    assert card.locator(".sigil").is_visible()
+    assert card.locator(".sigil").get_attribute("data-build") == "SteamOS 3.8.28"
+    words = card.inner_text()
+    assert "Stable" in words and "No build number" not in words
+    assert card.locator("a").get_attribute("href").startswith("https://")
 
 
 def test_a_notch_opens_a_card_with_its_sigil_build_date_and_link(page, base_url):

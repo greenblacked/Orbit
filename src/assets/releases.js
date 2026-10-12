@@ -60,8 +60,7 @@
       return u.protocol === "https:" && source(vendor).hosts.indexOf(u.hostname) >= 0;
     } catch (e) { return false; }
   }
-  // The config is a convenience for ordering and accents: without it, any family name the
-  // data brings is accepted, still only with a link its vendor's source allows.
+  // The config only orders and accents: without it any family name is accepted, with its vendor's links only.
   function knownFamily(r) {
     if (!config.families.length) return typeof r.family === "string" && r.family !== "";
     var f = familyOf(r.family);
@@ -201,6 +200,18 @@
     if (r.stage === "beta") return r.beta ? "Beta " + r.beta : "Beta";
     return r.beta ? "RC " + r.beta : "RC";
   }
+  // The release channel in a word, for a release with no build number.
+  function channel(r) {
+    var title = r.title || "";
+    if (r.stage === "rc") return "Release candidate";
+    if (r.stage === "beta") return /\bpreview\b/i.test(title) ? "Preview" : "Beta";
+    if (r.stage === "release") return /\b(long[- ]term|lts)\b/i.test(title) ? "Long-term" : "Stable";
+    return "Release";
+  }
+  // What a sigil is drawn from: the build when there is one, else a stable key of the release.
+  function sigilKey(r) {
+    return r.build || r.family + " " + r.version + (r.stage === "release" ? "" : " " + r.stage + (r.beta || ""));
+  }
   // "27.2 beta 3" for a release's version and stage, without the OS name.
   function short(r) {
     return r.version + (r.stage === "release" ? "" : " " + stageLabel(r).toLowerCase());
@@ -253,14 +264,13 @@
     loadJson: loadJson, ready: loadConfig, families: function () { return config.families; },
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
+    channel: channel, sigilKey: sigilKey,
     latest: latest, newer: newer, compareVersions: compareVersions,
     reduced: function () {
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
   };
-  // Scroll reveals without animation-timeline: below-the-fold .reveal elements get .pre, and
-  // .in when they scroll into view. The script only adds classes; the CSS does the rest, and
-  // everything stays visible if this never runs.
+  // Scroll reveals: below-the-fold .reveal elements get .pre, then .in; the CSS does the rest.
   (function reveal() {
     var els = document.querySelectorAll(".reveal");
     if (!els.length || !("IntersectionObserver" in window) || !window.matchMedia) return;
