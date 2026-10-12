@@ -87,7 +87,8 @@
     "id": "android-build-numbers",
     "vendor": "Android",
     "kind": "release",
-    "url": "https://source.android.com/docs/setup/reference/build-numbers"
+    "url": "https://source.android.com/docs/setup/reference/build-numbers",
+    "raw_tables": 3
   },
   {
     "id": "android-security-bulletin-index",
@@ -123,7 +124,8 @@
     "id": "android-pixel-factory-images",
     "vendor": "Android",
     "kind": "release",
-    "url": "https://developers.google.com/android/images"
+    "url": "https://developers.google.com/android/images",
+    "raw_tables": 2
   },
   {
     "id": "android-pixel-update-schedule",
@@ -135,13 +137,15 @@
     "id": "windows-release-health-11",
     "vendor": "Microsoft",
     "kind": "release",
-    "url": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information"
+    "url": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information",
+    "raw_tables": 3
   },
   {
     "id": "windows-release-health-10",
     "vendor": "Microsoft",
     "kind": "release",
-    "url": "https://learn.microsoft.com/en-us/windows/release-health/release-information"
+    "url": "https://learn.microsoft.com/en-us/windows/release-health/release-information",
+    "raw_tables": 2
   },
   {
     "id": "windows-release-health-status-11-25h2",
@@ -166,6 +170,13 @@
     "vendor": "Microsoft",
     "kind": "security",
     "url": "https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Sep"
+  },
+  {
+    "id": "msrc-cvrf-2026-sep-json",
+    "vendor": "Microsoft",
+    "kind": "security",
+    "url": "https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Sep",
+    "accept": "application/json"
   },
   {
     "id": "steamos-news-rss-1675200",

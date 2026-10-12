@@ -43,6 +43,12 @@ MAX_BYTES = 2 * 1024 * 1024
 EXCERPT_CHARS = 4000
 MIN_GAP = 1.0  # seconds between two requests to one host
 KINDS = ("release", "security", "enrichment")
+REQUIRED_KEYS = {"id", "vendor", "kind", "url"}
+OPTIONAL_KEYS = {"raw_tables", "accept"}
+ACCEPT_ALLOWED = ("application/json", "application/xml", "*/*")
+DEFAULT_ACCEPT = "*/*"
+MAX_RAW_TABLES = 10
+RAW_TABLE_CHARS = 6000
 ID_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # Query parameter names that would mean a secret in the URL.
 SECRET_PARAMS = {
@@ -64,15 +70,20 @@ def validate_sources(data: object) -> list[str]:
         return [f"the list must have at most {MAX_SOURCES} entries"]
     problems: list[str] = []
     ids: set[str] = set()
-    urls: set[str] = set()
+    urls: set[tuple[str, str]] = set()
     for index, entry in enumerate(data):
         where = f"entry {index}"
         if not isinstance(entry, dict):
             problems.append(f"{where}: not an object")
             continue
-        if set(entry) != {"id", "vendor", "kind", "url"}:
-            problems.append(f"{where}: keys must be exactly id, vendor, kind, url")
+        keys = set(entry)
+        if not REQUIRED_KEYS <= keys or keys - REQUIRED_KEYS - OPTIONAL_KEYS:
+            problems.append(
+                f"{where}: keys must be id, vendor, kind, url and optionally "
+                + ", ".join(sorted(OPTIONAL_KEYS))
+            )
             continue
+        problems.extend(f"{where}: {p}" for p in option_problems(entry))
         ident, vendor, kind, url = (entry[k] for k in ("id", "vendor", "kind", "url"))
         if not isinstance(ident, str) or not ID_PATTERN.match(ident):
             problems.append(f"{where}: id must be kebab-case")
@@ -88,9 +99,24 @@ def validate_sources(data: object) -> list[str]:
             problems.append(f"{where}: url must be a string")
             continue
         problems.extend(f"{where}: {p}" for p in url_problems(url))
-        if url in urls:
+        # The same URL may be listed again only with a different Accept header.
+        pair = (url, entry.get("accept", DEFAULT_ACCEPT))
+        if pair in urls:
             problems.append(f"{where}: duplicate url {url}")
-        urls.add(url)
+        urls.add(pair)
+    return problems
+
+
+def option_problems(entry: dict) -> list[str]:
+    """Problems with the optional raw_tables and accept fields."""
+    problems = []
+    if "raw_tables" in entry:
+        count = entry["raw_tables"]
+        valid = isinstance(count, int) and not isinstance(count, bool)
+        if not valid or not 1 <= count <= MAX_RAW_TABLES:
+            problems.append(f"raw_tables must be an integer from 1 to {MAX_RAW_TABLES}")
+    if "accept" in entry and entry["accept"] not in ACCEPT_ALLOWED:
+        problems.append(f"accept must be one of {', '.join(ACCEPT_ALLOWED)}")
     return problems
 
 
@@ -276,6 +302,64 @@ def html_excerpt(text: str) -> str:
     return cut("\n".join(parts), EXCERPT_CHARS + 2000)
 
 
+class _TableFinder(HTMLParser):
+    """Offsets of the outermost <table> elements, found without any pattern over the HTML."""
+
+    def __init__(self, text: str, limit: int) -> None:
+        super().__init__(convert_charrefs=False)
+        self.text = text
+        self.limit = limit
+        self.starts = [0]  # offset of each line start, for getpos()
+        for i, ch in enumerate(text):
+            if ch == "\n":
+                self.starts.append(i + 1)
+        self.depth = 0
+        self.begin = 0
+        self.spans: list[tuple[int, int]] = []
+
+    def _offset(self) -> int:
+        line, col = self.getpos()
+        return self.starts[line - 1] + col
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "table" or len(self.spans) >= self.limit:
+            return
+        if self.depth == 0:
+            self.begin = self._offset()
+        self.depth += 1
+
+    def handle_endtag(self, tag):
+        if tag != "table" or not self.depth:
+            return
+        self.depth -= 1
+        if self.depth == 0:
+            at = self._offset()
+            close = self.text.find(">", at)
+            self.spans.append((self.begin, len(self.text) if close < 0 else close + 1))
+
+    def finish(self) -> list[str]:
+        spans = list(self.spans)
+        if self.depth and len(spans) < self.limit:  # an unclosed table runs to the end
+            spans.append((self.begin, len(self.text)))
+        return [self.text[a:b] for a, b in spans]
+
+
+def raw_tables(text: str, count: int) -> list[str]:
+    """The raw outer HTML of the first ``count`` tables, each cut at RAW_TABLE_CHARS."""
+    finder = _TableFinder(text, count)
+    finder.feed(text)
+    finder.close()
+    return [cut(table, RAW_TABLE_CHARS) for table in finder.finish()]
+
+
+def tables_excerpt(text: str, count: int) -> str:
+    tables = raw_tables(text, count)
+    parts = [f"raw tables (first {len(tables)} of up to {count} requested):"]
+    for number, table in enumerate(tables, 1):
+        parts += [f"--- table {number} ---", table]
+    return "\n".join(parts)
+
+
 def text_excerpt(text: str) -> str:
     return cut(text.strip(), 1500)
 
@@ -293,8 +377,11 @@ def kind_of(content_type: str, text: str) -> str:
     return "text"
 
 
-def excerpt(content_type: str, text: str) -> str:
-    """A trimmed, unsanitised excerpt. A parse failure falls back to plain text."""
+def excerpt(content_type: str, text: str, tables: int = 0) -> str:
+    """A trimmed, unsanitised excerpt. A parse failure falls back to plain text.
+
+    ``tables`` > 0 appends the raw outer HTML of that many tables to an HTML excerpt.
+    """
     kind = kind_of(content_type, text)
     try:
         if kind == "json":
@@ -302,7 +389,8 @@ def excerpt(content_type: str, text: str) -> str:
         if kind == "xml":
             return "xml\n" + xml_excerpt(text)
         if kind == "html":
-            return "html\n" + html_excerpt(text)
+            out = "html\n" + html_excerpt(text)
+            return out + "\n" + tables_excerpt(text, tables) if tables else out
     except Exception as exc:  # best effort: a parser fault must not erase the report
         return f"{kind} (parse failed: {type(exc).__name__})\n" + text_excerpt(text)
     return "text\n" + text_excerpt(text)
@@ -350,13 +438,13 @@ def read_body(response, *, clock=time.monotonic) -> tuple[bytes, str]:
     return b"".join(chunks), ""
 
 
-def fetch(url: str) -> dict:
+def fetch(url: str, accept: str = DEFAULT_ACCEPT) -> dict:
     """One GET. Returns status, final_url, content_type, body, truncated; raises on failure.
 
     An HTTP error status is a result, not a failure: its body is often the useful part.
     """
     request = urllib.request.Request(  # noqa: S310 - https only, checked by validate_sources
-        url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"}
+        url, headers={"User-Agent": USER_AGENT, "Accept": accept}
     )
     opener = urllib.request.build_opener(LimitedRedirects())
     try:
@@ -396,6 +484,8 @@ def report(source: dict, result: dict | None, error: BaseException | None) -> st
         f"  kind: {one_line(source['kind'])}",
         f"url: {one_line(source['url'])}",
     ]
+    if source.get("accept", DEFAULT_ACCEPT) != DEFAULT_ACCEPT:
+        lines.append(f"accept: {one_line(source['accept'])}")
     if error is not None or result is None:
         name = type(error).__name__ if error is not None else "Unknown"
         detail = ""
@@ -415,7 +505,13 @@ def report(source: dict, result: dict | None, error: BaseException | None) -> st
         + (f" ({one_line(result['note'], 40)})" if result.get("note") else ""),
         f"sha256: {hashlib.sha256(body).hexdigest()}",
         "excerpt:",
-        sanitize(excerpt(result["content_type"], decode(body, result["charset"]))),
+        sanitize(
+            excerpt(
+                result["content_type"],
+                decode(body, result["charset"]),
+                source.get("raw_tables", 0),
+            )
+        ),
     ]
     return "\n".join(lines)
 
@@ -429,7 +525,7 @@ def run(sources: list[dict], *, sleep=time.sleep, clock=time.monotonic, out=sys.
             sleep(wait)
         result = error = None
         try:
-            result = fetch(source["url"])
+            result = fetch(source["url"], source.get("accept", DEFAULT_ACCEPT))
         except Exception as exc:  # any failure is recorded, never fatal
             error = exc
         last[host] = clock()

@@ -8,7 +8,7 @@ the job log.
 ## What it does
 
 `scripts/probe_sources.py` reads `scripts/probe_sources.json`, a list of
-`{id, vendor, kind, url}` (`kind` is `release`, `security` or `enrichment`), and makes one GET
+`{id, vendor, kind, url}` plus the optional `raw_tables` and `accept` below (`kind` is `release`, `security` or `enrichment`), and makes one GET
 per source: 20 second timeout, at most 3 redirects and only to https, at most 2 MB read, at
 least one second between two requests to the same host. A body that is still arriving after 60
 seconds is cut and marked. A list entry or a redirect to localhost, a `.local` or `.internal`
@@ -22,6 +22,19 @@ length, the SHA-256 of the body and a trimmed excerpt:
 - HTML: the `<title>` (300 characters), up to 4000 characters of visible text and the first 40 links that
   mention security, release, bulletin, changelog or update.
 - Anything else: the first 1500 characters.
+
+Two optional fields change what is fetched and printed for one source:
+
+- `raw_tables: N` (an integer from 1 to 10), for an HTML source, prints after the excerpt the
+  raw outer HTML of the first N top-level `<table>` elements, each cut at 6000 characters. The
+  tables are located with `html.parser` from the standard library, not a pattern over the
+  HTML, so a nested table stays inside its outer one and an unclosed table runs to the end of
+  the page. The adapters for the Android and Windows pages need this markup, which the visible
+  text excerpt drops. The tables go through the same sanitising as the rest of the excerpt.
+- `accept` sets the `Accept` request header. It must be one of `application/json`,
+  `application/xml` or `*/*` (the default). The same URL may be listed twice when the `accept`
+  values differ, as `msrc-cvrf-2026-sep` and `msrc-cvrf-2026-sep-json` do, to see both
+  representations of the MSRC CVRF month.
 
 A failing source is reported with its error class and the run carries on. The exit status is 0
 unless the list file is invalid, then 1.
@@ -42,5 +55,5 @@ use the runner to fetch arbitrary URLs). It has read access to the repository an
 token, no upload, and it commits nothing. Read the result in the job log.
 
 To add a source, add an entry to `scripts/probe_sources.json`: https only, no credentials in
-the URL, a unique kebab-case id, at most 40 entries (the script refuses more). `tests/test_probe_sources.py` checks the
+the URL, a unique kebab-case id (a unique URL, unless the `accept` differs), at most 40 entries (the script refuses more). `tests/test_probe_sources.py` checks the
 list and the output handling without any network access.

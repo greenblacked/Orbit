@@ -32,9 +32,9 @@ def test_a_list_over_the_cap_is_rejected():
 
 
 def test_every_url_is_https_unique_and_free_of_credentials():
-    urls = [s["url"] for s in SOURCES]
-    assert len(urls) == len(set(urls))
-    for url in urls:
+    pairs = [(s["url"], s.get("accept", "*/*")) for s in SOURCES]
+    assert len(pairs) == len(set(pairs))
+    for url, _ in pairs:
         parts = urlsplit(url)
         assert parts.scheme == "https", url
         assert parts.username is None and parts.password is None, url
@@ -52,6 +52,9 @@ def test_the_list_covers_every_vendor_and_kind():
     assert {"Apple", "MikroTik", "Android", "Microsoft", "Valve"} <= vendors
 
 
+OK_ENTRY = {"id": "a", "vendor": "V", "kind": "release", "url": "https://a.example/"}
+
+
 @pytest.mark.parametrize(
     "entry",
     [
@@ -66,6 +69,13 @@ def test_the_list_covers_every_vendor_and_kind():
         {"id": "a", "vendor": "V", "kind": "release", "url": "https://[::1]/"},
         {"id": "a", "vendor": "V", "kind": "release", "url": "https://localhost/"},
         {"id": "a", "vendor": "V", "kind": "release", "url": "https://x.internal/"},
+        dict(OK_ENTRY, x=1),
+        dict(OK_ENTRY, accept="text/html"),
+        dict(OK_ENTRY, accept=1),
+        dict(OK_ENTRY, raw_tables=0),
+        dict(OK_ENTRY, raw_tables=99),
+        dict(OK_ENTRY, raw_tables=True),
+        dict(OK_ENTRY, raw_tables="2"),
     ],
 )
 def test_an_invalid_entry_is_rejected(entry):
@@ -88,6 +98,26 @@ def test_an_invalid_list_file_exits_one_and_a_valid_one_zero(tmp_path, capsys, m
     monkeypatch.setattr(probe, "run", lambda sources: None)
     assert probe.main([]) == 0
     capsys.readouterr()
+
+
+def test_optional_fields_are_accepted_and_the_same_url_may_differ_by_accept():
+    base = {"id": "a", "vendor": "V", "kind": "release", "url": "https://a.example/"}
+    assert probe.validate_sources([dict(base, raw_tables=3, accept="application/json")]) == []
+    for accept in ("application/json", "application/xml", "*/*"):
+        assert probe.validate_sources([dict(base, accept=accept)]) == []
+    twin = dict(base, id="b", accept="application/json")
+    assert probe.validate_sources([base, twin]) == []
+    assert probe.validate_sources([twin, dict(twin, id="c")])
+
+
+def test_the_list_sets_raw_tables_and_the_json_accept():
+    by_id = {s["id"]: s for s in SOURCES}
+    assert by_id["android-build-numbers"]["raw_tables"] == 3
+    assert by_id["windows-release-health-11"]["raw_tables"] == 3
+    assert by_id["windows-release-health-10"]["raw_tables"] == 2
+    assert by_id["android-pixel-factory-images"]["raw_tables"] == 2
+    assert by_id["msrc-cvrf-2026-sep-json"]["accept"] == "application/json"
+    assert by_id["msrc-cvrf-2026-sep-json"]["url"] == by_id["msrc-cvrf-2026-sep"]["url"]
 
 
 def test_the_sanitiser_neutralises_workflow_commands():
@@ -204,6 +234,86 @@ def test_html_excerpt_bounds_a_huge_title_and_href():
     assert max(len(line) for line in out.split("\n")) < 320
 
 
+TABLES_PAGE = (
+    "<html><body><p>x</p>"
+    '<table class="a">\n<tr><td>one</td></tr>\n</table>'
+    "<table><tr><td><table><tr><td>inner</td></tr></table></td></tr></table>"
+    "<table><tr><td>third</td></tr></table></body></html>"
+)
+
+
+def test_raw_tables_returns_the_outer_html_of_the_first_n_tables():
+    tables = probe.raw_tables(TABLES_PAGE, 2)
+    assert tables[0] == '<table class="a">\n<tr><td>one</td></tr>\n</table>'
+    assert tables[1] == (
+        "<table><tr><td><table><tr><td>inner</td></tr></table></td></tr></table>"
+    )
+    assert len(probe.raw_tables(TABLES_PAGE, 1)) == 1
+    assert len(probe.raw_tables(TABLES_PAGE, 10)) == 3
+    assert "third" in probe.raw_tables(TABLES_PAGE, 3)[2]
+
+
+def test_raw_tables_handles_an_unclosed_table_and_a_page_without_tables():
+    assert probe.raw_tables("<p>a</p><table><tr><td>cut", 2) == ["<table><tr><td>cut"]
+    assert probe.raw_tables("<p>none</p>", 2) == []
+
+
+def test_a_raw_table_is_cut_at_6000_characters():
+    page = "<table><tr><td>" + "x" * 9000 + "</td></tr></table>"
+    (table,) = probe.raw_tables(page, 1)
+    assert table.startswith("<table><tr><td>xxx")
+    assert table.endswith("\n[cut at 6000 chars]")
+    assert len(table) < 6100
+
+
+def test_html_excerpt_gets_raw_tables_only_when_asked():
+    plain = probe.excerpt("text/html", TABLES_PAGE)
+    assert "raw tables" not in plain and "<table" not in plain
+    with_tables = probe.excerpt("text/html", TABLES_PAGE, 2)
+    assert plain in with_tables
+    assert "--- table 1 ---" in with_tables and "--- table 2 ---" in with_tables
+    assert "--- table 3 ---" not in with_tables
+    assert '<table class="a">' in with_tables
+    assert "<table" not in probe.excerpt("application/json", '{"a": 1}', 2)
+
+
+def test_commands_inside_a_raw_table_are_neutralised_in_the_report():
+    page = (
+        "<html><body><table><tr><td>::error::boom</td>\n"
+        "<td>##[add-mask]x\x1b[31m</td></tr></table></body></html>"
+    )
+    result = {
+        "status": 200,
+        "final_url": "https://a.example/x",
+        "content_type": "text/html",
+        "charset": "utf-8",
+        "body": page.encode(),
+        "truncated": False,
+    }
+    source = dict(SOURCES[0], raw_tables=1)
+    out = probe.report(source, result, None)
+    tail = out.split("excerpt:", 1)[1]
+    assert "<table>" in tail and "boom" in tail
+    for line in tail.split("\n")[1:]:
+        assert line.startswith(probe.PREFIX)
+        assert "::" not in line and "##[" not in line and "\x1b" not in line
+
+
+def test_the_accept_header_is_sent_and_defaults_to_anything(monkeypatch):
+    seen = []
+
+    class Opener:
+        def open(self, request, timeout):
+            seen.append(request.get_header("Accept"))
+            raise OSError("stop")
+
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *handlers: Opener())
+    for args in (("https://a.example/",), ("https://a.example/", "application/json")):
+        with pytest.raises(OSError):
+            probe.fetch(*args)
+    assert seen == ["*/*", "application/json"]
+
+
 def test_a_parser_fault_falls_back_to_text(monkeypatch):
     def boom(text):
         raise AssertionError("parser bug")
@@ -253,7 +363,7 @@ def test_requests_to_one_host_are_paced(monkeypatch):
         {"id": "c", "vendor": "V", "kind": "release", "url": "https://o.example/3"},
     ]
 
-    def fake_fetch(url):
+    def fake_fetch(url, accept="*/*"):
         raise OSError(url)
 
     monkeypatch.setattr(probe, "fetch", fake_fetch)
