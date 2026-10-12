@@ -260,7 +260,7 @@ def test_the_timeline_notes_fit_a_phone_and_their_links_are_big_enough(browser, 
         for link in page.locator(".sec-link").all():
             size = link.bounding_box()
             assert size["height"] >= TARGET, size
-            assert 0 <= size["x"] and size["x"] + size["width"] <= 360, size
+            assert size["x"] >= 0 and size["x"] + size["width"] <= 360, size
         assert errors == []
     finally:
         context.close()
