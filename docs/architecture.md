@@ -45,7 +45,7 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 ## Limits
 
 - **Budgets.** First-paint scripts under 60,000 bytes per page, the effect modules budgeted apart, a page with everything it loads under 500,000 bytes, any image under 200,000 bytes.
-- **Dial window.** 26 weeks, widening to 52 when the data spans more. The rings are 30 units apart; with more than seven families the gap, and the notches with it, narrow so the innermost ring keeps its radius.
+- **Dial window.** 26 weeks, widening to 52 when the data spans more. The rings are 30 units apart; with more than seven families the gap, and the notches with it, narrow so the innermost ring stays at radius 118, outside the hand's hub and the centre date.
 - **Vendors without a feed.** `families.json` may list a vendor whose adapter does not exist yet. Its cards and sections render the empty state, and nothing is fetched for it ([ADR 0006](adr/0006-list-vendors-before-their-feeds.md)).
 - **Security policy.** No inline script or style and no widening of the Content-Security-Policy to make a change work. The only outside origin is Google Fonts.
 - **Single Worker.** One Worker serves production and, as a Preview, the stage host. Until the first release the stage job attaches the custom domain for Preview traffic only; the first release makes it Production and Preview. Environment-scoped secrets and branch and tag rulesets keep the two apart ([SETUP.md](../SETUP.md)).

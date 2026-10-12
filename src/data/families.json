@@ -33,7 +33,7 @@
       "source": {
         "name": "Windows release health",
         "url": "https://learn.microsoft.com/en-us/windows/release-health/release-information",
-        "hosts": ["learn.microsoft.com", "support.microsoft.com"]
+        "hosts": ["learn.microsoft.com"]
       }
     },
     {
@@ -42,7 +42,7 @@
       "source": {
         "name": "Steam Deck news",
         "url": "https://store.steampowered.com/news/app/1675200",
-        "hosts": ["store.steampowered.com", "steamdeck.com"]
+        "hosts": ["store.steampowered.com"]
       }
     }
   ],
