@@ -874,13 +874,14 @@ def test_nothing_scrolls_sideways_at_320_with_a_card_open_and_the_hand_moved(bro
 
 # Installed before the page runs. It records, from the first byte, the child-list changes in
 # the parts of the page a refresh could redraw, every real change of data-theme, the first
-# paint, the cumulative layout shift, and the largest step a ring's opacity takes from one
-# frame to the next (a ring that breathes moves a little each frame, a restart jumps).
+# paint, the cumulative layout shift, how far the buttons under the newest list ever move, and
+# the fastest a ring's opacity changes per second (a ring that breathes moves slowly, a restart
+# jumps by a half in one frame).
 WATCH = """
 (() => {
   const SEL = '#orbit-dial, #cadence, #latest-grid, #newest';
   const w = (window.__watch = {
-    mutations: [], themes: [], paintAt: null, cls: 0, clsSeen: false, jump: 0,
+    mutations: [], themes: [], paintAt: null, cls: 0, clsSeen: false, jump: 0, moved: 0,
   });
   const owner = (node) => {
     const el = node.nodeType === 1 ? node : node.parentElement;
@@ -926,13 +927,26 @@ WATCH = """
     };
   } catch (e) { w.take_cls = () => {}; }
   const last = {};
-  const sample = () => {
+  let lastAt = null;
+  let actionsTop = null;
+  const sample = (at) => {
+    // Per second, so a slow frame (a busy runner) does not look like a restart.
+    const dt = lastAt === null ? null : Math.max((at - lastAt) / 1000, 0.008);
     document.querySelectorAll('.ring').forEach((ring) => {
       const id = ring.getAttribute('data-family');
       const opacity = parseFloat(getComputedStyle(ring).opacity);
-      if (id in last) w.jump = Math.max(w.jump, Math.abs(opacity - last[id]));
+      if (id in last && dt !== null) {
+        w.jump = Math.max(w.jump, Math.abs(opacity - last[id]) / dt);
+      }
       last[id] = opacity;
     });
+    lastAt = at;
+    const actions = document.querySelector('.actions');
+    if (actions) {
+      const top = actions.getBoundingClientRect().top + window.scrollY;
+      if (actionsTop === null) actionsTop = top;
+      w.moved = Math.max(w.moved, Math.abs(top - actionsTop));
+    }
     requestAnimationFrame(sample);
   };
   requestAnimationFrame(sample);
@@ -983,8 +997,11 @@ REPORT = """
   };
 }
 """
-# Between two frames, a ring's opacity may move by this much; a restart moves it by a half.
-MAX_JUMP = 0.25
+# A ring's opacity may change by this much per second (the fastest breath is about 0.4); a
+# restart moves it by a half in one frame, about 30.
+MAX_RATE = 2
+# The buttons under the newest list may move by this many pixels once the data lands.
+MAX_MOVE = 1
 CLS_LIMIT = 0.02
 EXTRA_ID = "https://developer.apple.com/news/releases/?id=09082026b"
 
@@ -1070,7 +1087,7 @@ def test_a_refresh_with_new_data_patches_the_dial_and_replays_nothing(browser, b
         assert report["drawing"] == 0
         assert report["breathers"] >= 1
         assert report["breathing"], "a ring's breathing was restarted"
-        assert report["jump"] < MAX_JUMP
+        assert report["jump"] < MAX_RATE
     finally:
         context.close()
 
@@ -1096,7 +1113,7 @@ def test_the_same_data_again_changes_nothing_on_the_page(browser, base_url):
         assert report["drawing"] == 0
         assert report["breathers"] >= 1
         assert report["breathing"], "a ring's breathing was restarted"
-        assert report["jump"] < MAX_JUMP
+        assert report["jump"] < MAX_RATE
     finally:
         context.close()
 
@@ -1119,17 +1136,19 @@ def test_the_first_three_seconds_neither_shift_the_layout_nor_change_the_theme(
         page.evaluate("() => { __watch.take_cls(); }")
         report = page.evaluate(
             "() => ({ cls: __watch.cls, seen: __watch.clsSeen, themes: __watch.themes,"
-            " paintAt: __watch.paintAt, jump: __watch.jump })"
+            " paintAt: __watch.paintAt, jump: __watch.jump, moved: __watch.moved })"
         )
         assert report["seen"], "this browser does not report layout shifts"
         assert report["cls"] < CLS_LIMIT, report["cls"]
+        # Any shift of the buttons, whatever its size: the phone list reserves its room.
+        assert report["moved"] < MAX_MOVE, report["moved"]
         # The theme is set once, by the script in the head, and never changes again.
         assert [(t["from"], t["to"]) for t in report["themes"]] == [(None, "day")]
         if report["paintAt"] is not None:
             assert report["themes"][0]["at"] <= report["paintAt"]
         assert page.get_attribute("html", "data-theme") == "day"
         # The rings start at full opacity and move smoothly from there.
-        assert report["jump"] < MAX_JUMP
+        assert report["jump"] < MAX_RATE
         assert page.evaluate("() => window.__csp") == []
     finally:
         context.close()
