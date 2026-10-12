@@ -21,8 +21,8 @@ An adapter is added for a vendor only when all of these hold, in a session that 
 
 - The site never shows a number that was not read from the vendor.
 - Connecting a vendor later is one adapter file, one registry line, a fixture and a snapshot refresh; the pages, colours, filters and dial need no change.
-- Until then the four platforms look empty. The About page says so.
-- Provenance of the source links. The four links below are the vendors' own landing pages for release information, shown as where to look. None was fetched and read when this change was prepared (mikrotik.com answered 403 to the research), so they are unverified: https://mikrotik.com/download/changelogs, https://developer.android.com/about/versions, https://learn.microsoft.com/en-us/windows/release-health/release-information and https://store.steampowered.com/news/app/1675200. Each must be checked by hand before its adapter lands, and the host lists in `families.json` stay at the single source host until then.
+- Until then the four platforms look empty (Windows: see the 2026-10-12 update below). The About page says so.
+- Provenance of the source links. The four links below are the vendors' own landing pages for release information, shown as where to look. None was fetched and read when this change was prepared (mikrotik.com answered 403 to the research), so they are unverified (the Windows link is verified in the 2026-10-12 update below): <https://mikrotik.com/download/changelogs>, <https://developer.android.com/about/versions>, <https://learn.microsoft.com/en-us/windows/release-health/release-information> and <https://store.steampowered.com/news/app/1675200>. Each must be checked by hand before its adapter lands, and the host lists in `families.json` stay at the single source host until then (Windows: see the update below).
 - SteamOS is listed but shows no releases until a verified Steam source and adapter exist.
 - Open questions per vendor: MikroTik (which feed carries the stable and long-term channels, and the channel labels), Android (a machine-readable source for stable releases and monthly patch levels, since the developer pages cover betas) and Valve (the shape and channel labels of the Steam news data for the Steam Deck app). The Windows questions are answered below.
 
@@ -30,8 +30,8 @@ An adapter is added for a vendor only when all of these hold, in a session that 
 
 Windows was the first of the four to meet the conditions above. A read-only probe fetched the pages from a GitHub runner on 2026-10-12 and recorded the answer of each (status, content type, size, SHA-256 and the raw tables). Both answered 200 `text/html` with no redirect:
 
-- https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information (132,531 bytes, SHA-256 `3c9fc9b33646c4ef971499c714960fc8718c6c1fef195da02c2ac94f69d20ceb`)
-- https://learn.microsoft.com/en-us/windows/release-health/release-information, the Windows 10 page (320,848 bytes, SHA-256 `7a66752e80d19cacbf08ddfbefffa5588a69e7e2a70efcf130089fd903c0243c`)
+- <https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information> (132,531 bytes, SHA-256 `3c9fc9b33646c4ef971499c714960fc8718c6c1fef195da02c2ac94f69d20ceb`)
+- <https://learn.microsoft.com/en-us/windows/release-health/release-information>, the Windows 10 page (320,848 bytes, SHA-256 `7a66752e80d19cacbf08ddfbefffa5588a69e7e2a70efcf130089fd903c0243c`)
 
 Everything below is read from those records, and the recorded tables are committed under `tests/fixtures/microsoft/`:
 
@@ -42,4 +42,12 @@ Everything below is read from those records, and the recorded tables are committ
 - The link is the KB article only when it is `https://support.microsoft.com/help/<digits>` with no port or credentials, and otherwise the release-health page. `support.microsoft.com` is therefore added to the Microsoft vendor's `hosts`, which the pages use to accept a release link.
 - The parser is a small strict scanner over the first table, bounded in input, rows and cell size, with no DOM and no `eval`. A page whose first table lacks the expected headers yields nothing, and the Worker then serves the last good copy.
 
-Not settled by the probe: Microsoft's terms of use for automated reads of Microsoft Learn were not read. The Worker's existing ten-minute cache and identifying User-Agent apply, and the owner should check the terms before the first release.
+Not settled by the probe: Microsoft's terms of use for automated reads of Microsoft Learn were not read, so the third condition above is deferred, not met. The adapter is registered so the code, fixtures and tests are reviewable together, and the owner must read the terms (and `robots.txt`) and record the outcome and the poll interval here before the first Cut release that ships it. The Worker's existing ten-minute cache and identifying User-Agent apply meanwhile. The page text also points programmatic readers to the Windows Updates API in Microsoft Graph, which needs a tenant and credentials; the public page was chosen for that reason.
+
+Decisions taken in review:
+
+- The Worker's `Accept` header now lists `text/html` after the feed types, since two of its sources are HTML pages. The probe did not record its request headers, so the first deploy should be checked once with the Worker's exact User-Agent and `Accept`.
+- The scanner caps the first table at 256 KB and walks it with `indexOf`, so unclosed tags are read once and the work is linear, not quadratic.
+- The version is the bare `25H2`, so a Windows 10-only update shows as "Windows 22H2" on the front card; the title keeps 10 or 11. Splitting the family into Windows 11 and Windows 10 is a larger UI change for its own pull request.
+- A version is marked "end of updates" only when every edition has ended (Windows 11 23H2 is not, while Enterprise is still serviced). Marking it when any edition has ended is a one-word change (`every` to `some`) if the owner prefers.
+- If one of the two pages answers other than 200, the whole source fails and the last good copy is served until it expires. Tolerating one failed page belongs in its own Worker pull request.
