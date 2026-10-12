@@ -96,10 +96,6 @@ html[data-theme="reactor"] h1, html[data-theme="reactor"] h2 {
   font-weight: 500;
   letter-spacing: -0.04em;
 }
-html[data-theme="reactor"] .card {
-  border-radius: 0;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
 html[data-theme="reactor"]::before {
   content: "";
   pointer-events: none;
@@ -187,15 +183,17 @@ a[aria-current="page"] { text-decoration: underline; text-underline-offset: 4px;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  display: inline-flex;
+  display: block;
   min-width: 2.75rem;
-  min-height: 2.75rem;
-  align-items: center;
-  justify-content: center;
+  max-width: calc(100% - 13rem);
+  overflow: hidden;
   font-size: 0.875rem;
-  line-height: 1.4286;
+  line-height: 2.75rem;
   font-weight: 500;
   letter-spacing: 0.1em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tools { margin-left: auto; display: flex; align-items: center; }
 .tool {
@@ -280,11 +278,6 @@ html[data-theme="night"] .sun { display: none; }
   letter-spacing: -0.025em;
   text-wrap: balance;
 }
-.hero h1 span {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 8px;
-}
 .lede {
   font-size: 1.125rem;
   line-height: 1.5556;
@@ -315,35 +308,11 @@ html[data-theme="night"] .sun { display: none; }
   .hero h1 { grid-column: span 7; }
   .hero .side { grid-column: span 5; }
 }
-.listing { padding-bottom: 5rem; }
-.card {
-  border-radius: 1.5rem;
-  background: var(--card);
-  padding: 2.5rem 1.5rem;
-}
-.card p {
-  max-width: 48rem;
-  font-family: var(--font-serif);
-  font-size: 1.875rem;
-  line-height: 1.375;
-  text-wrap: balance;
-}
-@media (min-width: 40rem) {
-  .card { padding: 3.5rem 2.5rem; }
-  .card p { font-size: 2.25rem; }
-}
 /* Plugin, skill and the other pages. */
 .page { width: 100%; max-width: 72rem; margin: 0 auto; padding: 3rem 1.25rem; }
 .page.narrow { max-width: 48rem; }
 @media (min-width: 40rem) {
   .page { padding-top: 4rem; padding-bottom: 4rem; }
-}
-.crumbs a {
-  display: inline-flex;
-  min-height: 2.75rem;
-  align-items: center;
-  text-decoration: underline;
-  text-underline-offset: 4px;
 }
 /* Back and To top: Material Design 3's button with a leading icon (full pill, 1.125rem
    icon, 14px medium label, 44px target, state layers of the label colour at 8% on
@@ -389,7 +358,80 @@ html[data-theme="night"] .sun { display: none; }
   .back { transition: transform 120ms ease, box-shadow 120ms ease; }
   .back:active { transform: scale(0.97); }
 }
-.back + .crumbs { margin-top: 1rem; }
+.back + .site-header:not(.away) ~ .dock { top: calc(4rem + 1px); }
+.dock.on { visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .dock {
+    transition: opacity 150ms ease, transform 150ms ease, top 200ms ease,
+      visibility 0s linear 150ms;
+  }
+  .dock.on { transition: opacity 150ms ease, transform 150ms ease, top 200ms ease; }
+}
+.dock-in {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.5rem max(1.25rem, env(safe-area-inset-right)) 0.5rem
+    max(1.25rem, env(safe-area-inset-left));
+}
+/* To top floats at the bottom right: Material's place for a page's one floating
+   action, and the one place Liquid Glass is meant for, a control over the content.
+   Round with only the arrow on a narrow screen, where the column is all text, and
+   labelled once the margin beside the 72rem column can hold the label. Its tint is
+   denser than Back's, because it sits over running text rather than the solid bar,
+   and glyphs showing through compete with the arrow. Hidden, and out of the tab
+   order, until the script shows it. */
+.fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 9;
+  justify-content: center;
+  background-color: color-mix(in srgb, var(--glass-tint) 55%, var(--bg));
+  width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(0.5rem);
+  pointer-events: none;
+}
+.fab span { display: none; }
+.fab.on { visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .fab {
+    transition: opacity 150ms ease, transform 150ms ease, box-shadow 120ms ease,
+      visibility 0s linear 150ms;
+  }
+  .fab.on { transition: opacity 150ms ease, transform 150ms ease, box-shadow 120ms ease; }
+  .fab.on:active { transform: scale(0.97); }
+}
+@media (min-width: 40rem) {
+  .fab {
+    right: max(1.5rem, env(safe-area-inset-right));
+    bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+}
+@media (min-width: 90rem) {
+  .fab { width: auto; padding: 0 1.25rem 0 1rem; }
+  .fab span { display: inline; }
+}
+/* A jump to a heading (an in-page link, a shared deep link, the finder) lands below
+   both bars rather than under them. A jump upwards brings the header back with the
+   bar stacked beneath it: 4rem and a border, then 0.5rem, a 2.75rem button, 0.5rem and
+   a border, 7.875rem in all, so 8.5rem leaves a gap. Zero specificity, so a rule that
+   sets its own margin wins. */
+:where([id]) { scroll-margin-top: 8.5rem; }
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 2rem;
+  font-size: 0.875rem;
+  line-height: 1.4286;
+}
 /* The bar Back moves into once the page has scrolled past its own Back: a
    top app bar on the solid page colour, so text scrolls under it and never shows
    behind a button. It sits below the header while the header shows, and at the top when the
@@ -473,27 +515,6 @@ html[data-theme="night"] .sun { display: none; }
    a border, 7.875rem in all, so 8.5rem leaves a gap. Zero specificity, so a rule that
    sets its own margin wins. */
 :where([id]) { scroll-margin-top: 8.5rem; }
-.crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  margin-bottom: 2rem;
-  font-size: 0.875rem;
-  line-height: 1.4286;
-}
-.crumbs a.quiet { color: var(--muted); }
-.title-xl {
-  max-width: 48rem;
-  margin-top: 1.5rem;
-  font-size: 3rem;
-  line-height: 1;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  text-wrap: balance;
-}
-@media (min-width: 40rem) {
-  .title-xl { font-size: 3.75rem; }
-}
 .title {
   font-size: 2.25rem;
   line-height: 1.1111;
@@ -627,15 +648,6 @@ html[data-theme="night"] .sun { display: none; }
    stays on one line and gives way before it can run under the header's controls. A long unbroken title or word
    breaks instead of widening the page on a phone. */
 .hero h1, .title { overflow-wrap: anywhere; }
-#home {
-  display: block;
-  max-width: calc(100% - 13rem);
-  overflow: hidden;
-  line-height: 2.75rem;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 /* The notice in the footer is long: keep its lines readable. */
 .site-footer .foot .tag { max-width: 40rem; }
@@ -676,8 +688,8 @@ html[data-theme="night"] .fam-visionos, html[data-theme="reactor"] .fam-visionos
 
 :root {
   --aurora: 0.2;
-  --live: #1f9d55;
-  --warn: #c2750a;
+  --live: #17804a;
+  --warn: #a8650a;
   --bad: #d4343a;
 }
 html[data-theme="night"] { --aurora: 0.42; --live: #3ddc84; --warn: #f5a524; --bad: #ff6369; }
@@ -787,9 +799,8 @@ html[data-theme="reactor"] { --aurora: 0.3; --live: #3ddc84; --warn: #f5a524; --
 .rel-fam {
   color: var(--fam-text-card);
   font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 .rel-fam a { display: inline-flex; min-height: 2.75rem; align-items: center; }
 .rel-fam a:hover { text-decoration: underline; text-underline-offset: 4px; }
@@ -815,7 +826,7 @@ html[data-theme="reactor"] { --aurora: 0.3; --live: #3ddc84; --warn: #f5a524; --
 }
 .badge .b-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--fam-text-card); }
 .badge[data-kind="beta"], [data-stage="beta"] .badge { border-style: dashed; }
-[data-stage="rc"] .badge { border-style: dotted; border-width: 2px; }
+.badge[data-kind="rc"], [data-stage="rc"] .badge { border-style: dotted; border-width: 2px; }
 .build { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--muted); }
 .rel-when { margin-top: 0.25rem; }
 .rel-apple {
@@ -827,7 +838,10 @@ html[data-theme="reactor"] { --aurora: 0.3; --live: #3ddc84; --warn: #f5a524; --
   text-decoration: underline;
   text-underline-offset: 4px;
 }
-html[data-theme="reactor"] .rel, html[data-theme="reactor"] .live, html[data-theme="reactor"] .tile {
+html[data-theme="reactor"] .rel, html[data-theme="reactor"] .live, html[data-theme="reactor"] .tile,
+html[data-theme="reactor"] .pill, html[data-theme="reactor"] .back, html[data-theme="reactor"] .fab,
+html[data-theme="reactor"] .toast, html[data-theme="reactor"] .toast-close, html[data-theme="reactor"] .badge,
+html[data-theme="reactor"] .prose-lab pre {
   border-radius: 0;
 }
 
@@ -862,6 +876,10 @@ html[data-theme="reactor"] .chip-link {
   pointer-events: none;
 }
 .toast.on { visibility: visible; opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+/* On a phone the To top button sits bottom right: the toast rides above it. */
+@media (max-width: 39.99rem) {
+  .toast { bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 3.5rem); }
+}
 .toast-close {
   flex: none;
   min-width: 2.75rem;
@@ -963,14 +981,17 @@ html[data-theme="reactor"] .chip-link {
   .fam-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4rem; }
   .fam-flip .stage { order: -1; }
 }
-.eyebrow { color: var(--muted); font-size: 0.875rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.eyebrow { color: var(--muted); font-size: 0.875rem; letter-spacing: 0.02em; }
 .fam-title {
   margin-top: 0.25rem;
   color: var(--fam-text);
-  font-size: 3.5rem;
+  font-size: 2.75rem;
   line-height: 1;
   font-weight: 500;
   letter-spacing: -0.03em;
+}
+@media (min-width: 40rem) {
+  .fam-title { font-size: 3.5rem; }
 }
 .fam-lede { margin-top: 1rem; max-width: 30rem; color: var(--muted); font-size: 1.125rem; }
 .fam-latest { margin-top: 1.25rem; font-size: 1.0625rem; font-weight: 500; overflow-wrap: anywhere; }
@@ -1339,7 +1360,7 @@ button.m-comp:active { filter: brightness(1.2); }
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3491f4, #f4344d);
+  background: var(--ink);
 }
 .tl { margin: 0.5rem 0 0 0.2rem; border-left: 2px solid var(--line); }
 .tl-link {
@@ -1507,13 +1528,14 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   /* The row is filled in once the page has painted (cadence.js); the space is kept meanwhile. */
   min-height: 4.5rem;
 }
+/* Nothing loaded: no row to wait for. */
+.cadence.none { min-height: 0; margin-top: 0; padding-top: 0; border-top: 0; }
 .cadence li { min-width: 0; font-size: 0.8125rem; line-height: 1.4; }
 .cadence .c-fam {
   display: block;
   color: var(--fam-text-card);
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1523,11 +1545,12 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 .cadence .c-nums { display: block; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cadence .c-part { display: inline-block; white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) {
-  .ring.breath { transform-box: fill-box; transform-origin: center; animation: breathe var(--breath, 6s) ease-in-out infinite; }
+  .ring.breath { animation: breathe var(--breath, 6s) ease-in-out infinite; }
   @keyframes breathe {
-    0%, 100% { transform: scale(1); opacity: 0.5; }
-    50% { transform: scale(1.012); opacity: 1; }
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
   }
+  .orbit-stage.idle .ring.breath { animation-play-state: paused; }
 }
 
 /* Sigil birth: a sigil that first appears or changes draws itself in, ring by ring and spoke by
@@ -1576,7 +1599,8 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 }
 
 /* Liquid-light glass (fx.js): a specular highlight that follows the pointer over a card
-   (--mx and --my are set by the script), and a slight refraction of the hovered card. The
+   (--mx and --my are set by the script), and a slight refraction of the hovered card's tile
+   (never the text beside it). The
    classes on <html> are added only where the effect is supported, so nothing here applies
    otherwise. */
 .fx-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
@@ -1592,10 +1616,23 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
     transition: opacity 200ms ease;
   }
   .fx-glass .rel:hover::after, .fx-glass .orbit-card:hover::after { opacity: 1; }
-  .fx-refract .rel:hover { filter: url(#fx-refract); }
+  .fx-refract .rel:hover .tile { filter: url(#fx-refract); }
 }
 
 /* Aurora (aurora.js): the WebGL canvas takes the place of the CSS gradient blobs, which stay
    as the fallback whenever the canvas is not there. */
 .aurora-gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .aurora.gl i { display: none; }
+
+/* Windows High Contrast and other forced-colour modes: a selected chip or segment, the current
+   page and a focused notch or hand must not rely on a background or stroke colour alone. */
+@media (forced-colors: active) {
+  .chip[aria-pressed="true"], .chip-link[aria-current="page"], .m-segb[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+  .notch:focus-visible .nl, .hand:focus-visible .hl { stroke: Highlight; }
+  .notch:focus-visible .hit, .hand:focus-visible .hit { stroke: Highlight; }
+}

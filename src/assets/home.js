@@ -9,6 +9,7 @@
   var sections = document.querySelectorAll("section.fam");
   var signature = "";
   var current = [];
+  var dragging = false;
 
   function setLive(kind, text) {
     live.setAttribute("data-state", kind);
@@ -35,7 +36,7 @@
     // A deferred paint for an earlier build must not land.
     card.setAttribute("data-sigil-want", build);
     row.hidden = !build;
-    window.Sigil.draw(host, build, { size: 72 });
+    window.Sigil.draw(host, build, { size: 72, birth: !dragging });
     var text = "";
     if (build) {
       var p = window.Sigil.parse(build);
@@ -77,6 +78,15 @@
     card.querySelector('[data-f="badge"]').hidden = false;
   }
 
+  // Neither the live data nor the saved copy loaded: say so on every card and section rather
+  // than leaving them on "Loading…".
+  function paintFailed() {
+    for (var i = 0; i < cards.length; i++) {
+      paintCard(cards[i], null);
+      cards[i].querySelector('[data-f="ver"]').textContent = "Unavailable";
+    }
+    for (var j = 0; j < sections.length; j++) text(sections[j], "latest", "Could not load the releases.");
+  }
   function text(root, name, value) {
     var els = root.querySelectorAll('[data-f="' + name + '"]');
     for (var i = 0; i < els.length; i++) els[i].textContent = value;
@@ -139,12 +149,16 @@
   }
   document.addEventListener("ro:asof", function (e) {
     asOf = e.detail && typeof e.detail.t === "number" ? e.detail.t : null;
+    dragging = !!(e.detail && e.detail.dragging);
     render();
   });
 
   RO.on(function (data, fresh, failed) {
     paintLive(data, failed);
-    if (!data) return;
+    if (!data) {
+      if (failed) paintFailed();
+      return;
+    }
     all = data.releases;
     render();
   });

@@ -93,8 +93,13 @@
   window.Cadence = { at: at };
   // The dial draws its rings after the data arrives, and again when it changes.
   document.addEventListener("ro:orbit", paint);
-  RO.on(function (data) {
-    if (!data) return;
+  RO.on(function (data, fresh, failed) {
+    if (!data) {
+      // Nothing to show: give back the space the row keeps for itself.
+      if (failed) row.classList.add("none");
+      return;
+    }
+    row.classList.remove("none");
     all = data.releases;
     paint();
   });

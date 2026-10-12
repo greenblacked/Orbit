@@ -33,8 +33,18 @@ function explodeFallback() {
   }, { threshold: steps }).observe(stage);
 }
 
+// The rings' slow breathing only runs while the dial is on screen.
+function pauseOffscreen() {
+  const stage = document.getElementById("orbit-stage");
+  if (!stage || !("IntersectionObserver" in window)) return;
+  new IntersectionObserver((entries) => {
+    stage.classList.toggle("idle", !entries[entries.length - 1].isIntersecting);
+  }).observe(stage);
+}
+
 if (motionOk) {
   explodeFallback();
+  pauseOffscreen();
 }
 
 // Liquid-light glass on the cards. A pointer-following specular highlight: the pointer's
@@ -63,8 +73,8 @@ function glass() {
   }, { passive: true });
 }
 
-// Refraction: an SVG feTurbulence and feDisplacementMap filter that bends a card a little while
-// it is hovered (the CSS applies it to .rel:hover only, a single element at a time). Added only
+// Refraction: an SVG feTurbulence and feDisplacementMap filter that bends a card's tile a little
+// while the card is hovered (the CSS applies it to the tile only, never to the text). Added only
 // where the engine accepts a filter reference, so nothing changes elsewhere.
 function refraction() {
   if (!window.CSS || !CSS.supports || !CSS.supports("filter", "url(#fx-refract)")) return;
@@ -77,7 +87,7 @@ function refraction() {
   };
   const svg = make("svg", { width: 0, height: 0, "aria-hidden": "true", focusable: "false", "class": "fx-defs" });
   const filter = make("filter", { id: "fx-refract", x: "-4%", y: "-4%", width: "108%", height: "108%" }, svg);
-  make("feTurbulence", { type: "fractalNoise", baseFrequency: "0.012 0.02", numOctaves: 2, seed: 7, result: "noise" }, filter);
+  make("feTurbulence", { type: "fractalNoise", baseFrequency: "0.012 0.02", numOctaves: 1, seed: 7, result: "noise" }, filter);
   make("feDisplacementMap", { in: "SourceGraphic", in2: "noise", scale: 4, xChannelSelector: "R", yChannelSelector: "G" }, filter);
   document.body.appendChild(svg);
   root.classList.add("fx-refract");
