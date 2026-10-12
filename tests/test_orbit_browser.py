@@ -145,18 +145,22 @@ def test_the_dial_has_one_notch_per_release_in_the_window(page, base_url):
     assert [radius for _, radius in radii] == sorted((r for _, r in radii), reverse=True)
 
 
-def test_the_window_widens_to_52_weeks_when_the_data_spans_it(page, base_url):
+def test_the_dial_keeps_its_26_week_window_when_the_data_is_wider(page, base_url):
     data = json.loads(json.dumps(SNAPSHOT))
-    old = dict(data["releases"][-1])
-    old["id"] = old["id"] + "-old"
-    old["url"] = old["url"] + "-old"
-    old["date"] = "2026-01-12T17:00:00Z"
-    data["releases"].append(old)
+    dates = ("2026-01-12T17:00:00Z", "2025-03-05T00:00:36Z", "2024-06-01T00:00:00Z")
+    for n, date in enumerate(dates):
+        old = dict(data["releases"][-1])
+        old["id"] = f"{old['id']}-old{n}"
+        old["url"] = f"{old['url']}-old{n}"
+        old["date"] = date
+        data["releases"].append(old)
     serve(page, data)
     open_front_page(page, base_url)
-    assert page.get_attribute("#orbit-dial", "data-weeks") == "52"
-    assert page.locator("#orbit-dial .notch").count() == in_window(52, data)
-    assert "52" in text(page, "#orbit-weeks")
+    assert page.get_attribute("#orbit-dial", "data-weeks") == "26"
+    # Older releases are in the data but are neither drawn nor counted on the dial.
+    assert page.locator("#orbit-dial .notch").count() == in_window(26, data)
+    assert in_window(26, data) == in_window(26)
+    assert "26" in text(page, "#orbit-weeks")
 
 
 def test_betas_are_shorter_and_thinner_than_releases_in_the_same_full_colour(page, base_url):

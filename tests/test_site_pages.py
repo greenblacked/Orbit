@@ -205,7 +205,7 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     assert "7.25" in listed and "RC 1" in listed and "7.25rc1" in listed
 
 
-def test_android_shows_its_snapshot_release_with_a_link_to_the_aosp_page(page, base_url):
+def test_android_shows_its_snapshot_releases_with_a_link_to_the_aosp_page(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
     card = page.locator('#latest-grid [data-family="Android"]')
@@ -214,7 +214,10 @@ def test_android_shows_its_snapshot_release_with_a_link_to_the_aosp_page(page, b
     assert link.is_visible()
     assert link.get_attribute("href").startswith("https://source.android.com/")
     section = page.locator('section.fam[data-family="Android"]')
-    assert section.locator(".recent li").count() == 1
+    # The snapshot holds the whole recorded history; the section lists the newest five.
+    assert len(releases("Android")) > 5
+    assert section.locator(".recent li").count() == 5
+    assert "17.0.0" in section.locator(".recent").inner_text()
 
 
 def test_steamos_shows_its_snapshot_releases_with_a_link_to_the_news_page(page, base_url):
@@ -227,7 +230,8 @@ def test_steamos_shows_its_snapshot_releases_with_a_link_to_the_news_page(page, 
     assert link.get_attribute("href") == "https://store.steampowered.com/news/app/1675200"
     section = page.locator('section.fam[data-family="SteamOS"]')
     recent = section.locator(".recent li")
-    assert recent.count() == len(releases("SteamOS")) == 2
+    assert len(releases("SteamOS")) > 5
+    assert recent.count() == 5
     assert "3.8.28" in section.locator(".recent").inner_text()
 
 
@@ -490,7 +494,7 @@ def test_the_timeline_lists_everything_newest_first_grouped_by_month(page, base_
     page.wait_for_selector(".tl-item")
     assert page.locator(".tl-item").count() == len(SNAPSHOT["releases"])
     months = page.locator(".month-h").all_inner_texts()
-    assert months[0] == "October 2026" and months[-1] == "May 2026"
+    assert months[0] == "October 2026" and months[-1] == "September 2024"
     assert len(months) == len(set(months))
     assert page.inner_text("#count") == f"{len(SNAPSHOT['releases'])} releases"
     hrefs = page.locator(".tl-link").evaluate_all("els => els.map(a => a.href)")

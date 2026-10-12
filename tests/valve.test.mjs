@@ -22,7 +22,6 @@ import steamos, {
   parseTitle,
   titlePattern,
   linkOf,
-  WINDOW_DAYS,
 } from '../deploy/sources/steamos.js';
 
 const read = (name) => readFileSync(fileURLToPath(new URL(`./fixtures/valve/${name}`, import.meta.url)), 'utf8');
@@ -34,8 +33,8 @@ const PAGE = (slug) => `${NEWS_PAGE}#${slug}`;
 // The clock of the recorded data: the day after the probe. Every test passes it (parse() takes
 // it as its third argument) so none depends on the real clock; the Worker passes none.
 const NOW = Date.UTC(2026, 9, 13);
-const news = (text, now = NOW, days) => parseNews(text, now, days);
-const feed = (text, now = NOW, days) => parseFeed(text, now, days);
+const news = (text, now = NOW) => parseNews(text, now);
+const feed = (text, now = NOW) => parseFeed(text, now);
 
 const post = (over) => ({
   title: 'SteamOS 3.7.15',
@@ -323,22 +322,14 @@ describe('the bounds on what is emitted', () => {
     assert.deepEqual(feed(`<rss><channel>${far}</channel></rss>`), []);
   });
 
-  it('keeps the posts within the window of the clock, and the newest always', () => {
-    assert.equal(WINDOW_DAYS, 180);
+  it('keeps every SteamOS post however old, with no time window', () => {
     assert.equal(news(TITLES).length, 19);
-    const later = Date.UTC(2027, 3, 1); // every recorded post is older than 180 days
-    const kept = news(TITLES, later);
-    assert.deepEqual(kept.map((r) => r.version), ['3.9.2']);
-    const mid = Date.UTC(2026, 11, 1);
-    const floor = mid - WINDOW_DAYS * 86400000;
-    const some = news(TITLES, mid);
-    assert.ok(some.length >= 1 && some.length <= 19);
-    assert.ok(some.every((r, i) => i === 0 || Date.parse(r.date) >= floor));
-    assert.equal(news(TITLES, NOW, Infinity).length, 19);
-    assert.equal(news(TITLES, NOW, 0).length, 1);
+    const later = Date.UTC(2030, 3, 1);
+    assert.equal(news(TITLES, later).length, 19);
+    assert.equal(news(TITLES, later)[0].version, '3.9.2');
   });
 
-  it('keeps the posts within the window of the newest post when the clock is ahead of it', () => {
+  it('keeps old posts next to new ones', () => {
     const day = 86400;
     const base = Math.floor(NOW / 1000);
     const releases = news(
@@ -348,7 +339,7 @@ describe('the bounds on what is emitted', () => {
         post({ title: 'SteamOS 3.7.14', date: base - 200 * day }),
       ),
     );
-    assert.deepEqual(releases.map((r) => r.version), ['3.7.16', '3.7.15']);
+    assert.deepEqual(releases.map((r) => r.version), ['3.7.16', '3.7.15', '3.7.14']);
   });
 });
 

@@ -10,9 +10,11 @@
 // The RSS feed is not on it: the Worker treats one failing URL as a failed source and
 // merges the results of all of them, so a second URL would be a requirement, not a fallback.
 //
-// Bounds on what is emitted: a post dated more than a day after the clock is refused, and only
-// posts within WINDOW_DAYS (180, under the dial's 26 weeks) of the clock and of the newest post
-// are kept, the newest always, so a slow spell of Steam Client posts cannot widen the dial.
+// Bounds on what is emitted: a post dated more than a day after the clock is refused, and at
+// most MAX_ITEMS posts are read. There is no time window (ADR 0007): every SteamOS release the
+// news API returns is emitted, newest first. The request asks for the newest 100 Steam posts, so
+// how far back that reaches depends on how often Valve posts; the static snapshot keeps what
+// older refreshes saw. The dial filters by date on the client, so wider data does not widen it.
 
 import { familyIds } from '../families.js';
 import { field, isHttpsOn, mergeReleases, parseDate, rssItems } from '../releases.js';
@@ -28,7 +30,6 @@ export const FAMILIES = familyIds(VENDOR);
 export const LINK_HOSTS = ['store.steampowered.com', 'steamstore-a.akamaihd.net'];
 
 const MAX_ITEMS = 500;
-export const WINDOW_DAYS = 180;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_SKEW_MS = DAY_MS; // a post dated further ahead than this is not believed
 
@@ -97,24 +98,19 @@ export function linkOf(value) {
   return `https://${url.hostname}${url.pathname}`;
 }
 
-// Refuse a post dated far ahead of the clock, then keep what is within the window of the clock
-// and of the newest post (the newest always), newest first.
-function bounded(releases, now, windowDays) {
-  const sorted = mergeReleases(
+// Refuse a post dated far ahead of the clock, newest first.
+function bounded(releases, now) {
+  return mergeReleases(
     [],
     releases.filter((release) => Date.parse(release.date) <= now + MAX_SKEW_MS),
   );
-  if (sorted.length === 0) return sorted;
-  const span = windowDays * DAY_MS;
-  const floor = Math.max(now - span, Date.parse(sorted[0].date) - span);
-  return sorted.filter((release, i) => i === 0 || Date.parse(release.date) >= floor);
 }
 
 /**
  * Releases in a GetNewsForApp JSON document, newest first; [] for anything unreadable. `now`
- * and `windowDays` are for tests: the registered parse() passes neither.
+ * is for tests: the registered parse() does not pass it.
  */
-export function parseNews(jsonText, now = Date.now(), windowDays = WINDOW_DAYS) {
+export function parseNews(jsonText, now = Date.now()) {
   let doc;
   try {
     doc = JSON.parse(jsonText);
@@ -143,11 +139,11 @@ export function parseNews(jsonText, now = Date.now(), windowDays = WINDOW_DAYS) 
       source: ID,
     });
   }
-  return bounded(releases, now, windowDays);
+  return bounded(releases, now);
 }
 
 /** Releases in the RSS form of the same news; it carries no tags, so only the title decides. */
-export function parseFeed(xmlText, now = Date.now(), windowDays = WINDOW_DAYS) {
+export function parseFeed(xmlText, now = Date.now()) {
   const releases = [];
   for (const item of rssItems(xmlText).slice(0, MAX_ITEMS)) {
     const title = field(item, 'title');
@@ -157,7 +153,7 @@ export function parseFeed(xmlText, now = Date.now(), windowDays = WINDOW_DAYS) {
     if (!parsed || !date) continue;
     releases.push({ id: idOf(title), ...parsed, title, date, url: linkOf(link), source: ID });
   }
-  return bounded(releases, now, windowDays);
+  return bounded(releases, now);
 }
 
 /**
