@@ -31,7 +31,9 @@ SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encodi
 AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
 # Listed beside them, with no release feed connected yet: their cards say so.
-WAITING = ["RouterOS", "Android", "Windows", "SteamOS"]
+WAITING = ["Android", "Windows", "SteamOS"]
+# The newest Apple row: tests that forge an Apple release copy this one, not the newest row.
+APPLE_FIRST = next(r for r in SNAPSHOT["releases"] if r["vendor"] == "apple")
 LEGAL = (
     "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc., MikroTik, "
     "Google LLC, Microsoft Corporation or Valve Corporation. Apple, iPhone, iPad, Mac, Apple "
@@ -150,7 +152,7 @@ def test_the_live_indicator_says_live_or_stale(page, base_url):
 
 def test_the_page_drops_entries_it_cannot_show_safely(page, base_url):
     bad = copy.deepcopy(SNAPSHOT)
-    first = bad["releases"][0]
+    first = APPLE_FIRST
     for name, change in {
         "x": {"url": "https://evil.example/x"},
         "y": {"family": "Xcode"},
@@ -305,7 +307,7 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         fresh["releases"].insert(
             0,
             {
-                **fresh["releases"][0],
+                **APPLE_FIRST,
                 "id": "https://developer.apple.com/news/releases/?id=new1",
                 "title": "iOS 27.2 beta 4 (24B5105a)",
                 "version": "27.2",
@@ -732,7 +734,7 @@ def test_a_poll_with_nothing_new_leaves_the_compare_page_alone(page, base_url):
 
 
 def test_a_failed_poll_keeps_the_live_data_instead_of_the_older_snapshot(page, base_url):
-    newest = copy.deepcopy(SNAPSHOT["releases"][0])
+    newest = copy.deepcopy(APPLE_FIRST)
     newest.update(
         id="https://developer.apple.com/news/releases/?id=live-only",
         version="99.1",
