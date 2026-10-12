@@ -144,9 +144,9 @@
   }
   // Android: the bulletins of the months after the older patch level up to the newer one.
   function bulletins(newer, older) {
-    var sources = {};
+    var sources = Object.create(null);
     newer.notes.concat(older.notes).forEach(function (u) { sources[payload.notes[u].source] = true; });
-    var found = {}, missing = [], urls = [];
+    var found = Object.create(null), missing = [], urls = [];
     Object.keys(payload.notes).forEach(function (u) {
       if (!sources[payload.notes[u].source] || !link(u)) return;
       var m = month(payload.notes[u], u);
@@ -159,10 +159,10 @@
     return { urls: urls, missing: missing };
   }
   function severities(urls) {
-    var map = {};
+    var map = Object.create(null);
     urls.forEach(function (u) {
       (Array.isArray(payload.notes[u].cves) ? payload.notes[u].cves : []).forEach(function (c) {
-        if (plain(c) && typeof c.id === "string" && typeof c.severity === "string" && c.severity && !own(map, c.id)) map[c.id] = c.severity;
+        if (plain(c) && typeof c.id === "string" && typeof c.severity === "string" && c.severity && !map[c.id]) map[c.id] = c.severity;
       });
     });
     return map;
@@ -196,7 +196,7 @@
     var linked = names(function (e) { return e.status === "linked"; });
     if (linked) return say("Cannot compare: CVEs not counted for " + linked);
 
-    var urls = en.notes, seen = {}, ids;
+    var urls = en.notes, seen = Object.create(null), ids;
     eo.cves.forEach(function (c) { seen[c] = true; });
     if (newer.family === "Android") {
       var absent = names(function (e) { return !e.patchLevel; });
@@ -205,7 +205,7 @@
       var range = bulletins(en, eo);
       if (range.missing.length) return say("Security comparison unavailable: no bulletin read for " + range.missing.slice(0, 3).join(", ") + (range.missing.length > 3 ? " and " + (range.missing.length - 3) + " more" : ""));
       urls = range.urls;
-      var union = {};
+      var union = Object.create(null);
       urls.forEach(function (u) { (payload.notes[u].cves || []).forEach(function (c) { if (plain(c) && CVE.test(c.id)) union[c.id] = true; }); });
       ids = Object.keys(union).sort();
     } else {
