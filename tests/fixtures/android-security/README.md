@@ -1,8 +1,9 @@
 # Android security bulletin fixtures
 
 Both files are built from the raw output of the read-only source probe of 2026-10-12. Nothing in
-them was written by hand except the wrapper (the doctype, the `<title>` element and the comment
-at the top) and the closing tags.
+them was written by hand except the wrapper (the doctype, the `<html lang>`, `<head>`,
+`<meta charset>` and `<title>` elements, the `<body>` tag and the comment at the top) and the
+closing tags.
 
 - `aosp-2026-10.html` is the Android Security Bulletin for October 2026,
   `https://source.android.com/docs/security/bulletin/2026/2026-10-01` (200, `text/html;
@@ -25,9 +26,10 @@ Each file holds, in this order:
    6, 2026` only) and the patch-level sentence (`Security patch levels of 2026-10-01 or higher
    address all of these issues`, wrapped across lines; the Pixel page says `security patch levels
    of 2026-10-05 or later address all issues in this bulletin and all issues in the October 2026
-   Android Security Bulletin`). The slice stops in the middle of a word; the Pixel slice ends
-   inside an unclosed `<table>` (Kernel components), which the scanner drops. That table is
-   probably the recorded Pixel table 1 cut short by the slice, which was not checked.
+   Android Security Bulletin`). The AOSP slice stops in the middle of a word. The Pixel slice ends
+   in whitespace inside an unclosed `<table>` (Kernel components), which the scanner drops. That
+   table is a prefix of the recorded Pixel table 1 (compared ignoring indentation), cut short by
+   the slice.
 
 The order differs from the page (the slice is last), so the tests do not depend on it: the
 scanner reads the tables and the text separately.
