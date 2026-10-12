@@ -12,11 +12,7 @@ import android from './android.js';
 import apple from './apple.js';
 import mikrotik from './mikrotik.js';
 
-<<<<<<< HEAD
-export const SOURCES = [apple, mikrotik];
-=======
-export const SOURCES = [apple, android];
->>>>>>> local/adapter-android
+export const SOURCES = [apple, mikrotik, android];
 
 /** True when `source` has the shape the Worker relies on. */
 export function isSource(source) {
