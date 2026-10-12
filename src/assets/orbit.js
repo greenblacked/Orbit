@@ -296,7 +296,7 @@
     card.setAttribute("data-id", r.id);
     var sig = RO.h("span", "sigil");
     card.appendChild(sig);
-    if (window.Sigil) window.Sigil.draw(sig, RO.sigilKey(r), { size: 64 });
+    if (window.Sigil) window.Sigil.draw(sig, RO.sigilKey(r), { size: 64, onfail: function (el) { el.hidden = true; } });
     else sig.hidden = true;
     var text = RO.h("div", "oc-text");
     text.appendChild(RO.h("p", "oc-title", r.family + " " + RO.short(r)));

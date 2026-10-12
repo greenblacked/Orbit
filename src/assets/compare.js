@@ -35,7 +35,7 @@
     var box = RO.h("div", "cmp-card fam-" + r.family.toLowerCase());
     var sig = RO.h("span", "sigil");
     box.appendChild(sig);
-    if (window.Sigil) window.Sigil.draw(sig, RO.sigilKey(r), { size: 64 });
+    if (window.Sigil) window.Sigil.draw(sig, RO.sigilKey(r), { size: 64, onfail: function (el) { el.hidden = true; } });
     else sig.hidden = true;
     var text = RO.h("div", "cmp-text");
     text.appendChild(RO.h("p", "f-label", title));
