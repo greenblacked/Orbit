@@ -153,7 +153,13 @@
       lane.style.setProperty("--lane", String(i));
       lane.setAttribute("data-family", fam.id);
       var rad = OUTER - i * step;
-      el("circle", { "class": "ring", r: rad, "data-family": fam.id }, lane);
+      var ring = el("circle", { "class": "ring", r: rad, "data-family": fam.id }, lane);
+      // Keep the breath cadence.js put on the live ring, so a patch leaves it be.
+      [].forEach.call(dial.querySelectorAll(".ring.breath"), function (n) {
+        if (n.getAttribute("data-family") !== fam.id) return;
+        ring.setAttribute("class", n.getAttribute("class"));
+        ring.setAttribute("style", n.getAttribute("style") || "");
+      });
       counts[fam.id] = 0;
       // Releases stamped at one moment fan out FAN units apart, each with a narrower grab area.
       var mine = all.filter(function (r) { return r.family === fam.id && r.t >= start && r.t <= now; });

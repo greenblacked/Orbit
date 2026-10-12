@@ -76,6 +76,7 @@
       var a = RO.h("a", "", null, { href: "#" + String(family).toLowerCase() });
       a.appendChild(RO.h("span", "n-fam", r.family));
       a.appendChild(RO.h("span", "n-ver", RO.short(r)));
+      a.title = r.family + " " + RO.short(r);
       li.appendChild(a);
       ul.appendChild(li);
     }

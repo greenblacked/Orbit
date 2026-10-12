@@ -890,6 +890,9 @@ WATCH = """
   const note = (records) => {
     for (const r of records) {
       const host = owner(r.target);
+      const t = r.target.nodeType === 1 ? r.target : r.target.parentElement;
+      // The relative-time clock (releases.js tick) rewrites these every minute: not a repaint.
+      if (t && t.closest && t.closest('time[data-rel]')) continue;
       if (host && (r.addedNodes.length || r.removedNodes.length)) {
         w.mutations.push({
           host: host.id, direct: r.target === host,
@@ -997,8 +1000,8 @@ REPORT = """
   };
 }
 """
-# A ring's opacity may change by this much per second (the fastest breath is about 0.4); a
-# restart moves it by a half in one frame, about 30.
+# A ring's opacity may change by this much per second (the fastest breath, a 2 s period with
+# ease-in-out, peaks near 0.9 per second); a restart moves it by a half in one frame, about 30.
 MAX_RATE = 2
 # The buttons under the newest list may move by this many pixels once the data lands.
 MAX_MOVE = 1
