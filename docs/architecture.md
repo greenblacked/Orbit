@@ -18,7 +18,7 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 | Results | `results/` | One JSON file per publicly released, tested build. |
 | Page scripts | `src/assets/` | `releases.js` loads the data. `home.js`, `timeline.js` and `compare.js` draw a page. `security.js` adds the security notes on the timeline and compare pages only (deferred, from the page; [ADR 0008](adr/0008-security-notes-are-a-separate-payload.md)). `sigil.js` and `orbit.js` draw the signature. `below.js` (the mock screens and the developer highlights), `cadence.js`, `sigil-generic.js` (the sigil rule for a build that is not an Apple build), `fx.js` and `aurora.js` load after the first paint. |
 | Checks | `scripts/check_*.py`, `tests/` | Site, results and pipeline checks, and the Python and Node tests. |
-| Pipeline | `.github/workflows/` | `ci`, `security`, `deploy` (pull request dry run and the Preview), `cut-release`, `release` and `dependabot-auto-merge`. |
+| Pipeline | `.github/workflows/` | `ci`, `security`, `deploy` (pull request dry run and the Preview), `cut-release`, `release`, `dependabot-auto-merge`, `source-probe` and `security-snapshot` (manual, prints the refreshed security notes into its log). |
 
 ## Data flow
 
