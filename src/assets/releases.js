@@ -113,8 +113,8 @@
       return res.json();
     });
   }
-  function getJson(url) {
-    return loadJson(url).then(function (json) {
+  function getJson(url, early) {
+    return (early || loadJson(url)).then(function (json) {
       var data = normalise(json);
       if (!data) throw new Error("no releases in " + url);
       return data;
@@ -135,7 +135,10 @@
     state.busy = true;
     // The bundled snapshot is only for a first load: a later failed poll keeps the data
     // already on screen (it may be newer than the snapshot).
-    return loadConfig().then(function () { return getJson(API); }).catch(function (err) {
+    // Asked for at once with the config; only reading it waits.
+    var early = loadJson(API);
+    early.catch(function () {});
+    return loadConfig().then(function () { return getJson(API, early); }).catch(function (err) {
       if (state.data) throw err;
       return getJson(SNAPSHOT);
     }).then(function (data) {

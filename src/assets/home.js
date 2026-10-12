@@ -8,6 +8,7 @@
   var signature = "";
   var current = [];
   var dragging = false;
+  var shown = false;
 
   // The sigil of a build and a line that reads two of its parameters.
   function paintSigil(card, r) {
@@ -18,7 +19,8 @@
     // A deferred paint for an earlier build must not land.
     card.setAttribute("data-sigil-want", build);
     row.hidden = !build;
-    window.Sigil.draw(host, build, { size: 72, birth: !dragging });
+    // The first paint puts the marks in place; only a later change draws itself in.
+    window.Sigil.draw(host, build, { size: 72, birth: shown && !dragging });
     var text = "";
     if (build) {
       var p = window.Sigil.parse(build);
@@ -60,12 +62,12 @@
     card.querySelector('[data-f="badge"]').hidden = false;
   }
 
-  // A short list under the intro, shown on a phone only (CSS), so the newest release of each
-  // platform is on the first screen rather than below the dial.
+  // The newest release of each platform under the intro, on a phone only (CSS).
   function paintNewest(list) {
     var ul = document.getElementById("newest");
     if (!ul) return;
     ul.textContent = "";
+    ul.hidden = false;
     for (var i = 0; i < cards.length; i++) {
       var family = cards[i].getAttribute("data-family");
       var r = RO.latest(list, family, false);
@@ -77,6 +79,8 @@
       li.appendChild(a);
       ul.appendChild(li);
     }
+    // Nothing to list: give back the space the list keeps while it loads.
+    ul.hidden = !ul.firstChild;
   }
   // Neither the live data nor the saved copy loaded: say so on every card and section rather
   // than leaving them on "Loading…".
@@ -106,8 +110,7 @@
     shown.forEach(function (x) {
       var item = RO.h("li");
       var a = RO.h("a", "", null, { href: x.url });
-      // In the document before any mark draws: a draw that waits for the sigil rule keeps its
-      // place in the queue only while its mark is connected.
+      // Connected before it draws: a draw waiting for the sigil rule needs its mark in the document.
       item.appendChild(a);
       recent.appendChild(item);
       if (x.build && window.Sigil) {
@@ -147,6 +150,7 @@
     current = list;
     for (var j = 0; j < sections.length; j++) paintSection(sections[j], list);
     paintNewest(list);
+    shown = true;
     if (window.Below) window.Below.paint(list);
   }
   document.addEventListener("ro:asof", function (e) {
@@ -164,7 +168,7 @@
     render();
   });
 
-  // Three scripts load after the page has painted, never from the HTML: below.js, the cadence row and the effects module (see docs/architecture.md).
+  // Loaded after the page has painted, never from the HTML (docs/architecture.md).
   function load(src, type, onload) {
     var s = document.createElement("script");
     s.src = src;
