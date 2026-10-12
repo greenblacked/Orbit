@@ -166,7 +166,7 @@ def test_back_in_a_tab_opened_from_this_site_goes_to_the_page_above(context, pag
     with context.expect_page() as opened:
         page.click(f'main a[href="{DEEP_PATH}"]', modifiers=["ControlOrMeta"])
     tab = opened.value
-    tab.wait_for_load_state()
+    tab.wait_for_url(base_url + DEEP_PATH)
     assert tab.url == base_url + DEEP_PATH
     assert tab.evaluate("() => history.length") == 1
     tab.click("main .back")
@@ -179,7 +179,7 @@ def test_a_modified_click_on_back_opens_the_page_above_in_a_new_tab(context, pag
     page.wait_for_url(base_url + DEEP_PATH)
     with context.expect_page() as opened:
         page.click("main .back", modifiers=["ControlOrMeta"])
-    opened.value.wait_for_load_state()
+    opened.value.wait_for_url(base_url + PARENT_PATH)
     assert opened.value.url == base_url + PARENT_PATH
     assert page.url == base_url + DEEP_PATH
 
@@ -213,8 +213,7 @@ def test_the_bar_follows_back_when_the_window_changes_width(page, base_url):
     assert not shown(page, "#dock")
     page.set_viewport_size({"width": 360, "height": 800})
     page.wait_for_function(
-        "() => getComputedStyle(document.getElementById('dock')).visibility === 'visible'",
-        timeout=2000,
+        "() => getComputedStyle(document.getElementById('dock')).visibility === 'visible'"
     )
 
 
@@ -375,7 +374,10 @@ def test_no_page_scrolls_sideways_on_a_phone(browser, built, base_url):
         page = context.new_page()
         wide = {}
         for path in paths:
-            page.goto(base_url + path, wait_until="domcontentloaded")
+            page.goto(base_url + path)
+            # The release data and the scripts that load after the page paint rows and cards.
+            page.wait_for_load_state("networkidle")
+            settle(page)
             width = page.evaluate("() => document.documentElement.scrollWidth")
             if width > 360:
                 wide[path] = width

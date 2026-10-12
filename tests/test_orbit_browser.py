@@ -53,7 +53,11 @@ document.addEventListener("securitypolicyviolation", (e) => {
 NO_WEBGL = """
 const real = HTMLCanvasElement.prototype.getContext;
 HTMLCanvasElement.prototype.getContext = function (kind, ...rest) {
-  return /webgl/.test(kind) ? null : real.call(this, kind, ...rest);
+  if (/webgl/.test(kind)) {
+    window.__webglProbed = true;
+    return null;
+  }
+  return real.call(this, kind, ...rest);
 };
 Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
 """
@@ -114,7 +118,10 @@ def serve(page, data):
 
 
 def show_stage(page):
-    page.evaluate("() => document.getElementById('orbit-stage').scrollIntoView({block: 'center'})")
+    page.evaluate(
+        "() => document.getElementById('orbit-stage')"
+        ".scrollIntoView({ block: 'center', behavior: 'instant' })"
+    )
 
 
 def pending(page):
@@ -559,12 +566,9 @@ def test_without_webgl_the_css_gradient_stays_and_nothing_logs_an_error(browser,
         page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
         page.on("pageerror", lambda e: errors.append(str(e)))
         open_front_page(page, base_url)
-        page.wait_for_function(
-            "() => performance.getEntriesByType('resource')"
-            ".some(e => /\\/aurora\\.js$/.test(e.name))",
-            timeout=15000,
-        )
-        page.wait_for_timeout(300)
+        # aurora.js asks for a WebGL context when it runs, which the init script records.
+        page.wait_for_function("() => window.__webglProbed === true", timeout=15000)
+        page.wait_for_load_state("networkidle")
         assert page.locator(".aurora canvas").count() == 0
         shown = "() => getComputedStyle(document.querySelector('.aurora i')).display"
         assert page.evaluate(shown) != "none"
@@ -597,14 +601,14 @@ def test_the_effects_load_after_the_page_and_the_page_stays_clean_while_they_run
         page.focus(HAND)
         page.keyboard.press("PageDown")
         page.locator(f"{IOS}").scroll_into_view_if_needed()
-        box = page.locator(IOS).bounding_box()
-        page.mouse.move(box["x"] + 40, box["y"] + 40)
+        page.locator(IOS).hover(position={"x": 40, "y": 40})
         page.wait_for_function(
             "() => document.querySelector(\"#latest-grid [data-family='iOS']\")"
             ".style.getPropertyValue('--mx') !== ''"
         )
         page.evaluate("() => window.scrollTo(0, 0)")
-        page.wait_for_timeout(300)
+        page.wait_for_function("() => window.scrollY === 0")
+        page.wait_for_load_state("networkidle")
         assert errors == []
         assert page.evaluate("() => window.__csp") == []
     finally:
@@ -619,7 +623,10 @@ def test_turning_on_reduce_motion_after_load_stops_the_effects(browser, base_url
         page.wait_for_function(
             "() => document.documentElement.classList.contains('fx-glass')", timeout=15000
         )
-        page.wait_for_timeout(1500)  # the aurora module, where WebGL exists, starts about now
+        has_webgl = page.evaluate("() => !!document.createElement('canvas').getContext('webgl')")
+        if not has_webgl:
+            pytest.skip("this browser has no WebGL, so there is no aurora to stop")
+        page.wait_for_selector(".aurora canvas", state="attached", timeout=15000)
         page.emulate_media(reduced_motion="reduce")
         page.wait_for_function("() => !document.documentElement.className.includes('fx-')")
         page.wait_for_selector(".aurora canvas", state="detached")
@@ -768,9 +775,13 @@ def test_a_failed_generic_rule_is_requested_once_however_often_the_sigil_redraws
     page.focus(HAND)
     seen = [first]
     for _ in range(2):
+        hand_was = page.get_attribute(HAND, "aria-valuetext")
         page.keyboard.press("PageDown")
         page.keyboard.press("PageDown")
-        pending(page)
+        page.wait_for_function(
+            "([sel, was]) => document.querySelector(sel).getAttribute('aria-valuetext') !== was",
+            arg=[HAND, hand_was],
+        )
         page.wait_for_function(
             "([sel, was]) => document.querySelector(sel).textContent !== was",
             arg=[host, seen[-1]],
