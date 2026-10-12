@@ -74,6 +74,18 @@ def test_the_generic_sigil_rule_runs_right_after_sigil_js_on_every_page_that_dra
                 assert names.index(drawer) > at + 1, (route, drawer)
 
 
+def test_a_dist_without_the_generic_sigil_rule_bundles_without_it(tmp_path):
+    def mutate(dist):
+        (dist / "assets" / "sigil-generic.js").unlink()
+
+    result = build_with(tmp_path, mutate).read_text()
+    assert "sigil-generic.js" not in result
+    tags = re.findall(r'<template data-route="([^"]+)"[^>]*data-scripts="([^"]*)"', result)
+    drawing = [n.split() for _, n in tags if "/assets/sigil.js" in n.split()]
+    assert drawing, "some page loads sigil.js"
+    assert all("/assets/sigil-generic.js" not in names for names in drawing)
+
+
 def test_nothing_is_fetched_from_outside_the_file(text):
     assert bundle.external_requests(text) == []
     assert "fonts.googleapis.com" not in text
