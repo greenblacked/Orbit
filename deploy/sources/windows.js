@@ -26,6 +26,7 @@ const SERVICING = 'General Availability Channel';
 
 // Bounds on what is read, so a hostile or runaway page costs a fixed amount of work.
 const MAX_HTML = 2 * 1024 * 1024;
+const MAX_TABLE = 256 * 1024; // the real first table is a few KB
 const MAX_ROWS = 64;
 const MAX_CELLS = 16;
 const MAX_CELL = 4000;
@@ -70,7 +71,7 @@ export function firstTable(html) {
   if (!open) return null;
   const rest = text.slice(open.index + open[0].length);
   const close = /<\/table\s*>/i.exec(rest);
-  return close ? rest.slice(0, close.index) : null;
+  return close ? rest.slice(0, Math.min(close.index, MAX_TABLE)) : null;
 }
 
 function cellText(html) {
@@ -81,25 +82,64 @@ function cellText(html) {
     .trim();
 }
 
+// ASCII-only, so every index in the lower-cased copy is an index in the original.
+const asciiLower = (text) => text.replace(/[A-Z]/g, (c) => c.toLowerCase());
+
 /** The rows of a table as arrays of { header, text, href }; bounded in rows, cells and size. */
 export function tableRows(tableHtml) {
+  const text = String(tableHtml ?? '').slice(0, MAX_TABLE);
+  const lower = asciiLower(text);
   const rows = [];
-  for (const row of String(tableHtml ?? '').matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi)) {
-    if (rows.length >= MAX_ROWS) break;
-    const cells = [];
-    for (const cell of row[1].matchAll(/<(t[dh])\b[^>]*>([\s\S]*?)<\/\1\s*>/gi)) {
-      if (cells.length >= MAX_CELLS) break;
-      const inner = cell[2];
-      const link = inner.length > MAX_CELL ? null : /<a\b[^>]*?\shref\s*=\s*"([^"]*)"/i.exec(inner);
-      cells.push({
-        header: cell[1].toLowerCase() === 'th',
-        text: inner.length > MAX_CELL ? '' : cellText(inner),
-        href: link ? link[1] : null,
-      });
-    }
-    rows.push(cells);
+  let from = 0;
+  while (rows.length < MAX_ROWS) {
+    const start = findTag(lower, 'tr', from);
+    if (start < 0) break;
+    const end = lower.indexOf('</tr', start);
+    if (end < 0) break;
+    from = end + 4;
+    rows.push(rowCells(text.slice(start, end)));
   }
   return rows;
+}
+
+// Index just after the `<name ...>` tag that opens at or after `from` in lower-cased text, or
+// -1. `<tr` must not match `<track`, so the character after the name has to end it.
+function findTag(lower, name, from) {
+  let at = lower.indexOf(`<${name}`, from);
+  while (at >= 0) {
+    const next = lower[at + name.length + 1];
+    if (next !== undefined && /[\s/>]/.test(next)) {
+      const close = lower.indexOf('>', at);
+      return close < 0 ? -1 : close + 1;
+    }
+    at = lower.indexOf(`<${name}`, at + 1);
+  }
+  return -1;
+}
+
+// The cells of one row's inner HTML, each walked once with indexOf.
+function rowCells(inner) {
+  const lower = asciiLower(inner);
+  const cells = [];
+  let from = 0;
+  while (cells.length < MAX_CELLS) {
+    const td = findTag(lower, 'td', from);
+    const th = findTag(lower, 'th', from);
+    const open = td < 0 ? th : th < 0 ? td : Math.min(td, th);
+    if (open < 0) break;
+    const name = open === td ? 'td' : 'th';
+    const end = lower.indexOf(`</${name}`, open);
+    if (end < 0) break;
+    from = end + 3;
+    const body = inner.slice(open, end);
+    const link = body.length > MAX_CELL ? null : /<a\b[^>]*?\shref\s*=\s*"([^"]*)"/i.exec(body);
+    cells.push({
+      header: name === 'th',
+      text: body.length > MAX_CELL ? '' : cellText(body),
+      href: link ? link[1] : null,
+    });
+  }
+  return cells;
 }
 
 // Column positions from the header row, or null when the table is not the one expected. The

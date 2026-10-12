@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FAMILIES } from '../deploy/families.js';
 import { mergeReleases } from '../deploy/releases.js';
-import { createWorker } from '../deploy/worker.js';
+import shipped, { createWorker } from '../deploy/worker.js';
 import windows, {
   firstTable,
   ID,
@@ -23,6 +23,9 @@ import windows, {
   WINDOWS_11_URL,
 } from '../deploy/sources/windows.js';
 import {
+  APPLE_ID,
+  FEED,
+  FEED_URL,
   fakeCtx,
   fakeEnv,
   ORIGIN,
@@ -226,6 +229,14 @@ describe('the scanner on odd and hostile input', () => {
     assert.deepEqual(parsePage(page([])), [], 'a header and no rows');
   });
 
+  it('costs linear work on a table of rows or cells that never close', () => {
+    const started = performance.now();
+    assert.deepEqual(parsePage(page([]).replace('</tbody>', `${'<tr>'.repeat(200000)}</tbody>`)), []);
+    const cells = `<tr>${'<td>'.repeat(200000)}</tr>`;
+    assert.deepEqual(parsePage(page([cells])), []);
+    assert.ok(performance.now() - started < 2000, 'unclosed tags are read once, not rescanned');
+  });
+
   it('reads only the first table', () => {
     const html = page([row({ version: '24H2', build: '26100.9550' })]).replace(
       '</body>',
@@ -387,6 +398,15 @@ describe('the Worker with the Windows source', () => {
     assert.equal(body.stale, false);
     assert.equal(body.releases.length, 6);
     assert.ok(body.releases.every((r) => r.vendor === 'microsoft' && r.source === ID));
+  });
+
+  it('is served by the shipped Worker beside Apple', async () => {
+    routes({ [FEED_URL]: FEED, [WINDOWS_11_URL]: WIN11, [WINDOWS_10_URL]: WIN10 });
+    const res = await shipped.fetch(new Request(`${ORIGIN}/api/releases.json`), fakeEnv(null), fakeCtx());
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.deepEqual(body.source.split(',').sort(), [APPLE_ID, ID].sort());
+    assert.deepEqual([...new Set(body.releases.map((r) => r.vendor))].sort(), ['apple', 'microsoft']);
   });
 
   it('keeps the page that parsed when the other one changed shape', async () => {
