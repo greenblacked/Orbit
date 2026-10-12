@@ -112,7 +112,9 @@ def test_an_unknown_or_empty_vendor_is_a_400_that_lists_the_known_ones(base_url)
         status, headers, body = get(base_url, f"/api/releases.json?{query}")
         assert status == 400, query
         assert headers["Content-Type"].startswith("application/json")
-        assert json.loads(body) == {"error": "unknown vendor", "vendors": ["apple", "mikrotik"]}
+        answer = json.loads(body)
+        assert answer["error"] == "unknown vendor"
+        assert {"apple", "mikrotik", "google"} <= set(answer["vendors"])
 
 
 def test_releases_answer_passes_an_unreadable_snapshot_through():

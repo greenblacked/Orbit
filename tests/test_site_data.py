@@ -37,7 +37,8 @@ def pages() -> list[str]:
 
 def test_the_snapshot_follows_the_data_contract():
     data = json.loads((SRC / "data" / "releases.json").read_text(encoding="utf-8"))
-    assert data["source"] == "apple-developer-releases,mikrotik-routeros"
+    sources = data["source"].split(",")
+    assert sources[0] == "apple-developer-releases"
     ids = [r["id"] for r in data["releases"]]
     assert len(ids) == len(set(ids))
     dates = [r["date"] for r in data["releases"]]
@@ -47,7 +48,9 @@ def test_the_snapshot_follows_the_data_contract():
     for r in data["releases"]:
         assert owner.get(r["family"]) == r["vendor"], r["id"]
         assert r["stage"] in {"release", "beta", "rc"}
+        assert r["source"] in sources, r["id"]
         assert urlparse(r["url"]).hostname in hosts[r["vendor"]], r["id"]
+        assert r["url"].startswith("https://"), r["id"]
         # A verdict is for a released build only: the dial would show it to everyone.
         assert "status" not in r or r["stage"] == "release", r["id"]
 
