@@ -29,7 +29,18 @@ except ImportError:
     )
 
 SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
-FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
+FAMILIES = [
+    "iOS",
+    "iPadOS",
+    "macOS",
+    "watchOS",
+    "tvOS",
+    "visionOS",
+    "RouterOS",
+    "Android",
+    "Windows",
+    "SteamOS",
+]
 NOW = datetime(2026, 10, 12, 12, 0, tzinfo=timezone.utc)  # noqa: UP017
 CLOCK = "(() => { const t = Date.parse('2026-10-12T12:00:00Z'); Date.now = () => t; })();"
 RECORD = """

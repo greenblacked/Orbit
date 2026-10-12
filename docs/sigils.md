@@ -117,7 +117,7 @@ Every number the drawing uses, as `SPEC` in `sigil.js`.
 
 ## Family accents
 
-Marks and anything on black use the base accents (at least 3.85:1 on `#f4f1ea`, at least 4.78:1 on `#000`). Text set on paper uses the darker text accents (at least 4.6:1 on `#f4f1ea`). The values live in `src/data/families.json`.
+Marks and anything on black use the base accents (at least 3.85:1 on `#f4f1ea`, at least 4.78:1 on `#000`). Text set on paper uses the darker text accents (at least 4.6:1 on `#f4f1ea`). The values live in `src/data/families.json`. Their brightness is pinned by the contrast rules, so the four newest differ from the first six by hue and saturation only (warm taupe, olive, cerulean, dusty rose), and none of them is the vendor's brand colour.
 
 | Family | Mark, and on black | Text on paper |
 | --- | --- | --- |
@@ -127,6 +127,10 @@ Marks and anything on black use the base accents (at least 3.85:1 on `#f4f1ea`, 
 | watchOS | `#158591` | `#137883` |
 | tvOS | `#7869d9` | `#6a5ad5` |
 | visionOS | `#cc3fa1` | `#bd3293` |
+| RouterOS | `#8a7566` | `#7c695c` |
+| Android | `#738003` | `#677303` |
+| Windows | `#1a80b6` | `#1773a4` |
+| SteamOS | `#b26070` | `#a85163` |
 
 Ink on paper is `#161512` on `#f4f1ea`. Build strings and numbers are set in a monospaced face.
 

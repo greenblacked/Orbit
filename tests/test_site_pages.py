@@ -30,10 +30,16 @@ except ImportError:
 SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
 AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
+# Listed beside them, with no release feed connected yet: their cards say so.
+WAITING = ["RouterOS", "Android", "Windows", "SteamOS"]
 LEGAL = (
-    "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, "
-    "iPhone, iPad, Mac, Apple Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, "
-    "tvOS and visionOS are trademarks of Apple Inc."
+    "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc., MikroTik, "
+    "Google LLC, Microsoft Corporation or Valve Corporation. Apple, iPhone, iPad, Mac, Apple "
+    "Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, tvOS and visionOS are "
+    "trademarks of Apple Inc. MikroTik and RouterOS are trademarks of MikroTik. Android is a "
+    "trademark of Google LLC. Windows is a trademark of the Microsoft group of companies. "
+    "Steam, Steam Deck and SteamOS are trademarks and/or registered trademarks of Valve "
+    "Corporation."
 )
 PAGES = ["/", "/timeline/", "/compare/", "/about/"]
 RECORD = """
@@ -171,6 +177,20 @@ def test_each_family_has_a_section_with_a_device_and_recent_releases(page, base_
         assert section.locator("[data-f=name]").first.inner_text().startswith(name)
         link = f'#latest-grid [data-family="{name}"] a[href="#{name.lower()}"]'
         assert page.locator(link).count() == 1
+
+
+def test_a_family_without_a_connected_feed_says_so_instead_of_inventing_a_release(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    for name in WAITING:
+        card = page.locator(f'#latest-grid [data-family="{name}"]')
+        assert card.locator("[data-f=ver]").inner_text() == "No release yet"
+        assert card.locator("[data-f=link]").is_hidden()
+        section = page.locator(f'section.fam[data-family="{name}"]')
+        assert section.locator(".dev .screen").count() == 1
+        assert section.locator(".recent li").count() == 0
+        assert section.locator("[data-f=name]").first.inner_text() == name
+        assert f"No {name} release" in section.locator("[data-f=latest]").inner_text()
 
 
 def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
@@ -822,7 +842,15 @@ def test_pages_say_what_they_are_before_any_script_runs(browser, base_url):
         footer = page.inner_text("footer")
         assert footer.startswith("Release Orbit")
         assert LEGAL in footer
-        assert "Source: Apple Developer Releases" in footer
+        for name in (
+            "Apple Developer Releases",
+            "MikroTik changelogs",
+            "Android versions",
+            "Windows release health",
+            "Steam Deck news",
+        ):
+            assert name in footer
+        assert "Sources: Apple Developer Releases" in footer
     finally:
         context.close()
 
