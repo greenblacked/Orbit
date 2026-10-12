@@ -29,7 +29,8 @@
   var dial = document.getElementById("orbit-dial");
   var card = document.getElementById("orbit-card");
   var all = [];                                    // every release, newest first
-  var weeks = 26, now = 0, start = 0, span = 0;
+  var WEEKS = 26;                                  // the dial's window, whatever the data spans
+  var weeks = WEEKS, now = 0, start = 0, span = 0;
   var notches = [], signature = "", pinned = "", hideTimer = 0;
   var ui = {};
   var centres = null;                              // notch centres in stage space, read once per layout
@@ -98,8 +99,10 @@
 
   function build() {
     now = Date.now();
-    var oldest = all.length ? all[all.length - 1].t : now;
-    weeks = now - oldest > 26 * 7 * DAY ? 52 : 26;
+    // The window is fixed. The data may reach back years (the timeline lists all of it), but the
+    // dial shows the last 26 weeks only: notches are chosen by date below, so older releases
+    // are neither drawn nor counted.
+    weeks = WEEKS;
     span = weeks * 7 * DAY;
     start = now - span;
     dial.textContent = "";
