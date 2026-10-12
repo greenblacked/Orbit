@@ -1,13 +1,11 @@
-/* Release Orbit dial: one ring per platform family (the first family outermost), one notch per
-   release placed by date over a trailing window, drawn as SVG from the same data as the rest of
-   the page. A release is a long, broad notch; a beta or release candidate a shorter, thinner one,
-   in the same full accent colour. Each notch carries a small marker for its validation status
-   (pass, warn, fail; untested until a verdict exists). A notch is a button: hover, focus or a tap
-   opens a card with the build's sigil, version, build, date and a link. The dial is a stack of
-   SVG layers (base, one per ring, hand) so the rings can separate in 3D (see "Signature" in
-   site.css). The hand is a slider and the time machine: drag it or use the arrow keys, Page Up
-   and Page Down, Home and End, and the page below shows the releases that had landed by that
-   day; "Back to now" is the only way back, so nothing springs on its own.
+/* Release Orbit dial: one ring per platform family (the first outermost), one notch per release
+   by date over a trailing window, drawn as SVG from the page's data. A release is a long, broad
+   notch; a beta or RC a shorter, thinner one, in the same accent, with a status marker (pass,
+   warn, fail; untested until a verdict). A notch is a button: hover, focus or a tap opens a card
+   with the sigil, version, build, date and a link. The dial is SVG layers (base, one per ring,
+   hand) so the rings can separate in 3D (see "Signature" in site.css). The hand is a slider and
+   the time machine: drag it or use arrows, Page Up/Down, Home and End, and the page below shows
+   the releases landed by that day; "Back to now" is the only way back.
    Text goes in with textContent and attributes only. */
 (function () {
   "use strict";
@@ -62,8 +60,7 @@
   // The knob's grab area is 22 CSS px in radius, in viewBox units.
   function sizeKnob() {
     var w = stage.clientWidth;
-    // Units per CSS pixel: the dial's text is sized in it (see .mlabel in site.css) so it keeps
-    // a readable size when the stage shrinks on a phone.
+    // Units per CSS pixel: the dial's text is sized in it (.mlabel in site.css).
     if (w > 0) stage.style.setProperty("--upx", String(r2(2 * HALF / w)));
     centres = null;
     if (!ui.knob) return;
@@ -360,8 +357,7 @@
   function hide(force) {
     window.clearTimeout(hideTimer);
     if (pinned && !force) return;
-    // Focus in the card would fall to the page start when it goes: give it back to
-    // the notch the card belongs to, or to the roving one.
+    // Focus in the card would fall to the page start: give it to its notch, or the roving one.
     if (force && !card.hidden && card.contains(document.activeElement)) {
       var id = card.getAttribute("data-id");
       var home = notches.filter(function (n) { return n.rel.id === id; })[0] ||
@@ -415,7 +411,7 @@
     var g = notchOf(e.target);
     if (g) { show(g, false); return; }
     if (!card.contains(e.target)) return;
-    // A card still closing can sit over another notch: only a pointer from outside the stage opens it.
+    // A closing card can sit over a notch: only a pointer from outside the stage opens it.
     var from = e.relatedTarget;
     if (e.pointerType !== "touch" && !pinned && !(from && stage.contains(from))) {
       var covered = nearest(e.clientX, e.clientY, 6);
@@ -486,8 +482,7 @@
   }
   stage.addEventListener("pointerup", drop);
   stage.addEventListener("pointercancel", drop);
-  // A finger starting on the hand moves the hand, not the page: that listener is on the hand
-  // itself (see build), so a touch anywhere else on the dial scrolls without waiting for script.
+  // A finger on the hand moves the hand, not the page (listener on the hand, see build).
   window.addEventListener("resize", sizeKnob, { passive: true });
   // Capture, so a scrolling ancestor counts; tilt and lane lift drop centres at the end.
   function forget() { centres = null; }
