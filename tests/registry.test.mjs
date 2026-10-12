@@ -3,16 +3,18 @@
 // node --test 'tests/*.test.mjs'    (node:test and node:assert only; nothing to install)
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { FAMILIES } from '../deploy/families.js';
 import android from '../deploy/sources/android.js';
 import apple from '../deploy/sources/apple.js';
-import mikrotik from '../deploy/sources/mikrotik.js';
+import mikrotik, { NEWEST_URLS } from '../deploy/sources/mikrotik.js';
 import { isSource, SOURCES, vendorsOf } from '../deploy/sources/index.js';
 import steamos from '../deploy/sources/steamos.js';
 import windows from '../deploy/sources/windows.js';
-import { createWorker, DEFAULT_ACCEPT } from '../deploy/worker.js';
+import shipped, { createWorker, DEFAULT_ACCEPT } from '../deploy/worker.js';
 import {
   advance,
   ago,
@@ -21,6 +23,7 @@ import {
   FEED_URL,
   fakeCtx,
   fakeEnv,
+  FEED,
   feedResponse,
   ORIGIN,
   seed,
@@ -339,5 +342,60 @@ describe('the Accept header of an upstream request', () => {
       assert.equal(isSource({ ...acme, accept }), false, String(accept));
     }
     assert.equal(isSource({ ...acme, accept: 'text/html' }), true);
+  });
+});
+
+// Every registered source with a document of the recorded fixtures, by URL.
+const recorded = (name) =>
+  readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), 'utf8');
+const DOCUMENTS = {
+  [FEED_URL]: FEED,
+  [NEWEST_URLS.stable]: recorded('mikrotik/NEWESTa7.stable'),
+  [NEWEST_URLS['long-term']]: recorded('mikrotik/NEWESTa7.long-term'),
+  [NEWEST_URLS.testing]: recorded('mikrotik/NEWESTa7.testing'),
+  [android.urls[0]]: recorded('google/build-numbers.html'),
+  [windows.urls[0]]: recorded('microsoft/windows11-release-information.html'),
+  [windows.urls[1]]: recorded('microsoft/windows10-release-information.html'),
+  [steamos.urls[0]]: recorded('valve/getnewsforapp-steamos-titles.json'),
+};
+
+describe('the parse(text, url) contract', () => {
+  it('has a recorded document for every registered URL, and no other', () => {
+    assert.deepEqual(
+      Object.keys(DOCUMENTS).sort(),
+      SOURCES.flatMap((source) => source.urls).sort(),
+    );
+  });
+
+  it('reads the same with the url as without it, except where the url names the document', () => {
+    // MikroTik is the one adapter that needs the url (a NEWEST file does not say its channel).
+    for (const source of SOURCES) {
+      for (const url of source.urls) {
+        const withUrl = source.parse(DOCUMENTS[url], url);
+        assert.ok(withUrl.length > 0, `${source.id} reads its fixture at ${url}`);
+        if (source === mikrotik) continue;
+        assert.deepEqual(withUrl, source.parse(DOCUMENTS[url]), source.id);
+      }
+    }
+  });
+});
+
+describe('the shipped Worker, over all registered sources', () => {
+  it('serves every vendor, fresh, and asks each source for the right Accept header', async () => {
+    stubUpstream((url) => (DOCUMENTS[url] ? new Response(DOCUMENTS[url]) : new Response('nope', { status: 503 })));
+    const res = await shipped.fetch(new Request(`${ORIGIN}/api/releases.json`), fakeEnv(null), fakeCtx());
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.stale, false);
+    assert.deepEqual(body.source.split(',').sort(), SOURCES.map((source) => source.id).sort());
+    assert.deepEqual(vendors(body), ['apple', 'google', 'microsoft', 'mikrotik', 'valve']);
+    assert.ok(body.releases.every((r) => SOURCES.some((s) => s.id === r.source && s.vendor === r.vendor)));
+    assert.deepEqual(urlsAsked().sort(), Object.keys(DOCUMENTS).sort());
+    const html = new Set([...android.urls, ...windows.urls]);
+    for (const call of state.upstream.calls) {
+      const accept = call.init.headers.accept;
+      if (html.has(call.url)) assert.match(accept, /^text\/html/, call.url);
+      else assert.equal(accept, DEFAULT_ACCEPT, call.url);
+    }
   });
 });
