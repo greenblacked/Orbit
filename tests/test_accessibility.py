@@ -111,16 +111,34 @@ def test_focus_is_styled_and_never_removed_without_a_replacement():
 
 AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 
+# Two frames after the key, so scroll handlers have run before the focus is read. The
+# element is keyed by its place in the document: two links can share their first 70 characters.
 FOCUS_RING = """
-() => {
+async () => {
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   const el = document.activeElement;
   if (!el || el === document.body) return null;
   const style = getComputedStyle(el);
   const ring = style.outlineStyle !== "none" && parseFloat(style.outlineWidth) > 0;
-  return { tag: el.outerHTML.slice(0, 70), ring,
-           shadow: style.boxShadow !== "none" };
+  return { tag: el.outerHTML.slice(0, 70), at: [...document.querySelectorAll("*")].indexOf(el),
+           ring, shadow: style.boxShadow !== "none" };
 }
 """
+
+# The page's own scripts add content after the load event (below.js and cadence.js, the
+# latter from an idle callback), so wait for the network and the idle callback, then a frame.
+SETTLED = """
+() => new Promise((done) => {
+  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 1000));
+  idle(() => requestAnimationFrame(() => requestAnimationFrame(done)), { timeout: 2000 });
+})
+"""
+
+
+def settled(page):
+    page.wait_for_load_state("networkidle")
+    page.evaluate(SETTLED)
+    page.wait_for_load_state("networkidle")
 
 
 def paths(built):
@@ -142,6 +160,7 @@ def tab(browser, base_url):
 def test_every_page_passes_the_structure_and_naming_audit(tab, base_url, built):
     for path in paths(built):
         tab.goto(base_url + path)
+        settled(tab)
         problems = tab.evaluate(AUDIT)
         assert problems == [], f"{path}: {problems}"
 
@@ -149,10 +168,12 @@ def test_every_page_passes_the_structure_and_naming_audit(tab, base_url, built):
 @pytest.mark.browser
 def test_the_skip_link_is_first_and_lands_on_the_content(tab, base_url):
     tab.goto(base_url + "/")
+    settled(tab)
     tab.keyboard.press("Tab")
     first = tab.evaluate("() => document.activeElement.getAttribute('href')")
     assert first == "#content"
     tab.keyboard.press("Enter")
+    tab.wait_for_function("() => location.hash === '#content'")
     assert tab.evaluate("() => location.hash") == "#content"
     assert tab.evaluate("() => !!document.getElementById('content')")
 
@@ -161,21 +182,23 @@ def test_the_skip_link_is_first_and_lands_on_the_content(tab, base_url):
 def test_everything_a_keyboard_reaches_shows_a_focus_ring(tab, base_url, built):
     for path in paths(built):
         tab.goto(base_url + path)
+        settled(tab)
         seen = set()
         for _ in range(40):
             tab.keyboard.press("Tab")
             state = tab.evaluate(FOCUS_RING)
-            if state is None or state["tag"] in seen:
+            if state is None or state["at"] in seen:
                 break
-            seen.add(state["tag"])
+            seen.add(state["at"])
             assert state["ring"] or state["shadow"], f"{path}: no focus ring on {state['tag']}"
-        assert len(seen) >= 4, f"{path}: the keyboard reached only {sorted(seen)}"
+        assert len(seen) >= 4, f"{path}: the keyboard reached only {len(seen)} elements"
 
 
 @pytest.mark.browser
 def test_reduced_motion_turns_every_transition_and_animation_off(tab, base_url, built):
     for path in paths(built):
         tab.goto(base_url + path)
+        settled(tab)
         moving = tab.evaluate(
             """() => [...document.querySelectorAll('*')].filter((el) => {
               const s = getComputedStyle(el);

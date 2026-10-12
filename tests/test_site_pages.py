@@ -57,8 +57,12 @@ def releases(family: str, data=SNAPSHOT):
     return [r for r in data["releases"] if r["family"] == family]
 
 
-def make_context(browser, base_url, width=1280, motion="reduce", theme=None):
-    context = browser.new_context(viewport={"width": width, "height": 900}, reduced_motion=motion)
+def make_context(browser, base_url, width=1280, motion="reduce", theme=None, script=True):
+    context = browser.new_context(
+        viewport={"width": width, "height": 900},
+        reduced_motion=motion,
+        java_script_enabled=script,
+    )
     context.add_init_script(RECORD)
     if theme:
         context.add_init_script(
@@ -240,10 +244,11 @@ def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     cards_ready(page)
     mocks_ready(page)
     page.click("[data-act=check]")
-    page.wait_for_function(
-        "() => document.querySelector('[data-f=result]').textContent.length > 20"
-    )
     public = next(r for r in releases("iOS") if r["stage"] == "release")
+    page.wait_for_function(
+        "b => document.querySelector('[data-f=result]').textContent.includes(b)",
+        arg=public["build"],
+    )
     text = page.inner_text("[data-f=result]")
     assert public["version"] in text and public["build"] in text
     assert "newest beta is iOS 27.2 beta 3" in text
@@ -257,6 +262,10 @@ def test_the_mock_screens_and_highlights_wait_for_their_script_and_then_paint(pa
     with page.expect_request("**/assets/below.js"):
         page.goto(base_url + "/")
     cards_ready(page)
+    for _ in range(200):
+        if held:
+            break
+        page.wait_for_timeout(50)
     assert held, "below.js was never requested"
     assert page.inner_text("[data-f=pubrow]") == ""
     assert page.inner_text("[data-f=betarow]") == ""
@@ -376,7 +385,9 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         page.click("#toast button")
         assert "on" not in page.get_attribute("#toast", "class").split()
         # The same data again is not news.
-        page.clock.run_for(5 * 60 * 1000 + 1000)
+        # Wait for the third poll's answer itself; the short pause then lets the page read it.
+        with page.expect_response("**/api/releases.json"):
+            page.clock.run_for(5 * 60 * 1000 + 1000)
         page.wait_for_timeout(200)
         assert "on" not in page.get_attribute("#toast", "class").split()
     finally:
@@ -414,9 +425,12 @@ def test_with_motion_allowed_everything_still_ends_up_visible(browser, base_url)
         )
         step = page.evaluate("() => innerHeight")
         for y in range(0, page.evaluate("() => document.body.scrollHeight"), step // 2):
-            page.evaluate("y => window.scrollTo(0, y)", y)
+            page.evaluate("y => window.scrollTo({ top: y, behavior: 'instant' })", y)
             page.wait_for_timeout(30)
-        page.wait_for_timeout(700)
+        page.wait_for_function(
+            "() => [...document.querySelectorAll('.reveal')]"
+            ".every(e => getComputedStyle(e).opacity === '1')"
+        )
         hidden = page.evaluate(
             "() => [...document.querySelectorAll('.reveal')]"
             ".filter(e => getComputedStyle(e).opacity !== '1').length"
@@ -480,9 +494,10 @@ def test_the_highlights_section_shows_with_sources_and_hides_when_empty(page, ba
     assert links and all(href.startswith("https://developer.apple.com/") for href in links)
     empty = page.context.new_page()
     serve_json(empty, "**/data/features.json", "[]")
-    empty.goto(base_url + "/")
+    with empty.expect_response("**/data/features.json"):
+        empty.goto(base_url + "/")
     cards_ready(empty)
-    empty.wait_for_timeout(300)
+    empty.wait_for_load_state("networkidle")
     assert empty.locator("#features").is_hidden()
 
 
@@ -846,6 +861,20 @@ def wait_for_data(page, path):
     }.get(path)
     if selector:
         page.wait_for_selector(selector)
+    # below.js paints the mock screens, cadence.js its row and fx.js its effects after the page
+    # has painted (home.js, from an idle callback that may wait 1500 ms). Network idle alone can
+    # come before those scripts are even requested, so wait for what they leave behind: the
+    # Cadence global and its row (cadence.js loads under reduced motion too, fx.js does not),
+    # then one more idle callback for the module, then the network.
+    if path == "/":
+        mocks_ready(page)
+        page.wait_for_function(
+            "() => { const row = document.getElementById('cadence');"
+            " return !row || (!!window.Cadence && row.children.length > 0); }",
+            timeout=10000,
+        )
+        page.evaluate("() => new Promise(r => requestIdleCallback(() => r(), { timeout: 2000 }))")
+    page.wait_for_load_state("networkidle")
 
 
 @pytest.mark.parametrize("theme", ["day", "night", "reactor"])
@@ -896,7 +925,7 @@ def test_every_new_control_is_big_enough(browser, base_url):
 
 
 def test_pages_say_what_they_are_before_any_script_runs(browser, base_url):
-    context = browser.new_context(java_script_enabled=False)
+    context = make_context(browser, base_url, script=False)
     try:
         page = context.new_page()
         for path, heading in (
