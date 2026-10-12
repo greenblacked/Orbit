@@ -60,6 +60,20 @@ def test_the_front_page_runs_below_js_after_home_js_as_the_bundle_cannot_load_it
     assert 'data-page-script="/assets/below.js"' in text
 
 
+def test_the_generic_sigil_rule_runs_right_after_sigil_js_on_every_page_that_draws(text):
+    assert 'data-page-script="/assets/sigil-generic.js"' in text
+    tags = re.findall(r'<template data-route="([^"]+)"[^>]*data-scripts="([^"]*)"', text)
+    drawing = [(r, n.split()) for r, n in tags if "/assets/sigil.js" in n.split()]
+    assert drawing, "some page loads sigil.js"
+    for route, names in drawing:
+        at = names.index("/assets/sigil.js")
+        assert names[at + 1] == "/assets/sigil-generic.js", route
+        assert names.count("/assets/sigil-generic.js") == 1, route
+        for drawer in ("/assets/orbit.js", "/assets/compare.js"):
+            if drawer in names:
+                assert names.index(drawer) > at + 1, (route, drawer)
+
+
 def test_nothing_is_fetched_from_outside_the_file(text):
     assert bundle.external_requests(text) == []
     assert "fonts.googleapis.com" not in text
