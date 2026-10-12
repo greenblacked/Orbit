@@ -14,16 +14,16 @@
 // pre-release, so `stage` is always "release". No text of the page is kept apart from the
 // tag and the build id.
 //
-// Bounds on what is emitted (ADR 0006): only rows dated within WINDOW_DAYS (180, a little
-// under the dial's 26 weeks) of both the clock and the newest row are kept, so neither the live
-// page's history back to 2009 nor a quiet spell widens the dial to 52 weeks or fills the
-// timeline with old device builds. The newest row is always kept, so the source is never
-// empty. A row dated more than a day after the clock is refused (a typo such as CP2A.990605.016 must not
-// pin a release in 2099). Within one day the revision number orders the releases: the time of
+// Bounds on what is emitted (ADR 0007, which replaced the 180-day window of ADR 0006): every
+// release row of the page is emitted, back to 2009, newest first. There is no time window.
+// What bounds the answer is MAX_INPUT (2 MB read), MAX_ROWS (5000 table rows scanned) and the
+// merge's own cap on releases. The dial filters by date on the client, so wider data does not
+// widen it. A row dated more than a day after the clock is refused (a typo such as
+// CP2A.990605.016 must not pin a release in 2099). Within one day the revision number orders the releases: the time of
 // day is the revision in seconds (android-15.0.0_r36 is 00:00:36), so r36 sorts before r31.
 //
 // The Worker calls parse(text, url). `parse` below takes the text alone, because parsePage's
-// later parameters (`now`, `windowDays`) are for tests: passing the url on would make it `now`.
+// later parameter (`now`) is for tests: passing the url on would make it `now`.
 
 import { familyIds } from '../families.js';
 import { mergeReleases } from '../releases.js';
@@ -42,7 +42,6 @@ export const MAX_TABLES = 50;
 export const MAX_ROWS = 5000;
 export const MAX_CELLS = 16;
 const MAX_CELL_TEXT = 200;
-export const WINDOW_DAYS = 180;
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Elements whose content is text, not markup: the scanner jumps to their closing tag.
 const RAW_TEXT = new Set(['script', 'style', 'template', 'textarea']);
@@ -215,11 +214,10 @@ export function parseRow(cells, columns, now = Date.now()) {
 }
 
 /**
- * Releases of the Android family in the build-numbers page, newest first, within `windowDays`
- * of the clock and of the newest row (which is always kept). `now` and `windowDays` are for
- * tests; the Worker passes neither.
+ * Releases of the Android family in the build-numbers page, newest first, all of them. `now`
+ * is for tests; the Worker does not pass it.
  */
-export function parsePage(html, now = Date.now(), windowDays = WINDOW_DAYS) {
+export function parsePage(html, now = Date.now()) {
   if (!FAMILIES.includes(FAMILY)) return [];
   const table = buildTable(html);
   if (!table) return [];
@@ -228,14 +226,7 @@ export function parsePage(html, now = Date.now(), windowDays = WINDOW_DAYS) {
     const release = parseRow(cells, table, now);
     if (release) releases.push(release);
   }
-  const sorted = mergeReleases([], releases);
-  if (sorted.length === 0) return sorted;
-  // Keep what is within the window of the clock and of the newest row; the page reaches
-  // back to 2009. The window is anchored to the clock so that it holds the dial at 26 weeks
-  // however long ago the newest row was cut; the newest row itself is always kept.
-  const span = windowDays * DAY_MS;
-  const floor = Math.max(now - span, Date.parse(sorted[0].date) - span);
-  return sorted.filter((release, i) => i === 0 || Date.parse(release.date) >= floor);
+  return mergeReleases([], releases);
 }
 
 // An HTML page: ask for it as one.

@@ -20,7 +20,6 @@ import android, {
   MAX_ROWS,
   PAGE_URL,
   parsePage,
-  WINDOW_DAYS,
   parseRow,
   tables,
   VENDOR,
@@ -55,10 +54,10 @@ const keys = [
 
 // The clock of the recorded data: the probe day. The Worker reads the real clock, so every
 // test that goes through parsePage or android.parse passes this one and cannot start failing
-// as real time passes the 180-day window.
+// as real time passes (the future-date refusal is relative to the clock).
 const NOW = Date.UTC(2026, 9, 12);
-const at = (html, now = NOW, days) => parsePage(html, now, days);
-const parseAll = (html) => parsePage(html, NOW, Infinity);
+const at = (html, now = NOW) => parsePage(html, now);
+const parseAll = (html) => parsePage(html, NOW);
 
 useHarness();
 
@@ -314,7 +313,7 @@ describe('parsePage on the recorded page', () => {
   });
 });
 
-describe('the bound on what is emitted', () => {
+describe('the bounds on what is emitted', () => {
   // Synthetic: one release a month for ten years, r1 each, on the 5th.
   const long = [];
   for (let i = 0; i < 120; i += 1) {
@@ -325,39 +324,22 @@ describe('the bound on what is emitted', () => {
   const html = page(...long);
   const now = Date.UTC(2027, 0, 1);
 
-  it('keeps only the rows within the window of the newest row', () => {
+  it('keeps every row, however old, newest first (no time window)', () => {
     const releases = parsePage(html, now);
-    assert.ok(WINDOW_DAYS <= 182, 'no wider than the dial');
+    assert.equal(releases.length, 120);
     assert.equal(releases[0].id, 'android-120.0.0_r1');
-    // 2026-12-05, 11-05, 10-05, 09-05, 08-05, 07-05 (153 days back); 06-05 is 183 days back.
-    assert.equal(releases.length, 6);
-    const newest = Date.parse(releases[0].date);
-    assert.ok(releases.every((r) => newest - Date.parse(r.date) <= WINDOW_DAYS * 86400000));
-  });
-
-  it('can be widened or removed, and an empty table stays empty', () => {
-    assert.equal(parsePage(html, now, Infinity).length, 120);
-    assert.equal(parsePage(html, now, 0).length, 1);
+    assert.equal(releases.at(-1).id, 'android-1.0.0_r1');
+    assert.ok(releases.every((r, i) => i === 0 || Date.parse(releases[i - 1].date) > Date.parse(r.date)));
     assert.deepEqual(parsePage(page(), now), []);
   });
 
-  it('is anchored to the clock: rows older than the window go however old the newest is', () => {
-    // The newest row is 2026-12-05; a clock on 2027-07-01 puts the floor at 2027-01-02.
-    const later = Date.UTC(2027, 6, 1);
-    const releases = parsePage(html, later);
-    assert.deepEqual(releases.map((r) => r.id), ['android-120.0.0_r1']);
-    const soon = parsePage(html, Date.UTC(2027, 0, 1));
-    assert.equal(soon.length, 6);
-    assert.ok(soon.every((r) => Date.parse(r.date) >= Date.UTC(2027, 0, 1) - WINDOW_DAYS * 86400000));
+  it('does not depend on the clock for old rows', () => {
+    assert.equal(parsePage(html, Date.UTC(2030, 0, 1)).length, 120);
   });
 
-  it('always keeps the newest row, so a quiet source is not empty', () => {
-    const releases = parsePage(html, Date.UTC(2030, 0, 1));
-    assert.deepEqual(releases.map((r) => r.id), ['android-120.0.0_r1']);
-  });
-
-  it('is applied by the adapter the Worker calls', () => {
-    assert.equal(android.parse(PAGE, PAGE_URL, NOW).length, 1);
+  it('is what the adapter the Worker calls returns: the whole recorded page', () => {
+    assert.equal(android.parse(PAGE, PAGE_URL, NOW).length, parseAll(PAGE).length);
+    assert.ok(android.parse(PAGE, PAGE_URL, NOW).length > 1);
   });
 
   it('ignores the url the Worker passes as the second argument', () => {
@@ -536,7 +518,7 @@ describe('the Android adapter behind the Worker', () => {
     const body = await res.json();
     assert.equal(body.source, ID);
     assert.equal(body.stale, false);
-    assert.equal(body.releases.length, 1);
+    assert.equal(body.releases.length, parseAll(PAGE).length);
     assert.ok(body.releases.every((r) => r.vendor === 'google' && r.source === ID));
     assert.deepEqual(state.upstream.calls.map((c) => c.url), [PAGE_URL]);
     assert.equal(state.upstream.calls[0].init.redirect, 'manual');
