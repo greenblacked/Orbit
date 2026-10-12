@@ -136,4 +136,3 @@ def test_family_ids_are_one_plain_token():
     for family in FAMILIES:
         assert re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", family["id"]), family["id"]
     assert len({family["id"].lower() for family in FAMILIES}) == len(FAMILIES)
-
