@@ -6,7 +6,7 @@
 
 ## Decision
 
-- The Android and SteamOS adapters emit every release they can read, newest first. The time window and `WINDOW_DAYS` are gone. The safety bounds stay: Android reads at most 2 MB and 5000 table rows, SteamOS at most 500 news items, the merge caps the list at 2000 releases, and a row or post dated more than a day ahead of the clock is refused. Security-only `android-security-*` rows are still skipped: they carry a bare numeric build id and no Android version, and the release contract has no stage for them, so there is no clean way to show them.
+- The Android and SteamOS adapters emit every release they can read, newest first. For Android that means every row with a three-part tag and a dated build id, which in practice is Android 8 (2017) onward. The time window and `WINDOW_DAYS` are gone. The safety bounds stay: Android reads at most 2 MB and 5000 table rows, SteamOS at most 500 news items, the merge caps the list at 2000 releases, and a row or post dated more than a day ahead of the clock is refused. Security-only `android-security-*` rows are still skipped: they carry a bare numeric build id and no Android version, and the release contract has no stage for them, so there is no clean way to show them. Older rows are skipped too, because they carry no date: two-part tags such as `android-4.4_r1` fail the tag pattern, and pre-Oreo build ids such as `NJH47F`, `KTU84P` and `FRF91` fail the build pattern and have no patch level to fall back on. The live history therefore starts at Android 8, not 2009.
 - The dial no longer reads the data's span. Its window is fixed at 26 weeks, and notches are chosen by date, so older releases are neither drawn nor counted however wide the data is.
 - The timeline needs no change: it lists everything it is given, grouped by month with the year, and counts per filter.
 - `src/data/releases.json` gains the history that is already recorded in the repository, and nothing else. The Android rows are the 21 release rows of `tests/fixtures/google/build-numbers.html` older than `android-17.0.0_r1` (`android-16.0.0_r1` to `r4` and `android-15.0.0_r20` to `r36`), and the SteamOS rows are the 17 other SteamOS posts of `tests/fixtures/valve/getnewsforapp-steamos-titles.json`, made by the adapters' own rules (id, stage, date and build as `parse` derives them; the fixture has no post links, so the news page is the link). Older AOSP history is not in the repository; the live API serves it once deployed, and `node deploy/snapshot_releases.mjs` brings it into the snapshot.
@@ -14,7 +14,8 @@
 
 ## Consequences
 
-- The Android and SteamOS history grows with each refresh of the snapshot and with the live feed; the Android page reaches back to 2009, so the live timeline will be long. The home page still lists the newest five per family.
+- The Android and SteamOS history grows with each refresh of the snapshot and with the live feed; the live Android timeline reaches back to 2017 (Android 8), so it will be long. The home page still lists the newest five per family.
+- The oldest Android row in the snapshot, `android-15.0.0_r24` (`BD4A.240925.111`), is dated by its build id (September 2024), although its patch level is 2025-01-05, so the timeline's last month comes from a build-id date and not a publication date (ADR 0006 already dates by build id).
 - Supersedes the window part of ADR 0006 (the Bounds paragraph of the Android section, the snapshot sentence that follows it, and the SteamOS bounds). The rest of ADR 0006 stands.
 - The dial's 52-week widening is removed. A wider dial would be a new decision.
 - The fetch volume, the allowlist and the cache are unchanged.

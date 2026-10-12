@@ -375,6 +375,11 @@ describe('releases on one day', () => {
 });
 
 describe('pre-release and unlisted tags', () => {
+  it('skips pre-Oreo rows that carry no dated build id', () => {
+    const rows = [row('NJH47F', 'android-7.1.2_r36', ''), row('KTU84P', 'android-4.4.4_r1', ''), row('FRF91', 'android-2.2_r1', '')];
+    assert.deepEqual(at(page(...rows)), []);
+  });
+
   it('skips what is not a release tag of the form android-<major>.<minor>.<patch>_r<N>', () => {
     const skipped = [
       'android-security-17.0.0_r1',

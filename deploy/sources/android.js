@@ -15,7 +15,9 @@
 // tag and the build id.
 //
 // Bounds on what is emitted (ADR 0007, which replaced the 180-day window of ADR 0006): every
-// release row of the page is emitted, back to 2009, newest first. There is no time window.
+// release row of the page with a dated build id is emitted, newest first, which in practice
+// is Android 8 (2017) onward. Older rows (two-part tags such as android-4.4_r1, undated build
+// ids such as NJH47F) carry no date and are skipped. There is no time window.
 // What bounds the answer is MAX_INPUT (2 MB read), MAX_ROWS (5000 table rows scanned) and the
 // merge's own cap on releases. The dial filters by date on the client, so wider data does not
 // widen it. A row dated more than a day after the clock is refused (a typo such as
