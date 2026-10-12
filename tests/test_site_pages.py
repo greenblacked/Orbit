@@ -31,7 +31,9 @@ SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encodi
 AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
 # Listed beside them, with no release feed connected yet: their cards say so.
-WAITING = ["RouterOS", "Android", "Windows", "SteamOS"]
+WAITING = ["Android", "Windows", "SteamOS"]
+# The newest Apple row: tests that forge an Apple release copy this one, not the newest row.
+APPLE_FIRST = next(r for r in SNAPSHOT["releases"] if r["vendor"] == "apple")
 LEGAL = (
     "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc., MikroTik, "
     "Google LLC, Microsoft Corporation or Valve Corporation. Apple, iPhone, iPad, Mac, Apple "
@@ -130,7 +132,7 @@ def test_without_the_worker_the_page_falls_back_to_the_snapshot(page, base_url, 
 
 def test_the_page_drops_entries_it_cannot_show_safely(page, base_url):
     bad = copy.deepcopy(SNAPSHOT)
-    first = bad["releases"][0]
+    first = APPLE_FIRST
     for name, change in {
         "x": {"url": "https://evil.example/x"},
         "y": {"family": "Xcode"},
@@ -171,6 +173,23 @@ def test_a_family_without_a_connected_feed_says_so_instead_of_inventing_a_releas
         assert section.locator(".recent li").count() == 0
         assert section.locator("[data-f=name]").first.inner_text() == name
         assert f"No {name} release" in section.locator("[data-f=latest]").inner_text()
+
+
+def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="RouterOS"]')
+    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.23.8"
+    assert card.locator("[data-f=link]").is_visible()
+    assert card.locator("[data-f=link]").get_attribute("href") == (
+        "https://mikrotik.com/download?v=7.23.8"
+    )
+    section = page.locator('section.fam[data-family="RouterOS"]')
+    recent = section.locator(".recent li")
+    assert recent.count() == len(releases("RouterOS")) == 3
+    assert "7.23.8" in recent.first.inner_text()
+    listed = section.locator(".recent").inner_text()
+    assert "7.25" in listed and "RC 1" in listed and "7.25rc1" in listed
 
 
 def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
@@ -285,7 +304,7 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         fresh["releases"].insert(
             0,
             {
-                **fresh["releases"][0],
+                **APPLE_FIRST,
                 "id": "https://developer.apple.com/news/releases/?id=new1",
                 "title": "iOS 27.2 beta 4 (24B5105a)",
                 "version": "27.2",
@@ -712,7 +731,7 @@ def test_a_poll_with_nothing_new_leaves_the_compare_page_alone(page, base_url):
 
 
 def test_a_failed_poll_keeps_the_live_data_instead_of_the_older_snapshot(page, base_url):
-    newest = copy.deepcopy(SNAPSHOT["releases"][0])
+    newest = copy.deepcopy(APPLE_FIRST)
     newest.update(
         id="https://developer.apple.com/news/releases/?id=live-only",
         version="99.1",

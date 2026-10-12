@@ -1,9 +1,23 @@
 {
-  "source": "apple-developer-releases",
-  "fetchedAt": "2026-10-11T15:26:54Z",
+  "source": "apple-developer-releases,mikrotik-routeros",
+  "fetchedAt": "2026-10-12T08:38:02Z",
   "stale": false,
   "snapshot": true,
   "releases": [
+    {
+      "id": "routeros-7.23.8-long-term",
+      "vendor": "mikrotik",
+      "family": "RouterOS",
+      "version": "7.23.8",
+      "major": 7,
+      "stage": "release",
+      "beta": null,
+      "build": "7.23.8",
+      "title": "RouterOS 7.23.8 long-term",
+      "date": "2026-10-08T09:46:16Z",
+      "url": "https://mikrotik.com/download?v=7.23.8",
+      "source": "mikrotik-routeros"
+    },
     {
       "id": "https://developer.apple.com/news/releases/?id=10052026a",
       "vendor": "apple",
@@ -87,6 +101,34 @@
       "date": "2026-10-05T18:00:00Z",
       "url": "https://developer.apple.com/news/releases/?id=10052026f",
       "source": "apple-developer-releases"
+    },
+    {
+      "id": "routeros-7.25rc1-testing",
+      "vendor": "mikrotik",
+      "family": "RouterOS",
+      "version": "7.25",
+      "major": 7,
+      "stage": "rc",
+      "beta": 1,
+      "build": "7.25rc1",
+      "title": "RouterOS 7.25rc1",
+      "date": "2026-10-01T14:18:48Z",
+      "url": "https://mikrotik.com/download?v=7.25rc1",
+      "source": "mikrotik-routeros"
+    },
+    {
+      "id": "routeros-7.24.5-stable",
+      "vendor": "mikrotik",
+      "family": "RouterOS",
+      "version": "7.24.5",
+      "major": 7,
+      "stage": "release",
+      "beta": null,
+      "build": "7.24.5",
+      "title": "RouterOS 7.24.5 stable",
+      "date": "2026-09-29T14:21:27Z",
+      "url": "https://mikrotik.com/download?v=7.24.5",
+      "source": "mikrotik-routeros"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=09282026e",

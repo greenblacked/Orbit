@@ -5,11 +5,13 @@
 //   id      a stable name, written into every release as `source` and used as the cache key
 //   vendor  the maker whose releases it reads; the value of `?vendor=` on the API
 //   urls    the allowlist of https URLs the Worker may fetch for it
-//   parse   (text) => releases, with no I/O
+//   parse   (text, url) => releases, with no I/O; `url` is the document's own URL, for a source
+//           whose documents differ only by where they were fetched from
 
 import apple from './apple.js';
+import mikrotik from './mikrotik.js';
 
-export const SOURCES = [apple];
+export const SOURCES = [apple, mikrotik];
 
 /** True when `source` has the shape the Worker relies on. */
 export function isSource(source) {

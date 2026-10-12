@@ -152,14 +152,14 @@ async function fetchLive(source, env, request) {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         'user-agent': USER_AGENT,
-        accept: 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, application/json;q=0.7',
+        accept: 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, application/json;q=0.7, text/plain;q=0.6, */*;q=0.1',
       },
     });
     if (res.status !== 200) {
       await res.body?.cancel();
       throw new Error(`${source.id} answered ${res.status}`);
     }
-    found.push(...source.parse(await readCapped(res)));
+    found.push(...source.parse(await readCapped(res), url));
   }
   // Whatever an adapter says, a release belongs to the source and vendor that produced it.
   const live = found.map((release) => ({ ...release, vendor: source.vendor, source: source.id }));

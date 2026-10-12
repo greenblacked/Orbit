@@ -351,7 +351,7 @@ def test_the_page_follows_the_hand_when_the_window_moves_past_it(page, base_url)
 
 
 def test_a_family_id_with_a_quote_does_not_stop_the_cadence_row(page, base_url):
-    odd = dict(SNAPSHOT["releases"][0])
+    odd = dict(next(r for r in SNAPSHOT["releases"] if r["vendor"] == "apple"))
     odd.update(
         id=odd["id"] + "-odd",
         url=odd["url"] + "-odd",
@@ -367,7 +367,8 @@ def test_a_family_id_with_a_quote_does_not_stop_the_cadence_row(page, base_url):
     page.on("pageerror", lambda error: errors.append(str(error)))
     open_front_page(page, base_url)
     page.wait_for_selector("#cadence li")
-    names = {r["family"] for r in data["releases"]}
+    # The fallback config lists Apple only, so only Apple families are shown.
+    names = {r["family"] for r in data["releases"] if r["vendor"] == "apple"}
     assert page.locator("#cadence li").count() == len(names)
     assert page.locator("#orbit-dial .ring.breath").count() >= 1
     assert not [e for e in errors if "selector" in e], errors
