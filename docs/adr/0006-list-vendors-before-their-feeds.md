@@ -24,4 +24,22 @@ An adapter is added for a vendor only when all of these hold, in a session that 
 - Until then the four platforms look empty. The About page says so.
 - Provenance of the source links. The four links below are the vendors' own landing pages for release information, shown as where to look. None was fetched and read when this change was prepared (mikrotik.com answered 403 to the research), so they are unverified: https://mikrotik.com/download/changelogs, https://developer.android.com/about/versions, https://learn.microsoft.com/en-us/windows/release-health/release-information and https://store.steampowered.com/news/app/1675200. Each must be checked by hand before its adapter lands, and the host lists in `families.json` stay at the single source host until then.
 - SteamOS is listed but shows no releases until a verified Steam source and adapter exist.
-- Open questions per vendor: MikroTik (which feed carries the stable and long-term channels, and the channel labels), Android (a machine-readable source for stable releases and monthly patch levels, since the developer pages cover betas), Windows (a structured source on Microsoft Learn or the update history pages, and how hotpatch and out-of-band updates are labelled) and Valve (the shape and channel labels of the Steam news data for the Steam Deck app).
+- Open questions per vendor: MikroTik (which feed carries the stable and long-term channels, and the channel labels), Android (a machine-readable source for stable releases and monthly patch levels, since the developer pages cover betas) and Valve (the shape and channel labels of the Steam news data for the Steam Deck app). The Windows questions are answered below.
+
+## Update: the Windows adapter (2026-10-12)
+
+Windows was the first of the four to meet the conditions above. A read-only probe fetched the pages from a GitHub runner on 2026-10-12 and recorded the answer of each (status, content type, size, SHA-256 and the raw tables). Both answered 200 `text/html` with no redirect:
+
+- https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information (132,531 bytes, SHA-256 `3c9fc9b33646c4ef971499c714960fc8718c6c1fef195da02c2ac94f69d20ceb`)
+- https://learn.microsoft.com/en-us/windows/release-health/release-information, the Windows 10 page (320,848 bytes, SHA-256 `7a66752e80d19cacbf08ddfbefffa5588a69e7e2a70efcf130089fd903c0243c`)
+
+Everything below is read from those records, and the recorded tables are committed under `tests/fixtures/microsoft/`:
+
+- The first table of each page lists the servicing versions with the columns Version, Servicing option, Availability date, two End of updates columns, Latest update (Latest update for ESU on the Windows 10 page), Latest revision date and Latest build. The Latest update cell links to `https://support.microsoft.com/help/<KB>` with a label such as `2026-09 D` or `2026-09 OOB`. The second table is the LTSC table, whose end-date columns are named differently, and the adapter ignores it.
+- The adapter emits one release per row whose servicing option is General Availability Channel: the family `Windows`, the version (`25H2`), the latest build (`26200.9550`), the latest revision date as midnight UTC, and the title `Windows 11 25H2 (2026-09 D)`. The stage is always `release`: these pages carry no pre-release channel, so nothing maps to `beta` or `rc`. The id carries the build, so each monthly update is a new entry once the snapshot merges.
+- The families stay one `Windows` family, as the config has it. The title says 11 or 10, which the adapter reads from the page title; a later `Windows 11` and `Windows 10` family pair would be picked up without a code change.
+- The contract has no end-of-support field, so a version whose End of updates cells all read "End of updates" says so in its title (Windows 10 22H2). A version still updated for some edition is not marked. The adapter does not compare dates with the clock, so parsing stays a pure function of the page.
+- The link is the KB article only when it is `https://support.microsoft.com/help/<digits>` with no port or credentials, and otherwise the release-health page. `support.microsoft.com` is therefore added to the Microsoft vendor's `hosts`, which the pages use to accept a release link.
+- The parser is a small strict scanner over the first table, bounded in input, rows and cell size, with no DOM and no `eval`. A page whose first table lacks the expected headers yields nothing, and the Worker then serves the last good copy.
+
+Not settled by the probe: Microsoft's terms of use for automated reads of Microsoft Learn were not read. The Worker's existing ten-minute cache and identifying User-Agent apply, and the owner should check the terms before the first release.
