@@ -1,0 +1,75 @@
+---
+# Why this exists: the security notes (src/data/security.json, ADR 0008) are read from the
+# vendors' own security pages, and the people building the site cannot reach those sites
+# from where they work. This runs deploy/snapshot_security.mjs on a GitHub runner, which
+# can, and prints the refreshed file into the job log, base64-encoded between two marker
+# lines with its size and SHA-256. The payload is copied from that log into a pull request,
+# where it is reviewed like any other change; nothing here puts it in the repository.
+#
+# It commits nothing, pushes nothing, uploads nothing and holds no secret or token: the job
+# can read the repository and nothing else, and the checkout keeps no credential. Run it
+# by hand only (workflow_dispatch). Same pinned actions as ci.yml and source-probe.yml.
+name: Security snapshot
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    name: refresh the security notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: '22.23.3'
+          # Nothing is installed: the script has no dependencies.
+          package-manager-cache: false
+      - name: Take the snapshot and print it
+        # The script exits non-zero when a source could not be read, but it has still
+        # written the file (a failed source keeps its old rows). So the exit code is kept,
+        # the result is printed either way, and the step then fails with that code.
+        # Base64 has no `::`, so nothing in the payload can be read as a workflow command.
+        run: |
+          set -Eeuo pipefail
+          file=src/data/security.json
+          before=$(sha256sum "$file" | cut -d' ' -f1)
+          status=0
+          node deploy/snapshot_security.mjs || status=$?
+          after=$(sha256sum "$file" | cut -d' ' -f1)
+          echo "snapshot exit code: $status"
+          if [ "$before" = "$after" ]; then
+            echo "file changed: no"
+          else
+            echo "file changed: yes"
+          fi
+          # Counts only, from a fixed list of status names; no vendor text reaches the log here.
+          node -e '
+            const known = ["listed", "no-cve-entries", "not-found", "not-applicable", "unavailable", "not-connected"];
+            const data = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+            const counts = Object.fromEntries(known.map((k) => [k, 0]));
+            let other = 0;
+            for (const row of Object.values(data.releases ?? {})) {
+              if (known.includes(row.status)) counts[row.status] += 1;
+              else other += 1;
+            }
+            console.log("releases by status: " + JSON.stringify(counts) + ", other: " + other);
+            console.log("notes: " + Object.keys(data.notes ?? {}).length);
+          ' "$file"
+          echo "sha256: $after"
+          echo "bytes: $(wc -c < "$file" | tr -d ' ')"
+          echo "-----BEGIN SECURITY JSON BASE64-----"
+          base64 "$file"
+          echo "-----END SECURITY JSON BASE64-----"
+          exit "$status"
