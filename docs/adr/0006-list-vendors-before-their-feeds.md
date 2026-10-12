@@ -22,7 +22,7 @@ An adapter is added for a vendor only when all of these hold, in a session that 
 - The site never shows a number that was not read from the vendor.
 - Connecting a vendor later is one adapter file, one registry line, a fixture and a snapshot refresh; the pages, colours, filters and dial need no change.
 - Until then the four platforms look empty. The About page says so. (Superseded: all four have adapters now, see the 2026-10-12 updates below; a family with no release in the data still shows the empty state.)
-- Provenance of the source links. The four links below are the vendors' own landing pages for release information, shown as where to look. None was fetched and read when this change was prepared (mikrotik.com answered 403 to the research), so they are unverified: https://mikrotik.com/download/changelogs, https://developer.android.com/about/versions, https://learn.microsoft.com/en-us/windows/release-health/release-information and https://store.steampowered.com/news/app/1675200. Each must be checked by hand before its adapter lands, and the host lists in `families.json` stay at the single source host until then.
+- Provenance of the source links. The four links below are the vendors' own landing pages for release information, shown as where to look. None was fetched and read when this change was prepared (mikrotik.com answered 403 to the research), so they are unverified: <https://mikrotik.com/download/changelogs>, <https://developer.android.com/about/versions>, <https://learn.microsoft.com/en-us/windows/release-health/release-information> and <https://store.steampowered.com/news/app/1675200>. Each must be checked by hand before its adapter lands, and the host lists in `families.json` stay at the single source host until then.
 - SteamOS was listed but showed no releases until a verified Steam source and adapter existed (see the SteamOS update below).
 - Open questions per vendor: MikroTik (which feed carries the stable and long-term channels, and the channel labels), Android (a machine-readable source for stable releases and monthly patch levels, since the developer pages cover betas), Windows (a structured source on Microsoft Learn or the update history pages, and how hotpatch and out-of-band updates are labelled) and Valve (the shape and channel labels of the Steam news data for the Steam Deck app).
 
@@ -39,7 +39,6 @@ A read-only probe fetched each vendor source from a GitHub runner on 2026-10-12 
 - The three NEWEST documents are fixtures under `tests/fixtures/mikrotik/`, copied from the probe excerpts.
 
 The terms of use for automated polling of these endpoints were not part of the probe and are still to be confirmed by hand, and the gate above (terms allow automated polling) is open until the owner confirms them or accepts the exception here; the Worker asks each URL at most once per cache window with the site's User-Agent. The vendor's source link in `families.json` stays the changelogs page. Android, Windows and Valve remain as described above.
-
 
 ## Update: the Android adapter (2026-10-12)
 
