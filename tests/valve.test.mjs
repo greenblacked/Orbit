@@ -228,12 +228,16 @@ describe('parseNews', () => {
   });
 
   it('gives the same id to a post whether it came from the API, the feed or the snapshot', () => {
-    const [fromApi] = news(doc(post()));
-    const [fromFeed] = feed(
-      '<rss><channel><item><title>SteamOS 3.7.15</title><link>https://store.steampowered.com/news/app/1675200/view/1</link>' +
+    const title = 'SteamOS 3.7.15 Stable';
+    const apiReleases = news(doc(post({ title })));
+    assert.equal(apiReleases.length, 1);
+    const feedReleases = feed(
+      '<rss><channel><item><title>SteamOS 3.7.15 Stable</title><link>https://store.steampowered.com/news/app/1675200/view/1</link>' +
         '<pubDate>Sat, 10 Oct 2026 00:42:30 +0000</pubDate></item></channel></rss>',
     );
-    assert.equal(fromApi.id, fromFeed.id);
+    assert.equal(feedReleases.length, 1);
+    assert.equal(apiReleases[0].id, feedReleases[0].id);
+    assert.equal(apiReleases[0].id, PAGE('steamos-3.7.15-stable'));
   });
 });
 
