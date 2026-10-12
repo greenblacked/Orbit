@@ -17,7 +17,7 @@
   var NS = "http://www.w3.org/2000/svg";
   var DAY = 86400000;
   var HALF = 330;                                  // the viewBox runs from -HALF to HALF
-  var OUTER = 268, STEP = 30, INNER = 70;          // outer and inner ring radius, widest gap between rings
+  var OUTER = 268, STEP = 30, INNER = 118;         // outer and inner ring radius, widest gap between rings
   var LEN = { release: 22, rc: 15, beta: 12 };     // notch length
   var WID = { release: 4.5, rc: 3, beta: 2.4 };    // notch width
   var FAN = 12;                                    // spacing of notches stamped at one moment
@@ -116,7 +116,7 @@
 
     // The gap narrows (and the notches with it) once the rings no longer fit at STEP.
     var step = fams.length > 1 ? Math.min(STEP, (OUTER - INNER) / (fams.length - 1)) : STEP;
-    var k = step / STEP;
+    var scale = step / STEP;
     var counts = {};
     fams.forEach(function (fam, i) {
       var lane = layer("lane " + famClass(fam.id));
@@ -135,17 +135,19 @@
         counts[fam.id]++;
         var n = stack[r.t], k = seat[r.t] || 0;
         seat[r.t] = k + 1;
-        var len = LEN[r.stage] * k;
+        var len = LEN[r.stage] * scale;
+        // Grab area past the notch: never so long that it reaches the next ring.
+        var pad = scale < 1 ? Math.max(0, Math.min(8 * scale, (step - 2 - len) / 2)) : 8;
         var ang = angle(r.t) + (n > 1 ? (k - (n - 1) / 2) * FAN * 180 / (Math.PI * rad) : 0);
         var a0 = xy(ang, rad - len / 2), a1 = xy(ang, rad + len / 2);
-        var h0 = xy(ang, rad - len / 2 - 8 * k), h1 = xy(ang, rad + len / 2 + 8 * k);
+        var h0 = xy(ang, rad - len / 2 - pad), h1 = xy(ang, rad + len / 2 + pad);
         var g = el("g", {
           "class": "notch " + r.stage, role: "button", tabindex: "-1", "data-id": r.id,
           "data-status": r.status, "aria-label": label(r)
         }, lane);
         el("line", { "class": "hit", x1: h0[0], y1: h0[1], x2: h1[0], y2: h1[1], "stroke-width": n > 1 ? FAN - 2 : 26 }, g);
         el("line", { "class": "nl", x1: a0[0], y1: a0[1], x2: a1[0], y2: a1[1], "stroke-width": WID[r.stage] }, g);
-        marker(g, xy(ang, rad + len / 2 + 9 * k), r.status);
+        marker(g, xy(ang, rad + len / 2 + 9 * scale), r.status);
         notches.push(g);
         g.rel = r;
       });

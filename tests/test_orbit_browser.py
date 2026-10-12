@@ -181,6 +181,7 @@ def test_betas_are_shorter_and_thinner_than_releases_in_the_same_full_colour(pag
         }"""
     )
     assert rows["release"] and rows["beta"]
+    assert all(n["length"] > 0 for n in rows["release"] + rows["beta"])
     assert max(n["length"] for n in rows["beta"]) < min(n["length"] for n in rows["release"])
     assert max(n["width"] for n in rows["beta"]) < min(n["width"] for n in rows["release"])
     for note in rows["release"] + rows["beta"]:
