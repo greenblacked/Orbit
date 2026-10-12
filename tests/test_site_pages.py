@@ -369,7 +369,7 @@ def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
     mocks_ready(page)
-    newest = releases("watchOS")[0]
+    newest = next(r for r in releases("watchOS") if r["stage"] == "release")
     seen = [page.text_content(".m-comp .k")]
     assert page.text_content(".m-comp .v") == newest["version"]
     for _ in range(2):

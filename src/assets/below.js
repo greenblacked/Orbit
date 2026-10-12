@@ -78,7 +78,7 @@
     var v = box.querySelector('[data-f="v"]');
     if (!v) return;
     box.querySelector('[data-act="cycle"]').disabled = false;
-    var r = RO.latest(releases, "watchOS", false);
+    var r = RO.lead(releases, "watchOS").main;
     var values = r ? [r.version, r.build || "None", RO.day(r.t).replace(/, \d{4}$/, "")] : ["None", "None", "None"];
     text(box, "k", MODES[mode]);
     text(box, "v", values[mode]);
