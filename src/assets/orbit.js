@@ -5,9 +5,9 @@
    (pass, warn, fail; untested until a verdict exists). A notch is a button: hover, focus or a tap
    opens a card with the build's sigil, version, build, date and a link. The dial is a stack of
    SVG layers (base, one per ring, hand) so the rings can separate in 3D (see "Signature" in
-   site.css). The hand is a slider and the time machine: drag it (pointer or touch) or use the
-   arrow keys, Page Up and Page Down, Home and End, and the page below shows the releases that
-   had landed by that day; "Back to now" is the only way back, so nothing springs on its own.
+   site.css). The hand is a slider and the time machine: drag it or use the arrow keys, Page Up
+   and Page Down, Home and End, and the page below shows the releases that had landed by that
+   day; "Back to now" is the only way back, so nothing springs on its own.
    Text goes in with textContent and attributes only. */
 (function () {
   "use strict";
@@ -53,11 +53,11 @@
     var d = new Date(t);
     return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
   }
-  function layer(cls) {
+  function layer(cls, parent) {
     return el("svg", {
       viewBox: -HALF + " " + -HALF + " " + 2 * HALF + " " + 2 * HALF,
       "class": "layer " + cls, focusable: "false"
-    }, dial);
+    }, parent);
   }
   // The knob's grab area is 22 CSS px in radius, in viewBox units.
   function sizeKnob() {
@@ -95,19 +95,43 @@
       .map(function (r) { return { id: r.family, name: r.family }; });
   }
 
+  // Make a's children match b's, keeping every node that is already right.
+  function sync(a, b) {
+    var xs = [].slice.call(a.childNodes), ys = [].slice.call(b.childNodes);
+    ys.forEach(function (y, i) {
+      var x = xs[i];
+      if (!x) a.appendChild(y);
+      else if (x.isEqualNode(y)) return;
+      else if (x.nodeName !== y.nodeName) a.replaceChild(y, x);
+      else if (x.nodeType !== 1) x.nodeValue = y.nodeValue;
+      else {
+        [].slice.call(x.attributes).forEach(function (t) {
+          if (!y.hasAttribute(t.name)) x.removeAttribute(t.name);
+        });
+        [].slice.call(y.attributes).forEach(function (t) {
+          if (x.getAttribute(t.name) !== t.value) x.setAttribute(t.name, t.value);
+        });
+        sync(x, y);
+      }
+    });
+    xs.slice(ys.length).forEach(function (x) { a.removeChild(x); });
+  }
+
   function build() {
+    var host = dial;
+    // A dial already there is patched (sync), not torn down.
+    var into = host.firstChild ? document.createElement("div") : host;
     now = Date.now();
     // The window is fixed: only the last 26 weeks are drawn or counted.
     weeks = WEEKS;
     span = weeks * 7 * DAY;
     start = now - span;
-    dial.textContent = "";
     notches = [];
     var fams = families();
-    dial.setAttribute("aria-label", "Release dial: the releases of the last " + weeks + " weeks, one ring per platform");
-    dial.setAttribute("data-weeks", String(weeks));
+    host.setAttribute("aria-label", "Release dial: the releases of the last " + weeks + " weeks, one ring per platform");
+    host.setAttribute("data-weeks", String(weeks));
 
-    var base = layer("base");
+    var base = layer("base", into);
     base.setAttribute("aria-hidden", "true");
     for (var m = nextMonth(start - 1); m <= now; m = nextMonth(m)) {
       var a = angle(m), p0 = xy(a, OUTER + 16), p1 = xy(a, OUTER + 28), q = xy(a, OUTER + 38);
@@ -125,11 +149,17 @@
     var step = nf > 1 ? Math.min(STEP, (OUTER - INNER) / (nf - 1)) : STEP;
     var scale = step / STEP, ms = Math.min(1, Math.max(0.55, scale));
     fams.forEach(function (fam, i) {
-      var lane = layer("lane " + famClass(fam.id));
+      var lane = layer("lane " + famClass(fam.id), into);
       lane.style.setProperty("--lane", String(i));
       lane.setAttribute("data-family", fam.id);
       var rad = OUTER - i * step;
-      el("circle", { "class": "ring", r: rad, "data-family": fam.id }, lane);
+      var ring = el("circle", { "class": "ring", r: rad, "data-family": fam.id }, lane);
+      // Keep the breath cadence.js put on the live ring, so a patch leaves it be.
+      [].forEach.call(dial.querySelectorAll(".ring.breath"), function (n) {
+        if (n.getAttribute("data-family") !== fam.id) return;
+        ring.setAttribute("class", n.getAttribute("class"));
+        ring.style.setProperty("--breath", n.style.getPropertyValue("--breath"));
+      });
       counts[fam.id] = 0;
       // Releases stamped at one moment fan out FAN units apart, each with a narrower grab area.
       var mine = all.filter(function (r) { return r.family === fam.id && r.t >= start && r.t <= now; });
@@ -139,7 +169,7 @@
         counts[fam.id]++;
         var n = stack[r.t], k = seat[r.t] || 0;
         seat[r.t] = k + 1;
-        // Never below a floor, so a notch stays visible and tappable on a crowded dial.
+        // Floors keep a notch visible and tappable on a crowded dial.
         var len = Math.max(LEN[r.stage] * scale, MIN_LEN), wid = Math.max(WID[r.stage] * scale, MIN_WID);
         var reach = Math.min(len / 2 + 8, step / 2 - 1);
         var ang = angle(r.t) + (n > 1 ? (k - (n - 1) / 2) * FAN * 180 / (Math.PI * rad) : 0);
@@ -159,10 +189,8 @@
       });
     });
     centres = null;
-    notches.sort(function (x, y) { return x.rel.t - y.rel.t; });
-    if (notches.length) notches[notches.length - 1].setAttribute("tabindex", "0");
 
-    var top = layer("hand-layer");
+    var top = layer("hand-layer", into);
     // The hand is the dial's slider: it sets the date the page shows (the time machine).
     ui.hand = el("g", {
       "class": "hand", transform: "rotate(360)", role: "slider", tabindex: "0",
@@ -177,7 +205,19 @@
     el("circle", { "class": "hk", cx: 0, cy: -(OUTER + 24), r: 6 }, ui.hand);
     el("circle", { "class": "hk", cx: 0, cy: -110, r: 4 }, ui.hand);
 
-    // The window start moved on: the hand cannot stay before it.
+    var byId = {};
+    notches.forEach(function (g) { byId[g.rel.id] = g.rel; });
+    if (into !== host) sync(host, into);
+    notches = [].slice.call(host.querySelectorAll(".notch"));
+    notches.forEach(function (g) { g.rel = byId[g.getAttribute("data-id")]; });
+    notches.sort(function (x, y) { return x.rel.t - y.rel.t; });
+    if (notches.length) notches[notches.length - 1].setAttribute("tabindex", "0");
+    ui.hand = host.querySelector(".hand");
+    ui.knob = ui.hand.querySelector(".hit");
+    ui.date = host.querySelector(".c-date");
+    ui.note = host.querySelector(".c-note");
+
+    // The hand cannot stay before the window start.
     var before = asOf;
     if (asOf !== null) asOf = Math.max(asOf, snap(start));
     paintKey(fams, counts);
@@ -353,8 +393,7 @@
   function nearest(x, y, reach) {
     var best = null, bestD = reach;
     var sr = stage.getBoundingClientRect();
-    // The centres are read once and kept until the layout changes (build, resize, scroll), so
-    // a pointer move costs one rect, not one per notch.
+    // Read once, kept until the layout changes (build, resize, scroll).
     if (!centres) {
       centres = notches.map(function (g) {
         var r = g.getBoundingClientRect();

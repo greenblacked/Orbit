@@ -87,6 +87,17 @@ def test_the_releases_api_is_answered_from_the_snapshot(base_url):
     assert "default-src 'self'" in headers["Content-Security-Policy"]
 
 
+def test_the_security_api_is_answered_from_the_snapshot(base_url):
+    status, headers, body = get(base_url, "/api/security.json")
+    assert status == 200
+    assert headers["Content-Type"].startswith("application/json")
+    assert body == get(base_url, "/data/security.json")[2]
+    assert json.loads(body)["schema"] == 1
+    assert "default-src 'self'" in headers["Content-Security-Policy"]
+    head_status, _, head_body = get(base_url, "/api/security.json", method="HEAD")
+    assert (head_status, head_body) == (200, b"")
+
+
 def test_the_health_path_answers_ok_json(base_url):
     status, headers, body = get(base_url, "/api/health")
     assert status == 200

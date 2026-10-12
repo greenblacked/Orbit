@@ -3,6 +3,7 @@
 //
 //   GET /api/releases.json            the releases of every vendor
 //   GET /api/releases.json?vendor=X   only the releases of vendor X (400 for an unknown one)
+//   GET /api/security.json            the bundled security notes (/data/security.json), unchanged in content
 //   GET /api/health                   {ok, fetchedAt, stale, count, sources}
 //
 // The Worker iterates the registry of source adapters (sources/index.js). Each source has
@@ -111,6 +112,19 @@ async function readSnapshot(source, env, request) {
     if (!usable(payload)) return null;
     const releases = payload.releases.filter((release) => release && release.source === source.id);
     return releases.length > 0 ? { ...payload, source: source.id, releases } : null;
+  } catch {
+    return null;
+  }
+}
+
+// The bundled security notes, or null when the asset is missing or is not a JSON object. They
+// are parsed and served unchanged in content: the Worker fetches nothing for them.
+async function readSecurity(env, request) {
+  try {
+    const res = await env.ASSETS.fetch(new URL('/data/security.json', request.url));
+    if (!res.ok) return null;
+    const payload = await res.json();
+    return payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
   } catch {
     return null;
   }
@@ -337,6 +351,12 @@ async function api(request, env, ctx, sources) {
     return payload
       ? json(payload, 200, {}, head)
       : json({ error: 'no releases available' }, 503, { 'cache-control': 'no-store' }, head);
+  }
+  if (url.pathname === '/api/security.json') {
+    const payload = await readSecurity(env, request);
+    return payload
+      ? json(payload, 200, {}, head)
+      : json({ error: 'no security notes available' }, 503, { 'cache-control': 'no-store' }, head);
   }
   if (url.pathname === '/api/health') {
     const results = await loadAll(sources, request, env, ctx);

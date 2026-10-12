@@ -670,10 +670,12 @@ html[data-theme="reactor"] { --aurora: 0.3; }
 }
 /* Newest release per platform, on a phone only (home.js): the dial is far down the page. */
 .newest { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; margin-top: 1.25rem; }
-.newest:empty { display: none; }
-.newest a { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; min-height: 2.75rem; padding: 0.5rem 0; font-size: 0.9375rem; }
+.newest[hidden] { display: none; }
+.newest a { display: flex; flex-wrap: nowrap; align-items: baseline; gap: 0 0.5rem; min-height: 2.75rem; padding: 0.5rem 0; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; }
 .newest .n-fam { color: var(--fam-text-card); font-weight: 600; }
-.newest .n-ver { color: var(--muted); font-variant-numeric: tabular-nums; }
+.newest .n-ver { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Five rows of two, kept while the list loads so the buttons below do not jump when it fills. */
+@media (max-width: 39.99rem) { .newest { min-height: 14.75rem; } }
 @media (min-width: 40rem) { .newest { display: none; } }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
 .actions .pill { margin-top: 0; }
@@ -1513,8 +1515,10 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .oc-title { font-weight: 500; line-height: 1.25; overflow-wrap: anywhere; }
 .oc-build { color: var(--muted); font: 0.8125rem var(--font-mono); overflow-wrap: anywhere; }
 .orbit-side { display: grid; gap: 1.25rem; align-content: center; }
-.orbit-asof { font-size: 1.0625rem; font-weight: 500; line-height: 1.35; }
-.orbit-key { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; max-width: 22rem; }
+.orbit-asof { font-size: 1.0625rem; font-weight: 500; line-height: 1.35; min-height: 2.7em; }
+/* Three lines on a phone: the sentence that replaces "Loading the dial…" must not push the key down. */
+@media (max-width: 39.99rem) { .orbit-asof { min-height: 4.05em; } }
+.orbit-key { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; max-width: 22rem; min-height: 9.75rem; }
 .orbit-key li { display: flex; align-items: center; gap: 0.5rem; min-height: 1.75rem; font-size: 0.9375rem; }
 .orbit-key .sw { flex: none; width: 1.25rem; height: 0.25rem; background: var(--fam-a); }
 .orbit-key .k-n { margin-left: auto; color: var(--muted); font: 0.8125rem var(--font-mono); }
@@ -1582,8 +1586,8 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .ring.breath { animation: breathe var(--breath, 6s) ease-in-out infinite; }
   @keyframes breathe {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
   .orbit-stage.idle .ring.breath { animation-play-state: paused; }
 }
@@ -1656,8 +1660,12 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 
 /* Aurora (aurora.js): the WebGL canvas takes the place of the CSS gradient blobs, which stay
    as the fallback whenever the canvas is not there. */
-.aurora-gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
-.aurora.gl i { display: none; }
+.aurora-gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; opacity: 0; }
+.aurora.gl .aurora-gl { opacity: 1; }
+.aurora.gl i { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .aurora-gl, .aurora i { transition: opacity 0.6s ease; }
+}
 
 /* Windows High Contrast and other forced-colour modes: a selected chip or segment, the current
    page and a focused notch or hand must not rely on a background or stroke colour alone. */
