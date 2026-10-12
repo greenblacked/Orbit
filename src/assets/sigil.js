@@ -54,7 +54,8 @@
   }
   function use(fn) { flush(fn, "run"); }
   // One request per host (key); hosts off the page are dropped. fail runs if the rule cannot
-  // load, at once in the preview bundle (data-seed) and after one failed load, where nothing queues.
+  // load: at once in a preview bundle built without the rule (data-seed) and after one failed
+  // load, where nothing queues.
   function ready(run, key, fail) {
     if (generic) return run();
     var doc = global.document;

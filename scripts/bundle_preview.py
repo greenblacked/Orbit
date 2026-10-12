@@ -125,6 +125,10 @@ def preview_csp(scripts: list[str], styles: list[str], style_attrs: list[str]) -
 
 HOME_SCRIPT = "/assets/home.js"
 BELOW_SCRIPT = "/assets/below.js"
+# The live site loads the generic sigil rule on demand; a bundle cannot fetch it, so it runs
+# right after sigil.js on every page that loads sigil.js, before any script that draws.
+SIGIL_SCRIPT = "/assets/sigil.js"
+SIGIL_GENERIC_SCRIPT = "/assets/sigil-generic.js"
 HOME_CHECK = 'window.location.pathname === "/"'
 HOME_CHECK_BUNDLE = '(window.location.hash.slice(1).split("#")[0] || "/") === "/"'
 
@@ -575,6 +579,10 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
         if HOME_SCRIPT in page["body_scripts"]:
             at = page["body_scripts"].index(HOME_SCRIPT) + 1
             page["body_scripts"].insert(at, BELOW_SCRIPT)
+        if (dist / "assets" / "sigil-generic.js").is_file():
+            for key in ("head_scripts", "body_scripts"):
+                if SIGIL_SCRIPT in page[key]:
+                    page[key].insert(page[key].index(SIGIL_SCRIPT) + 1, SIGIL_GENERIC_SCRIPT)
 
     # Every script, head or body, is stored once by its URL and run by the router when a
     # route that names it is shown. A head script keeps its own page's list: the union of
