@@ -1,10 +1,13 @@
-// Tests for the releases API Worker with the shipped registry (the Apple source).
+// Tests for the releases API Worker with the Apple source alone: the stubbed upstream
+// answers the Apple feed, so these tests pin the registry to it. Other sources and the
+// multi-source behaviour are covered in registry.test.mjs and their own adapter tests.
 // node --test 'tests/*.test.mjs'    (node:test and node:assert only; nothing to install)
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import worker from '../deploy/worker.js';
+import apple from '../deploy/sources/apple.js';
+import { createWorker } from '../deploy/worker.js';
 import {
   advance,
   ago,
@@ -25,6 +28,7 @@ import {
   useHarness,
 } from './support/harness.mjs';
 
+const worker = createWorker([apple]);
 const call = (path, env, ctx = fakeCtx(), init = {}) =>
   worker.fetch(new Request(ORIGIN + path, init), env, ctx);
 
