@@ -34,8 +34,8 @@ document.addEventListener("securitypolicyviolation", (e) => {
 GENERATED = "2026-10-11T00:00:00Z"
 CHECKED = "2026-10-10T00:00:00Z"
 TARGET = 44
-APPLE = "https://support.apple.com/en-us/"
-ANDROID = "https://source.android.com/docs/security/bulletin/"
+APPLE = "https://example.org/apple/"
+ANDROID = "https://example.org/android/"
 
 
 def releases(family, stage="release"):
@@ -109,9 +109,7 @@ def android_payload(missing=None, newer_patch="2026-06-05"):
 
 
 def make_context(browser, base_url, width=1280, theme=None):
-    context = browser.new_context(
-        viewport={"width": width, "height": 900}, reduced_motion="reduce"
-    )
+    context = browser.new_context(viewport={"width": width, "height": 900}, reduced_motion="reduce")
     context.add_init_script(RECORD)
     context.add_init_script(CLOCK)
     if theme:
@@ -214,7 +212,7 @@ def test_the_timeline_shows_one_line_per_row_with_an_entry_and_nothing_for_the_r
 def test_the_other_states_say_what_they_know_and_nothing_more(browser, base_url):
     router = releases("RouterOS")[0]
     windows = releases("Windows")[0]
-    note_url = "https://help.mikrotik.com/docs/spaces/ROS/pages/1"
+    note_url = "https://example.org/routeros/1"
     body = payload(
         {note_url: note("mikrotik", "RouterOS notes", [])},
         {
@@ -255,9 +253,7 @@ def test_a_failed_source_turns_a_listed_row_into_the_unavailable_state(browser, 
 
 
 @pytest.mark.parametrize("theme", ["day", "night", "reactor"])
-def test_the_timeline_notes_fit_a_phone_and_their_links_are_big_enough(
-    browser, base_url, theme
-):
+def test_the_timeline_notes_fit_a_phone_and_their_links_are_big_enough(browser, base_url, theme):
     context, page, errors = open_timeline(browser, base_url, apple_payload(), 360, theme)
     try:
         assert page.evaluate("() => document.documentElement.scrollWidth") <= 360
@@ -343,10 +339,12 @@ def test_compare_says_when_a_side_has_no_known_note_or_no_counted_cves(browser, 
         context.close()
     router = releases("RouterOS")
     body = apple_payload()
+    ros = "https://example.org/routeros/1"
+    body["notes"][ros] = note("apple", "RouterOS notes", [])
     for release in router[:2]:
         body["releases"][release["id"]] = {
             "status": "linked",
-            "notes": [APPLE + "100003"],
+            "notes": [ros],
             "cves": [],
             "count": None,
             "patchLevel": None,
@@ -409,3 +407,19 @@ def test_android_with_a_patch_level_that_is_not_newer_says_so(browser, base_url)
         assert text.startswith("Patch level is not newer; no CVEs listed beyond Android ")
     finally:
         context.close()
+
+
+def test_android_in_one_bulletin_month_or_from_a_first_part_level_is_unavailable(browser, base_url):
+    android = releases("Android")
+    for newer_patch, older_patch in (("2026-09-05", "2026-09-01"), ("2026-06-05", "2025-12-01")):
+        body = android_payload(newer_patch=newer_patch)
+        body["releases"][android[1]["id"]]["patchLevel"] = older_patch
+        context, page, _ = open_compare(browser, base_url, body, "Android", android[0], android[1])
+        try:
+            page.wait_for_selector(".sec-cmp")
+            text = page.locator(".sec-cmp .sec-say").inner_text()
+            assert text.startswith("Security comparison unavailable: bulletins are read by month")
+            assert page.locator(".sec-cmp .cve").count() == 0
+            assert page.locator(".sec-cmp .sec-count").count() == 0
+        finally:
+            context.close()

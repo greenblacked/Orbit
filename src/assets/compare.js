@@ -62,7 +62,8 @@
   function secure() {
     if (!slot) return;
     slot.textContent = "";
-    var section = window.Sec ? window.Sec.compare(shown.newer, shown.older) : null;
+    var section = null;
+    try { section = window.Sec ? window.Sec.compare(shown.newer, shown.older) : null; } catch (e) { section = null; }
     if (section) slot.appendChild(section);
   }
   if (window.Sec) window.Sec.on(secure);

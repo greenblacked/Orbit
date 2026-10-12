@@ -9,6 +9,7 @@
   var RO = window.RO;
   var SNAPSHOT = "/data/security.json";
   var API = "/api/security.json";
+  var FAMILIES = "/data/families.json";
   var DAY = 864e5;
   var GRACE = 14 * DAY;
   var STALE = 30 * DAY;
@@ -17,6 +18,7 @@
   var CVE = /^CVE-\d{4}-\d{4,}$/;
   var payload = null;
   var listeners = [];
+  var vendors = Object.create(null);
 
   function own(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
   function plain(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
@@ -36,7 +38,18 @@
     payload = json;
     return true;
   }
-  function notify() { listeners.forEach(function (fn) { fn(); }); }
+  // A listener that throws must not stop the others or leave the caller's state half set.
+  function notify() { listeners.forEach(function (fn) { try { fn(); } catch (e) { /* skip */ } }); }
+  // A vendor's name from the families config (already cached by releases.js); its id otherwise.
+  function vendorName(id) { return own(vendors, id) ? vendors[id] : String(id); }
+  function named() {
+    return RO.loadJson(FAMILIES).then(function (json) {
+      if (!plain(json) || !Array.isArray(json.vendors)) return;
+      json.vendors.forEach(function (v) {
+        if (plain(v) && typeof v.id === "string" && typeof v.name === "string") vendors[v.id] = v.name;
+      });
+    }, function () {});
+  }
   function on(fn) { listeners.push(fn); }
 
   function apiJson() {
@@ -46,9 +59,10 @@
     });
   }
   // The bundled preview embeds the snapshot and cannot fetch; it skips the optional newer copy.
-  RO.loadJson(SNAPSHOT).then(function (json) { return accept(json); }, function () { return false; })
-    .then(function (changed) {
-      if (changed) notify();
+  var snapshot = RO.loadJson(SNAPSHOT).then(function (json) { return accept(json); }, function () { return false; });
+  Promise.all([named(), snapshot])
+    .then(function (done) {
+      if (done[1]) notify();
       if (document.querySelector("script[data-seed]")) return;
       return apiJson().then(function (json) { if (accept(json)) notify(); }).catch(function () {});
     });
@@ -62,17 +76,18 @@
     var cves = e.cves.filter(function (c) { return typeof c === "string" && CVE.test(c); });
     var needs = e.status === "listed" || e.status === "linked";
     if (notes.length !== e.notes.length || cves.length !== e.cves.length) return null;
-    if (needs && !notes.length) return null;
-    if (e.status === "listed" && (!cves.length || e.count !== cves.length)) return null;
+    if (needs !== (notes.length > 0)) return null;
+    if (e.status === "listed" ? !cves.length || e.count !== cves.length : cves.length) return null;
+    if (e.status === "no-cve-entries" ? e.count !== 0 : e.status !== "listed" && e.count !== null) return null;
     return {
       status: e.status, notes: notes, cves: cves, count: e.count,
-      patchLevel: typeof e.patchLevel === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e.patchLevel) ? e.patchLevel : "",
+      patchLevel: typeof e.patchLevel === "string" && /^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(e.patchLevel) ? e.patchLevel : "",
       checkedAt: Date.parse(e.checkedAt)
     };
   }
   // A failed source, or a check older than 30 days, means the row is not trustworthy now.
   function stale(e) {
-    if (e.status === "not-applicable") return false;
+    if (e.status === "not-applicable" || e.status === "not-connected") return false;
     for (var i = 0; i < e.notes.length; i++) {
       var src = payload.sources[payload.notes[e.notes[i]].source];
       if (plain(src) && src.status === "failed") return true;
@@ -87,7 +102,7 @@
   function describe(r) {
     var e = read(r.id);
     if (!e || e.status === "not-applicable") return null;
-    var vendor = RO.vendorName(r.vendor);
+    var vendor = vendorName(r.vendor);
     var android = r.family === "Android";
     var first = e.notes[0] || "";
     var say = function (tone, text, href) { return { tone: tone, text: text, href: href || "" }; };
@@ -140,7 +155,7 @@
   function nextMonth(m) {
     var y = Number(m.slice(0, 4)), n = Number(m.slice(5)) + 1;
     if (n > 12) { y += 1; n = 1; }
-    return y + "-" + (n < 10 ? "0" : "") + n;
+    return ("000" + y).slice(-4) + "-" + (n < 10 ? "0" : "") + n;
   }
   // Android: the bulletins of the months after the older patch level up to the newer one.
   function bulletins(newer, older) {
@@ -148,7 +163,7 @@
     newer.notes.concat(older.notes).forEach(function (u) { sources[payload.notes[u].source] = true; });
     var found = Object.create(null), missing = [], urls = [];
     Object.keys(payload.notes).forEach(function (u) {
-      if (!sources[payload.notes[u].source] || !link(u)) return;
+      if (!plain(payload.notes[u]) || !sources[payload.notes[u].source] || !link(u)) return;
       var m = month(payload.notes[u], u);
       found[m] = (found[m] || []).concat(u);
     });
@@ -202,11 +217,17 @@
       var absent = names(function (e) { return !e.patchLevel; });
       if (absent) return say("Security comparison unavailable: no patch level for " + absent);
       if (en.patchLevel <= eo.patchLevel) return say("Patch level is not newer; no CVEs listed beyond " + name(older) + "'s");
+      var from = eo.patchLevel.slice(0, 7);
+      if (from === en.patchLevel.slice(0, 7) || eo.patchLevel.slice(8) === "01") {
+        return say("Security comparison unavailable: bulletins are read by month, so the parts of " + from + " after the older patch level are not told apart");
+      }
       var range = bulletins(en, eo);
       if (range.missing.length) return say("Security comparison unavailable: no bulletin read for " + range.missing.slice(0, 3).join(", ") + (range.missing.length > 3 ? " and " + (range.missing.length - 3) + " more" : ""));
       urls = range.urls;
       var union = Object.create(null);
-      urls.forEach(function (u) { (payload.notes[u].cves || []).forEach(function (c) { if (plain(c) && CVE.test(c.id)) union[c.id] = true; }); });
+      urls.forEach(function (u) { (Array.isArray(payload.notes[u].cves) ? payload.notes[u].cves : []).forEach(function (c) {
+          if (plain(c) && typeof c.id === "string" && CVE.test(c.id)) union[c.id] = true;
+        }); });
       ids = Object.keys(union).sort();
     } else {
       ids = en.cves;

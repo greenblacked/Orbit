@@ -54,13 +54,21 @@
     return li;
   }
 
+  function hrefOf(el) {
+    var a = el.querySelector("a");
+    return a ? a.getAttribute("href") : "";
+  }
   // The security note under a row, when security.json has an entry for the release. The notes
   // arrive after the list, so they are added to the rows already on the page.
   function note(li, r) {
     var old = li.querySelector(".sec");
+    var chip = null;
+    try { chip = window.Sec ? window.Sec.chip(r) : null; } catch (e) { chip = null; }
+    // Keep the line (and the focus on its link) when it would be rebuilt the same.
+    if (old && chip && old.className === chip.className && old.textContent === chip.textContent &&
+        hrefOf(old) === hrefOf(chip)) return;
     if (old) li.removeChild(old);
     li.classList.remove("has-sec");
-    var chip = window.Sec ? window.Sec.chip(r) : null;
     if (!chip) return;
     li.appendChild(chip);
     li.classList.add("has-sec");
