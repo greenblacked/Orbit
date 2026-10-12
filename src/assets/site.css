@@ -723,6 +723,13 @@ html[data-theme="reactor"] { --aurora: 0.3; --live: #3ddc84; --warn: #f5a524; --
   background: linear-gradient(90deg, #d7452f, #a36f14, #288b35, #158591, #7869d9, #cc3fa1) 0 100% / 100% 0.14em no-repeat;
 }
 .hero .side .live { margin-top: 1.5rem; }
+/* Newest release per platform, on a phone only (home.js): the dial is far down the page. */
+.newest { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; margin-top: 1.25rem; }
+.newest:empty { display: none; }
+.newest a { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; min-height: 2.75rem; padding: 0.5rem 0; font-size: 0.9375rem; }
+.newest .n-fam { color: var(--fam-text-card); font-weight: 600; }
+.newest .n-ver { color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (min-width: 40rem) { .newest { display: none; } }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
 .actions .pill { margin-top: 0; }
 .live {
@@ -1530,6 +1537,9 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 }
 /* Nothing loaded: no row to wait for. */
 .cadence.none { min-height: 0; margin-top: 0; padding-top: 0; border-top: 0; }
+@media (max-width: 39.99rem) {
+  .cadence { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem 1rem; }
+}
 .cadence li { min-width: 0; font-size: 0.8125rem; line-height: 1.4; }
 .cadence .c-fam {
   display: block;

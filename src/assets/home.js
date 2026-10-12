@@ -78,6 +78,24 @@
     card.querySelector('[data-f="badge"]').hidden = false;
   }
 
+  // A short list under the intro, shown on a phone only (CSS), so the newest release of each
+  // platform is on the first screen rather than below the dial.
+  function paintNewest(list) {
+    var ul = document.getElementById("newest");
+    if (!ul) return;
+    ul.textContent = "";
+    for (var i = 0; i < cards.length; i++) {
+      var family = cards[i].getAttribute("data-family");
+      var r = RO.latest(list, family, false);
+      if (!r) continue;
+      var li = RO.h("li", "fam-" + String(family).toLowerCase());
+      var a = RO.h("a", "", null, { href: "#" + String(family).toLowerCase() });
+      a.appendChild(RO.h("span", "n-fam", r.family));
+      a.appendChild(RO.h("span", "n-ver", RO.short(r)));
+      li.appendChild(a);
+      ul.appendChild(li);
+    }
+  }
   // Neither the live data nor the saved copy loaded: say so on every card and section rather
   // than leaving them on "Loading…".
   function paintFailed() {
@@ -86,6 +104,7 @@
       cards[i].querySelector('[data-f="ver"]').textContent = "Unavailable";
     }
     for (var j = 0; j < sections.length; j++) text(sections[j], "latest", "Could not load the releases.");
+    paintNewest([]);
   }
   function text(root, name, value) {
     var els = root.querySelectorAll('[data-f="' + name + '"]');
@@ -145,6 +164,7 @@
     }
     current = list;
     for (var j = 0; j < sections.length; j++) paintSection(sections[j], list);
+    paintNewest(list);
     if (window.Below) window.Below.paint(list);
   }
   document.addEventListener("ro:asof", function (e) {
