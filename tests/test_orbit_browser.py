@@ -323,9 +323,11 @@ def test_the_dial_is_a_slider_and_the_notches_are_reachable_by_arrow_keys(page, 
 
 def test_keyboard_scrub_changes_the_grid_and_announces_then_back_to_now_restores(page, base_url):
     open_front_page(page, base_url)
-    assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.2"
-    assert page.get_attribute(f"{IOS} .sigil", "data-build") == "24B5099f"
+    assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.0.1"
+    assert page.get_attribute(f"{IOS} .sigil", "data-build") == "24A446"
     assert page.is_hidden("#orbit-back")
+    assert page.is_visible(f"{IOS} [data-f=pre]")
+    assert text(page, f"{IOS} [data-f=pre]").startswith("Next: 27.2 beta 3")
 
     page.focus(HAND)
     page.keyboard.press("PageDown")
@@ -333,6 +335,7 @@ def test_keyboard_scrub_changes_the_grid_and_announces_then_back_to_now_restores
     pending(page)
     assert page.get_attribute(HAND, "aria-valuetext") == "As of Sep 28, 2026"
     assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.0.1"
+    assert page.is_hidden(f"{IOS} [data-f=pre]")
     assert page.get_attribute(f"{IOS} .sigil", "data-build") == "24A446"
     assert "27.0.1" in text(page, "#ios [data-f=latest]")
     assert "Sep 28, 2026" in text(page, "#latest-asof")
@@ -344,8 +347,10 @@ def test_keyboard_scrub_changes_the_grid_and_announces_then_back_to_now_restores
     page.wait_for_timeout(600)
     assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.0.1"
     page.click("#orbit-back")
-    assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.2"
-    assert page.get_attribute(f"{IOS} .sigil", "data-build") == "24B5099f"
+    assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.0.1"
+    assert page.is_visible(f"{IOS} [data-f=pre]")
+    assert text(page, f"{IOS} [data-f=pre]").startswith("Next: 27.2 beta 3")
+    assert page.get_attribute(f"{IOS} .sigil", "data-build") == "24A446"
     assert page.is_hidden("#orbit-back")
     assert page.is_hidden("#latest-asof")
     assert page.evaluate("() => document.activeElement.classList.contains('hand')")
@@ -420,7 +425,7 @@ def test_the_hand_moves_by_a_day_a_week_and_to_the_ends(page, base_url):
     assert page.is_hidden(f"{IOS} .rel-sig")
     page.keyboard.press("End")
     assert page.get_attribute(HAND, "aria-valuetext") == "Now, Oct 12, 2026"
-    assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.2"
+    assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.0.1"
 
 
 def test_the_hand_can_be_dragged_and_stays_where_it_is_put(page, base_url):
@@ -442,7 +447,7 @@ def test_the_hand_can_be_dragged_and_stays_where_it_is_put(page, base_url):
     assert page.is_visible("#orbit-back")
     assert text(page, f"{IOS} [data-f=ver]") == "iOS 18.7.10"
     page.click("#orbit-back")
-    assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.2"
+    assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.0.1"
 
 
 def release_of(family: str, version: str):
@@ -690,9 +695,10 @@ FAILED_REQUEST = "Failed to load resource"
 
 
 def with_other_build(family="iOS"):
-    """The snapshot with the newest release of a family on a non-Apple build string."""
+    """The snapshot with the newest stable release of a family on a non-Apple build string."""
     data = json.loads(json.dumps(SNAPSHOT))
-    newest = max((r for r in data["releases"] if r["family"] == family), key=lambda r: r["date"])
+    stable = (r for r in data["releases"] if r["family"] == family and r["stage"] == "release")
+    newest = max(stable, key=lambda r: r["date"])
     newest["build"] = OTHER_BUILD
     return data
 
@@ -774,10 +780,11 @@ def test_a_failed_generic_rule_is_requested_once_however_often_the_sigil_redraws
     )
     page.focus(HAND)
     seen = [first]
-    for _ in range(2):
+    # 27.0.1 stays the headline until the third step back; the next two reach 18.7.10.
+    for steps in (3, 2):
         hand_was = page.get_attribute(HAND, "aria-valuetext")
-        page.keyboard.press("PageDown")
-        page.keyboard.press("PageDown")
+        for _ in range(steps):
+            page.keyboard.press("PageDown")
         page.wait_for_function(
             "([sel, was]) => document.querySelector(sel).getAttribute('aria-valuetext') !== was",
             arg=[HAND, hand_was],
@@ -808,10 +815,10 @@ def test_a_late_generic_rule_does_not_repaint_a_card_the_hand_has_moved_off(page
     assert held, "sigil-generic.js was never requested"
     assert page.get_attribute(f"{IOS} .sigil", "data-build") is None
     page.focus(HAND)
-    page.keyboard.press("PageDown")
-    page.keyboard.press("PageDown")
+    for _ in range(3):
+        page.keyboard.press("PageDown")
     pending(page)
-    apple = "24A446"
+    apple = "23G90"
     assert page.get_attribute(f"{IOS} .sigil", "data-build") == apple
     held[0].continue_()
     page.wait_for_function("() => typeof window.Sigil.generic === 'function'")

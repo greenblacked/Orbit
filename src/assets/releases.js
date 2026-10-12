@@ -1,9 +1,7 @@
-/* Release data for every page: loads the families config (/data/families.json) and
-   /api/releases.json (the Worker), falls back to the bundled /data/releases.json, polls
-   every five minutes while the page is visible, and tells a toast (aria-live) when ids the
-   page has not shown before appear. Pages ask for the data with RO.on(fn). Nothing here
-   writes HTML from data: text goes in with textContent and a link only if it points at the
-   host its vendor's source allows. */
+/* Release data for every page: loads the families config and /api/releases.json (the Worker),
+   falls back to the bundled /data/releases.json, polls every five minutes while the page is
+   visible, and tells a toast (aria-live) about new ids. Pages ask with RO.on(fn). Nothing here
+   writes HTML from data: text goes in with textContent, a link only to its vendor's hosts. */
 (function () {
   "use strict";
   var API = "/api/releases.json";
@@ -99,7 +97,7 @@
     };
   }
 
-  // The preview bundle cannot fetch: it embeds data/*.json as data-seed.
+  // The preview bundle embeds data/*.json as data-seed.
   function seeded(url) {
     var key = url === API ? SNAPSHOT : url;
     var el = document.querySelector('script[data-seed="' + key + '"]');
@@ -223,14 +221,21 @@
     return ((NUM.test(a.version) && NUM.test(b.version) ? compareVersions(a.version, b.version) : a.t - b.t) ||
       (RANK[a.stage] - RANK[b.stage]) || ((a.beta || 0) - (b.beta || 0)) || (a.t - b.t)) > 0;
   }
-  // A family with headline "release" only headlines releases.
   function latest(list, family, publicOnly) {
-    var best = null, f = familyOf(family);
-    publicOnly = publicOnly || (f && f.headline === "release");
+    var best = null;
     list.forEach(function (r) {
       if (r.family === family && (!publicOnly || r.stage === "release") && (!best || better(r, best))) best = r;
     });
     return best;
+  }
+  // A card's headline: the newest stable release (else any stage) and a higher beta or RC.
+  function lead(list, family) {
+    var main = latest(list, family, true) || latest(list, family, false);
+    var any = main && latest(list, family, false);
+    var pre = any && any.stage !== "release" && main.stage === "release" &&
+      (NUM.test(any.version) && NUM.test(main.version) ?
+        compareVersions(any.version, main.version) > 0 : any.t > main.t) ? any : null;
+    return { main: main, pre: pre };
   }
   function when(t) {
     var el = h("time", "when", ago(t), { datetime: new Date(t).toISOString() });
@@ -275,7 +280,7 @@
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
     channel: channel, sigilKey: sigilKey,
-    latest: latest, newer: newer, compareVersions: compareVersions,
+    latest: latest, lead: lead, newer: newer, compareVersions: compareVersions,
     reduced: function () {
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
