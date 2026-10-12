@@ -569,10 +569,28 @@ def test_commands_inside_a_raw_slice_are_neutralised_in_the_report():
         assert "::" not in line and "##[" not in line and "\x1b" not in line
 
 
+def _slices(source):
+    raw = source["raw_slice"]
+    return raw if isinstance(raw, list) else [raw]
+
+
 def test_the_list_asks_for_raw_security_markup():
     by_id = {s["id"]: s for s in SOURCES}
     for ident in ("android-security-bulletin-2026-10", "android-pixel-bulletin-2026-10"):
         assert 1 <= by_id[ident]["raw_tables"] <= probe.MAX_RAW_TABLES
-    assert by_id["android-security-bulletin-index"]["raw_slice"]["start"] == "<table"
-    for ident in ("apple-security-releases-index", "apple-security-note-ios-26-7-1"):
-        assert by_id[ident]["raw_slice"]["chars"] <= probe.MAX_RAW_SLICE_CHARS
+        assert "<h1" in [s["start"] for s in _slices(by_id[ident])]
+    for ident in (
+        "apple-security-releases-index",
+        "apple-security-note-ios-26-7-1",
+        "android-security-bulletin-index",
+        "android-security-bulletin-2026-10",
+        "android-pixel-bulletin-2026-10",
+    ):
+        slices = _slices(by_id[ident])
+        assert 1 <= len(slices) <= probe.MAX_RAW_SLICES
+        assert all(s["chars"] > 0 for s in slices)
+        assert sum(s["chars"] for s in slices) <= probe.MAX_RAW_SLICE_CHARS
+    for ident in ("apple-security-releases-index", "android-security-bulletin-index"):
+        assert [s["start"] for s in _slices(by_id[ident])] == ["<table"]
+    starts = [s["start"] for s in _slices(by_id["apple-security-note-ios-26-7-1"])]
+    assert "<h1" in starts and "Published Date" in starts
