@@ -37,7 +37,7 @@
   }
 
   function item(r) {
-    var li = RO.h("li", "tl-item fam-" + r.family.toLowerCase());
+    var li = RO.h("li", "tl-item fam-" + r.family.toLowerCase(), null, { "data-id": r.id });
     rows.push({ li: li, r: r });
     var a = RO.h("a", "tl-link", null, { href: r.url, target: "_blank", rel: "noopener noreferrer" });
     a.appendChild(RO.h("span", "tl-day", RO.day(r.t)));
