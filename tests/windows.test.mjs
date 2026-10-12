@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 
 import { FAMILIES } from '../deploy/families.js';
 import { mergeReleases } from '../deploy/releases.js';
-import shipped, { createWorker } from '../deploy/worker.js';
+import { SOURCES } from '../deploy/sources/index.js';
+import { createWorker } from '../deploy/worker.js';
 import windows, {
   firstTable,
   ID,
@@ -400,7 +401,11 @@ describe('the Worker with the Windows source', () => {
     assert.ok(body.releases.every((r) => r.vendor === 'microsoft' && r.source === ID));
   });
 
-  it('is served by the shipped Worker beside Apple', async () => {
+  it('is registered, and served beside Apple by a Worker built from the registered sources', async () => {
+    // The other registered sources have their own tests; only these two are routed here.
+    const shipped = createWorker(SOURCES.filter((s) => [APPLE_ID, ID].includes(s.id)));
+    assert.ok(SOURCES.includes(windows));
+    assert.equal(SOURCES.filter((s) => [APPLE_ID, ID].includes(s.id)).length, 2);
     routes({ [FEED_URL]: FEED, [WINDOWS_11_URL]: WIN11, [WINDOWS_10_URL]: WIN10 });
     const res = await shipped.fetch(new Request(`${ORIGIN}/api/releases.json`), fakeEnv(null), fakeCtx());
     assert.equal(res.status, 200);
