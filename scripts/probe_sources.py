@@ -409,9 +409,7 @@ def kind_of(content_type: str, text: str) -> str:
     return "text"
 
 
-def excerpt(
-    content_type: str, text: str, tables: int = 0, match_titles: str | None = None
-) -> str:
+def excerpt(content_type: str, text: str, tables: int = 0, match_titles: str | None = None) -> str:
     """A trimmed, unsanitised excerpt. A parse failure falls back to plain text.
 
     ``tables`` > 0 appends the raw outer HTML of that many tables to an HTML excerpt.
@@ -462,9 +460,7 @@ class LimitedRedirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, target)
 
 
-def read_body(
-    response, *, clock=time.monotonic, limit: int = MAX_BYTES
-) -> tuple[bytes, str]:
+def read_body(response, *, clock=time.monotonic, limit: int = MAX_BYTES) -> tuple[bytes, str]:
     """Up to limit + 1 bytes in chunks, stopping at READ_DEADLINE. Returns (body, note)."""
     deadline = clock() + READ_DEADLINE
     chunks: list[bytes] = []
