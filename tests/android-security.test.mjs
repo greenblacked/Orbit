@@ -541,10 +541,10 @@ describe('match', () => {
       ]),
     );
     assert.equal(many.length, MAX_BULLETINS);
-    assert.ok(many.includes(AOSP_URL));
+    assert.equal(many.at(-1), AOSP_URL);
     const real = neededBulletins(RELEASES, patchLevelsByTag(BUILDS));
-    assert.ok(real.includes('https://source.android.com/docs/security/bulletin/2026/2026-06-01'));
-    assert.ok(real.includes('https://source.android.com/docs/security/bulletin/2025-12-01'));
+    assert.ok(real.some((url) => url === bulletinUrl('2026-06-01')));
+    assert.ok(real.some((url) => url === bulletinUrl('2025-12-01')));
     assert.ok(sortedUnique(real));
   });
 });
