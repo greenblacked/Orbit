@@ -9,6 +9,8 @@
 # It commits nothing, pushes nothing, uploads nothing and holds no secret or token: the job
 # can read the repository and nothing else, and the checkout keeps no credential. Run it
 # by hand only (workflow_dispatch). Same pinned actions as ci.yml and source-probe.yml.
+# It does not refresh releases.json: dispatch it on a ref whose src/data/releases.json is
+# current, because the payload is joined to that file.
 name: Security snapshot
 
 on:
@@ -24,7 +26,7 @@ jobs:
   snapshot:
     name: refresh the security notes
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -37,16 +39,22 @@ jobs:
           # Nothing is installed: the script has no dependencies.
           package-manager-cache: false
       - name: Take the snapshot and print it
-        # The script exits non-zero when a source could not be read, but it has still
-        # written the file (a failed source keeps its old rows). So the exit code is kept,
-        # the result is printed either way, and the step then fails with that code.
+        # The script exits non-zero when a source could not be read; it usually has still
+        # written the file (a failed source keeps its old rows), and "file changed: no"
+        # shows when it has not. So the exit code is kept, the result is printed either way,
+        # and the step then fails with that code. A run that hits the timeout prints nothing,
+        # because the file is only written at the end. The script's own output is fenced with
+        # stop-commands, so no text it logs can be read as a workflow command.
         # Base64 has no `::`, so nothing in the payload can be read as a workflow command.
         run: |
           set -Eeuo pipefail
           file=src/data/security.json
           before=$(sha256sum "$file" | cut -d' ' -f1)
           status=0
+          token=$(uuidgen)
+          echo "::stop-commands::${token}"
           node deploy/snapshot_security.mjs || status=$?
+          echo "::${token}::"
           after=$(sha256sum "$file" | cut -d' ' -f1)
           echo "snapshot exit code: $status"
           if [ "$before" = "$after" ]; then
@@ -66,7 +74,7 @@ jobs:
             }
             console.log("releases by status: " + JSON.stringify(counts) + ", other: " + other);
             console.log("notes: " + Object.keys(data.notes ?? {}).length);
-          ' "$file"
+          ' "$file" || echo "summary: unavailable"
           echo "sha256: $after"
           echo "bytes: $(wc -c < "$file" | tr -d ' ')"
           echo "-----BEGIN SECURITY JSON BASE64-----"
