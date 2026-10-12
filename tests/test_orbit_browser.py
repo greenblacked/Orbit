@@ -147,7 +147,8 @@ def test_the_dial_has_one_notch_per_release_in_the_window(page, base_url):
 
 def test_the_dial_keeps_its_26_week_window_when_the_data_is_wider(page, base_url):
     data = json.loads(json.dumps(SNAPSHOT))
-    for n, date in enumerate(("2026-01-12T17:00:00Z", "2025-03-05T00:00:36Z", "2024-06-01T00:00:00Z")):
+    dates = ("2026-01-12T17:00:00Z", "2025-03-05T00:00:36Z", "2024-06-01T00:00:00Z")
+    for n, date in enumerate(dates):
         old = dict(data["releases"][-1])
         old["id"] = f"{old['id']}-old{n}"
         old["url"] = f"{old['url']}-old{n}"
