@@ -1443,13 +1443,17 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .lane { color: var(--fam-a); }
 .ring { fill: none; stroke: var(--muted); stroke-opacity: 0.4; stroke-width: 1; }
 .tick { stroke: var(--muted); stroke-width: 1.2; }
-.mlabel { fill: var(--muted); font: 11px var(--font-mono); letter-spacing: 0.06em; text-anchor: middle; dominant-baseline: central; }
-.c-date { fill: var(--ink); font: 500 22px var(--font-mono); text-anchor: middle; }
-.c-note { fill: var(--muted); font: 11px var(--font-mono); letter-spacing: 0.14em; text-anchor: middle; }
+/* The dial is drawn in a 660-unit box that shrinks with the stage; orbit.js sets --upx, the
+   units per CSS pixel, so the text is sized in screen pixels and capped so the hub (the date
+   and the notes inside the innermost ring) stays clear of the rings. */
+.mlabel { fill: var(--muted); font-family: var(--font-mono); font-size: min(12px * var(--upx, 1), 20px); letter-spacing: 0.06em; text-anchor: middle; dominant-baseline: central; }
+.c-date { fill: var(--ink); font-family: var(--font-mono); font-weight: 500; font-size: min(18px * var(--upx, 1), 22px); text-anchor: middle; }
+.c-note { fill: var(--muted); font-family: var(--font-mono); font-size: min(11px * var(--upx, 1), 18px); letter-spacing: 0.14em; text-anchor: middle; }
 .notch { cursor: pointer; }
 .notch .hit { pointer-events: stroke; stroke: transparent; fill: none; }
 .notch .nl { stroke: currentColor; stroke-linecap: butt; }
 .notch:focus-visible .nl, .notch:hover .nl { stroke-width: 7; }
+.notch:focus-visible .hit { stroke: color-mix(in srgb, currentColor 35%, transparent); }
 .mk { fill: none; stroke: currentColor; stroke-width: 1.4; }
 .mk-pass, .mk-warn { fill: currentColor; }
 .mk-fail { stroke-width: 2; }
@@ -1486,6 +1490,7 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 .hand .hit { pointer-events: all; stroke: transparent; fill: transparent; }
 .hand:active { cursor: grabbing; }
 .hand:focus-visible .hl { stroke-width: 4; }
+.hand:focus-visible .hit { stroke: var(--ink); stroke-width: calc(2px * var(--upx, 1)); }
 .notch.later { opacity: 0.35; }
 .orbit-back { margin-top: 0; justify-self: start; }
 .asof-note { margin: 0; flex-basis: 100%; }
@@ -1556,7 +1561,7 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   }
   @keyframes orbit-lift {
     from { translate: 0 0 0; }
-    to { translate: 0 0 calc(var(--lane, 0) * 3.5rem); }
+    to { translate: 0 0 calc(min(var(--lane, 0), 6) * 3.5rem); }
   }
   @supports (animation-timeline: view()) {
     .dial3d { animation: orbit-tilt linear both; animation-timeline: view(); animation-range: exit 8% exit 95%; }
@@ -1566,7 +1571,7 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
     .dial3d { transition: transform 700ms ease; }
     .layer.lane { transition: translate 700ms ease; }
     .orbit-stage.out .dial3d { transform: rotateX(58deg) scale(0.92); }
-    .orbit-stage.out .layer.lane { translate: 0 0 calc(var(--lane, 0) * 3.5rem); }
+    .orbit-stage.out .layer.lane { translate: 0 0 calc(min(var(--lane, 0), 6) * 3.5rem); }
   }
 }
 
