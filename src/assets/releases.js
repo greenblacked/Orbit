@@ -219,8 +219,8 @@
   function short(r) {
     return r.version + (r.stage === "release" ? "" : " " + stageLabel(r).toLowerCase());
   }
-  var NUM = /^\d+(\.\d+)*$/;
-  // Higher version (date if not plain dotted numbers), then stage, iteration, date.
+  var NUM = /^\d+([.H]\d+)*$/;
+  // Higher version (date if not numeric), then stage, iteration, date.
   function better(a, b) {
     return ((NUM.test(a.version) && NUM.test(b.version) ? compareVersions(a.version, b.version) : a.t - b.t) ||
       (RANK[a.stage] - RANK[b.stage]) || ((a.beta || 0) - (b.beta || 0)) || (a.t - b.t)) > 0;

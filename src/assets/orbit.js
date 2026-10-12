@@ -62,7 +62,7 @@
   // The knob's grab area is 22 CSS px in radius, in viewBox units.
   function sizeKnob() {
     var w = stage.clientWidth;
-    // Units per CSS pixel: the dial's text is sized in it (see .mlabel) so it keeps
+    // Units per CSS pixel: the dial's text is sized in it (see .mlabel in site.css) so it keeps
     // a readable size when the stage shrinks on a phone.
     if (w > 0) stage.style.setProperty("--upx", String(r2(2 * HALF / w)));
     centres = null;
