@@ -410,7 +410,8 @@ def report(source: dict, result: dict | None, error: BaseException | None) -> st
         f"final url: {one_line(result['final_url'])}",
         f"status: {result['status']}",
         f"content-type: {one_line(result['content_type'])}",
-        f"bytes: {len(body)}" + (f" (truncated at {MAX_BYTES})" if result["truncated"] else "")
+        f"bytes: {len(body)}"
+        + (f" (truncated at {MAX_BYTES})" if result["truncated"] else "")
         + (f" ({one_line(result['note'], 40)})" if result.get("note") else ""),
         f"sha256: {hashlib.sha256(body).hexdigest()}",
         "excerpt:",

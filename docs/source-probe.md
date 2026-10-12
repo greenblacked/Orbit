@@ -29,7 +29,7 @@ unless the list file is invalid, then 1.
 ## Safe output
 
 Everything in an excerpt came from a third party. Control and format characters are removed,
-`::` is written `: :` and `##[` is written `# #[`, and every excerpt line starts with `  | `, so
+`::` is written `: :` and `##[` is written `# #[`, and every excerpt line is prefixed with two spaces, a vertical bar and a space, so
 neither workflow-command form can appear at the start of a line. Excerpts are bounded (a long
 title or link is cut at 300 characters). Request headers and the environment are never
 printed.
