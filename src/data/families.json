@@ -22,9 +22,9 @@
       "id": "google",
       "name": "Google",
       "source": {
-        "name": "Android versions",
-        "url": "https://developer.android.com/about/versions",
-        "hosts": ["developer.android.com", "source.android.com"]
+        "name": "AOSP build numbers",
+        "url": "https://source.android.com/docs/setup/reference/build-numbers",
+        "hosts": ["source.android.com"]
       }
     },
     {

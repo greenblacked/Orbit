@@ -194,6 +194,18 @@ def test_a_family_without_a_connected_feed_says_so_instead_of_inventing_a_releas
         assert f"No {name} release" in section.locator("[data-f=latest]").inner_text()
 
 
+def test_android_shows_its_snapshot_release_with_a_link_to_the_aosp_page(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="Android"]')
+    assert "Android 17" in card.locator("[data-f=ver]").inner_text()
+    link = card.locator("[data-f=link]")
+    assert link.is_visible()
+    assert link.get_attribute("href").startswith("https://source.android.com/")
+    section = page.locator('section.fam[data-family="Android"]')
+    assert section.locator(".recent li").count() == 1
+
+
 def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
@@ -458,8 +470,11 @@ def test_the_timeline_lists_everything_newest_first_grouped_by_month(page, base_
     assert page.inner_text("#count") == f"{len(SNAPSHOT['releases'])} releases"
     hrefs = page.locator(".tl-link").evaluate_all("els => els.map(a => a.href)")
     assert sorted(hrefs) == sorted(r["url"] for r in SNAPSHOT["releases"])
-    by_url = {r["url"]: r["date"] for r in SNAPSHOT["releases"]}
-    dates = [by_url[href] for href in hrefs]
+    # Releases of one source can share a link, so take the dates of a link newest first.
+    by_url = {}
+    for r in sorted(SNAPSHOT["releases"], key=lambda r: r["date"], reverse=True):
+        by_url.setdefault(r["url"], []).append(r["date"])
+    dates = [by_url[href].pop(0) for href in hrefs]
     assert dates == sorted(dates, reverse=True)
 
 
@@ -846,7 +861,7 @@ def test_pages_say_what_they_are_before_any_script_runs(browser, base_url):
         for name in (
             "Apple Developer Releases",
             "MikroTik changelogs",
-            "Android versions",
+            "AOSP build numbers",
             "Windows release health",
             "Steam Deck news",
         ):
