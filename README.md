@@ -148,7 +148,7 @@ The preferred rollback is a new patch release with the change reverted. The one-
 │   ├── assets/            site.css, theme.js, site.js, releases.js, home.js,
 │   │                      timeline.js, compare.js, sigil.js, orbit.js,
 │   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js
-│   └── data/              releases.json (snapshot), families.json, features.json
+│   └── data/              releases.json (snapshot), security.json, families.json, features.json
 ├── deploy/                the Worker (worker.js, releases.js, families.js,
 │   └── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs
 ├── scripts/               build, checks, preview, screenshots and the source probe (standard library only)

@@ -8,10 +8,11 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 | --- | --- | --- |
 | Static site | `src/` | Plain HTML, one stylesheet and small scripts. No framework and no bundler. |
 | Build | `scripts/build_site.py` | Copies `src/` to `dist/site/`, stamps the version, writes `robots.txt` and `sitemap.xml`, copies `results/` into `data/results/`. Standard library only. |
-| Worker | `deploy/worker.js` | Answers `/api/releases.json` and `/api/health`. Every other path is a static asset. |
+| Worker | `deploy/worker.js` | Answers `/api/releases.json`, `/api/security.json` and `/api/health`. Every other path is a static asset. |
 | Source adapters | `deploy/sources/` | One adapter per feed: `{ id, vendor, urls, parse(text, url) }` and an optional `accept`. `urls` is the allowlist the Worker may fetch; `accept` is the `Accept` header it sends for them (feeds, JSON and plain text when absent; `text/html` for the Android and Windows pages); `url` tells `parse` which document it got, for a source whose documents differ only by address. The registry is `index.js`. |
 | Release contract | `deploy/releases.js` | The release shape, date parsing and the merge of live data with the snapshot. |
 | Snapshot | `src/data/releases.json` | The bundled copy of the releases. Refreshed with `node deploy/snapshot_releases.mjs`. |
+| Security notes | `src/data/security.json` | The bundled security-notes payload (schema 1), served as is at `/api/security.json` from the static assets: the Worker fetches no vendor for it. Empty until an adapter is admitted. |
 | Families | `src/data/families.json` | Platform families, their accents and the vendors with their sources. Read by the Worker and the pages. Five vendors, each with an adapter: Apple, MikroTik, Google, Microsoft and Valve. |
 | Results | `results/` | One JSON file per publicly released, tested build. |
 | Page scripts | `src/assets/` | `releases.js` loads the data. `home.js`, `timeline.js` and `compare.js` draw a page. `sigil.js` and `orbit.js` draw the signature. `below.js` (the mock screens and the developer highlights), `cadence.js`, `sigil-generic.js` (the sigil rule for a build that is not an Apple build), `fx.js` and `aurora.js` load after the first paint. |

@@ -6,10 +6,10 @@ redirect and no response headers. This one answers a missing path with ``404.htm
 status 404 (the Worker's ``not_found_handling``), redirects ``/about`` to ``/about/``,
 hides the files Cloudflare does not publish, and applies the ``_headers`` file, so the
 Content-Security-Policy a browser enforces here is the one it will enforce in production.
-It does not run the Worker, but it answers the two API paths the pages call from the files
-the Worker falls back on: ``/api/releases.json`` is ``data/releases.json`` (with ``?vendor=``
-applied) and ``/api/health`` is ``{"ok": true}``, so a local page loads its data the way a
-live one does.
+It does not run the Worker, but it answers the API paths the pages call from the files the
+Worker falls back on: ``/api/releases.json`` is ``data/releases.json`` (with ``?vendor=``
+applied), ``/api/security.json`` is ``data/security.json`` and ``/api/health`` is
+``{"ok": true}``, so a local page loads its data the way a live one does.
 
     python scripts/serve_site.py --dir dist/site --port 8000
     python scripts/serve_site.py --port 0        # pick a free port; the first line says which
@@ -139,6 +139,13 @@ def make_handler(root: Path):
                 if snapshot is not None:
                     status, body = releases_answer(snapshot.read_bytes(), parts.query)
                     self._send(status, body, "application/json; charset=utf-8", path, head)
+                    return
+            if path == "/api/security.json":
+                notes = self._locate("/data/security.json")
+                if notes is not None:
+                    self._send(
+                        200, notes.read_bytes(), "application/json; charset=utf-8", path, head
+                    )
                     return
             target = self._locate(path)
             if target is not None:
