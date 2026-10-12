@@ -150,10 +150,10 @@ The preferred rollback is a new patch release with the change reverted. The one-
 │   └── data/              releases.json (snapshot), families.json, features.json
 ├── deploy/                the Worker (worker.js, releases.js, families.js,
 │   └── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs
-├── scripts/               build, checks, preview and screenshots (standard library only)
+├── scripts/               build, checks, preview, screenshots and the source probe (standard library only)
 ├── results/               one JSON file per publicly released, tested build
 ├── tests/                 Python and Node tests, fixtures
-├── docs/                  sigils.md, architecture.md, adr/
+├── docs/                  sigils.md, architecture.md, source-probe.md, adr/
 └── .github/               workflows, issue and pull request templates, CODEOWNERS
 ```
 
