@@ -327,7 +327,7 @@ def test_keyboard_scrub_changes_the_grid_and_announces_then_back_to_now_restores
     assert page.get_attribute(f"{IOS} .sigil", "data-build") == "24A446"
     assert page.is_hidden("#orbit-back")
     assert page.is_visible(f"{IOS} [data-f=pre]")
-    assert text(page, f"{IOS} [data-f=pre]").startswith("Testing: 27.2 beta 3")
+    assert text(page, f"{IOS} [data-f=pre]").startswith("Next: 27.2 beta 3")
 
     page.focus(HAND)
     page.keyboard.press("PageDown")
@@ -349,7 +349,7 @@ def test_keyboard_scrub_changes_the_grid_and_announces_then_back_to_now_restores
     page.click("#orbit-back")
     assert text(page, f"{IOS} [data-f=ver]") == "iOS 27.0.1"
     assert page.is_visible(f"{IOS} [data-f=pre]")
-    assert text(page, f"{IOS} [data-f=pre]").startswith("Testing: 27.2 beta 3")
+    assert text(page, f"{IOS} [data-f=pre]").startswith("Next: 27.2 beta 3")
     assert page.get_attribute(f"{IOS} .sigil", "data-build") == "24A446"
     assert page.is_hidden("#orbit-back")
     assert page.is_hidden("#latest-asof")

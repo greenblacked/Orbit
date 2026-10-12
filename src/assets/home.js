@@ -43,7 +43,7 @@
   function paintPre(card, pre) {
     var line = card.querySelector('[data-f="pre"]');
     var old = line.firstChild;
-    var text = pre ? "Testing: " + RO.short(pre) : "";
+    var text = pre ? "Next: " + RO.short(pre) : "";
     line.hidden = !pre;
     if (pre && old && old.getAttribute("href") === pre.url && old.firstChild.data === text) return;
     line.textContent = "";
@@ -143,7 +143,7 @@
     // The mock screens' fields are below.js's to paint.
     text(sec, "latest", r
       ? "Newest: " + r.title + ", " + RO.day(r.t) +
-        (lead.pre ? ". Testing: " + RO.short(lead.pre) + ", " + RO.day(lead.pre.t) : "")
+        (lead.pre ? ". Next: " + RO.short(lead.pre) + ", " + RO.day(lead.pre.t) : "")
       : "No " + family + " release in the data" + (asOf === null ? " yet." : " by then."));
   }
 

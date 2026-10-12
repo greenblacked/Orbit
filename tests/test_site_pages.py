@@ -209,9 +209,9 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     assert "7.25" in listed and "RC 1" in listed and "7.25rc1" in listed
     assert page.locator("#newest .fam-routeros .n-ver").text_content() == "7.24.5"
     assert "RouterOS 7.24.5" in section.locator("[data-f=latest]").inner_text()
-    assert "Testing: 7.25 rc 1" in section.locator("[data-f=latest]").inner_text()
+    assert "Next: 7.25 rc 1" in section.locator("[data-f=latest]").inner_text()
     pre = card.locator("[data-f=pre] a")
-    assert pre.inner_text().startswith("Testing: 7.25 rc 1")
+    assert pre.inner_text().startswith("Next: 7.25 rc 1")
     assert pre.get_attribute("href") == "https://mikrotik.com/download?v=7.25rc1"
     assert pre.get_attribute("target") == "_blank"
     assert pre.get_attribute("rel") == "noopener noreferrer"
@@ -431,7 +431,7 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         assert "iOS 27.2 beta 4" in page.inner_text("#toast")
         ios = "#latest-grid [data-family=iOS]"
         assert page.inner_text(f"{ios} [data-f=stage]") == "Release"
-        assert page.inner_text(f"{ios} [data-f=pre] a").startswith("Testing: 27.2 beta 4")
+        assert page.inner_text(f"{ios} [data-f=pre] a").startswith("Next: 27.2 beta 4")
         page.click("#toast button")
         assert "on" not in page.get_attribute("#toast", "class").split()
         # The same data again is not news.
@@ -1020,11 +1020,11 @@ def test_cards_headline_the_stable_release_with_a_line_for_a_newer_pre_release(p
 
     assert card("iOS").locator("[data-f=ver]").inner_text() == "iOS 27.0.1"
     assert card("iOS").locator("[data-f=stage]").inner_text() == "Release"
-    assert card("iOS").locator("[data-f=pre] a").inner_text().startswith("Testing: 27.2 beta 3")
+    assert card("iOS").locator("[data-f=pre] a").inner_text().startswith("Next: 27.2 beta 3")
     assert card("RouterOS").locator("[data-f=ver]").inner_text() == "RouterOS 7.24.5"
     assert card("SteamOS").locator("[data-f=ver]").inner_text() == "SteamOS 3.8.28"
-    assert card("SteamOS").locator("[data-f=pre] a").inner_text().startswith("Testing: 3.9.2 beta")
-    assert card("tvOS").locator("[data-f=pre] a").inner_text().startswith("Testing: 27.2 beta 3")
+    assert card("SteamOS").locator("[data-f=pre] a").inner_text().startswith("Next: 3.9.2 beta")
+    assert card("tvOS").locator("[data-f=pre] a").inner_text().startswith("Next: 27.2 beta 3")
     # No newer pre-release: no second line, and the space is not reserved.
     for name in ("Windows", "Android"):
         assert card(name).locator("[data-f=pre]").is_hidden()
