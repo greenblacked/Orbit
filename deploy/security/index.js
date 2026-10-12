@@ -42,6 +42,7 @@ export function isSecuritySource(source) {
       typeof source.match === 'function' &&
       (source.kind === 'bulletins'
         ? typeof source.parseBulletin === 'function' &&
+          typeof source.bulletinUrl === 'function' &&
           typeof source.neededPages === 'function' &&
           typeof source.family === 'string'
         : typeof source.parseNote === 'function'),

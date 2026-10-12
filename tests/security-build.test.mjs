@@ -81,6 +81,7 @@ describe('the registry', () => {
     assert.equal(isSecuritySource({ ...android, parseBulletin: undefined }), false);
     assert.equal(isSecuritySource({ ...android, neededPages: undefined }), false);
     assert.equal(isSecuritySource({ ...android, family: undefined }), false);
+    assert.equal(isSecuritySource({ ...android, bulletinUrl: undefined }), false);
   });
 
   it('names the pages each source needs', () => {
@@ -211,6 +212,23 @@ describe('Android pages that were not read', () => {
     assert.equal(payload.releases.droid.patchLevel, '2026-10-05');
     assert.equal(AOSP_URL in payload.notes, false);
     assert.ok(failures.some((line) => line.includes('no usable note')));
+  });
+
+  it('reports a needed month that was refused and has no previous note', () => {
+    const june = bulletinUrl('2026-06-01');
+    const { payload, failures } = build([
+      appleSource(),
+      androidSource({
+        pages: new Map([
+          [AOSP_URL, AOSP],
+          [SEP_URL, SEP],
+          [june, '<html><h1>Not a bulletin</h1></html>'],
+        ]),
+      }),
+    ]);
+    assert.deepEqual(problems(payload, releases), []);
+    assert.equal(june in payload.notes, false);
+    assert.ok(failures.some((line) => line.includes(june) && line.includes('no usable note')));
   });
 
   it('keeps a listed row whose release lost its patch level, and reports it', () => {

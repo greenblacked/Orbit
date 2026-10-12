@@ -128,6 +128,17 @@ function applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases
       outReleases[id] = value;
     }
   }
+
+  // A needed month (one Compare reads, which no release points at) that ends with no note was
+  // either not fetched or refused; say so, whatever the cause, so it is never silent.
+  for (const url of wanted) {
+    if (url in outNotes || failures.some((line) => line.includes(url))) continue;
+    failures.push(
+      pages?.has(url)
+        ? `${adapter.id}: no usable note for ${url}`
+        : `${adapter.id}: ${url} was not read and has no previous note`,
+    );
+  }
 }
 
 /**

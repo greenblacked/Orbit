@@ -112,7 +112,7 @@ bash scripts/preview.sh --channel chrome         # or --executable PATH, or PLAY
 
 To refresh the bundled snapshot, run `node deploy/snapshot_releases.mjs` and commit the result.
 
-To refresh the security notes, run `node deploy/snapshot_releases.mjs` first and then `node deploy/snapshot_security.mjs`, and commit the result. The second reads each vendor's security index and the note page of every released build in `releases.json` that matches a row (one request a second, each page once), and writes only CVE ids, titles, dates and URLs to `src/data/security.json`. A vendor whose index cannot be read keeps its old data, is marked `failed` and makes the script exit non-zero. Apple and Android are driven so far (Android reads the AOSP build-numbers page for patch levels and one bulletin per month, up to 200 requests); the adapters are in `deploy/security/`.
+To refresh the security notes, run `node deploy/snapshot_releases.mjs` first and then `node deploy/snapshot_security.mjs`, and commit the result. The second reads each vendor's security index and the note page of every released build in `releases.json` that matches a row (one request a second, each page once), and writes only CVE ids, titles, dates and URLs to `src/data/security.json`. A vendor whose index cannot be read keeps its old data, is marked `failed` and makes the script exit non-zero. Apple and Android are driven so far (Android reads the AOSP build-numbers page for patch levels and one bulletin per month; the build-numbers page and up to 200 bulletins); the adapters are in `deploy/security/`.
 
 ## Engineering standards
 
