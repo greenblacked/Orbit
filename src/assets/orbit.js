@@ -158,7 +158,7 @@
       [].forEach.call(dial.querySelectorAll(".ring.breath"), function (n) {
         if (n.getAttribute("data-family") !== fam.id) return;
         ring.setAttribute("class", n.getAttribute("class"));
-        ring.setAttribute("style", n.getAttribute("style") || "");
+        ring.style.setProperty("--breath", n.style.getPropertyValue("--breath"));
       });
       counts[fam.id] = 0;
       // Releases stamped at one moment fan out FAN units apart, each with a narrower grab area.
