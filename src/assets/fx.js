@@ -93,7 +93,15 @@ function aurora() {
   const link = navigator.connection;
   if (link && link.saveData) return;
   if (navigator.hardwareConcurrency <= 4) return;
-  const colors = window.RO ? RO.families().map((f) => f.accent) : [];
+  // Six blobs, so the first six accents: one per vendor first, then the second of each, so a
+  // vendor listed later (RouterOS, Android, Windows, SteamOS) is not crowded out by Apple's six.
+  const seen = {};
+  const colors = window.RO
+    ? RO.families()
+        .map((f) => ({ accent: f.accent, rank: (seen[f.vendor] = (seen[f.vendor] || 0) + 1) }))
+        .sort((a, b) => a.rank - b.rank)
+        .map((f) => f.accent)
+    : [];
   import("./aurora.js").then((m) => m.default(host, colors)).catch(() => {});
 }
 

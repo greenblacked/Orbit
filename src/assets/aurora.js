@@ -1,5 +1,5 @@
-/* Aurora: a small WebGL canvas behind the hero, six slow blobs of light in the six family
-   accents. It is its own module, imported by fx.js only after the page has painted and only
+/* Aurora: a small WebGL canvas behind the hero, six slow blobs of light in family
+   accents (one per vendor first). It is its own module, imported by fx.js only after the page has painted and only
    where a cheap device can carry it. It draws at a quarter of the hero's size and lets the CSS
    scale it up (the glow is blurry by nature), renders only while the hero is on screen, stops
    while the tab is hidden, and gives itself up, putting the CSS gradient fallback back, when the
@@ -25,7 +25,7 @@ const FRAGMENT = [
   "}"
 ].join("\n");
 
-const FALLBACK = ["#d7452f", "#a36f14", "#288b35", "#158591", "#7869d9", "#cc3fa1"];
+const FALLBACK = ["#d7452f", "#8a7566", "#738003", "#1a80b6", "#b26070", "#a36f14"];
 const PROBE_MS = 1000;
 const MAX_FRAME_MS = 20;
 const WARM_FRAMES = 4;
