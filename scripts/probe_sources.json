@@ -54,6 +54,24 @@
     "url": "https://upgrade.mikrotik.com/routeros/NEWEST7a.stable"
   },
   {
+    "id": "mikrotik-newesta7-stable",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://upgrade.mikrotik.com/routeros/NEWESTa7.stable"
+  },
+  {
+    "id": "mikrotik-newesta7-long-term",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://upgrade.mikrotik.com/routeros/NEWESTa7.long-term"
+  },
+  {
+    "id": "mikrotik-newesta7-testing",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://upgrade.mikrotik.com/routeros/NEWESTa7.testing"
+  },
+  {
     "id": "mikrotik-changelogs",
     "vendor": "MikroTik",
     "kind": "release",

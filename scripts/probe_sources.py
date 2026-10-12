@@ -7,8 +7,8 @@ readiness benchmark are built against these real payloads. It writes nothing, se
 credentials and prints neither request headers nor the environment.
 
 Everything printed from a response is untrusted. Each line is prefixed with ``  | ``, control
-characters are removed and ``::`` is broken up, so no excerpt can start a GitHub Actions
-workflow command. Standard library only.
+and format characters are removed, ``::`` is written ``: :`` and ``##[`` is written ``# #[``,
+so neither workflow-command form can appear in an excerpt. Standard library only.
 
 Exit status: 0 when the list is valid (individual sources may fail and are reported), 1 when
 the list file is invalid.
@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import ipaddress
 import json
 import re
 import sys
@@ -34,7 +35,9 @@ HERE = Path(__file__).resolve().parent
 DEFAULT_LIST = HERE / "probe_sources.json"
 
 USER_AGENT = "orbit-source-probe (+https://orbit.szolotov.com)"
-TIMEOUT = 20
+TIMEOUT = 20  # per socket operation
+READ_DEADLINE = 60  # seconds for the whole body
+MAX_SOURCES = 40
 MAX_REDIRECTS = 3
 MAX_BYTES = 2 * 1024 * 1024
 EXCERPT_CHARS = 4000
@@ -57,6 +60,8 @@ def validate_sources(data: object) -> list[str]:
     """Every problem with the parsed list, empty when it is usable."""
     if not isinstance(data, list) or not data:
         return ["the list must be a non-empty JSON array"]
+    if len(data) > MAX_SOURCES:
+        return [f"the list must have at most {MAX_SOURCES} entries"]
     problems: list[str] = []
     ids: set[str] = set()
     urls: set[str] = set()
@@ -89,6 +94,18 @@ def validate_sources(data: object) -> list[str]:
     return problems
 
 
+def host_refused(host: str) -> bool:
+    """True for localhost, local-only names and any IP literal: only public DNS names pass."""
+    host = host.strip("[]").rstrip(".").lower()
+    if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
+        return True
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return True
+
+
 def url_problems(url: str) -> list[str]:
     parts = urllib.parse.urlsplit(url)
     problems = []
@@ -96,6 +113,8 @@ def url_problems(url: str) -> list[str]:
         problems.append("url must be https")
     if not parts.hostname:
         problems.append("url has no host")
+    elif host_refused(parts.hostname):
+        problems.append("url host must be a public DNS name")
     if parts.username is not None or parts.password is not None or "@" in parts.netloc:
         problems.append("url must not carry credentials")
     for name, _ in urllib.parse.parse_qsl(parts.query, keep_blank_values=True):
@@ -128,7 +147,7 @@ def clean(text: str) -> str:
     show a line start where this code saw none.
     """
     text = text.replace("\r\n", "\n").replace("\r", "\n")
-    text = text.replace("\x85", "\n").replace(" ", "\n").replace(" ", "\n")
+    text = text.replace("\x85", "\n").replace("\u2028", "\n").replace("\u2029", "\n")
     text = text.replace("\t", " ")
     return "".join(
         ch for ch in text if ch == "\n" or unicodedata.category(ch) not in ("Cc", "Cf", "Cs")
@@ -136,12 +155,13 @@ def clean(text: str) -> str:
 
 
 def break_commands(text: str) -> str:
-    """``::`` becomes ``: :``, however many colons in a row."""
-    return re.sub(r":(?=:)", ": ", text)
+    """``::`` becomes ``: :`` and ``##[`` becomes ``# #[``, the two workflow-command forms."""
+    text = re.sub(r":(?=:)", ": ", text)
+    return re.sub(r"#(?=#\[)", "# ", text)
 
 
 def sanitize(text: str, *, prefix: str = PREFIX) -> str:
-    """Make untrusted text safe to print: cleaned, ``::`` broken, every line prefixed."""
+    """Make untrusted text safe to print: cleaned, ``::`` and ``##[`` broken, every line prefixed."""
     lines = break_commands(clean(text)).split("\n")
     return "\n".join(prefix + line for line in lines)
 
@@ -153,7 +173,7 @@ def one_line(text: object, limit: int = 300) -> str:
 
 
 def cut(text: str, limit: int = EXCERPT_CHARS) -> str:
-    return text if len(text) <= limit else text[:limit] + "\n[cut at %d chars]" % limit
+    return text if len(text) <= limit else text[:limit] + f"\n[cut at {limit} chars]"
 
 
 # --- excerpts ---------------------------------------------------------------------------
@@ -197,7 +217,7 @@ def xml_excerpt(text: str) -> str:
     # A document with a DTD is not parsed: entity expansion is not worth the risk for a probe.
     if re.search(r"<!(DOCTYPE|ENTITY)", text, re.IGNORECASE):
         return "[XML with a DTD or entities: not parsed]"
-    root = ET.fromstring(text)
+    root = ET.fromstring(text)  # noqa: S314 - a DTD or entity is refused above
     parts = [f"root: {local_name(root.tag)}"]
     entries = [e for e in root.iter() if local_name(e.tag) in ("item", "entry")]
     parts.append(f"item/entry elements: {len(entries)}")
@@ -245,15 +265,15 @@ def html_excerpt(text: str) -> str:
     page.feed(text)
     page.close()
     visible = re.sub(r"\s+", " ", " ".join(page.text)).strip()
-    links = list(dict.fromkeys(page.links))[:40]
+    links = [link[:300] for link in dict.fromkeys(page.links)][:40]
     parts = [
-        "title: " + re.sub(r"\s+", " ", page.title).strip(),
+        "title: " + re.sub(r"\s+", " ", page.title).strip()[:300],
         "visible text:",
         visible[:EXCERPT_CHARS],
-        f"matching links ({len(links)} of first 40 shown):",
+        f"matching links (first {len(links)}, max 40):",
         *links,
     ]
-    return "\n".join(parts)
+    return cut("\n".join(parts), EXCERPT_CHARS + 2000)
 
 
 def text_excerpt(text: str) -> str:
@@ -283,7 +303,7 @@ def excerpt(content_type: str, text: str) -> str:
             return "xml\n" + xml_excerpt(text)
         if kind == "html":
             return "html\n" + html_excerpt(text)
-    except (ValueError, ET.ParseError, RecursionError) as exc:
+    except Exception as exc:  # best effort: a parser fault must not erase the report
         return f"{kind} (parse failed: {type(exc).__name__})\n" + text_excerpt(text)
     return "text\n" + text_excerpt(text)
 
@@ -291,7 +311,7 @@ def excerpt(content_type: str, text: str) -> str:
 # --- fetching ---------------------------------------------------------------------------
 
 
-class RedirectRefused(urllib.error.URLError):
+class RedirectRefusedError(urllib.error.URLError):
     """A redirect the probe will not follow."""
 
 
@@ -303,12 +323,31 @@ class LimitedRedirects(urllib.request.HTTPRedirectHandler):
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         target = urllib.parse.urljoin(req.full_url, newurl)
-        if urllib.parse.urlsplit(target).scheme != "https":
-            raise RedirectRefused("redirect to a non-https URL refused")
+        parts = urllib.parse.urlsplit(target)
+        if parts.scheme != "https":
+            raise RedirectRefusedError("redirect to a non-https URL refused")
+        if not parts.hostname or host_refused(parts.hostname):
+            raise RedirectRefusedError("redirect to a local or IP-literal host refused")
         self.hops += 1
         if self.hops > MAX_REDIRECTS:
-            raise RedirectRefused("too many redirects")
+            raise RedirectRefusedError("too many redirects")
         return super().redirect_request(req, fp, code, msg, headers, target)
+
+
+def read_body(response, *, clock=time.monotonic) -> tuple[bytes, str]:
+    """Up to MAX_BYTES + 1 bytes in chunks, stopping at READ_DEADLINE. Returns (body, note)."""
+    deadline = clock() + READ_DEADLINE
+    chunks: list[bytes] = []
+    got = 0
+    while got <= MAX_BYTES:
+        if clock() > deadline:
+            return b"".join(chunks), "read deadline"
+        chunk = response.read(min(65536, MAX_BYTES + 1 - got))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        got += len(chunk)
+    return b"".join(chunks), ""
 
 
 def fetch(url: str) -> dict:
@@ -325,7 +364,7 @@ def fetch(url: str) -> dict:
     except urllib.error.HTTPError as exc:
         response = exc
     with response:
-        body = response.read(MAX_BYTES + 1)
+        body, note = read_body(response)
         headers = response.headers
         status = response.status if hasattr(response, "status") else response.code
         final_url = response.geturl()
@@ -337,7 +376,8 @@ def fetch(url: str) -> dict:
         "content_type": content_type,
         "charset": charset,
         "body": body[:MAX_BYTES],
-        "truncated": len(body) > MAX_BYTES,
+        "truncated": len(body) > MAX_BYTES or bool(note),
+        "note": note,
     }
 
 
@@ -361,7 +401,7 @@ def report(source: dict, result: dict | None, error: BaseException | None) -> st
         detail = ""
         if isinstance(error, urllib.error.URLError) and not isinstance(error.reason, str):
             detail = f" ({type(error.reason).__name__})"
-        elif isinstance(error, RedirectRefused):
+        elif isinstance(error, RedirectRefusedError):
             detail = f" ({one_line(error.reason, 80)})"
         lines.append(f"error: {name}{detail}")
         return "\n".join(lines)
@@ -370,7 +410,8 @@ def report(source: dict, result: dict | None, error: BaseException | None) -> st
         f"final url: {one_line(result['final_url'])}",
         f"status: {result['status']}",
         f"content-type: {one_line(result['content_type'])}",
-        f"bytes: {len(body)}" + (f" (truncated at {MAX_BYTES})" if result["truncated"] else ""),
+        f"bytes: {len(body)}" + (f" (truncated at {MAX_BYTES})" if result["truncated"] else "")
+        + (f" ({one_line(result['note'], 40)})" if result.get("note") else ""),
         f"sha256: {hashlib.sha256(body).hexdigest()}",
         "excerpt:",
         sanitize(excerpt(result["content_type"], decode(body, result["charset"]))),

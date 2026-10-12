@@ -20,6 +20,17 @@ def test_the_list_file_is_valid_and_small():
     assert 0 < len(SOURCES) < 40
 
 
+def test_a_list_over_the_cap_is_rejected():
+    entries = [
+        {"id": f"s{i}", "vendor": "V", "kind": "release",
+         "url": f"https://a{i}.example/"}
+        for i in range(probe.MAX_SOURCES + 1)
+    ]  # fmt: skip
+    assert probe.validate_sources(entries) == [
+        f"the list must have at most {probe.MAX_SOURCES} entries"
+    ]
+
+
 def test_every_url_is_https_unique_and_free_of_credentials():
     urls = [s["url"] for s in SOURCES]
     assert len(urls) == len(set(urls))
@@ -51,6 +62,10 @@ def test_the_list_covers_every_vendor_and_kind():
         {"id": "a", "vendor": "V", "kind": "release", "url": "https://a.example/?api_key=x"},
         {"id": "a", "vendor": "", "kind": "release", "url": "https://a.example/"},
         {"id": "a", "vendor": "V", "kind": "release"},
+        {"id": "a", "vendor": "V", "kind": "release", "url": "https://127.0.0.1/"},
+        {"id": "a", "vendor": "V", "kind": "release", "url": "https://[::1]/"},
+        {"id": "a", "vendor": "V", "kind": "release", "url": "https://localhost/"},
+        {"id": "a", "vendor": "V", "kind": "release", "url": "https://x.internal/"},
     ],
 )
 def test_an_invalid_entry_is_rejected(entry):
@@ -76,16 +91,19 @@ def test_an_invalid_list_file_exits_one_and_a_valid_one_zero(tmp_path, capsys, m
 
 
 def test_the_sanitiser_neutralises_workflow_commands():
-    out = probe.sanitize("::error::boom\n::set-output name=x::y\n::::add-mask::z")
+    out = probe.sanitize(
+        "::error::boom\n::set-output name=x::y\n::::add-mask::z\n##[error]x\n###[add-mask]y"
+    )
     for line in out.split("\n"):
         assert line.startswith(probe.PREFIX)
         assert "::" not in line
+        assert "##[" not in line
     assert ": :error: :boom" in out
 
 
 def test_the_sanitiser_strips_control_characters_and_line_separators():
-    out = probe.sanitize("a\x1b[31mb\x00c\x07d ::error::e\x85::f​e\r::g")
-    assert not re.search(r"[\x00-\x09\x0b-\x1f\x7f-\x9f  ​]", out)
+    out = probe.sanitize("a\x1b[31mb\x00c\x07d\u2028::error::e\x85::f\u200be\r::g")
+    assert not re.search(r"[\x00-\x09\x0b-\x1f\x7f-\x9f\u2028\u2029\u200b]", out)
     for line in out.split("\n"):
         assert line.startswith(probe.PREFIX)
         assert "::" not in line
@@ -94,13 +112,34 @@ def test_the_sanitiser_strips_control_characters_and_line_separators():
 def test_a_single_line_value_has_no_newline_and_no_command():
     value = probe.one_line("text/html\n::error::x")
     assert "\n" not in value and "::" not in value
+    assert "##[" not in probe.one_line("##[error]f")
 
 
 def test_a_redirect_to_http_is_refused():
     handler = probe.LimitedRedirects()
     request = urllib.request.Request("https://a.example/")
-    with pytest.raises(probe.RedirectRefused):
+    with pytest.raises(probe.RedirectRefusedError):
         handler.redirect_request(request, None, 302, "Found", {}, "http://b.example/")
+
+
+@pytest.mark.parametrize(
+    "target", ["https://127.0.0.1/", "https://localhost/", "https://[::1]/", "https://10.0.0.1/"]
+)
+def test_a_redirect_to_a_local_or_ip_literal_host_is_refused(target):
+    handler = probe.LimitedRedirects()
+    request = urllib.request.Request("https://a.example/")
+    with pytest.raises(probe.RedirectRefusedError):
+        handler.redirect_request(request, None, 302, "Found", {}, target)
+
+
+def test_a_slow_body_stops_at_the_deadline():
+    class Slow:
+        def read(self, n):
+            return b"x"
+
+    ticks = iter([0.0, 1.0, 2.0, probe.READ_DEADLINE + 5])
+    body, note = probe.read_body(Slow(), clock=lambda: next(ticks))
+    assert body == b"xx" and note == "read deadline"
 
 
 def test_a_redirect_to_https_is_followed_up_to_three_times():
@@ -108,7 +147,7 @@ def test_a_redirect_to_https_is_followed_up_to_three_times():
     request = urllib.request.Request("https://a.example/")
     for _ in range(3):
         assert handler.redirect_request(request, None, 302, "Found", {}, "/next")
-    with pytest.raises(probe.RedirectRefused):
+    with pytest.raises(probe.RedirectRefusedError):
         handler.redirect_request(request, None, 302, "Found", {}, "/next")
 
 
@@ -154,6 +193,24 @@ def test_html_excerpt_has_title_visible_text_and_matching_links():
     assert "var x" not in out and "p{}" not in out
     assert "/docs/security/bulletin/2026" in out and "/changelog" in out
     assert "/about" not in out
+
+
+def test_html_excerpt_bounds_a_huge_title_and_href():
+    page = (
+        "<html><head><title>" + "t" * 9000 + "</title></head><body>"
+        '<a href="/security/' + "h" * 9000 + '">x</a></body></html>'
+    )
+    out = probe.html_excerpt(page)
+    assert max(len(line) for line in out.split("\n")) < 320
+
+
+def test_a_parser_fault_falls_back_to_text(monkeypatch):
+    def boom(text):
+        raise AssertionError("parser bug")
+
+    monkeypatch.setattr(probe, "html_excerpt", boom)
+    out = probe.excerpt("text/html", "<html>hi</html>")
+    assert "parse failed: AssertionError" in out
 
 
 def test_excerpt_picks_the_parser_and_falls_back_to_text():
@@ -210,8 +267,9 @@ def test_the_workflow_is_read_only_and_pinned_like_ci():
     assert re.search(r"^permissions: \{\}$", text, flags=re.MULTILINE)
     assert "contents: read" in text and "timeout-minutes: 15" in text
     assert "cancel-in-progress: true" in text
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in text
     assert "secrets." not in text and "upload-artifact" not in text
-    assert "run: python scripts/probe_sources.py" in text
+    assert "run: python -I scripts/probe_sources.py" in text
     for action in re.findall(r"uses: (actions/[a-z-]+@[0-9a-f]{40}  # v[0-9.]+)", text):
         assert action in ci, action
     assert len(re.findall(r"^\s*- uses:", text, flags=re.MULTILINE)) == 2
