@@ -861,10 +861,19 @@ def wait_for_data(page, path):
     }.get(path)
     if selector:
         page.wait_for_selector(selector)
-    # below.js paints the mock screens and cadence.js its row after the page has painted; wait
-    # for those and for the network, so a read does not depend on how fast they arrived.
+    # below.js paints the mock screens, cadence.js its row and fx.js its effects after the page
+    # has painted (home.js, from an idle callback that may wait 1500 ms). Network idle alone can
+    # come before those scripts are even requested, so wait for what they leave behind: the
+    # Cadence global and its row (cadence.js loads under reduced motion too, fx.js does not),
+    # then one more idle callback for the module, then the network.
     if path == "/":
         mocks_ready(page)
+        page.wait_for_function(
+            "() => { const row = document.getElementById('cadence');"
+            " return !row || (!!window.Cadence && row.children.length > 0); }",
+            timeout=10000,
+        )
+        page.evaluate("() => new Promise(r => requestIdleCallback(() => r(), { timeout: 2000 }))")
     page.wait_for_load_state("networkidle")
 
 
