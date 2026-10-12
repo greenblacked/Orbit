@@ -161,7 +161,7 @@ def break_commands(text: str) -> str:
 
 
 def sanitize(text: str, *, prefix: str = PREFIX) -> str:
-    """Make untrusted text safe to print: cleaned, ``::`` and ``##[`` broken, every line prefixed."""
+    """Make untrusted text safe to print: cleaned, `::` and `##[` broken, lines prefixed."""
     lines = break_commands(clean(text)).split("\n")
     return "\n".join(prefix + line for line in lines)
 
