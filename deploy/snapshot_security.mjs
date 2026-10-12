@@ -8,16 +8,18 @@
 // description text. Run snapshot_releases.mjs first so the releases are current. Each vendor is
 // read on its own: one whose index cannot be read keeps what the file already has for it and is
 // marked `failed`, the others still update, and the script then exits non-zero. Pages are asked
-// for one per second, each URL once per run, at most MAX_PAGES a vendor. No dependencies: node 22.
+// for one per second, each URL once per run, at most MAX_PAGES a vendor (Android reads its own
+// months, at most 200, from the patch levels of the AOSP build-numbers page). No dependencies:
+// node 22.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { buildPayload, MAX_PAGES, neededPages } from './security/build.js';
+import { buildPayload, MAX_PAGES, neededPages, pagesFor } from './security/build.js';
 import { SECURITY_SOURCES } from './security/index.js';
 
-export { buildPayload, neededPages };
+export { buildPayload, neededPages, pagesFor };
 
 const USER_AGENT = 'orbit (+https://orbit.szolotov.com)';
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -57,6 +59,16 @@ async function fetchPage(url) {
   return new TextDecoder('utf-8').decode(Buffer.concat(chunks));
 }
 
+/** True when `url` is https on one of `hosts`: a page is never read from anywhere else. */
+function onHosts(url, hosts) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && hosts.includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function readJson(path, required) {
   let text;
   try {
@@ -91,8 +103,9 @@ async function main() {
     const pages = new Map();
     try {
       rows = adapter.parseIndex(await fetchPage(adapter.index));
-      for (const url of neededPages(adapter, releases, rows, MAX_PAGES)) {
+      for (const url of pagesFor(adapter, releases, rows, MAX_PAGES)) {
         try {
+          if (!onHosts(url, adapter.hosts)) throw new Error(`${url} is not on ${adapter.hosts.join(', ')}`);
           if (!cache.has(url)) cache.set(url, await fetchPage(url));
           pages.set(url, cache.get(url));
         } catch (error) {

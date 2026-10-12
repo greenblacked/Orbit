@@ -50,7 +50,7 @@ flowchart LR
 
 `/api/releases.json` (optionally `?vendor=apple`) answers one document, and `/api/health` reports each source.
 
-`/api/security.json` answers the bundled security notes from `src/data/security.json` (schema 1; Apple is the first adapter, refreshed by `node deploy/snapshot_security.mjs`; the file stays empty until the first refresh, after the owner has checked Apple's terms of use). The document holds `schema`, `generatedAt`, `sources`, `notes` (keyed by an `https` note URL, each with a `source` and its sorted `cves`) and `releases` (keyed by a release id from `releases.json`, each with a `status`, sorted `notes` and `cves`, and a `count`). A `status` is one of `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` or `not-connected`; only a `release` is ever `listed` or `no-cve-entries`, and every other release is `not-applicable`. `tests/security.test.mjs` is the executable contract; the reasoning is in [ADR 0008](docs/adr/0008-security-notes-are-a-separate-payload.md).
+`/api/security.json` answers the bundled security notes from `src/data/security.json` (schema 1; Apple and Android are the adapters, refreshed by `node deploy/snapshot_security.mjs`; the file stays empty until the first refresh, after the owner has checked the vendors' terms of use). The document holds `schema`, `generatedAt`, `sources`, `notes` (keyed by an `https` note URL, each with a `source` and its sorted `cves`) and `releases` (keyed by a release id from `releases.json`, each with a `status`, sorted `notes` and `cves`, and a `count`). A `status` is one of `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` or `not-connected`; only a `release` is ever `listed` or `no-cve-entries`, and every other release is `not-applicable`. `tests/security.test.mjs` is the executable contract; the reasoning is in [ADR 0008](docs/adr/0008-security-notes-are-a-separate-payload.md).
 
 ```json
 {
@@ -112,7 +112,7 @@ bash scripts/preview.sh --channel chrome         # or --executable PATH, or PLAY
 
 To refresh the bundled snapshot, run `node deploy/snapshot_releases.mjs` and commit the result.
 
-To refresh the security notes, run `node deploy/snapshot_releases.mjs` first and then `node deploy/snapshot_security.mjs`, and commit the result. The second reads each vendor's security index and the note page of every released build in `releases.json` that matches a row (one request a second, each page once), and writes only CVE ids, titles, dates and URLs to `src/data/security.json`. A vendor whose index cannot be read keeps its old data, is marked `failed` and makes the script exit non-zero. Apple is the only vendor so far; the adapters are in `deploy/security/`.
+To refresh the security notes, run `node deploy/snapshot_releases.mjs` first and then `node deploy/snapshot_security.mjs`, and commit the result. The second reads each vendor's security index and the note page of every released build in `releases.json` that matches a row (one request a second, each page once), and writes only CVE ids, titles, dates and URLs to `src/data/security.json`. A vendor whose index cannot be read keeps its old data, is marked `failed` and makes the script exit non-zero. Apple and Android are driven so far (Android reads the AOSP build-numbers page for patch levels and one bulletin per month, up to 200 requests); the adapters are in `deploy/security/`.
 
 ## Engineering standards
 

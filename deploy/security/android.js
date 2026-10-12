@@ -20,7 +20,7 @@
 // source and is never joined to an Android release: its patch level is a device level, and
 // the ADR defines no rule for it.
 
-import { buildTable, tables } from '../sources/android.js';
+import { buildTable, PAGE_URL, tables } from '../sources/android.js';
 
 export const SOURCE_ID = 'android-security-bulletin';
 export const PIXEL_SOURCE_ID = 'android-pixel-bulletin';
@@ -378,10 +378,21 @@ export function match(releases, patchLevels, bulletins, checkedAt) {
   return { notes, releases: rows };
 }
 
+// The registry shape (index.js). `kind: 'bulletins'` tells the payload builder that this source
+// is read differently from an index-and-notes source such as Apple: its `index` is the
+// build-numbers page, which parseIndex turns into the Map of patch levels, and the pages to read
+// are the bulletins neededPages names; match takes the levels and the parsed bulletins.
 export default {
   id: SOURCE_ID,
+  kind: 'bulletins',
   vendor: 'google',
+  family: FAMILY,
   host: HOST,
+  hosts: [HOST],
+  index: PAGE_URL,
+  maxPages: MAX_BULLETINS,
+  parseIndex: patchLevelsByTag,
+  neededPages: neededBulletins,
   parseBulletin,
   bulletinUrl,
   match,

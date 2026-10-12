@@ -6,9 +6,11 @@
 
 // Caps, set well above the recorded fixtures (one note with one CVE; fifty index rows) and to be
 // tightened from the first real refresh. A page over the CVE cap is refused (its release is
-// `unavailable`); a payload over the notes or byte cap is not written at all.
+// `unavailable`); a payload over the notes or byte cap is not written at all. The note cap holds
+// Apple's pages (at most MAX_PAGES) and an Android bulletin for every month back to the oldest
+// patch level (at most 200), because Compare needs the months between two builds.
 export const MAX_PAGES = 40;
-export const MAX_NOTES = 150;
+export const MAX_NOTES = 400;
 export const MAX_CVES_PER_NOTE = 500;
 export const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 
@@ -23,6 +25,25 @@ const isObject = (value) => Boolean(value) && typeof value === 'object' && !Arra
 
 function entry(status, checkedAt, notes = [], cves = [], count = null) {
   return { status, notes, cves, count, patchLevel: null, checkedAt };
+}
+
+/** The releases a source describes: its vendor's, and only its family when it names one. */
+const releasesOf = (adapter, releases) =>
+  releases.filter(
+    (release) => release.vendor === adapter.vendor && (!adapter.family || release.family === adapter.family),
+  );
+
+const keepsEntry = (value) => value?.status === 'listed' || value?.status === 'no-cve-entries';
+
+/**
+ * The pages a source needs this run. An index-and-notes source (Apple) needs the note of every
+ * matched row, at most `cap`; a `bulletins` source (Android) names its own months, at most its
+ * `maxPages`. `rows` is what the source's parseIndex returned.
+ */
+export function pagesFor(adapter, releases, rows, cap = MAX_PAGES) {
+  if (adapter.kind !== 'bulletins') return neededPages(adapter, releases, rows, cap);
+  const mine = releasesOf(adapter, releases);
+  return adapter.neededPages(mine, rows).slice(-(adapter.maxPages ?? cap));
 }
 
 /**
@@ -53,12 +74,69 @@ function noteOf(adapter, html, release) {
   };
 }
 
+// Fold one `bulletins` source (Android) into the payload. Fail closed like an index source: a
+// bulletin that was not read again keeps its previous note and the rows that point at it; a page
+// that was read and refused never does; a release that was listed and has lost its patch level
+// keeps its old row and is reported (markup drift looks like that).
+function applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases, failures }) {
+  const read = new Map();
+  for (const [url, html] of pages ?? []) {
+    if (typeof html === 'string') read.set(url, adapter.parseBulletin(html));
+  }
+  const found = adapter.match(mine, rows, read, now);
+  const wanted = new Set(adapter.neededPages(mine, rows));
+
+  const previous = {};
+  for (const [url, note] of Object.entries(outNotes)) {
+    if (note?.source === adapter.id) {
+      previous[url] = note;
+      delete outNotes[url];
+    }
+  }
+  Object.assign(outNotes, found.notes);
+  const reported = new Set();
+  const restore = (url) => {
+    if (previous[url] && !(url in outNotes)) outNotes[url] = previous[url];
+  };
+  for (const url of wanted) {
+    if (!pages?.has(url) && !(url in outNotes) && previous[url]) {
+      restore(url);
+      reported.add(url);
+      failures.push(`${adapter.id}: ${url} was not read again; the previous note is kept`);
+    }
+  }
+
+  for (const [id, value] of Object.entries(found.releases)) {
+    const was = outReleases[id];
+    const title = mine.find((release) => release.id === id)?.title ?? id;
+    if (value.status === 'not-found' && keepsEntry(was)) {
+      for (const url of was.notes) restore(url);
+      failures.push(`${adapter.id}: ${title} was ${was.status} and no longer has a patch level`);
+    } else if (value.status === 'unavailable') {
+      const url = adapter.bulletinUrl(value.patchLevel);
+      if (keepsEntry(was) && was.notes[0] === url && !pages?.has(url) && previous[url]) {
+        restore(url);
+        if (!reported.has(url)) {
+          reported.add(url);
+          failures.push(`${adapter.id}: ${url} was not read again; the previous note is kept`);
+        }
+      } else {
+        failures.push(`${adapter.id}: no usable note for ${title} (${url})`);
+        outReleases[id] = value;
+      }
+    } else {
+      outReleases[id] = value;
+    }
+  }
+}
+
 /**
  * The payload for `releases` (the rows of releases.json).
  *
  *   previous  the payload now on disk, or null
  *   sources   [{ adapter, rows, pages }]: `rows` is the parsed index (null or empty when it could
- *             not be read) and `pages` maps a note URL to its HTML (a missing URL failed)
+ *             not be read; for a `bulletins` source the Map of patch levels) and `pages` maps a
+ *             note URL to its HTML (a missing URL failed)
  *   now       the ISO timestamp to write as generatedAt and checkedAt
  *   maxBytes  the size the written file may not pass
  *
@@ -79,9 +157,14 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
     }
   }
 
+  // Notes of a `bulletins` source are kept whether or not a release points at them (Compare).
+  const keepAll = new Set();
+
   for (const { adapter, rows, pages } of sources) {
-    const mine = releases.filter((release) => release.vendor === adapter.vendor);
-    const failed = !Array.isArray(rows) || rows.length === 0;
+    const mine = releasesOf(adapter, releases);
+    const bulletins = adapter.kind === 'bulletins';
+    if (bulletins) keepAll.add(adapter.id);
+    const failed = bulletins ? !(rows instanceof Map) || rows.size === 0 : !Array.isArray(rows) || rows.length === 0;
     if (failed) failures.push(`${adapter.id}: the index could not be read`);
     const old = outSources[adapter.id];
     outSources[adapter.id] = failed
@@ -94,6 +177,11 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
         if (release.stage !== 'release') outReleases[release.id] = entry('not-applicable', now);
         else if (!outReleases[release.id]) outReleases[release.id] = entry('unavailable', now);
       }
+      continue;
+    }
+
+    if (bulletins) {
+      applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases, failures });
       continue;
     }
 
@@ -147,7 +235,7 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
   // A note that no release refers to any more is dropped.
   const used = new Set(Object.values(outReleases).flatMap((value) => value.notes ?? []));
   for (const url of Object.keys(outNotes)) {
-    if (!used.has(url)) delete outNotes[url];
+    if (!used.has(url) && !keepAll.has(outNotes[url]?.source)) delete outNotes[url];
   }
 
   if (Object.keys(outNotes).length > MAX_NOTES) {
