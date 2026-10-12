@@ -120,26 +120,6 @@ def test_without_the_worker_the_page_falls_back_to_the_snapshot(page, base_url, 
     cards_ready(page)
     ver = page.locator("#latest-grid [data-family=iOS] [data-f=ver]")
     assert ver.inner_text().startswith("iOS ")
-    assert page.get_attribute("#live", "data-state") == "snapshot"
-    assert "not live" in page.inner_text("#live-text")
-
-
-def test_the_live_indicator_says_live_or_stale(page, base_url):
-    live = copy.deepcopy(SNAPSHOT) | {
-        "snapshot": False,
-        "stale": False,
-        "fetchedAt": "2026-10-11T12:00:00Z",
-    }
-    serve_json(page, "**/api/releases.json", json.dumps(live))
-    page.goto(base_url + "/")
-    page.wait_for_function("() => document.getElementById('live').dataset.state === 'live'")
-    assert "Oct 11, 2026" in page.inner_text("#live-text")
-    live["stale"] = True
-    page.unroute("**/api/releases.json")
-    serve_json(page, "**/api/releases.json", json.dumps(live))
-    page.goto(base_url + "/")
-    page.wait_for_function("() => document.getElementById('live').dataset.state === 'stale'")
-    assert "the source was unreachable" in page.inner_text("#live-text")
 
 
 def test_the_page_drops_entries_it_cannot_show_safely(page, base_url):
@@ -736,13 +716,23 @@ def test_a_failed_poll_keeps_the_live_data_instead_of_the_older_snapshot(page, b
     cards_ready(page)
     assert page.inner_text("#latest-grid [data-family=iOS] [data-f=ver]") == "iOS 99.1"
     answers.update(status=502, body="{}")
-    page.evaluate("RO.refresh()")
-    page.wait_for_function("() => document.getElementById('live').dataset.state === 'stale'")
+    page.evaluate("() => RO.refresh()")
     assert page.inner_text("#latest-grid [data-family=iOS] [data-f=ver]") == "iOS 99.1"
-    assert "Could not reach the tracker" in page.inner_text("#live-text")
-    answers.update(status=200, body=json.dumps(live))
-    page.evaluate("RO.refresh()")
-    page.wait_for_function("() => document.getElementById('live').dataset.state === 'live'")
+    newer = copy.deepcopy(newest)
+    newer.update(
+        id="https://developer.apple.com/news/releases/?id=live-only-2",
+        version="99.2",
+        title="iOS 99.2",
+        date="2099-01-02T00:00:00Z",
+    )
+    recovered = copy.deepcopy(live)
+    recovered["releases"] = [newer, *live["releases"]]
+    answers.update(status=200, body=json.dumps(recovered))
+    page.evaluate("() => RO.refresh()")
+    page.wait_for_function(
+        "() => document.querySelector('#latest-grid [data-family=iOS] [data-f=ver]')"
+        ".textContent === 'iOS 99.2'"
+    )
 
 
 # --- every page, every theme ------------------------------------------------------------

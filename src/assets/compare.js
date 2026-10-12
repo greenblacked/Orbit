@@ -54,6 +54,11 @@
     var i = list.map(function (r) { return r.id; }).indexOf(selFrom.value);
     var j = list.map(function (r) { return r.id; }).indexOf(selTo.value);
     if (i < 0 || j < 0) { out.appendChild(RO.h("p", "small", "No releases for this platform in the data.")); return; }
+    if (list.length === 1) {
+      out.appendChild(RO.h("p", "notice", "Only one " + list[0].family + " release in the data so far."));
+      out.appendChild(card("Release", list[0]));
+      return;
+    }
     if (i === j) {
       out.appendChild(RO.h("p", "notice", "Pick two different releases to compare."));
       out.appendChild(card("Release", list[i]));
