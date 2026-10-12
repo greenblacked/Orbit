@@ -7,7 +7,6 @@ import { describe, it } from 'node:test';
 
 import { FAMILIES } from '../deploy/families.js';
 import apple from '../deploy/sources/apple.js';
-import steamos from '../deploy/sources/steamos.js';
 import { isSource, SOURCES, vendorsOf } from '../deploy/sources/index.js';
 import { createWorker } from '../deploy/worker.js';
 import {
@@ -84,8 +83,7 @@ describe('the registry', () => {
     assert.ok(SOURCES.every(isSource));
     assert.equal(new Set(SOURCES.map((s) => s.id)).size, SOURCES.length);
     assert.ok(SOURCES.includes(apple));
-    assert.ok(SOURCES.includes(steamos));
-    assert.deepEqual(vendorsOf(SOURCES), ['apple', 'valve']);
+    assert.deepEqual(vendorsOf(SOURCES), ['apple']);
   });
 
   it('only lists https URLs, and the families of its own vendor', () => {
