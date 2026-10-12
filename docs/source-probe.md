@@ -8,7 +8,7 @@ the job log.
 ## What it does
 
 `scripts/probe_sources.py` reads `scripts/probe_sources.json`, a list of
-`{id, vendor, kind, url}` plus the optional `raw_tables` and `accept` below (`kind` is `release`, `security` or `enrichment`), and makes one GET
+`{id, vendor, kind, url}` plus the optional `raw_tables`, `raw_slice`, `accept`, `max_bytes` and `match_titles` below (`kind` is `release`, `security` or `enrichment`), and makes one GET
 per source: 20 second timeout, at most 3 redirects and only to https, at most 2 MB read (`max_bytes` below raises it), at
 least one second between two requests to the same host. A body that is still arriving after 60
 seconds is cut and marked. A list entry or a redirect to localhost, a `.local` or `.internal`
@@ -31,6 +31,12 @@ Two optional fields change what is fetched and printed for one source:
   HTML, so a nested table stays inside its outer one and an unclosed table runs to the end of
   the page. The adapters for the Android and Windows pages need this markup, which the visible
   text excerpt drops. The tables go through the same sanitising as the rest of the excerpt.
+- `raw_slice` (one `{"start": "<marker>", "chars": N}` object or a list of up to 3), for an HTML
+  source, prints after the excerpt N raw characters of the body starting at the first
+  occurrence of the marker (1 to 80 characters, no control characters). It is for pages whose
+  structure is not a table, such as the Apple security pages. If the marker is not in the body
+  the log says `marker not found` and the run carries on. The slices of one source add up to at
+  most 30000 characters. The text goes through the same sanitising as the tables.
 - `accept` sets the `Accept` request header. It must be one of `application/json`,
   `application/xml` or `*/*` (the default). The same URL may be listed twice when the `accept`
   values differ, as `msrc-cvrf-2026-sep` and `msrc-cvrf-2026-sep-json` do, to see both

@@ -82,6 +82,22 @@ OK_ENTRY = {"id": "a", "vendor": "V", "kind": "release", "url": "https://a.examp
         dict(OK_ENTRY, raw_tables=99),
         dict(OK_ENTRY, raw_tables=True),
         dict(OK_ENTRY, raw_tables="2"),
+        dict(OK_ENTRY, raw_slice="<table"),
+        dict(OK_ENTRY, raw_slice={}),
+        dict(OK_ENTRY, raw_slice=[]),
+        dict(OK_ENTRY, raw_slice={"start": "<table"}),
+        dict(OK_ENTRY, raw_slice={"start": "<table", "chars": 5, "x": 1}),
+        dict(OK_ENTRY, raw_slice={"start": "", "chars": 5}),
+        dict(OK_ENTRY, raw_slice={"start": "a" * 81, "chars": 5}),
+        dict(OK_ENTRY, raw_slice={"start": "a\nb", "chars": 5}),
+        dict(OK_ENTRY, raw_slice={"start": "a\x1bb", "chars": 5}),
+        dict(OK_ENTRY, raw_slice={"start": 7, "chars": 5}),
+        dict(OK_ENTRY, raw_slice={"start": "a", "chars": 0}),
+        dict(OK_ENTRY, raw_slice={"start": "a", "chars": True}),
+        dict(OK_ENTRY, raw_slice={"start": "a", "chars": "5"}),
+        dict(OK_ENTRY, raw_slice={"start": "a", "chars": 30001}),
+        dict(OK_ENTRY, raw_slice=[{"start": "a", "chars": 20000}, {"start": "b", "chars": 10001}]),
+        dict(OK_ENTRY, raw_slice=[{"start": "a", "chars": 1}] * 4),
     ],
 )
 def test_an_invalid_entry_is_rejected(entry):
@@ -476,3 +492,87 @@ def test_match_titles_reaches_the_report_and_is_sanitised():
               "body": news.encode()}  # fmt: skip
     text = probe.report(source, result, None)
     assert "title_matches" in text and "# #[error]" in text and "##[" not in text
+
+
+SLICE_PAGE = (
+    "<html><body><p>top</p><table><tr><td>row one</td></tr></table><b>tail</b></body></html>"
+)
+
+
+def test_raw_slice_is_accepted_as_one_object_or_up_to_three():
+    base = {"id": "a", "vendor": "V", "kind": "security", "url": "https://a.example/"}
+    one = {"start": "<table", "chars": probe.MAX_RAW_SLICE_CHARS}
+    assert probe.validate_sources([dict(base, raw_slice=one)]) == []
+    three = [{"start": "a", "chars": 10000}] * 3
+    assert probe.validate_sources([dict(base, raw_slice=three)]) == []
+
+
+def test_raw_slice_errors_are_plain():
+    assert probe.slice_problems({"start": "a", "chars": 30001}) == [
+        "raw_slice chars must be at most 30000"
+    ]
+    assert probe.slice_problems([]) == ["raw_slice must have 1 to 3 slices"]
+    assert probe.slice_problems("x") == ['raw_slice must be {"start": <text>, "chars": <integer>}']
+
+
+def test_raw_slices_print_raw_characters_from_the_marker():
+    out = probe.raw_slices(SLICE_PAGE, {"start": "<table", "chars": 31})
+    assert out[0].startswith("--- slice 1: '<table' ---") and "31 chars" in out[0]
+    assert out[1] == "<table><tr><td>row one</td></tr>"[:31]
+    short = probe.raw_slices(SLICE_PAGE, {"start": "<b>", "chars": 5000})
+    assert short[1] == "<b>tail</b></body></html>"
+    specs = [{"start": "<p>", "chars": 8}, {"start": "<b>", "chars": 3}]
+    two = probe.raw_slices(SLICE_PAGE, specs)
+    assert two[1] == "<p>top</p>"[:8] and two[3] == "<b>"
+
+
+def test_a_missing_marker_is_reported_not_raised():
+    out = probe.raw_slices(SLICE_PAGE, {"start": "id=\"sections\"", "chars": 100})
+    assert out[1] == "marker not found"
+    page = probe.excerpt("text/html", SLICE_PAGE, slices={"start": "nope", "chars": 9})
+    assert page.startswith("html\n") and "raw slices:" in page and "marker not found" in page
+
+
+def test_html_excerpt_gets_raw_slices_only_when_asked():
+    plain = probe.excerpt("text/html", SLICE_PAGE)
+    assert "raw slices" not in plain
+    with_slice = probe.excerpt("text/html", SLICE_PAGE, slices={"start": "<table", "chars": 20})
+    assert plain in with_slice and "<table><tr><td>row" in with_slice
+    assert "raw slices" not in probe.excerpt("application/json", '{"a": 1}', slices=[1])
+
+
+def test_a_slice_fault_keeps_the_html_excerpt(monkeypatch):
+    def boom(text, specs):
+        raise AssertionError("slice bug")
+
+    monkeypatch.setattr(probe, "raw_slices", boom)
+    out = probe.excerpt("text/html", SLICE_PAGE, slices={"start": "<p>", "chars": 5})
+    assert "top" in out and "raw slices (failed: AssertionError)" in out
+
+
+def test_commands_inside_a_raw_slice_are_neutralised_in_the_report():
+    page = "<html><body><div id=\"s\">::error::boom\n##[add-mask]x\x1b[31m</div></body></html>"
+    result = {
+        "status": 200,
+        "final_url": "https://a.example/x",
+        "content_type": "text/html",
+        "charset": "utf-8",
+        "body": page.encode(),
+        "truncated": False,
+    }
+    source = dict(SOURCES[0], raw_slice={"start": "<div", "chars": 200})
+    out = probe.report(source, result, None)
+    tail = out.split("raw slices:", 1)[1]
+    assert "<div" in tail and "boom" in tail
+    for line in tail.split("\n")[1:]:
+        assert line.startswith(probe.PREFIX)
+        assert "::" not in line and "##[" not in line and "\x1b" not in line
+
+
+def test_the_list_asks_for_raw_security_markup():
+    by_id = {s["id"]: s for s in SOURCES}
+    for ident in ("android-security-bulletin-2026-10", "android-pixel-bulletin-2026-10"):
+        assert 1 <= by_id[ident]["raw_tables"] <= probe.MAX_RAW_TABLES
+    assert by_id["android-security-bulletin-index"]["raw_slice"]["start"] == "<table"
+    for ident in ("apple-security-releases-index", "apple-security-note-ios-26-7-1"):
+        assert by_id[ident]["raw_slice"]["chars"] <= probe.MAX_RAW_SLICE_CHARS
