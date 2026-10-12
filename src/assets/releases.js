@@ -22,8 +22,9 @@
   var listeners = [];
   var toastTimer = 0;
 
+  // "26H2" splits into [26, 2], so a second half-year sorts above the first.
   function parts(v) {
-    return String(v).split(".").map(function (n) { return parseInt(n, 10) || 0; });
+    return String(v).split(/[.H]/i).map(function (n) { return parseInt(n, 10) || 0; });
   }
   function compareVersions(a, b) {
     var x = parts(a), y = parts(b);

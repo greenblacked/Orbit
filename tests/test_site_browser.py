@@ -384,3 +384,18 @@ def test_no_page_scrolls_sideways_on_a_phone(browser, built, base_url):
         assert {"/", DEEP_PATH} <= set(paths)
     finally:
         context.close()
+
+
+def test_a_half_year_version_orders_h2_above_h1_on_the_same_day(page, base_url):
+    page.goto(base_url + "/", wait_until="domcontentloaded")
+    order = page.evaluate(
+        """() => {
+          const t = Date.UTC(2026, 8, 22);
+          const rows = [
+            { id: '#26h1-1', version: '26H1', stage: 'release', beta: null, t },
+            { id: '#26h2-1', version: '26H2', stage: 'release', beta: null, t },
+          ];
+          return rows.sort(RO.newer).map((r) => r.version);
+        }"""
+    )
+    assert order == ["26H2", "26H1"]
