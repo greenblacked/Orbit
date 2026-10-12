@@ -152,7 +152,7 @@ async function fetchLive(source, env, request) {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         'user-agent': USER_AGENT,
-        accept: 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, application/json;q=0.7',
+        accept: 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, application/json;q=0.7, text/html;q=0.6',
       },
     });
     if (res.status !== 200) {
