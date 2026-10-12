@@ -195,6 +195,23 @@ def test_a_family_without_a_connected_feed_says_so_instead_of_inventing_a_releas
         assert f"No {name} release" in section.locator("[data-f=latest]").inner_text()
 
 
+def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="RouterOS"]')
+    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.23.8"
+    assert card.locator("[data-f=link]").is_visible()
+    assert card.locator("[data-f=link]").get_attribute("href") == (
+        "https://mikrotik.com/download?v=7.23.8"
+    )
+    section = page.locator('section.fam[data-family="RouterOS"]')
+    recent = section.locator(".recent li")
+    assert recent.count() == len(releases("RouterOS")) == 3
+    assert "7.23.8" in recent.first.inner_text()
+    listed = section.locator(".recent").inner_text()
+    assert "7.25" in listed and "RC 1" in listed and "7.25rc1" in listed
+
+
 def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
