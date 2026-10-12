@@ -11,8 +11,7 @@
   var CONFIG = "/data/families.json";
   var POLL = 5 * 60 * 1000;
   var STAGES = ["release", "beta", "rc"];
-  // A validation verdict may come with a released build once results exist; a beta, a release
-  // candidate and anything without a verdict is untested (see docs/adr/0005).
+  // Only a released build may carry a verdict (docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
   // Used when the families config cannot be read.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
@@ -60,14 +59,14 @@
       return u.protocol === "https:" && source(vendor).hosts.indexOf(u.hostname) >= 0;
     } catch (e) { return false; }
   }
-  // The config only orders and accents: without it any family name is accepted.
+  // Without the config any family name is accepted.
   function knownFamily(r) {
     if (!config.families.length) return typeof r.family === "string" && r.family !== "";
     var f = familyOf(r.family);
     return !!f && f.vendor === r.vendor;
   }
 
-  // Keep only entries the pages can show safely; null when nothing usable is left.
+  // Keep only entries safe to show; null if none.
   function normalise(json) {
     if (!json || !Array.isArray(json.releases)) return null;
     var seen = Object.create(null);
@@ -120,7 +119,7 @@
       return data;
     });
   }
-  // The families config loads once, before the first data is read.
+  // The config loads once, before the first data.
   var ready = null;
   function loadConfig() {
     if (!ready) {
@@ -133,8 +132,7 @@
   function refresh() {
     if (state.busy) return Promise.resolve();
     state.busy = true;
-    // The bundled snapshot is only for a first load: a later failed poll keeps the data
-    // already on screen (it may be newer than the snapshot).
+    // The snapshot is for a first load only; a failed poll keeps the data on screen.
     // Asked for at once with the config; only reading it waits.
     var early = loadJson(API);
     early.catch(function () {});
@@ -215,7 +213,7 @@
   function sigilKey(r) {
     return r.build || r.family + " " + r.version + (r.stage === "release" ? "" : " " + r.stage + (r.beta || ""));
   }
-  // "27.2 beta 3" for a release's version and stage, without the OS name.
+  // "27.2 beta 3": version and stage, no OS name.
   function short(r) {
     return r.version + (r.stage === "release" ? "" : " " + stageLabel(r).toLowerCase());
   }
@@ -225,8 +223,10 @@
     return ((NUM.test(a.version) && NUM.test(b.version) ? compareVersions(a.version, b.version) : a.t - b.t) ||
       (RANK[a.stage] - RANK[b.stage]) || ((a.beta || 0) - (b.beta || 0)) || (a.t - b.t)) > 0;
   }
+  // A family with headline "release" only headlines releases.
   function latest(list, family, publicOnly) {
-    var best = null;
+    var best = null, f = familyOf(family);
+    publicOnly = publicOnly || (f && f.headline === "release");
     list.forEach(function (r) {
       if (r.family === family && (!publicOnly || r.stage === "release") && (!best || better(r, best))) best = r;
     });
