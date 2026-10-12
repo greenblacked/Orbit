@@ -79,7 +79,8 @@ def test_a_dist_without_the_generic_sigil_rule_bundles_without_it(tmp_path):
         (dist / "assets" / "sigil-generic.js").unlink()
 
     result = build_with(tmp_path, mutate).read_text()
-    assert "sigil-generic.js" not in result
+    # sigil.js names the rule in its own text, so look at what the bundle runs, not the text.
+    assert 'data-page-script="/assets/sigil-generic.js"' not in result
     tags = re.findall(r'<template data-route="([^"]+)"[^>]*data-scripts="([^"]*)"', result)
     drawing = [n.split() for _, n in tags if "/assets/sigil.js" in n.split()]
     assert drawing, "some page loads sigil.js"
