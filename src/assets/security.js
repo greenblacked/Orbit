@@ -74,9 +74,9 @@
     if (!plain(e) || STATUSES.indexOf(e.status) < 0 || !Array.isArray(e.notes) || !Array.isArray(e.cves)) return null;
     var notes = e.notes.filter(function (u) { return own(payload.notes, u) && link(u) && plain(payload.notes[u]); });
     var cves = e.cves.filter(function (c) { return typeof c === "string" && CVE.test(c); });
-    var needs = e.status === "listed" || e.status === "linked";
     if (notes.length !== e.notes.length || cves.length !== e.cves.length) return null;
-    if (needs !== (notes.length > 0)) return null;
+    // listed and linked need a note; no-cve-entries may or may not name one; the rest name none.
+    if (e.status === "listed" || e.status === "linked" ? !notes.length : e.status !== "no-cve-entries" && notes.length) return null;
     if (e.status === "listed" ? !cves.length || e.count !== cves.length : cves.length) return null;
     if (e.status === "no-cve-entries" ? e.count !== 0 : e.status !== "listed" && e.count !== null) return null;
     return {
