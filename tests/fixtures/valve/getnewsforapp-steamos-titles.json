@@ -67,10 +67,7 @@
         "tags": [
           "patchnotes",
           "betachannel",
-          "previewchannel",
-          "mod_reviewed",
-          "ModAct_1425146861_1786164813_0",
-          "mod_require_rereview"
+          "previewchannel"
         ]
       },
       {
@@ -113,10 +110,7 @@
         "tags": [
           "patchnotes",
           "betachannel",
-          "previewchannel",
-          "mod_reviewed",
-          "ModAct_1896160435_1783125496_0",
-          "mod_require_rereview"
+          "previewchannel"
         ]
       },
       {
@@ -132,12 +126,9 @@
         "date": 1782951277,
         "tags": [
           "patchnotes",
-          "mod_reviewed",
-          "ModAct_1751692459_1782953317_0",
+          "ModAct_0_0_0",
           "betachannel",
-          "previewchannel",
-          "ModAct_1607812438_1783017190_4",
-          "mod_require_rereview"
+          "previewchannel"
         ]
       },
       {
