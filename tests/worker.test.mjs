@@ -1,10 +1,11 @@
-// Tests for the releases API Worker with the shipped registry (the Apple source).
+// Tests for the releases API Worker over the Apple source (the other adapters have their own tests).
 // node --test 'tests/*.test.mjs'    (node:test and node:assert only; nothing to install)
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import worker from '../deploy/worker.js';
+import apple from '../deploy/sources/apple.js';
+import { createWorker } from '../deploy/worker.js';
 import {
   advance,
   ago,
@@ -25,6 +26,8 @@ import {
   useHarness,
 } from './support/harness.mjs';
 
+// The shipped Apple source alone: other vendors are covered by their own tests.
+const worker = createWorker([apple]);
 const call = (path, env, ctx = fakeCtx(), init = {}) =>
   worker.fetch(new Request(ORIGIN + path, init), env, ctx);
 

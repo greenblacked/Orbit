@@ -82,8 +82,8 @@
   }
   function remember() {
     var q = [];
-    if (state.family !== "all") q.push("family=" + state.family);
-    if (state.stage !== "all") q.push("stage=" + state.stage);
+    if (state.family !== "all") q.push("family=" + encodeURIComponent(state.family));
+    if (state.stage !== "all") q.push("stage=" + encodeURIComponent(state.stage));
     try {
       window.history.replaceState(null, "", window.location.pathname + (q.length ? "?" + q.join("&") : ""));
     } catch (e) { /* the filters still work without a shareable address */ }

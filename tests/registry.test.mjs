@@ -3,12 +3,18 @@
 // node --test 'tests/*.test.mjs'    (node:test and node:assert only; nothing to install)
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { FAMILIES } from '../deploy/families.js';
+import android from '../deploy/sources/android.js';
 import apple from '../deploy/sources/apple.js';
+import mikrotik, { NEWEST_URLS } from '../deploy/sources/mikrotik.js';
 import { isSource, SOURCES, vendorsOf } from '../deploy/sources/index.js';
-import { createWorker } from '../deploy/worker.js';
+import steamos from '../deploy/sources/steamos.js';
+import windows from '../deploy/sources/windows.js';
+import shipped, { createWorker, DEFAULT_ACCEPT } from '../deploy/worker.js';
 import {
   advance,
   ago,
@@ -17,6 +23,7 @@ import {
   FEED_URL,
   fakeCtx,
   fakeEnv,
+  FEED,
   feedResponse,
   ORIGIN,
   seed,
@@ -83,7 +90,11 @@ describe('the registry', () => {
     assert.ok(SOURCES.every(isSource));
     assert.equal(new Set(SOURCES.map((s) => s.id)).size, SOURCES.length);
     assert.ok(SOURCES.includes(apple));
-    assert.deepEqual(vendorsOf(SOURCES), ['apple']);
+    assert.deepEqual([...vendorsOf(SOURCES)].sort(), ['apple', 'google', 'microsoft', 'mikrotik', 'valve']);
+    assert.ok(SOURCES.includes(mikrotik));
+    assert.ok(SOURCES.includes(android));
+    assert.ok(SOURCES.includes(windows));
+    assert.ok(SOURCES.includes(steamos));
   });
 
   it('only lists https URLs, and the families of its own vendor', () => {
@@ -289,5 +300,106 @@ describe('the vendor filter', () => {
     assert.equal(await head.text(), '');
     const other = await getJson('/api/releases.json?x=1');
     assert.deepEqual(vendors(other), ['acme', 'apple']);
+  });
+});
+
+describe('the Accept header of an upstream request', () => {
+  const askedWith = (url) => state.upstream.calls.find((c) => c.url === url).init.headers.accept;
+  const page = {
+    id: 'html-page',
+    vendor: 'acme',
+    accept: 'text/html',
+    urls: ['https://feed.example/page.html'],
+    parse: () => [acmeRelease('p1', '2026-10-05T10:00:00Z', '4.0')],
+  };
+
+  it('is the feeds-and-text default unless the adapter sets its own', async () => {
+    const mixed = createWorker([acme, page]);
+    stubUpstream(() => new Response(ACME_FEED));
+    const res = await mixed.fetch(new Request(`${ORIGIN}/api/releases.json`), fakeEnv(), fakeCtx());
+    assert.equal(res.status, 200);
+    assert.equal(askedWith(ACME_URL), DEFAULT_ACCEPT);
+    assert.equal(askedWith('https://feed.example/page.html'), 'text/html');
+  });
+
+  it('keeps plain text in the default, for the MikroTik NEWEST files', () => {
+    assert.match(DEFAULT_ACCEPT, /text\/plain/);
+    assert.equal(mikrotik.accept, undefined);
+  });
+
+  it('asks for HTML on the two HTML sources and for nothing special elsewhere', () => {
+    for (const source of [android, windows]) {
+      assert.match(source.accept, /^text\/html/, source.id);
+      assert.ok(isSource(source), source.id);
+    }
+    for (const source of [apple, mikrotik, steamos]) {
+      assert.equal(source.accept, undefined, source.id);
+    }
+  });
+
+  it('refuses an adapter whose accept is not a non-empty string', () => {
+    for (const accept of ['', 7, null, ['text/html']]) {
+      assert.equal(isSource({ ...acme, accept }), false, String(accept));
+    }
+    assert.equal(isSource({ ...acme, accept: 'text/html' }), true);
+  });
+});
+
+// Every registered source with a document of the recorded fixtures, by URL.
+const recorded = (name) =>
+  readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), 'utf8');
+const DOCUMENTS = {
+  [FEED_URL]: FEED,
+  [NEWEST_URLS.stable]: recorded('mikrotik/NEWESTa7.stable'),
+  [NEWEST_URLS['long-term']]: recorded('mikrotik/NEWESTa7.long-term'),
+  [NEWEST_URLS.testing]: recorded('mikrotik/NEWESTa7.testing'),
+  [android.urls[0]]: recorded('google/build-numbers.html'),
+  [windows.urls[0]]: recorded('microsoft/windows11-release-information.html'),
+  [windows.urls[1]]: recorded('microsoft/windows10-release-information.html'),
+  [steamos.urls[0]]: recorded('valve/getnewsforapp-steamos-titles.json'),
+};
+
+// The clock of the recorded documents: the day after the probe. The windowed adapters take it
+// as a third argument, so the contract below does not depend on the real clock.
+const NOW = Date.UTC(2026, 9, 13);
+
+describe('the parse(text, url) contract', () => {
+  it('has a recorded document for every registered URL, and no other', () => {
+    assert.deepEqual(
+      Object.keys(DOCUMENTS).sort(),
+      SOURCES.flatMap((source) => source.urls).sort(),
+    );
+  });
+
+  it('reads the same with the url as without it, except where the url names the document', () => {
+    // MikroTik is the one adapter that needs the url (a NEWEST file does not say its channel).
+    for (const source of SOURCES) {
+      for (const url of source.urls) {
+        const withUrl = source.parse(DOCUMENTS[url], url, NOW);
+        assert.ok(withUrl.length > 0, `${source.id} reads its fixture at ${url}`);
+        if (source === mikrotik) continue;
+        assert.deepEqual(withUrl, source.parse(DOCUMENTS[url], undefined, NOW), source.id);
+      }
+    }
+  });
+});
+
+describe('the shipped Worker, over all registered sources', () => {
+  it('serves every vendor, fresh, and asks each source for the right Accept header', async () => {
+    stubUpstream((url) => (DOCUMENTS[url] ? new Response(DOCUMENTS[url]) : new Response('nope', { status: 503 })));
+    const res = await shipped.fetch(new Request(`${ORIGIN}/api/releases.json`), fakeEnv(null), fakeCtx());
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.stale, false);
+    assert.deepEqual(body.source.split(',').sort(), SOURCES.map((source) => source.id).sort());
+    assert.deepEqual(vendors(body), ['apple', 'google', 'microsoft', 'mikrotik', 'valve']);
+    assert.ok(body.releases.every((r) => SOURCES.some((s) => s.id === r.source && s.vendor === r.vendor)));
+    assert.deepEqual(urlsAsked().sort(), Object.keys(DOCUMENTS).sort());
+    const html = new Set([...android.urls, ...windows.urls]);
+    for (const call of state.upstream.calls) {
+      const accept = call.init.headers.accept;
+      if (html.has(call.url)) assert.match(accept, /^text\/html/, call.url);
+      else assert.equal(accept, DEFAULT_ACCEPT, call.url);
+    }
   });
 });

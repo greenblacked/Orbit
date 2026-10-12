@@ -1,15 +1,22 @@
 // The registry of source adapters. The Worker and the snapshot script iterate this list,
 // so adding a vendor is one new file in this directory and one line here.
 //
-// Each adapter is { id, vendor, urls, parse }:
+// Each adapter is { id, vendor, urls, parse } and may add `accept`:
 //   id      a stable name, written into every release as `source` and used as the cache key
 //   vendor  the maker whose releases it reads; the value of `?vendor=` on the API
 //   urls    the allowlist of https URLs the Worker may fetch for it
-//   parse   (text) => releases, with no I/O
+//   accept  optional: the `Accept` header the Worker sends for this source's URLs; without it the
+//           Worker asks for feeds, JSON and plain text (DEFAULT_ACCEPT in worker.js)
+//   parse   (text, url) => releases, with no I/O; `url` is the document's own URL, for a source
+//           whose documents differ only by where they were fetched from
 
+import android from './android.js';
 import apple from './apple.js';
+import mikrotik from './mikrotik.js';
+import steamos from './steamos.js';
+import windows from './windows.js';
 
-export const SOURCES = [apple];
+export const SOURCES = [apple, mikrotik, android, windows, steamos];
 
 /** True when `source` has the shape the Worker relies on. */
 export function isSource(source) {
@@ -22,6 +29,7 @@ export function isSource(source) {
       Array.isArray(source.urls) &&
       source.urls.length > 0 &&
       source.urls.every((url) => typeof url === 'string' && url.startsWith('https://')) &&
+      (source.accept === undefined || (typeof source.accept === 'string' && source.accept !== '')) &&
       typeof source.parse === 'function',
   );
 }

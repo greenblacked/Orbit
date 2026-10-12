@@ -1,30 +1,13 @@
-/* Front page: the live indicator and, per platform family, its latest release and section.
+/* Front page: per platform family, its latest release and section.
    The mock screens and the developer highlights are below.js, loaded once the page has painted. */
 (function () {
   "use strict";
   var RO = window.RO;
-  var live = document.getElementById("live");
-  var liveText = document.getElementById("live-text");
   var cards = document.querySelectorAll("#latest-grid [data-family]");
   var sections = document.querySelectorAll("section.fam");
   var signature = "";
   var current = [];
-
-  function setLive(kind, text) {
-    live.setAttribute("data-state", kind);
-    liveText.textContent = text;
-  }
-  function paintLive(data, failed) {
-    if (!data) {
-      setLive("error", failed ? "Could not load releases. The source is linked below." : "Loading…");
-      return;
-    }
-    var when = data.fetchedAt ? RO.stamp(data.fetchedAt) : "";
-    if (failed) setLive("stale", "Could not reach the tracker, showing data from " + when);
-    else if (data.stale) setLive("stale", "Stale: the source was unreachable, showing the last copy from " + when);
-    else if (data.snapshot) setLive("snapshot", "Saved copy from " + when + ", not live");
-    else setLive("live", "Live: fetched at " + when);
-  }
+  var dragging = false;
 
   // The sigil of a build and a line that reads two of its parameters.
   function paintSigil(card, r) {
@@ -35,7 +18,7 @@
     // A deferred paint for an earlier build must not land.
     card.setAttribute("data-sigil-want", build);
     row.hidden = !build;
-    window.Sigil.draw(host, build, { size: 72 });
+    window.Sigil.draw(host, build, { size: 72, birth: !dragging });
     var text = "";
     if (build) {
       var p = window.Sigil.parse(build);
@@ -77,6 +60,34 @@
     card.querySelector('[data-f="badge"]').hidden = false;
   }
 
+  // A short list under the intro, shown on a phone only (CSS), so the newest release of each
+  // platform is on the first screen rather than below the dial.
+  function paintNewest(list) {
+    var ul = document.getElementById("newest");
+    if (!ul) return;
+    ul.textContent = "";
+    for (var i = 0; i < cards.length; i++) {
+      var family = cards[i].getAttribute("data-family");
+      var r = RO.latest(list, family, false);
+      if (!r) continue;
+      var li = RO.h("li", "fam-" + String(family).toLowerCase());
+      var a = RO.h("a", "", null, { href: "#" + String(family).toLowerCase() });
+      a.appendChild(RO.h("span", "n-fam", r.family));
+      a.appendChild(RO.h("span", "n-ver", RO.short(r)));
+      li.appendChild(a);
+      ul.appendChild(li);
+    }
+  }
+  // Neither the live data nor the saved copy loaded: say so on every card and section rather
+  // than leaving them on "Loading…".
+  function paintFailed() {
+    for (var i = 0; i < cards.length; i++) {
+      paintCard(cards[i], null);
+      cards[i].querySelector('[data-f="ver"]').textContent = "Unavailable";
+    }
+    for (var j = 0; j < sections.length; j++) text(sections[j], "latest", "Could not load the releases.");
+    paintNewest([]);
+  }
   function text(root, name, value) {
     var els = root.querySelectorAll('[data-f="' + name + '"]');
     for (var i = 0; i < els.length; i++) els[i].textContent = value;
@@ -135,16 +146,20 @@
     }
     current = list;
     for (var j = 0; j < sections.length; j++) paintSection(sections[j], list);
+    paintNewest(list);
     if (window.Below) window.Below.paint(list);
   }
   document.addEventListener("ro:asof", function (e) {
     asOf = e.detail && typeof e.detail.t === "number" ? e.detail.t : null;
+    dragging = !!(e.detail && e.detail.dragging);
     render();
   });
 
   RO.on(function (data, fresh, failed) {
-    paintLive(data, failed);
-    if (!data) return;
+    if (!data) {
+      if (failed) paintFailed();
+      return;
+    }
     all = data.releases;
     render();
   });

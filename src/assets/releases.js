@@ -14,7 +14,7 @@
   // A validation verdict may come with a released build once results exist; a beta, a release
   // candidate and anything without a verdict is untested (see docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
-  // Used when the families config cannot be read: Apple is the only vendor so far.
+  // Used when the families config cannot be read: Apple is the only vendor with a feed so far.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
 
   var config = { families: [], vendors: [] };
@@ -22,8 +22,9 @@
   var listeners = [];
   var toastTimer = 0;
 
+  // "26H2" splits into [26, 2], so a second half-year sorts above the first.
   function parts(v) {
-    return String(v).split(".").map(function (n) { return parseInt(n, 10) || 0; });
+    return String(v).split(/[.H]/i).map(function (n) { return parseInt(n, 10) || 0; });
   }
   function compareVersions(a, b) {
     var x = parts(a), y = parts(b);
@@ -70,7 +71,7 @@
   // Keep only entries the pages can show safely; null when nothing usable is left.
   function normalise(json) {
     if (!json || !Array.isArray(json.releases)) return null;
-    var seen = {};
+    var seen = Object.create(null);
     var list = [];
     json.releases.forEach(function (r) {
       if (!r || typeof r.id !== "string" || seen[r.id] || typeof r.vendor !== "string") return;
@@ -134,7 +135,7 @@
     if (state.busy) return Promise.resolve();
     state.busy = true;
     // The bundled snapshot is only for a first load: a later failed poll keeps the data
-    // already on screen (it may be newer than the snapshot) and says it could not refresh.
+    // already on screen (it may be newer than the snapshot).
     return loadConfig().then(function () { return getJson(API); }).catch(function (err) {
       if (state.data) throw err;
       return getJson(SNAPSHOT);
@@ -171,19 +172,13 @@
     return el;
   }
 
-  var dayFormat, stampFormat, relFormat;
+  var dayFormat, relFormat;
   try {
     dayFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
-    stampFormat = new Intl.DateTimeFormat("en-US", {
-      dateStyle: "medium", timeStyle: "short", timeZone: "UTC"
-    });
   } catch (e) { /* older engines fall back to ISO text below */ }
   try { relFormat = new Intl.RelativeTimeFormat("en", { numeric: "auto" }); } catch (e) {}
 
   function day(t) { return dayFormat ? dayFormat.format(t) : new Date(t).toISOString().slice(0, 10); }
-  function stamp(t) {
-    return stampFormat ? stampFormat.format(t) + " UTC" : new Date(t).toISOString();
-  }
   function month(t) {
     var d = new Date(t);
     var names = ["January", "February", "March", "April", "May", "June", "July", "August",
@@ -256,7 +251,7 @@
 
   window.RO = {
     loadJson: loadJson, ready: loadConfig, families: function () { return config.families; },
-    familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day, stamp: stamp,
+    familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
     latest: latest, newer: newer, compareVersions: compareVersions,
     reduced: function () {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from urllib.parse import urlparse
 
 import pytest
 from helpers import REPO
@@ -12,11 +13,16 @@ SRC = REPO / "src"
 ASSETS = SRC / "assets"
 CONFIG = json.loads((SRC / "data" / "families.json").read_text(encoding="utf-8"))
 APPLE = [family["id"] for family in CONFIG["families"] if family["vendor"] == "apple"]
+ALL = [family["id"] for family in CONFIG["families"]]
 CSS = (ASSETS / "site.css").read_text(encoding="utf-8")
 LEGAL = (
-    "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, "
-    "iPhone, iPad, Mac, Apple Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, "
-    "tvOS and visionOS are trademarks of Apple Inc."
+    "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc., MikroTik, "
+    "Google LLC, Microsoft Corporation or Valve Corporation. Apple, iPhone, iPad, Mac, Apple "
+    "Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, tvOS and visionOS are "
+    "trademarks of Apple Inc. MikroTik and RouterOS are trademarks of MikroTik. Android is a "
+    "trademark of Google LLC. Windows is a trademark of the Microsoft group of companies. "
+    "Steam, Steam Deck and SteamOS are trademarks and/or registered trademarks of Valve "
+    "Corporation."
 )
 SOURCE_URL = "https://developer.apple.com/news/releases/"
 
@@ -31,16 +37,20 @@ def pages() -> list[str]:
 
 def test_the_snapshot_follows_the_data_contract():
     data = json.loads((SRC / "data" / "releases.json").read_text(encoding="utf-8"))
-    assert data["source"] == "apple-developer-releases"
+    sources = data["source"].split(",")
+    assert sources[0] == "apple-developer-releases"
     ids = [r["id"] for r in data["releases"]]
     assert len(ids) == len(set(ids))
     dates = [r["date"] for r in data["releases"]]
     assert dates == sorted(dates, reverse=True)
     owner = {family["id"]: family["vendor"] for family in CONFIG["families"]}
+    hosts = {v["id"]: v["source"]["hosts"] for v in CONFIG["vendors"]}
     for r in data["releases"]:
         assert owner.get(r["family"]) == r["vendor"], r["id"]
         assert r["stage"] in {"release", "beta", "rc"}
-        assert r["url"].startswith("https://developer.apple.com/")
+        assert r["source"] in sources, r["id"]
+        assert urlparse(r["url"]).hostname in hosts[r["vendor"]], r["id"]
+        assert r["url"].startswith("https://"), r["id"]
         # A verdict is for a released build only: the dial would show it to everyone.
         assert "status" not in r or r["stage"] == "release", r["id"]
 
@@ -49,8 +59,18 @@ def test_the_snapshot_follows_the_data_contract():
 def test_every_page_carries_the_notice_and_the_link_to_its_source(path):
     html = page(path)
     assert f'<p class="tag">{LEGAL}</p>' in html
-    assert f'Source: <a href="{SOURCE_URL}"' in html
+    assert f'Sources: <a href="{SOURCE_URL}"' in html
     assert "Apple Developer Releases" in html
+
+
+@pytest.mark.parametrize("path", pages())
+def test_every_page_links_the_source_of_every_vendor(path):
+    html = page(path)
+    credit = re.search(r'<p class="credit">(.*?)</p>', html, re.DOTALL).group(1)
+    for vendor in CONFIG["vendors"]:
+        source = vendor["source"]
+        assert f'<a href="{source["url"]}"' in credit, (path, vendor["id"])
+        assert source["name"] in credit, (path, vendor["id"])
 
 
 @pytest.mark.parametrize("path", pages())
@@ -70,7 +90,7 @@ def test_every_page_is_titled_release_orbit_in_the_tags_that_name_it(path):
 def test_the_front_page_has_one_card_per_family_in_the_order_of_the_config():
     html = page("index.html")
     cards = re.findall(r'<li class="rel fam-[a-z]+ reveal" data-family="([A-Za-z]+)"', html)
-    assert cards == APPLE
+    assert cards == ALL
 
 
 # The effects are separate modules that load after the first paint; no page names them.
@@ -183,7 +203,7 @@ def test_the_front_page_has_one_section_per_family_in_the_order_of_the_config():
         r'<section id="([a-z]+)" class="fam fam-[a-z]+(?: fam-flip)?" data-family="([A-Za-z]+)"',
         html,
     )
-    assert [family for _, family in found] == APPLE
+    assert [family for _, family in found] == ALL
     for anchor, family in found:
         assert anchor == family.lower()
         assert f'<a href="#{anchor}">{family}</a>' in html
@@ -209,7 +229,7 @@ def test_every_feature_is_a_short_summary_that_names_a_developer_apple_com_page(
 def test_the_timeline_offers_all_and_each_family_in_the_order_of_the_config():
     html = page("timeline/index.html")
     block = re.search(r'id="chips-family">(.*?)</div>', html, re.DOTALL).group(1)
-    assert re.findall(r'data-v="([A-Za-z]+)"', block) == ["all", *APPLE]
+    assert re.findall(r'data-v="([A-Za-z]+)"', block) == ["all", *ALL]
     stages = re.search(r'id="chips-stage">(.*?)</div>', html, re.DOTALL).group(1)
     assert re.findall(r'data-v="([a-z]+)"', stages) == ["all", "release", "beta", "rc"]
 
@@ -217,4 +237,4 @@ def test_the_timeline_offers_all_and_each_family_in_the_order_of_the_config():
 def test_the_compare_page_offers_each_family_in_the_order_of_the_config():
     html = page("compare/index.html")
     block = re.search(r'<select id="c-family">(.*?)</select>', html, re.DOTALL).group(1)
-    assert re.findall(r'<option value="([A-Za-z]+)">\1</option>', block) == APPLE
+    assert re.findall(r'<option value="([A-Za-z]+)">\1</option>', block) == ALL

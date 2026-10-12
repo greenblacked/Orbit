@@ -1,0 +1,43 @@
+---
+# Why this exists: the adapters and the readiness benchmark need to be built against what
+# the vendors really send, and the people building them cannot reach those sites from
+# where they work. This runs scripts/probe_sources.py on a GitHub runner, which can, and
+# prints one block per source (status, content type, size, digest and a trimmed excerpt)
+# into the job log, which is the only place the result is read.
+#
+# It commits nothing, uploads nothing and holds no secret or token: the job can read the
+# repository and nothing else. Same pinned actions as ci.yml.
+name: Source probe
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/probe_sources.py
+      - scripts/probe_sources.json
+      - .github/workflows/source-probe.yml
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: probe every source
+    # A fork's pull request could swap the list for arbitrary URLs: run it from this repository only.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Probe the sources
+        run: python -I scripts/probe_sources.py

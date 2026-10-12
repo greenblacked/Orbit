@@ -33,6 +33,10 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 5 * 60 * 1000;
 const STORE_MS = 7 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 8000;
+// What a source is asked for unless its adapter says otherwise: feeds first, then JSON and the
+// plain text of MikroTik's NEWEST files. An HTML source sets its own `accept` (see android.js).
+export const DEFAULT_ACCEPT =
+  'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, application/json;q=0.7, text/plain;q=0.6, */*;q=0.1';
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
 // _headers does not apply to a Worker's own responses, so they carry the same set here.
@@ -152,14 +156,14 @@ async function fetchLive(source, env, request) {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         'user-agent': USER_AGENT,
-        accept: 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, application/json;q=0.7',
+        accept: source.accept || DEFAULT_ACCEPT,
       },
     });
     if (res.status !== 200) {
       await res.body?.cancel();
       throw new Error(`${source.id} answered ${res.status}`);
     }
-    found.push(...source.parse(await readCapped(res)));
+    found.push(...source.parse(await readCapped(res), url));
   }
   // Whatever an adapter says, a release belongs to the source and vendor that produced it.
   const live = found.map((release) => ({ ...release, vendor: source.vendor, source: source.id }));
