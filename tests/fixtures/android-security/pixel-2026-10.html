@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Pixel Update Bulletin—October 2026 | Security | Android Open Source Project</title></head>
+<body>
+<!-- Excerpt of https://source.android.com/docs/security/bulletin/pixel/2026/2026-10-01 as recorded by a read-only probe on 2026-10-12
+     (200, text/html, 187280 bytes, sha256 30cbfde2e170d173899af64bf5328262585573f9b07d978fc0102547c45d3df5).
+     The h1 slice is the probe's 4000-character raw slice from the h1 on, cut mid-word; the tables
+     are the probe's raw tables, complete. Nothing else of the page is here. -->
+<table>
+      <colgroup>
+      <col width="21%">
+      <col width="21%">
+      <col width="14%">
+      <col width="14%">
+      <col width="30%">
+      </colgroup>
+      <tbody>
+        <tr>
+        <th>CVE</th>
+        <th>References</th>
+        <th>Type</th>
+        <th>Severity</th>
+        <th scope="col">Subcomponent</th>
+      </tr>
+      <tr>
+        <td>
+          CVE-2026-56906
+        </td>
+        <td>
+          A-496716086
+          <a href="#asterisk">*</a>
+        </td>
+        <td>EoP</td>
+        <td>High</td>
+        <td>Fs</td>
+      </tr>
+      <tr>
+        <td>
+          CVE-2026-56936
+        </td>
+        <td>
+          A-497973001
+          <a href="#asterisk">*</a>
+        </td>
+        <td>EoP</td>
+        <td>High</td>
+        <td>Wacom HID</td>
+      </tr>
+    </tbody>
+  </table>
+<table>
+      <colgroup>
+      <col width="21%">
+      <col width="21%">
+      <col width="14%">
+      <col width="14%">
+      <col width="30%">
+      </colgroup>
+      <tbody>
+        <tr>
+        <th>CVE</th>
+        <th>References</th>
+        <th>Type</th>
+        <th>Severity</th>
+        <th scope="col">Subcomponent</th>
+      </tr>
+      <tr>
+        <td>
+          CVE-2026-55330
+        </td>
+        <td>
+          A-522372636
+          <a href="#asterisk">*</a>
+        </td>
+        <td>EoP</td>
+        <td>Critical</td>
+        <td>Bluetooth</td>
+      </tr>
+      <tr>
+        <td>
+          CVE-2026-56952
+        </td>
+        <td>
+          A-508697411
+          <a href="#asterisk">*</a>
+        </td>
+        <td>EoP</td>
+        <td>Critical</td>
+        <td>GDMC</td>
+      </tr>
+      <tr>
+        <td>
+          CVE-2026-55307
+        </td>
+        <td>
+          A-511809981
+          <a href="#asterisk">*</a>
+        </td>
+        <td>ID</td>
+        <td>Critical</td>
+        <td>GSA</td>
+      </tr>
+      <tr>
+        <td>
+          CVE-2026-0198
+        </td>
+        <td>
+          A-508717360
+          <a href="#asterisk">*</a>
+        </td>
+        <td>ID</td>
+        <td>High</td>
+        <td>GDMC</td>
+      </tr>
+    </tbody>
+  </table>
+<table>
+<colgroup>
+<col width="25%">
+<col width="75%">
+</colgroup>
+<tbody>
+  <tr>
+  <th>Abbreviation</th>
+  <th>Definition</th>
+</tr>
+<tr>
+  <td>RCE</td>
+  <td>Remote code execution</td>
+</tr>
+<tr>
+  <td>EoP</td>
+  <td>Elevation of privilege</td>
+</tr>
+<tr>
+  <td>ID</td>
+  <td>Information disclosure</td>
+</tr>
+<tr>
+  <td>DoS</td>
+  <td>Denial of service</td>
+</tr>
+<tr>
+  <td>N/A</td>
+  <td>Classification not available</td>
+</tr>
+</tbody>
+</table>
+<table>
+<colgroup>
+<col width="25%">
+<col width="75%">
+</colgroup><tbody><tr>
+  <th>Prefix</th>
+  <th>Reference</th>
+</tr>
+<tr>
+  <td>A-</td>
+  <td>Android bug ID</td>
+</tr>
+<tr>
+  <td>QC-</td>
+  <td>Qualcomm reference number</td>
+</tr>
+<tr>
+  <td>M-</td>
+  <td>MediaTek reference number</td>
+</tr>
+<tr>
+  <td>N-</td>
+  <td>NVIDIA reference number</td>
+</tr>
+<tr>
+  <td>B-</td>
+  <td>Broadcom reference number</td>
+</tr>
+<tr>
+  <td>U-</td>
+  <td>UNISOC reference number</td>
+</tr>
+</tbody></table>
+<table>
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="50%">
+</colgroup>
+<tbody>
+  <tr>
+  <th>Version</th>
+  <th>Date</th>
+  <th>Notes</th>
+</tr>
+<tr>
+  <td>1.0</td>
+  <td>October 6, 2026</td>
+  <td>Bulletin Published</td>
+</tr>
+</tbody></table>
+<h1 class="devsite-page-title" tabindex="-1">
+      Pixel Update Bulletin—October 2026<devsite-actions hidden data-nosnippet><devsite-feature-tooltip
+      ack-key="AckCollectionsBookmarkTooltipDismiss"
+      analytics-category="Site-Wide Custom Events"
+      analytics-action-show="Callout Profile displayed"
+      analytics-action-close="Callout Profile dismissed"
+      analytics-label="Create Collection Callout"
+      class="devsite-page-bookmark-tooltip nocontent"
+      data-nosnippet
+      dismiss-button="true"
+      id="devsite-collections-dropdown"
+      
+      dismiss-button-text="Dismiss"
+
+      
+      close-button-text="Got it">
+
+    
+    
+      <devsite-bookmark></devsite-bookmark>
+    
+
+    <span slot="popout-heading">
+      
+      Stay organized with collections
+    </span>
+    <span slot="popout-contents">
+      
+      Save and categorize content based on your preferences.
+    </span>
+  </devsite-feature-tooltip></devsite-actions>
+  
+      
+    </h1>
+  <div class="devsite-page-title-meta"><devsite-view-release-notes></devsite-view-release-notes></div>
+  
+
+  <devsite-toc class="devsite-nav"
+    depth="2"
+    devsite-toc-embedded
+    >
+  </devsite-toc>
+  
+    
+  <div class="devsite-article-body clearfix
+  ">
+
+  
+    
+    
+<!--
+Copyright 2026 The Android Open Source Project
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<em>Published  October 6, 2026 </em>
+
+<p>The Pixel Update Bulletin contains details of security vulnerabilities and
+functional improvements affecting <a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&amp;nexus_devices"
+rel="noreferrer">supported Pixel devices</a> (Google devices). For Google
+devices, security patch levels of 2026-10-05 or later
+address all issues in this bulletin and all issues in the
+October 2026 Android Security Bulletin. To learn how to check a
+device's security patch level, see <a href="https://support.google.com/pixelphone/answer/4457705"
+rel="noreferrer">Check and update
+your Android version</a>.
+</p>
+<p>All supported Google devices will receive an update to the
+2026-10-05 patch level. We encourage all customers to
+accept these updates to their devices.
+</p>
+<aside class="note"><b>Note:</b> The Google device firmware images are available
+on the
+<a href="https://developers.google.com/android/images" rel="noreferrer">Google
+Developer site</a>.
+</aside>
+
+<h2 id="Announcements" data-text="Announcements" tabindex="-1">Announcements</h2>
+
+<ul>
+<li>In addition to the security vulnerabilities described in the October 2026 Android Security
+  Bulletin, Google devices also contain patches for the security vulnerabilities described
+  below.</li>
+</ul>
+
+<h2 id="Security-patches" data-text="Security patches" tabindex="-1">Security patches</h2>
+<p>Vulnerabilities are grouped under the component that they affect. There is a
+description of the issue and a table with the CVE, associated references,
+  <a href="#type">type of vulnerability</a>,
+  <a href="/security/overview/updates-resources#severity" rel="noreferrer">severity</a>,
+and updated Android Open Source Project (AOSP) versions (where applicable).
+When available, we link the public change that addressed the issue to the bug
+ID, like the AOSP change list. When multiple changes relate to a single bug,
+additional references are linked to numbers following the bug ID.
+</p>
+
+  <h3 id="kernel-components" data-text="Kernel components" tabindex="-1">Kernel components</h3>
+
+    <table>
+      <colgroup>
+      <col width="21%">
+      <col width="21%">
+     
+</body>
+</html>
