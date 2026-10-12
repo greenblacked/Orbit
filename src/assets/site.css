@@ -782,7 +782,7 @@ html[data-theme="reactor"] .prose-lab pre {
 /* The console theme is square everywhere: the pages after the front page follow it too. */
 html[data-theme="reactor"] .cmp-card, html[data-theme="reactor"] .stat,
 html[data-theme="reactor"] .feat, html[data-theme="reactor"] .chip,
-html[data-theme="reactor"] .chip-link {
+html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link {
   border-radius: 0;
 }
 
@@ -1388,6 +1388,25 @@ button.m-comp:active { filter: brightness(1.2); }
 .tl-fam { min-width: 4.5rem; color: var(--fam-text); font-size: 0.875rem; font-weight: 500; }
 .tl-ver { font-weight: 500; }
 @media (max-width: 36rem) { .tl-day { width: 100%; } }
+/* Security notes (security.js): one line under a timeline row. Only a link is a control, and it
+   keeps the 44px floor; a state with nothing to open is plain text. */
+.tl-item.has-sec .tl-link { border-bottom: 0; padding-bottom: 0.25rem; }
+.sec { margin: 0; padding: 0 0 0.5rem 1.25rem; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.875rem; line-height: 1.4286; }
+.sec-link {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0.25rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1.375rem;
+  background: var(--card);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.sec-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.sec-text { display: inline-block; max-width: 100%; padding: 0.25rem 0; overflow-wrap: anywhere; }
+.sec-missing .sec-text, .sec-unavailable .sec-text { font-style: italic; }
 @media (min-width: 40rem) { .page .filters { grid-template-columns: repeat(2, auto); justify-content: start; gap: 2rem 3rem; } }
 
 /* Compare. */
@@ -1681,4 +1700,6 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   .hand:focus-visible .hit { stroke: Highlight; }
   /* The glass card is outlined by shadows, which this mode drops: its transparent border shows. */
   .orbit-card, .cmp-card { border-color: CanvasText; }
+  .sec-link { border-color: CanvasText; }
+  .sec-link { color: LinkText; }
 }
