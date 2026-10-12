@@ -193,7 +193,7 @@
     return root;
   }
 
-  // Draw into a host element, replacing what it holds; a glyph that is already there for the
+  // Draw into a host, replacing its content; a glyph already there for the
   // same build and size is left alone, so only a new or changed sigil draws itself in.
   function draw(host, build, opts) {
     opts = opts || {};

@@ -196,10 +196,10 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     page.goto(base_url + "/")
     cards_ready(page)
     card = page.locator('#latest-grid [data-family="RouterOS"]')
-    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.23.8"
+    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.24.5"
     assert card.locator("[data-f=link]").is_visible()
     assert card.locator("[data-f=link]").get_attribute("href") == (
-        "https://mikrotik.com/download?v=7.23.8"
+        "https://mikrotik.com/download?v=7.24.5"
     )
     section = page.locator('section.fam[data-family="RouterOS"]')
     recent = section.locator(".recent li")
@@ -207,6 +207,48 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     assert "7.23.8" in recent.first.inner_text()
     listed = section.locator(".recent").inner_text()
     assert "7.25" in listed and "RC 1" in listed and "7.25rc1" in listed
+    assert page.locator("#newest .fam-routeros .n-ver").text_content() == "7.24.5"
+    assert "RouterOS 7.24.5" in section.locator("[data-f=latest]").inner_text()
+    assert "7.25rc1" not in section.locator("[data-f=latest]").inner_text()
+
+
+def test_the_newest_release_is_the_highest_version_not_the_latest_date(page, base_url):
+    ios = [r for r in SNAPSHOT["releases"] if r["family"] == "iOS" and r["stage"] == "release"]
+    old_branch = copy.deepcopy(ios[0]) | {
+        "id": "ios-18.7.9-test",
+        "version": "18.7.9",
+        "major": 18,
+        "title": "iOS 18.7.9",
+        "build": "22H999",
+        "date": "2099-01-01T00:00:00Z",
+    }
+    new_major = copy.deepcopy(ios[0]) | {
+        "id": "ios-26.1-test",
+        "version": "26.1",
+        "major": 26,
+        "title": "iOS 26.1",
+        "build": "23B100",
+        "date": "2098-12-01T00:00:00Z",
+    }
+    live = copy.deepcopy(SNAPSHOT) | {"snapshot": False, "stale": False}
+    live["releases"] = (
+        [r for r in live["releases"] if r["family"] not in ("iOS", "RouterOS")]
+        + [old_branch, new_major]
+        + releases("RouterOS")
+    )
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body=json.dumps(live)
+        ),
+    )
+    page.goto(base_url + "/")
+    cards_ready(page)
+    assert page.inner_text("#latest-grid [data-family=iOS] [data-f=ver]") == "iOS 26.1"
+    # RouterOS headlines its newest stable release: neither 7.25 RC 1 nor the dated 7.23.8.
+    assert page.inner_text("#latest-grid [data-family=RouterOS] [data-f=ver]") == "RouterOS 7.24.5"
+    section = page.locator('section.fam[data-family="RouterOS"]')
+    assert "RouterOS 7.24.5" in section.locator("[data-f=latest]").inner_text()
 
 
 def test_android_shows_its_snapshot_releases_with_a_link_to_the_aosp_page(page, base_url):
