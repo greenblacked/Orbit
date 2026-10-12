@@ -152,7 +152,8 @@ The preferred rollback is a new patch release with the change reverted. The one-
 │   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js
 │   └── data/              releases.json (snapshot), security.json, families.json, features.json
 ├── deploy/                the Worker (worker.js, releases.js, families.js,
-│   └── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs
+│   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs
+│   └── security/          security adapters (snapshot step only; Android so far)
 ├── scripts/               build, checks, preview, screenshots and the source probe (standard library only)
 ├── results/               one JSON file per publicly released, tested build
 ├── tests/                 Python and Node tests, fixtures

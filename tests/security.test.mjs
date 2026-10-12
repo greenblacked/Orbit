@@ -35,6 +35,13 @@ function isHttpsUrl(value) {
   }
 }
 
+// A real calendar day written YYYY-MM-DD (the form of a patch level).
+function isDay(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const at = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(at.getTime()) && at.toISOString().startsWith(value);
+}
+
 const sortedUnique = (list) => list.every((item, i) => i === 0 || list[i - 1] < item);
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
@@ -74,6 +81,9 @@ function problems(payload, rows) {
     const stage = stages.get(id);
     if (stage === undefined) found.push(`${id} is not in releases.json`);
     if (!STATUSES.includes(entry.status)) found.push(`${id} has status ${entry.status}`);
+    if (entry.patchLevel !== undefined && entry.patchLevel !== null && !isDay(entry.patchLevel)) {
+      found.push(`${id} has a bad patchLevel`);
+    }
     const listsNotes = entry.status === 'listed' || entry.status === 'no-cve-entries';
     if (listsNotes && stage !== 'release') found.push(`${id} lists notes but is a ${stage}`);
     if (stage && stage !== 'release' && entry.status !== 'not-applicable') {
@@ -125,8 +135,14 @@ describe('src/data/security.json', () => {
       sources: { s: {} },
       notes: { 'https://example.org/n': { source: 's', cves: [{ id: 'CVE-2026-0001' }] } },
       releases: {
-        r1: { status: 'listed', notes: ['https://example.org/n'], cves: ['CVE-2026-0001'], count: 1 },
-        b1: { status: 'not-applicable', notes: [], cves: [], count: null },
+        r1: {
+          status: 'listed',
+          notes: ['https://example.org/n'],
+          cves: ['CVE-2026-0001'],
+          count: 1,
+          patchLevel: '2026-10-05',
+        },
+        b1: { status: 'not-applicable', notes: [], cves: [], count: null, patchLevel: null },
       },
     };
     assert.deepEqual(problems(good, rows), []);
@@ -176,6 +192,10 @@ describe('src/data/security.json', () => {
       return p;
     }, 'notes are not sorted');
     bad((p) => ((p.releases.r1 = 'x'), p), 'r1 is not an object');
+    for (const level of ['soon', '2026-13-01', '2026-02-30', '2026-10-5', 20261005, '']) {
+      bad((p) => ((p.releases.r1.patchLevel = level), p), 'r1 has a bad patchLevel');
+    }
+    bad((p) => ((p.releases.b1.patchLevel = 'soon'), p), 'b1 has a bad patchLevel');
   });
 });
 
