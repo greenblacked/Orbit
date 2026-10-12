@@ -1515,7 +1515,9 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .oc-title { font-weight: 500; line-height: 1.25; overflow-wrap: anywhere; }
 .oc-build { color: var(--muted); font: 0.8125rem var(--font-mono); overflow-wrap: anywhere; }
 .orbit-side { display: grid; gap: 1.25rem; align-content: center; }
-.orbit-asof { font-size: 1.0625rem; font-weight: 500; line-height: 1.35; }
+.orbit-asof { font-size: 1.0625rem; font-weight: 500; line-height: 1.35; min-height: 2.7em; }
+/* Three lines on a phone: the sentence that replaces "Loading the dial…" must not push the key down. */
+@media (max-width: 39.99rem) { .orbit-asof { min-height: 4.05em; } }
 .orbit-key { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; max-width: 22rem; min-height: 9.75rem; }
 .orbit-key li { display: flex; align-items: center; gap: 0.5rem; min-height: 1.75rem; font-size: 0.9375rem; }
 .orbit-key .sw { flex: none; width: 1.25rem; height: 0.25rem; background: var(--fam-a); }
