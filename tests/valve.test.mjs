@@ -31,8 +31,8 @@ const RECORDED_RSS = read('news.rss');
 const TITLES = read('getnewsforapp-steamos-titles.json');
 const PAGE = (slug) => `${NEWS_PAGE}#${slug}`;
 
-// The clock of the recorded data: the day after the probe. The registered parser reads the
-// real clock, so tests that go through parse() or the Worker stub it.
+// The clock of the recorded data: the day after the probe. Every test passes it (parse() takes
+// it as its third argument) so none depends on the real clock; the Worker passes none.
 const NOW = Date.UTC(2026, 9, 13);
 const news = (text, now = NOW, days) => parseNews(text, now, days);
 const feed = (text, now = NOW, days) => parseFeed(text, now, days);
@@ -284,20 +284,18 @@ describe('parseFeed (the RSS form)', () => {
 });
 
 describe('parse', () => {
-  it('reads the news JSON and survives garbage', (t) => {
-    t.mock.method(Date, 'now', () => NOW);
-    assert.equal(parse(TITLES).length, 19);
-    assert.deepEqual(parse(RECORDED_JSON), []);
-    assert.deepEqual(parse(RECORDED_RSS), []);
-    assert.deepEqual(parse(`  \n${doc(post())}`).map((r) => r.version), ['3.7.15']);
-    assert.deepEqual(parse(''), []);
-    assert.deepEqual(parse(undefined), []);
+  it('reads the news JSON and survives garbage', () => {
+    assert.equal(parse(TITLES, undefined, NOW).length, 19);
+    assert.deepEqual(parse(RECORDED_JSON, undefined, NOW), []);
+    assert.deepEqual(parse(RECORDED_RSS, undefined, NOW), []);
+    assert.deepEqual(parse(`  \n${doc(post())}`, undefined, NOW).map((r) => r.version), ['3.7.15']);
+    assert.deepEqual(parse('', undefined, NOW), []);
+    assert.deepEqual(parse(undefined, undefined, NOW), []);
   });
 
-  it('ignores the url the Worker passes as the second argument', (t) => {
-    t.mock.method(Date, 'now', () => NOW);
-    assert.deepEqual(steamos.parse(TITLES, NEWS_URL), steamos.parse(TITLES));
-    assert.deepEqual(steamos.parse(doc(post(), post({ date: 4102444800, title: 'SteamOS 9.9.9' })), NEWS_URL).map((r) => r.version), ['3.7.15']);
+  it('ignores the url the Worker passes as the second argument', () => {
+    assert.deepEqual(steamos.parse(TITLES, NEWS_URL, NOW), steamos.parse(TITLES, undefined, NOW));
+    assert.deepEqual(steamos.parse(doc(post(), post({ date: 4102444800, title: 'SteamOS 9.9.9' })), NEWS_URL, NOW).map((r) => r.version), ['3.7.15']);
   });
 
   it('does not read RSS, so a body of unclosed <item> tags costs nothing', () => {

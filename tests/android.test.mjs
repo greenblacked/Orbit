@@ -53,7 +53,12 @@ const keys = [
   'vendor', 'version',
 ];
 
-const parseAll = (html) => parsePage(html, Date.now(), Infinity);
+// The clock of the recorded data: the probe day. The Worker reads the real clock, so every
+// test that goes through parsePage or android.parse passes this one and cannot start failing
+// as real time passes the 180-day window.
+const NOW = Date.UTC(2026, 9, 12);
+const at = (html, now = NOW, days) => parsePage(html, now, days);
+const parseAll = (html) => parsePage(html, NOW, Infinity);
 
 useHarness();
 
@@ -110,7 +115,7 @@ describe('the table scanner', () => {
     assert.deepEqual([found.build, found.tag, found.patch], [0, 1, 4]);
     const moved = `<table><tr><th>Tag</th><th>Security patch level</th><th>Build ID</th></tr>
       <tr><td>android-17.0.0_r1</td><td>2026-06-05</td><td>CP2A.260605.016</td></tr></table>`;
-    const releases = parsePage(moved);
+    const releases = at(moved);
     assert.equal(releases.length, 1);
     assert.equal(releases[0].build, 'CP2A.260605.016');
     assert.equal(buildTable('<table><tr><th>Build</th><th>Tag</th><th>Notes</th></tr></table>'), null);
@@ -188,12 +193,12 @@ describe('the table scanner', () => {
 
 describe('buildDate', () => {
   it('takes the day from the build id, else from the security patch level', () => {
-    assert.equal(buildDate('CP2A.260605.016', '2026-05-05'), '2026-06-05T00:00:00Z');
-    assert.equal(buildDate('BP2A.250605.031.A3', ''), '2025-06-05T00:00:00Z');
-    assert.equal(buildDate('15848949', '2026-05-05'), '2026-05-05T00:00:00Z');
+    assert.equal(buildDate('CP2A.260605.016', '2026-05-05', NOW), '2026-06-05T00:00:00Z');
+    assert.equal(buildDate('BP2A.250605.031.A3', '', NOW), '2025-06-05T00:00:00Z');
+    assert.equal(buildDate('15848949', '2026-05-05', NOW), '2026-05-05T00:00:00Z');
     // A build date that is not a day falls back to the patch level.
-    assert.equal(buildDate('CP2A.261305.016', '2026-06-05'), '2026-06-05T00:00:00Z');
-    assert.equal(buildDate('CP2A.260230.016', '2026-03-01'), '2026-03-01T00:00:00Z');
+    assert.equal(buildDate('CP2A.261305.016', '2026-06-05', NOW), '2026-06-05T00:00:00Z');
+    assert.equal(buildDate('CP2A.260230.016', '2026-03-01', NOW), '2026-03-01T00:00:00Z');
   });
 
   it('refuses a day more than a day ahead of the clock, falling back to the patch level', () => {
@@ -219,7 +224,7 @@ describe('buildDate', () => {
       ['CP2A.260230.016', '2026-00-00'],
       ['CP2A.000000.016', ''],
     ]) {
-      assert.equal(buildDate(build, patch), null, `${build} ${patch}`);
+      assert.equal(buildDate(build, patch, NOW), null, `${build} ${patch}`);
     }
     const later = Date.UTC(2030, 0, 1);
     assert.equal(buildDate('CP2A.270229.001', '', later), null, '2027 has no 29 February');
@@ -352,13 +357,13 @@ describe('the bound on what is emitted', () => {
   });
 
   it('is applied by the adapter the Worker calls', () => {
-    assert.equal(android.parse(PAGE).length, 1);
+    assert.equal(android.parse(PAGE, PAGE_URL, NOW).length, 1);
   });
 
   it('ignores the url the Worker passes as the second argument', () => {
-    assert.deepEqual(android.parse(PAGE, PAGE_URL), android.parse(PAGE));
+    assert.deepEqual(android.parse(PAGE, PAGE_URL, NOW), android.parse(PAGE, undefined, NOW));
     const future = page(row('CP2A.260605.016', 'android-17.0.0_r1'), row('CP2A.990605.016', 'android-18.0.0_r1', ''));
-    assert.deepEqual(android.parse(future, PAGE_URL).map((r) => r.id), ['android-17.0.0_r1']);
+    assert.deepEqual(android.parse(future, PAGE_URL, NOW).map((r) => r.id), ['android-17.0.0_r1']);
   });
 });
 
@@ -367,9 +372,10 @@ describe('releases on one day', () => {
     const rows = ['r31', 'r36', 'r9', 'r10', 'r100', 'r32'].map((r) =>
       row('BP1A.250505.005', `android-15.0.0_${r}`),
     );
-    const ids = parsePage(page(...rows)).map((r) => r.id.split('_r')[1]);
+    const day = Date.UTC(2025, 4, 6); // the day after the rows' date
+    const ids = at(page(...rows), day).map((r) => r.id.split('_r')[1]);
     assert.deepEqual(ids, ['100', '36', '32', '31', '10', '9']);
-    const dates = parsePage(page(...rows)).map((r) => r.date);
+    const dates = at(page(...rows), day).map((r) => r.date);
     assert.equal(new Set(dates).size, dates.length);
     assert.ok(dates.every((d) => /^2025-05-05T00:\d\d:\d\dZ$/.test(d)));
   });
@@ -381,7 +387,7 @@ describe('releases on one day', () => {
   });
 
   it('give revision 999 a valid time', () => {
-    const [r] = parsePage(page(row('CP2A.260605.016', 'android-17.0.0_r999')));
+    const [r] = at(page(row('CP2A.260605.016', 'android-17.0.0_r999')));
     assert.equal(r.date, '2026-06-05T00:16:39Z');
   });
 });
@@ -405,17 +411,17 @@ describe('pre-release and unlisted tags', () => {
       'android-q-beta-1',
       '',
     ];
-    assert.deepEqual(parsePage(page(...skipped.map((tag) => row('CP2A.260605.016', tag)))), []);
+    assert.deepEqual(at(page(...skipped.map((tag) => row('CP2A.260605.016', tag)))), []);
   });
 
   it('marks a tag that is listed as a release, never as a beta or an RC', () => {
-    const [r] = parsePage(page(row('CP2A.260605.016', 'android-17.0.0_r1')));
+    const [r] = at(page(row('CP2A.260605.016', 'android-17.0.0_r1')));
     assert.equal(r.stage, 'release');
     assert.equal(r.beta, null);
   });
 
   it('accepts a numeric build id on a release tag and dates it by the patch level', () => {
-    const [r] = parsePage(page(row('12345678', 'android-14.0.0_r1', '2023-10-05')));
+    const [r] = at(page(row('12345678', 'android-14.0.0_r1', '2023-10-05')));
     assert.equal(r.build, '12345678');
     assert.equal(r.date, '2023-10-05T00:00:01Z');
     assert.equal(r.version, '14.0.0');
@@ -437,17 +443,17 @@ describe('malformed and empty input', () => {
       '<table><tr><th>Tag</th><th>Build ID</th></tr></table>',
       page().replace('Security patch level', 'Patch'),
     ]) {
-      assert.deepEqual(parsePage(bad), [], String(bad));
+      assert.deepEqual(at(bad), [], String(bad));
     }
   });
 
   it('returns nothing for a table that is cut off before it closes', () => {
-    assert.deepEqual(parsePage(page(row('CP2A.260605.016', 'android-17.0.0_r1')).slice(0, -8)), []);
+    assert.deepEqual(at(page(row('CP2A.260605.016', 'android-17.0.0_r1')).slice(0, -8)), []);
   });
 
   it('skips a malformed row and keeps the good ones', () => {
     const good = row('CP2A.260605.016', 'android-17.0.0_r1');
-    const releases = parsePage(
+    const releases = at(
       page(
         row('CP2A.260605.016', 'android-17.0.0_r2', 'soon'), // the build id still dates it
         row('cp2a.260605.016', 'android-17.0.0_r3'),
@@ -466,20 +472,20 @@ describe('malformed and empty input', () => {
 
   it('returns a row once when the page repeats it', () => {
     const good = row('CP2A.260605.016', 'android-17.0.0_r1');
-    assert.equal(parsePage(page(good, good, good)).length, 1);
+    assert.equal(at(page(good, good, good)).length, 1);
   });
 
   it('refuses a row that is missing a column it needs', () => {
     const cols = { build: 0, tag: 1, patch: 4 };
-    assert.equal(parseRow(['CP2A.260605.016', 'android-17.0.0_r1'], cols), null);
-    assert.equal(parseRow([], cols), null);
-    assert.equal(parseRow(['CP2A.260605.016', 'android-17.0.0_r1', '', '', '2026-06-05'], cols).id, 'android-17.0.0_r1');
+    assert.equal(parseRow(['CP2A.260605.016', 'android-17.0.0_r1'], cols, NOW), null);
+    assert.equal(parseRow([], cols, NOW), null);
+    assert.equal(parseRow(['CP2A.260605.016', 'android-17.0.0_r1', '', '', '2026-06-05'], cols, NOW).id, 'android-17.0.0_r1');
   });
 });
 
 describe('hostile values', () => {
   it('never lets markup, script or a link of the page into a release', () => {
-    const releases = parsePage(
+    const releases = at(
       page(
         '<tr><td>CP2A.260605.016</td><td><script>alert(1)</script>android-17.0.0_r1</td><td></td><td></td><td>2026-06-05</td></tr>',
         '<tr><td><img src=x onerror=alert(1)>CP2A.260605.016</td><td>android-17.0.0_r2</td><td></td><td></td><td>2026-06-05</td></tr>',
@@ -496,9 +502,9 @@ describe('hostile values', () => {
 
   it('does not read a table hidden in a comment or a nested table', () => {
     const hidden = `<!-- ${page(row('CP2A.260605.016', 'android-17.0.0_r1'))} -->`;
-    assert.deepEqual(parsePage(hidden), []);
+    assert.deepEqual(at(hidden), []);
     const nested = `<table><tr><td>${page(row('CP2A.260605.016', 'android-17.0.0_r1'))}</td></tr></table>`;
-    assert.deepEqual(parsePage(nested), []);
+    assert.deepEqual(at(nested), []);
   });
 
   it('treats prototype names and huge or odd cells as plain text', () => {
@@ -509,12 +515,12 @@ describe('hostile values', () => {
       row('CP2A.260605.016', 'android\u2011-17.0.0_r4'),
       row('CP2A.260605.016', 'android-1\u0660.0.0_r5'),
     );
-    assert.deepEqual(parsePage(html), []);
+    assert.deepEqual(at(html), []);
     assert.equal(Object.keys(Object.prototype).length, 0);
   });
 
   it('is not fooled by a build id that only looks like a date', () => {
-    assert.deepEqual(parsePage(page(row('CP2A.99999999.016', 'android-17.0.0_r1', ''))), []);
+    assert.deepEqual(at(page(row('CP2A.99999999.016', 'android-17.0.0_r1', ''))), []);
   });
 });
 

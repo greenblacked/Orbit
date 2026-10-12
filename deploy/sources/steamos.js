@@ -163,11 +163,11 @@ export function parseFeed(xmlText, now = Date.now(), windowDays = WINDOW_DAYS) {
 /**
  * The registered parser: the news JSON only. Anything else, the RSS form included, gives [];
  * the RSS item scanner is not bounded, and the RSS URL is not on the allowlist. The url the
- * Worker passes is ignored.
+ * Worker passes is ignored; `now` is for tests and defaults to the real clock.
  */
-export function parse(text) {
+export function parse(text, _url, now = Date.now()) {
   const body = String(text ?? '').trimStart();
-  return body.startsWith('{') ? parseNews(body) : [];
+  return body.startsWith('{') ? parseNews(body, now) : [];
 }
 
 export default {

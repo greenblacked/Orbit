@@ -359,6 +359,10 @@ const DOCUMENTS = {
   [steamos.urls[0]]: recorded('valve/getnewsforapp-steamos-titles.json'),
 };
 
+// The clock of the recorded documents: the day after the probe. The windowed adapters take it
+// as a third argument, so the contract below does not depend on the real clock.
+const NOW = Date.UTC(2026, 9, 13);
+
 describe('the parse(text, url) contract', () => {
   it('has a recorded document for every registered URL, and no other', () => {
     assert.deepEqual(
@@ -371,10 +375,10 @@ describe('the parse(text, url) contract', () => {
     // MikroTik is the one adapter that needs the url (a NEWEST file does not say its channel).
     for (const source of SOURCES) {
       for (const url of source.urls) {
-        const withUrl = source.parse(DOCUMENTS[url], url);
+        const withUrl = source.parse(DOCUMENTS[url], url, NOW);
         assert.ok(withUrl.length > 0, `${source.id} reads its fixture at ${url}`);
         if (source === mikrotik) continue;
-        assert.deepEqual(withUrl, source.parse(DOCUMENTS[url]), source.id);
+        assert.deepEqual(withUrl, source.parse(DOCUMENTS[url], undefined, NOW), source.id);
       }
     }
   });

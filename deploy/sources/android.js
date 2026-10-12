@@ -246,5 +246,6 @@ export default {
   vendor: VENDOR,
   accept: ACCEPT,
   urls: [PAGE_URL],
-  parse: (html) => parsePage(html),
+  // The Worker passes (text, url); `now` is for tests and defaults to the real clock.
+  parse: (html, _url, now = Date.now()) => parsePage(html, now),
 };
