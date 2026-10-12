@@ -614,12 +614,9 @@ html[data-theme="night"] .fam-visionos, html[data-theme="reactor"] .fam-visionos
 
 :root {
   --aurora: 0.2;
-  --live: #17804a;
-  --warn: #a8650a;
-  --bad: #d4343a;
 }
-html[data-theme="night"] { --aurora: 0.42; --live: #3ddc84; --warn: #f5a524; --bad: #ff6369; }
-html[data-theme="reactor"] { --aurora: 0.3; --live: #3ddc84; --warn: #f5a524; --bad: #ff6369; }
+html[data-theme="night"] { --aurora: 0.42; }
+html[data-theme="reactor"] { --aurora: 0.3; }
 
 /* Front page hero. */
 .hero-wrap { position: relative; overflow: hidden; overflow: clip; }
@@ -648,7 +645,6 @@ html[data-theme="reactor"] { --aurora: 0.3; --live: #3ddc84; --warn: #f5a524; --
   padding-bottom: 0.06em;
   background: linear-gradient(90deg, #d7452f, #a36f14, #288b35, #158591, #7869d9, #cc3fa1) 0 100% / 100% 0.14em no-repeat;
 }
-.hero .side .live { margin-top: 1.5rem; }
 /* Newest release per platform, on a phone only (home.js): the dial is far down the page. */
 .newest { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; margin-top: 1.25rem; }
 .newest:empty { display: none; }
@@ -658,30 +654,6 @@ html[data-theme="reactor"] { --aurora: 0.3; --live: #3ddc84; --warn: #f5a524; --
 @media (min-width: 40rem) { .newest { display: none; } }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
 .actions .pill { margin-top: 0; }
-.live {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  max-width: 100%;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  background: var(--card);
-  font-size: 0.875rem;
-  line-height: 1.4286;
-}
-.live .dot {
-  position: relative;
-  flex: none;
-  width: 0.625rem;
-  height: 0.625rem;
-  margin-top: 0.4rem;
-  border-radius: 50%;
-  background: var(--muted);
-}
-.live[data-state="live"] .dot { background: var(--live); }
-.live[data-state="stale"] .dot { background: var(--warn); }
-.live[data-state="error"] .dot { background: var(--bad); }
 .notice { margin-top: 1rem; font-size: 0.875rem; color: var(--muted); }
 .notice a { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
 
@@ -771,7 +743,7 @@ html[data-theme="reactor"] { --aurora: 0.3; --live: #3ddc84; --warn: #f5a524; --
   text-decoration: underline;
   text-underline-offset: 4px;
 }
-html[data-theme="reactor"] .rel, html[data-theme="reactor"] .live, html[data-theme="reactor"] .tile,
+html[data-theme="reactor"] .rel, html[data-theme="reactor"] .tile,
 html[data-theme="reactor"] .pill, html[data-theme="reactor"] .back, html[data-theme="reactor"] .fab,
 html[data-theme="reactor"] .toast, html[data-theme="reactor"] .toast-close, html[data-theme="reactor"] .badge,
 html[data-theme="reactor"] .prose-lab pre {
@@ -856,18 +828,6 @@ html[data-theme="reactor"] .chip-link {
   @keyframes drift {
     from { transform: translate3d(0, 0, 0) scale(1); }
     to { transform: translate3d(3rem, 2rem, 0) scale(1.12); }
-  }
-  .live[data-state="live"] .dot::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: var(--live);
-    animation: ping 2s ease-out infinite;
-  }
-  @keyframes ping {
-    from { transform: scale(1); opacity: 0.6; }
-    to { transform: scale(3); opacity: 0; }
   }
   .toast { transition: opacity 200ms ease, transform 200ms ease, visibility 0s linear 200ms; }
   .toast.on { transition: opacity 200ms ease, transform 200ms ease; }

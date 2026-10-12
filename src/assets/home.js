@@ -1,31 +1,13 @@
-/* Front page: the live indicator and, per platform family, its latest release and section.
+/* Front page: per platform family, its latest release and section.
    The mock screens and the developer highlights are below.js, loaded once the page has painted. */
 (function () {
   "use strict";
   var RO = window.RO;
-  var live = document.getElementById("live");
-  var liveText = document.getElementById("live-text");
   var cards = document.querySelectorAll("#latest-grid [data-family]");
   var sections = document.querySelectorAll("section.fam");
   var signature = "";
   var current = [];
   var dragging = false;
-
-  function setLive(kind, text) {
-    live.setAttribute("data-state", kind);
-    liveText.textContent = text;
-  }
-  function paintLive(data, failed) {
-    if (!data) {
-      setLive("error", failed ? "Could not load releases. The source is linked below." : "Loading…");
-      return;
-    }
-    var when = data.fetchedAt ? RO.stamp(data.fetchedAt) : "";
-    if (failed) setLive("stale", "Could not reach the tracker, showing data from " + when);
-    else if (data.stale) setLive("stale", "Stale: the source was unreachable, showing the last copy from " + when);
-    else if (data.snapshot) setLive("snapshot", "Saved copy from " + when + ", not live");
-    else setLive("live", "Live: fetched at " + when);
-  }
 
   // The sigil of a build and a line that reads two of its parameters.
   function paintSigil(card, r) {
@@ -174,7 +156,6 @@
   });
 
   RO.on(function (data, fresh, failed) {
-    paintLive(data, failed);
     if (!data) {
       if (failed) paintFailed();
       return;
