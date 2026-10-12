@@ -14,7 +14,7 @@
   // A validation verdict may come with a released build once results exist; a beta, a release
   // candidate and anything without a verdict is untested (see docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
-  // Used when the families config cannot be read: Apple is the only vendor so far.
+  // Used when the families config cannot be read: Apple is the only vendor with a feed so far.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
 
   var config = { families: [], vendors: [] };

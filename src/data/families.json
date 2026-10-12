@@ -8,6 +8,42 @@
         "url": "https://developer.apple.com/news/releases/",
         "hosts": ["developer.apple.com"]
       }
+    },
+    {
+      "id": "mikrotik",
+      "name": "MikroTik",
+      "source": {
+        "name": "MikroTik changelogs",
+        "url": "https://mikrotik.com/download/changelogs",
+        "hosts": ["mikrotik.com"]
+      }
+    },
+    {
+      "id": "google",
+      "name": "Google",
+      "source": {
+        "name": "Android versions",
+        "url": "https://developer.android.com/about/versions",
+        "hosts": ["developer.android.com"]
+      }
+    },
+    {
+      "id": "microsoft",
+      "name": "Microsoft",
+      "source": {
+        "name": "Windows release health",
+        "url": "https://learn.microsoft.com/en-us/windows/release-health/release-information",
+        "hosts": ["learn.microsoft.com"]
+      }
+    },
+    {
+      "id": "valve",
+      "name": "Valve",
+      "source": {
+        "name": "Steam Deck news",
+        "url": "https://store.steampowered.com/news/app/1675200",
+        "hosts": ["store.steampowered.com"]
+      }
     }
   ],
   "families": [
@@ -16,6 +52,10 @@
     { "id": "macOS", "vendor": "apple", "name": "macOS", "accent": "#288b35", "accentText": "#247c2f" },
     { "id": "watchOS", "vendor": "apple", "name": "watchOS", "accent": "#158591", "accentText": "#137883" },
     { "id": "tvOS", "vendor": "apple", "name": "tvOS", "accent": "#7869d9", "accentText": "#6a5ad5" },
-    { "id": "visionOS", "vendor": "apple", "name": "visionOS", "accent": "#cc3fa1", "accentText": "#bd3293" }
+    { "id": "visionOS", "vendor": "apple", "name": "visionOS", "accent": "#cc3fa1", "accentText": "#bd3293" },
+    { "id": "RouterOS", "vendor": "mikrotik", "name": "RouterOS", "accent": "#8a7566", "accentText": "#7c695c" },
+    { "id": "Android", "vendor": "google", "name": "Android", "accent": "#738003", "accentText": "#677303" },
+    { "id": "Windows", "vendor": "microsoft", "name": "Windows", "accent": "#1a80b6", "accentText": "#1773a4" },
+    { "id": "SteamOS", "vendor": "valve", "name": "SteamOS", "accent": "#b26070", "accentText": "#a85163" }
   ]
 }

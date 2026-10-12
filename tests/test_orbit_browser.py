@@ -29,7 +29,18 @@ except ImportError:
     )
 
 SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
-FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
+FAMILIES = [
+    "iOS",
+    "iPadOS",
+    "macOS",
+    "watchOS",
+    "tvOS",
+    "visionOS",
+    "RouterOS",
+    "Android",
+    "Windows",
+    "SteamOS",
+]
 NOW = datetime(2026, 10, 12, 12, 0, tzinfo=timezone.utc)  # noqa: UP017
 CLOCK = "(() => { const t = Date.parse('2026-10-12T12:00:00Z'); Date.now = () => t; })();"
 RECORD = """
@@ -170,6 +181,7 @@ def test_betas_are_shorter_and_thinner_than_releases_in_the_same_full_colour(pag
         }"""
     )
     assert rows["release"] and rows["beta"]
+    assert all(n["length"] > 0 for n in rows["release"] + rows["beta"])
     assert max(n["length"] for n in rows["beta"]) < min(n["length"] for n in rows["release"])
     assert max(n["width"] for n in rows["beta"]) < min(n["width"] for n in rows["release"])
     for note in rows["release"] + rows["beta"]:

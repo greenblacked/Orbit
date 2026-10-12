@@ -12,7 +12,7 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 | Source adapters | `deploy/sources/` | One adapter per feed: `{ id, vendor, urls, parse(text) }`. `urls` is the allowlist the Worker may fetch. The registry is `index.js`. |
 | Release contract | `deploy/releases.js` | The release shape, date parsing and the merge of live data with the snapshot. |
 | Snapshot | `src/data/releases.json` | The bundled copy of the releases. Refreshed with `node deploy/snapshot_releases.mjs`. |
-| Families | `src/data/families.json` | Platform families, their accents and the vendors with their sources. Read by the Worker and the pages. |
+| Families | `src/data/families.json` | Platform families, their accents and the vendors with their sources. Read by the Worker and the pages. Five vendors: Apple (with an adapter), MikroTik, Google, Microsoft and Valve (listed, no adapter yet). |
 | Results | `results/` | One JSON file per publicly released, tested build. |
 | Page scripts | `src/assets/` | `releases.js` loads the data. `home.js`, `timeline.js` and `compare.js` draw a page. `sigil.js` and `orbit.js` draw the signature. `below.js` (the mock screens and the developer highlights), `cadence.js`, `sigil-generic.js` (the sigil rule for a build that is not an Apple build), `fx.js` and `aurora.js` load after the first paint. |
 | Checks | `scripts/check_*.py`, `tests/` | Site, results and pipeline checks, and the Python and Node tests. |
@@ -45,7 +45,8 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 ## Limits
 
 - **Budgets.** First-paint scripts under 60,000 bytes per page, the effect modules budgeted apart, a page with everything it loads under 500,000 bytes, any image under 200,000 bytes.
-- **Dial window.** 26 weeks, widening to 52 when the data spans more.
+- **Dial window.** 26 weeks, widening to 52 when the data spans more. The rings are 30 units apart; with more than seven families the gap, and the notches with it, narrow so the innermost ring stays at radius 118, outside the hand's hub and the centre date.
+- **Vendors without a feed.** `families.json` may list a vendor whose adapter does not exist yet. Its cards and sections render the empty state, and nothing is fetched for it ([ADR 0006](adr/0006-list-vendors-before-their-feeds.md)).
 - **Security policy.** No inline script or style and no widening of the Content-Security-Policy to make a change work. The only outside origin is Google Fonts.
 - **Single Worker.** One Worker serves production and, as a Preview, the stage host. Until the first release the stage job attaches the custom domain for Preview traffic only; the first release makes it Production and Preview. Environment-scoped secrets and branch and tag rulesets keep the two apart ([SETUP.md](../SETUP.md)).
 - **No runtime dependencies.** The site ships none, `scripts/` use the standard library only, and the Worker needs none beyond the platform.

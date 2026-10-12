@@ -47,8 +47,12 @@ describe('parseDate', () => {
 });
 
 describe('the families config', () => {
-  it('lists the six Apple families, each with a colour accent', () => {
+  it('lists the families of every vendor, each with a colour accent', () => {
     assert.deepEqual(familyIds('apple'), ['iOS', 'iPadOS', 'macOS', 'watchOS', 'tvOS', 'visionOS']);
+    assert.deepEqual(familyIds('mikrotik'), ['RouterOS']);
+    assert.deepEqual(familyIds('google'), ['Android']);
+    assert.deepEqual(familyIds('microsoft'), ['Windows']);
+    assert.deepEqual(familyIds('valve'), ['SteamOS']);
     assert.deepEqual(familyIds('nobody'), []);
     for (const family of FAMILIES) {
       assert.match(family.accent, /^#[0-9a-f]{6}$/i, family.id);
@@ -68,12 +72,16 @@ describe('the families config', () => {
         ['watchOS', '#158591', '#137883'],
         ['tvOS', '#7869d9', '#6a5ad5'],
         ['visionOS', '#cc3fa1', '#bd3293'],
+        ['RouterOS', '#8a7566', '#7c695c'],
+        ['Android', '#738003', '#677303'],
+        ['Windows', '#1a80b6', '#1773a4'],
+        ['SteamOS', '#b26070', '#a85163'],
       ],
     );
   });
 
   it('names each vendor and the page its data comes from', () => {
-    assert.deepEqual(VENDORS.map((vendor) => vendor.id), ['apple']);
+    assert.deepEqual(VENDORS.map((vendor) => vendor.id), ['apple', 'mikrotik', 'google', 'microsoft', 'valve']);
     for (const vendor of VENDORS) {
       assert.ok(vendor.name, vendor.id);
       assert.match(vendor.source.url, /^https:\/\//, vendor.id);
