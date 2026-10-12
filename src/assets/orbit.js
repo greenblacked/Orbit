@@ -384,8 +384,17 @@
 
   stage.addEventListener("pointerover", function (e) {
     var g = notchOf(e.target);
-    if (g) show(g, false);
-    else if (card.contains(e.target)) window.clearTimeout(hideTimer);
+    if (g) { show(g, false); return; }
+    if (!card.contains(e.target)) return;
+    // A card still closing can sit over another notch. A pointer that arrives on it from outside
+    // the stage at that notch's centre opens that notch; one that comes from the card's own notch
+    // (through the stage) keeps the card where it is.
+    var from = e.relatedTarget;
+    if (e.pointerType !== "touch" && !pinned && !(from && stage.contains(from))) {
+      var covered = nearest(e.clientX, e.clientY, 6);
+      if (covered && covered.rel.id !== card.getAttribute("data-id")) { show(covered, false); return; }
+    }
+    window.clearTimeout(hideTimer);
   });
   stage.addEventListener("pointerout", function (e) {
     if (notchOf(e.target) || card.contains(e.target) || inHand(e.target)) later();
@@ -421,15 +430,6 @@
   });
   stage.addEventListener("pointermove", function (e) {
     if (!drag) {
-      // A card that has not closed yet can sit over the next notch (the rings are 16 units
-      // apart on a dial of ten, and a card opens 22 px below its notch). A pointer over such a
-      // card but at the heart of another notch opens that notch: the notch's own centre, not
-      // whatever lies on top of it, decides. A pinned card stays put.
-      if (e.pointerType !== "touch" && !pinned && card.contains(e.target)) {
-        var covered = nearest(e.clientX, e.clientY, 6);
-        if (covered && covered.rel.id !== card.getAttribute("data-id")) show(covered, false);
-        return;
-      }
       // Hovering the knob shows the card of a notch under it, as hovering the notch would.
       if (e.pointerType !== "touch" && inHand(e.target)) {
         var under = nearest(e.clientX, e.clientY, 22);
