@@ -11,9 +11,10 @@
 import android from './android.js';
 import apple from './apple.js';
 import mikrotik from './mikrotik.js';
+import steamos from './steamos.js';
 import windows from './windows.js';
 
-export const SOURCES = [apple, mikrotik, android, windows];
+export const SOURCES = [apple, mikrotik, android, windows, steamos];
 
 /** True when `source` has the shape the Worker relies on. */
 export function isSource(source) {

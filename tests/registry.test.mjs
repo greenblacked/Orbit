@@ -10,6 +10,7 @@ import android from '../deploy/sources/android.js';
 import apple from '../deploy/sources/apple.js';
 import mikrotik from '../deploy/sources/mikrotik.js';
 import { isSource, SOURCES, vendorsOf } from '../deploy/sources/index.js';
+import steamos from '../deploy/sources/steamos.js';
 import windows from '../deploy/sources/windows.js';
 import { createWorker } from '../deploy/worker.js';
 import {
@@ -86,10 +87,11 @@ describe('the registry', () => {
     assert.ok(SOURCES.every(isSource));
     assert.equal(new Set(SOURCES.map((s) => s.id)).size, SOURCES.length);
     assert.ok(SOURCES.includes(apple));
-    assert.deepEqual([...vendorsOf(SOURCES)].sort(), ['apple', 'google', 'microsoft', 'mikrotik']);
+    assert.deepEqual([...vendorsOf(SOURCES)].sort(), ['apple', 'google', 'microsoft', 'mikrotik', 'valve']);
     assert.ok(SOURCES.includes(mikrotik));
     assert.ok(SOURCES.includes(android));
     assert.ok(SOURCES.includes(windows));
+    assert.ok(SOURCES.includes(steamos));
   });
 
   it('only lists https URLs, and the families of its own vendor', () => {

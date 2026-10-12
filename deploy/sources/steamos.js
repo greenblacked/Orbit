@@ -31,7 +31,6 @@ const TITLE_RE = new RegExp(`^(${FAMILIES.join('|')})\\s+(\\d+(?:\\.\\d+){1,3})(
 // A title is at most 200 characters with no markup or control characters.
 const TITLE_OK = /^[^<>\u0000-\u001f]{1,200}$/;
 const BUILD_RE = /(?:^|[\s(])(\d{8}\.\d{1,3})(?=$|[\s)])/;
-const GID_RE = /^\d{1,24}$/;
 
 /**
  * Parse a post title and its tags; null when it is not a SteamOS release. The channel comes
@@ -39,7 +38,9 @@ const GID_RE = /^\d{1,24}$/;
  * so `stablechannel` (or the word Stable) decides first, even when Valve also tags the post
  * for the beta and preview channels it rolls out to. Otherwise `betachannel`,
  * `previewchannel` or the words Beta and Preview mean a beta. A post that names no channel is
- * skipped rather than guessed. This rule is unverified against a real SteamOS post (ADR 0006).
+ * skipped rather than guessed. Checked against the 25 real SteamOS posts of the 2026-10-12
+ * probe (ADR 0006): Valve tags a stable build `stablechannel`, and sometimes also
+ * `betachannel` and `previewchannel`; a beta carries both; a preview only `previewchannel`.
  */
 export function parseTitle(title, tags = []) {
   if (typeof title !== 'string') return null;
@@ -67,6 +68,13 @@ export function parseTitle(title, tags = []) {
   };
 }
 
+/** A release's id: the news page plus the title as a slug, the same for the same post whichever
+ * document it came from (the snapshot rows are made from titles alone, without a gid). */
+function idOf(title) {
+  const slug = title.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '');
+  return `${NEWS_PAGE}#${slug}`;
+}
+
 function linkOf(value) {
   return typeof value === 'string' && LINK_HOSTS.some((host) => isHttpsOn(value, host)) ? value : NEWS_PAGE;
 }
@@ -87,14 +95,13 @@ export function parseNews(jsonText) {
     if (typeof item.title !== 'string') continue;
     const title = item.title.trim();
     const parsed = parseTitle(title, item.tags);
-    const gid = typeof item.gid === 'string' ? item.gid : '';
     const seconds = item.date;
-    if (!parsed || !GID_RE.test(gid)) continue;
+    if (!parsed) continue;
     if (!Number.isSafeInteger(seconds) || seconds <= 0) continue;
     const time = new Date(seconds * 1000);
     if (!Number.isFinite(time.getTime())) continue;
     releases.push({
-      id: gid,
+      id: idOf(title),
       ...parsed,
       title,
       date: time.toISOString().replace('.000Z', 'Z'),
@@ -112,10 +119,9 @@ export function parseFeed(xmlText) {
     const title = field(item, 'title');
     const parsed = parseTitle(title);
     const link = field(item, 'link');
-    const id = field(item, 'guid') || link;
     const date = parseDate(field(item, 'pubDate'));
-    if (!parsed || !id || !date) continue;
-    releases.push({ id, ...parsed, title, date, url: linkOf(link), source: ID });
+    if (!parsed || !date) continue;
+    releases.push({ id: idOf(title), ...parsed, title, date, url: linkOf(link), source: ID });
   }
   return mergeReleases([], releases);
 }

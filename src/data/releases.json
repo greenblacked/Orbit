@@ -1,5 +1,5 @@
 {
-  "source": "apple-developer-releases,mikrotik-routeros,android-build-numbers,microsoft-windows-release-health",
+  "source": "apple-developer-releases,mikrotik-routeros,android-build-numbers,microsoft-windows-release-health,valve-steam-news",
   "fetchedAt": "2026-10-12T08:38:02Z",
   "stale": false,
   "snapshot": true,
@@ -227,6 +227,34 @@
       "date": "2026-09-28T17:00:00Z",
       "url": "https://developer.apple.com/news/releases/?id=09282026f",
       "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://store.steampowered.com/news/app/1675200#steamos-3.9.2-beta",
+      "vendor": "valve",
+      "family": "SteamOS",
+      "version": "3.9.2",
+      "major": 3,
+      "stage": "beta",
+      "beta": null,
+      "build": "",
+      "title": "SteamOS 3.9.2 Beta",
+      "date": "2026-09-25T23:16:19Z",
+      "url": "https://store.steampowered.com/news/app/1675200",
+      "source": "valve-steam-news"
+    },
+    {
+      "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.28",
+      "vendor": "valve",
+      "family": "SteamOS",
+      "version": "3.8.28",
+      "major": 3,
+      "stage": "release",
+      "beta": null,
+      "build": "",
+      "title": "SteamOS 3.8.28",
+      "date": "2026-09-25T00:28:44Z",
+      "url": "https://store.steampowered.com/news/app/1675200",
+      "source": "valve-steam-news"
     },
     {
       "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#24h2-26100.9550",

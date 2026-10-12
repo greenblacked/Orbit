@@ -1,0 +1,182 @@
+{
+  "appnews": {
+    "newsitems": [
+      {
+        "title": "SteamOS 3.9.2 Beta",
+        "date": 1790378179,
+        "tags": [
+          "patchnotes",
+          "previewchannel",
+          "betachannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.28",
+        "date": 1790296124,
+        "tags": [
+          "patchnotes",
+          "stablechannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.28 Beta",
+        "date": 1790122891,
+        "tags": [
+          "patchnotes",
+          "betachannel",
+          "previewchannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.9.1 Preview",
+        "date": 1789428264,
+        "tags": [
+          "patchnotes",
+          "previewchannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.27 Beta",
+        "date": 1789422669,
+        "tags": [
+          "patchnotes",
+          "betachannel",
+          "previewchannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.9.0 Preview",
+        "date": 1787968928,
+        "tags": [
+          "patchnotes",
+          "previewchannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.26 Beta",
+        "date": 1787881452,
+        "tags": [
+          "patchnotes",
+          "betachannel",
+          "previewchannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.25 Beta",
+        "date": 1786164756,
+        "tags": [
+          "patchnotes",
+          "betachannel",
+          "previewchannel",
+          "mod_reviewed",
+          "ModAct_1425146861_1786164813_0",
+          "mod_require_rereview"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.24 Beta",
+        "date": 1784322959,
+        "tags": [
+          "patchnotes",
+          "betachannel",
+          "previewchannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.16",
+        "date": 1784250249,
+        "tags": [
+          "patchnotes",
+          "stablechannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.23 Beta",
+        "date": 1784159204,
+        "tags": [
+          "patchnotes",
+          "betachannel",
+          "previewchannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.15",
+        "date": 1784159166,
+        "tags": [
+          "patchnotes",
+          "stablechannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.22 Beta",
+        "date": 1783125103,
+        "tags": [
+          "patchnotes",
+          "betachannel",
+          "previewchannel",
+          "mod_reviewed",
+          "ModAct_1896160435_1783125496_0",
+          "mod_require_rereview"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.14",
+        "date": 1783125070,
+        "tags": [
+          "patchnotes",
+          "stablechannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.21 Beta",
+        "date": 1782951277,
+        "tags": [
+          "patchnotes",
+          "mod_reviewed",
+          "ModAct_1751692459_1782953317_0",
+          "betachannel",
+          "previewchannel",
+          "ModAct_1607812438_1783017190_4",
+          "mod_require_rereview"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.13",
+        "date": 1782951252,
+        "tags": [
+          "patchnotes",
+          "stablechannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.20 Beta",
+        "date": 1782778178,
+        "tags": [
+          "patchnotes",
+          "previewchannel",
+          "betachannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.12",
+        "date": 1782777247,
+        "tags": [
+          "patchnotes",
+          "stablechannel",
+          "betachannel",
+          "previewchannel"
+        ]
+      },
+      {
+        "title": "SteamOS 3.8.11",
+        "date": 1781995320,
+        "tags": [
+          "patchnotes",
+          "stablechannel",
+          "betachannel",
+          "previewchannel"
+        ]
+      }
+    ]
+  }
+}

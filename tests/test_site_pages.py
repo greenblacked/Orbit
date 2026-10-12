@@ -30,8 +30,8 @@ except ImportError:
 SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
 AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
-# Listed beside them, with no release feed connected yet: their cards say so. RouterOS, Android
-# and Windows are not here: their feeds are connected and the snapshot holds releases.
+# A family with no release in the data says so. Every shipped family has snapshot rows now, so the
+# test serves the data without the rows of these.
 WAITING = ["SteamOS"]
 # The newest Apple row: tests that forge an Apple release copy this one, not the newest row.
 APPLE_FIRST = next(r for r in SNAPSHOT["releases"] if r["vendor"] == "apple")
@@ -171,7 +171,10 @@ def test_windows_shows_the_newest_servicing_version_from_its_snapshot_rows(page,
     assert link.get_attribute("href") == "https://support.microsoft.com/help/5124010"
 
 
-def test_a_family_without_a_connected_feed_says_so_instead_of_inventing_a_release(page, base_url):
+def test_a_family_without_a_release_says_so_instead_of_inventing_one(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [r for r in data["releases"] if r["family"] not in WAITING]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
     page.goto(base_url + "/")
     cards_ready(page)
     for name in WAITING:
@@ -212,6 +215,20 @@ def test_android_shows_its_snapshot_release_with_a_link_to_the_aosp_page(page, b
     assert link.get_attribute("href").startswith("https://source.android.com/")
     section = page.locator('section.fam[data-family="Android"]')
     assert section.locator(".recent li").count() == 1
+
+
+def test_steamos_shows_its_snapshot_releases_with_a_link_to_the_news_page(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="SteamOS"]')
+    assert card.locator("[data-f=ver]").inner_text() == "SteamOS 3.9.2"
+    link = card.locator("[data-f=link]")
+    assert link.is_visible()
+    assert link.get_attribute("href") == "https://store.steampowered.com/news/app/1675200"
+    section = page.locator('section.fam[data-family="SteamOS"]')
+    recent = section.locator(".recent li")
+    assert recent.count() == len(releases("SteamOS")) == 2
+    assert "3.8.28" in section.locator(".recent").inner_text()
 
 
 def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):

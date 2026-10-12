@@ -42,7 +42,7 @@
       "source": {
         "name": "Steam Deck news",
         "url": "https://store.steampowered.com/news/app/1675200",
-        "hosts": ["store.steampowered.com"]
+        "hosts": ["store.steampowered.com", "steamstore-a.akamaihd.net"]
       }
     }
   ],
