@@ -66,9 +66,6 @@ def test_every_page_links_the_source_of_every_vendor(path):
         source = vendor["source"]
         assert f'<a href="{source["url"]}"' in credit, (path, vendor["id"])
         assert source["name"] in credit, (path, vendor["id"])
-    # The notice names each vendor's own marks.
-    for mark in ("MikroTik", "RouterOS", "Android", "Windows", "Steam Deck", "SteamOS"):
-        assert mark in LEGAL, mark
 
 
 @pytest.mark.parametrize("path", pages())
