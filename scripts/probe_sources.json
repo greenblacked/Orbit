@@ -1,0 +1,182 @@
+[
+  {
+    "id": "apple-developer-releases-rss",
+    "vendor": "Apple",
+    "kind": "release",
+    "url": "https://developer.apple.com/news/releases/rss/releases.rss"
+  },
+  {
+    "id": "apple-security-releases-index",
+    "vendor": "Apple",
+    "kind": "security",
+    "url": "https://support.apple.com/en-us/100100"
+  },
+  {
+    "id": "apple-security-note-ios-26-7-1",
+    "vendor": "Apple",
+    "kind": "security",
+    "url": "https://support.apple.com/en-us/149226"
+  },
+  {
+    "id": "mikrotik-current-rss",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://mikrotik.com/current.rss"
+  },
+  {
+    "id": "mikrotik-latest-stable-long-term-rss",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://download.mikrotik.com/routeros/latest-stable-and-long-term.rss"
+  },
+  {
+    "id": "mikrotik-newest7-stable",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://upgrade.mikrotik.com/routeros/NEWEST7.stable"
+  },
+  {
+    "id": "mikrotik-newest7-long-term",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://upgrade.mikrotik.com/routeros/NEWEST7.long-term"
+  },
+  {
+    "id": "mikrotik-newest7-testing",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://upgrade.mikrotik.com/routeros/NEWEST7.testing"
+  },
+  {
+    "id": "mikrotik-newest7a-stable",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://upgrade.mikrotik.com/routeros/NEWEST7a.stable"
+  },
+  {
+    "id": "mikrotik-changelogs",
+    "vendor": "MikroTik",
+    "kind": "release",
+    "url": "https://mikrotik.com/download/changelogs"
+  },
+  {
+    "id": "mikrotik-supportsec",
+    "vendor": "MikroTik",
+    "kind": "security",
+    "url": "https://mikrotik.com/supportsec"
+  },
+  {
+    "id": "android-build-numbers",
+    "vendor": "Android",
+    "kind": "release",
+    "url": "https://source.android.com/docs/setup/reference/build-numbers"
+  },
+  {
+    "id": "android-security-bulletin-index",
+    "vendor": "Android",
+    "kind": "security",
+    "url": "https://source.android.com/docs/security/bulletin"
+  },
+  {
+    "id": "android-security-bulletin-2026-10",
+    "vendor": "Android",
+    "kind": "security",
+    "url": "https://source.android.com/docs/security/bulletin/2026/2026-10-01"
+  },
+  {
+    "id": "android-pixel-bulletin-index",
+    "vendor": "Android",
+    "kind": "security",
+    "url": "https://source.android.com/docs/security/bulletin/pixel"
+  },
+  {
+    "id": "android-pixel-bulletin-2026-10",
+    "vendor": "Android",
+    "kind": "security",
+    "url": "https://source.android.com/docs/security/bulletin/pixel/2026/2026-10-01"
+  },
+  {
+    "id": "android-versions",
+    "vendor": "Android",
+    "kind": "release",
+    "url": "https://developer.android.com/about/versions"
+  },
+  {
+    "id": "android-pixel-factory-images",
+    "vendor": "Android",
+    "kind": "release",
+    "url": "https://developers.google.com/android/images"
+  },
+  {
+    "id": "android-pixel-update-schedule",
+    "vendor": "Android",
+    "kind": "release",
+    "url": "https://support.google.com/pixelphone/answer/4457705"
+  },
+  {
+    "id": "windows-release-health-11",
+    "vendor": "Microsoft",
+    "kind": "release",
+    "url": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information"
+  },
+  {
+    "id": "windows-release-health-10",
+    "vendor": "Microsoft",
+    "kind": "release",
+    "url": "https://learn.microsoft.com/en-us/windows/release-health/release-information"
+  },
+  {
+    "id": "windows-release-health-status-11-25h2",
+    "vendor": "Microsoft",
+    "kind": "release",
+    "url": "https://learn.microsoft.com/en-us/windows/release-health/status-windows-11-25h2"
+  },
+  {
+    "id": "windows-update-history",
+    "vendor": "Microsoft",
+    "kind": "release",
+    "url": "https://support.microsoft.com/en-us/help/4043454"
+  },
+  {
+    "id": "msrc-cvrf-updates",
+    "vendor": "Microsoft",
+    "kind": "security",
+    "url": "https://api.msrc.microsoft.com/cvrf/v3.0/updates"
+  },
+  {
+    "id": "msrc-cvrf-2026-sep",
+    "vendor": "Microsoft",
+    "kind": "security",
+    "url": "https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Sep"
+  },
+  {
+    "id": "steamos-news-rss-1675200",
+    "vendor": "Valve",
+    "kind": "release",
+    "url": "https://store.steampowered.com/feeds/news/app/1675200"
+  },
+  {
+    "id": "steamos-getnewsforapp-1675200",
+    "vendor": "Valve",
+    "kind": "release",
+    "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1675200&count=5&maxlength=300"
+  },
+  {
+    "id": "cisa-kev-json",
+    "vendor": "CISA",
+    "kind": "enrichment",
+    "url": "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
+  },
+  {
+    "id": "first-epss-cve-2024-3400",
+    "vendor": "FIRST",
+    "kind": "enrichment",
+    "url": "https://api.first.org/data/v1/epss?cve=CVE-2024-3400"
+  },
+  {
+    "id": "nvd-cve-2024-3400",
+    "vendor": "NIST",
+    "kind": "enrichment",
+    "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2024-3400"
+  }
+]
