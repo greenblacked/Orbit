@@ -35,6 +35,14 @@ def pages() -> list[str]:
     return sorted(p.relative_to(SRC).as_posix() for p in SRC.rglob("*.html"))
 
 
+def test_a_family_may_only_headline_its_releases():
+    # "headline": "release" makes the cards and "Newest" lines skip betas and RCs.
+    for family in CONFIG["families"]:
+        assert "headline" not in family or family["headline"] == "release", family["id"]
+    headlined = {f["id"] for f in CONFIG["families"] if "headline" in f}
+    assert headlined == {"RouterOS"}
+
+
 def test_the_snapshot_follows_the_data_contract():
     data = json.loads((SRC / "data" / "releases.json").read_text(encoding="utf-8"))
     sources = data["source"].split(",")

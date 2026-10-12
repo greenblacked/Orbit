@@ -196,10 +196,10 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     page.goto(base_url + "/")
     cards_ready(page)
     card = page.locator('#latest-grid [data-family="RouterOS"]')
-    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.25"
+    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.24.5"
     assert card.locator("[data-f=link]").is_visible()
     assert card.locator("[data-f=link]").get_attribute("href") == (
-        "https://mikrotik.com/download?v=7.25rc1"
+        "https://mikrotik.com/download?v=7.24.5"
     )
     section = page.locator('section.fam[data-family="RouterOS"]')
     recent = section.locator(".recent li")
@@ -207,6 +207,9 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     assert "7.23.8" in recent.first.inner_text()
     listed = section.locator(".recent").inner_text()
     assert "7.25" in listed and "RC 1" in listed and "7.25rc1" in listed
+    assert page.locator("#newest .fam-routeros .n-ver").text_content() == "7.24.5"
+    assert "RouterOS 7.24.5" in section.locator("[data-f=latest]").inner_text()
+    assert "7.25rc1" not in section.locator("[data-f=latest]").inner_text()
 
 
 def test_the_newest_release_is_the_highest_version_not_the_latest_date(page, base_url):
@@ -240,10 +243,10 @@ def test_the_newest_release_is_the_highest_version_not_the_latest_date(page, bas
     page.goto(base_url + "/")
     cards_ready(page)
     assert page.inner_text("#latest-grid [data-family=iOS] [data-f=ver]") == "iOS 26.1"
-    # The card counts every stage: RouterOS 7.25 RC 1 outranks 7.24.5 and the dated 7.23.8.
-    assert page.inner_text("#latest-grid [data-family=RouterOS] [data-f=ver]") == "RouterOS 7.25"
+    # RouterOS headlines its newest stable release: neither 7.25 RC 1 nor the dated 7.23.8.
+    assert page.inner_text("#latest-grid [data-family=RouterOS] [data-f=ver]") == "RouterOS 7.24.5"
     section = page.locator('section.fam[data-family="RouterOS"]')
-    assert "RouterOS 7.25rc1" in section.locator("[data-f=latest]").inner_text()
+    assert "RouterOS 7.24.5" in section.locator("[data-f=latest]").inner_text()
 
 
 def test_android_shows_its_snapshot_releases_with_a_link_to_the_aosp_page(page, base_url):
