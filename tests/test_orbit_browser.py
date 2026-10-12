@@ -1017,7 +1017,7 @@ MAX_RATE = 2
 # The buttons under the newest list may move by this many pixels once the data lands.
 MAX_MOVE = 1
 CLS_LIMIT = 0.02
-EXTRA_ID = "https://developer.apple.com/news/releases/?id=09082026b"
+EXTRA_ID = "https://developer.apple.com/news/releases/?id=09082026z"
 
 
 def serve_live(page, answers):
@@ -1033,6 +1033,7 @@ def serve_live(page, answers):
 def with_extra_release():
     """The snapshot plus an older iOS release (so no card changes) and a newer fetchedAt."""
     data = json.loads(json.dumps(SNAPSHOT))
+    assert EXTRA_ID not in {r["id"] for r in data["releases"]}, "the id must be new"
     source = [r for r in data["releases"] if r["family"] == "iOS"][2]
     extra = dict(source, id=EXTRA_ID, url=source["url"] + "&extra=1", date="2026-09-08T17:30:00Z")
     data["releases"] = sorted([*data["releases"], extra], key=lambda r: r["date"], reverse=True)
