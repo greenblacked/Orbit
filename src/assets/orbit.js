@@ -59,8 +59,7 @@
       "class": "layer " + cls, focusable: "false"
     }, dial);
   }
-  // The knob's grab area is at least 44 CSS px across at any stage width: its radius in
-  // viewBox units is 22 CSS px times the units per pixel.
+  // The knob's grab area is 22 CSS px in radius, in viewBox units.
   function sizeKnob() {
     var w = stage.clientWidth;
     // Units per CSS pixel: the dial's text is sized in it (see .mlabel in site.css) so it keeps
@@ -75,8 +74,7 @@
       RO.day(r.t) + ", validation " + VERDICT[r.status];
   }
 
-  // The marker beside a notch's outer end: a hollow circle (untested), a filled circle (pass),
-  // a diamond (warn) or a cross (fail), so the verdict never rests on colour alone.
+  // The marker beside a notch's outer end: its shape carries the verdict, never colour alone.
   function marker(g, c, status, s) {
     var x = c[0], y = c[1], m, d = r2(4.5 * s), e = r2(3.5 * s);
     if (status === "warn") {
@@ -99,9 +97,7 @@
 
   function build() {
     now = Date.now();
-    // The window is fixed. The data may reach back years (the timeline lists all of it), but the
-    // dial shows the last 26 weeks only: notches are chosen by date below, so older releases
-    // are neither drawn nor counted.
+    // The window is fixed: only the last 26 weeks are drawn or counted.
     weeks = WEEKS;
     span = weeks * 7 * DAY;
     start = now - span;
@@ -124,9 +120,7 @@
     el("text", { "class": "c-note", y: 52 }, base).textContent = weeks + " weeks";
 
     var counts = {};
-    // Rings are STEP apart while they fit between OUTER and INNER; with more families they
-    // close up, and the notches, their markers and their grab areas shrink with the gap so
-    // that adjacent rings never overlap.
+    // Rings are STEP apart while they fit, then close up; notches shrink with the gap.
     var nf = fams.length;
     var step = nf > 1 ? Math.min(STEP, (OUTER - INNER) / (nf - 1)) : STEP;
     var scale = step / STEP, ms = Math.min(1, Math.max(0.55, scale));
@@ -137,9 +131,7 @@
       var rad = OUTER - i * step;
       el("circle", { "class": "ring", r: rad, "data-family": fam.id }, lane);
       counts[fam.id] = 0;
-      // Releases of one family stamped at the same moment would sit on one spot and only the
-      // top one could be opened. They fan out sideways around that spot, FAN units apart on
-      // the ring (a few days at most), each with a narrower grab area, so each has its own.
+      // Releases stamped at one moment fan out FAN units apart, each with a narrower grab area.
       var mine = all.filter(function (r) { return r.family === fam.id && r.t >= start && r.t <= now; });
       var stack = {}, seat = {};
       mine.forEach(function (r) { stack[r.t] = (stack[r.t] || 0) + 1; });
@@ -159,8 +151,7 @@
         }, lane);
         el("line", { "class": "hit", x1: h0[0], y1: h0[1], x2: h1[0], y2: h1[1], "stroke-width": n > 1 ? FAN - 2 : 26 }, g);
         el("line", { "class": "nl", x1: a0[0], y1: a0[1], x2: a1[0], y2: a1[1], "stroke-width": r2(wid) }, g);
-        // Just past the notch's outer end, sized to fit the free space before the next ring's
-        // notch (a diamond is 9 units across plus its stroke) down to the 0.55 floor.
+        // Just past the notch's outer end, sized to the free space before the next ring.
         var mk = Math.min(ms, Math.max(0.55, (step - len - 1.5) / 10.4));
         marker(g, xy(ang, rad + len / 2 + 0.75 + 4.7 * mk), r.status, mk);
         notches.push(g);
@@ -178,8 +169,7 @@
       "aria-label": "Time machine hand", "aria-valuemin": 0, "aria-valuemax": weeks * 7,
       "aria-valuenow": weeks * 7, "aria-describedby": "orbit-help"
     }, top);
-    // Only the knob outside the rings takes the pointer: a line hit area over the rings would
-    // sit on top of every notch the hand points at. Its radius is sized in CSS pixels.
+    // Only the knob outside the rings takes the pointer.
     ui.knob = el("circle", { "class": "hit", cx: 0, cy: -(OUTER + 24), r: 22 }, ui.hand);
     ui.hand.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
     sizeKnob();
@@ -187,8 +177,7 @@
     el("circle", { "class": "hk", cx: 0, cy: -(OUTER + 24), r: 6 }, ui.hand);
     el("circle", { "class": "hk", cx: 0, cy: -110, r: 4 }, ui.hand);
 
-    // The window start moved on: the hand cannot stay before it. Say so, so the cards, the
-    // sections and the cadence row below show the same day as the dial.
+    // The window start moved on: the hand cannot stay before it.
     var before = asOf;
     if (asOf !== null) asOf = Math.max(asOf, snap(start));
     paintKey(fams, counts);
@@ -200,8 +189,7 @@
     document.dispatchEvent(new CustomEvent("ro:orbit"));
   }
 
-  // The time machine. asOf is null for now, else the end of a UTC day the hand points at; the
-  // page below the dial listens for "ro:asof" and shows the releases that had landed by then.
+  // The time machine. asOf is null for now, else the end of a UTC day; the page listens for "ro:asof".
   var asOf = null, announceTimer = 0;
   function snap(t) { return Math.floor(t / DAY) * DAY + DAY - 1; }
   function paintView() {
@@ -354,8 +342,7 @@
   function inHand(target) {
     return !!(target && target.closest && target.closest(".hand"));
   }
-  // Tapping or hovering the knob opens the notch beneath it, if there is one: the knob is bigger
-  // than a notch, and the notches the hand points at are the ones worth opening.
+  // Tapping or hovering the knob opens the notch beneath it, if any.
   function toggleNearest(e) {
     var g = nearest(e.clientX, e.clientY, 22);
     if (!g) return;
@@ -389,9 +376,7 @@
     var g = notchOf(e.target);
     if (g) { show(g, false); return; }
     if (!card.contains(e.target)) return;
-    // A card still closing can sit over another notch. A pointer that arrives on it from outside
-    // the stage at that notch's centre opens that notch; one that comes from the card's own notch
-    // (through the stage) keeps the card where it is.
+    // A card still closing can sit over another notch: only a pointer arriving from outside the stage opens it.
     var from = e.relatedTarget;
     if (e.pointerType !== "touch" && !pinned && !(from && stage.contains(from))) {
       var covered = nearest(e.clientX, e.clientY, 6);
@@ -419,8 +404,7 @@
     if (pinned === g.rel.id) hide(true);
     else show(g, true);
   });
-  // Dragging the hand, with a mouse, a pen or a finger. The hand follows the pointer's angle by
-  // its change since the press, so it never jumps, and it cannot be taken past now or the start.
+  // Dragging the hand: it follows the pointer's angle by its change since the press.
   stage.addEventListener("pointerdown", function (e) {
     if (!inHand(e.target) || (e.button !== undefined && e.button > 0)) return;
     var t = asOf === null ? now : asOf;
@@ -466,9 +450,7 @@
   // A finger that starts on the hand moves the hand, not the page: that listener is on the hand
   // itself (see build), so a touch anywhere else on the dial scrolls without waiting for script.
   window.addEventListener("resize", sizeKnob, { passive: true });
-  // Capture, so a scrolling ancestor counts too. The tilt and the lane lift also move the
-  // notches without a scroll or resize, so the centres are dropped when those end, and when the
-  // stage changes size for any other reason.
+  // Capture, so a scrolling ancestor counts; the tilt and lane lift drop the centres when they end.
   function forget() { centres = null; }
   window.addEventListener("scroll", forget, { passive: true, capture: true });
   stage.addEventListener("transitionend", forget);
