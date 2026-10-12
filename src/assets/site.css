@@ -1416,7 +1416,7 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .cmp-result { margin-top: 2rem; }
 .cmp-cards { display: grid; gap: 1rem; }
 @media (min-width: 40rem) { .cmp-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.cmp-card { display: flex; gap: 1rem; padding: 1.25rem; border-top: 0.25rem solid var(--fam-a); border-radius: 1.25rem; background-color: var(--card); color: var(--ink); }
+.cmp-card { display: flex; gap: 1rem; padding: 1.25rem; border: 1px solid transparent; border-top: 0.25rem solid var(--fam-a); border-radius: 1.25rem; background-color: var(--card); color: var(--ink); }
 .cmp-card .sigil { width: 64px; height: 64px; }
 .cmp-text { min-width: 0; }
 .cmp-card .f-label { margin-bottom: 0.25rem; }
@@ -1504,6 +1504,7 @@ html[data-theme="reactor"] select { border-radius: 0; }
   padding: 0.75rem 0.9rem;
   border-radius: 1rem;
   background-color: var(--card);
+  border: 1px solid transparent;
   color: var(--ink);
   box-shadow: 0 12px 28px -12px var(--glass-shadow);
 }
@@ -1519,7 +1520,8 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .orbit-key .k-n { margin-left: auto; color: var(--muted); font: 0.8125rem var(--font-mono); }
 html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 /* Liquid Glass, as Back and To top: the card is the theme's glass tint over a solid base (the
-   opaque --card under it keeps the text readable where the blur is not supported), a sheen, a
+   opaque --card is the whole background where the blur is not supported; with it the tint
+   is mixed into --card, about 77 to 79% opaque, as Back and To top), a sheen, a
    bright top edge, a hairline rim and a floating shadow. The family accent stays as the cmp
    card's top rule. */
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
@@ -1669,4 +1671,6 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   .notch:focus-visible .nl, .hand:focus-visible .hl { stroke: Highlight; }
   .notch:focus-visible .hit { stroke: Highlight; stroke-width: 2px; stroke-dasharray: 3 2; }
   .hand:focus-visible .hit { stroke: Highlight; }
+  /* The glass card is outlined by shadows, which this mode drops: its transparent border shows. */
+  .orbit-card, .cmp-card { border-color: CanvasText; }
 }
