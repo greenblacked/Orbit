@@ -384,8 +384,17 @@
 
   stage.addEventListener("pointerover", function (e) {
     var g = notchOf(e.target);
-    if (g) show(g, false);
-    else if (card.contains(e.target)) window.clearTimeout(hideTimer);
+    if (g) { show(g, false); return; }
+    if (!card.contains(e.target)) return;
+    // A card still closing can sit over another notch. A pointer that arrives on it from outside
+    // the stage at that notch's centre opens that notch; one that comes from the card's own notch
+    // (through the stage) keeps the card where it is.
+    var from = e.relatedTarget;
+    if (e.pointerType !== "touch" && !pinned && !(from && stage.contains(from))) {
+      var covered = nearest(e.clientX, e.clientY, 6);
+      if (covered && covered.rel.id !== card.getAttribute("data-id")) { show(covered, false); return; }
+    }
+    window.clearTimeout(hideTimer);
   });
   stage.addEventListener("pointerout", function (e) {
     if (notchOf(e.target) || card.contains(e.target) || inHand(e.target)) later();

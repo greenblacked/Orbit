@@ -14,6 +14,7 @@ Live site: <https://orbit.szolotov.com>. The `main` branch also uploads a Previe
 ## What it does
 
 - Shows the newest release or beta of each platform family, a timeline of everything released with platform and stage filters, and a side-by-side comparison of two releases.
+- Follows Apple's six platform families, MikroTik RouterOS, Google Android, Microsoft Windows and Valve SteamOS (the Steam Deck) live. A family with no release in the data says "No release yet" instead of a made-up one ([ADR 0006](docs/adr/0006-list-vendors-before-their-feeds.md)).
 - Draws the releases as a dial: one ring per platform, one notch per release placed by date, and a time machine that shows the site as of any day in the window.
 - Gives every build a deterministic glyph, its sigil, so a build is recognisable at a glance ([docs/sigils.md](docs/sigils.md)).
 - Publishes the outcome of testing each publicly released build, and only those.
@@ -169,4 +170,4 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) for the flow, branch names and commit st
 
 ## Notice
 
-Release Orbit is an independent project. It is not affiliated with, endorsed by or sponsored by Apple Inc. or any other platform vendor. Apple, iOS, iPadOS, macOS, watchOS, tvOS, visionOS and other product names are trademarks of their respective owners and are used only to identify the software whose releases are listed. Release data comes from the vendors' public release pages, linked from every page of the site, and the descriptions are written in our own words.
+Release Orbit is an independent project. It is not affiliated with, endorsed by or sponsored by Apple Inc., MikroTik, Google LLC, Microsoft Corporation, Valve Corporation or any other platform vendor. Apple, iOS, iPadOS, macOS, watchOS, tvOS, visionOS, MikroTik, RouterOS, Android, Windows, Steam, Steam Deck, SteamOS and other product names are trademarks of their respective owners and are used only to identify the software whose releases are listed. Release data comes from the vendors' public release pages, linked from every page of the site, and the descriptions are written in our own words.

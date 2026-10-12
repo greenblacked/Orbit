@@ -6,12 +6,12 @@
 <meta name="site-version" content="{{version}}">
 <meta name="theme-color" content="#f4f1ea">
 <title>Release Orbit</title>
-<meta name="description" content="Release Orbit tracks operating system releases and betas as they land, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, with a timeline and a version compare.">
+<meta name="description" content="Release Orbit tracks operating system releases and betas as they land: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, plus MikroTik RouterOS, Android, Windows and SteamOS for the Steam Deck, with a timeline and a version compare.">
 <link rel="canonical" href="https://orbit.szolotov.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Release Orbit">
 <meta property="og:title" content="Release Orbit">
-<meta property="og:description" content="Release Orbit tracks operating system releases and betas as they land, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, with a timeline and a version compare.">
+<meta property="og:description" content="Release Orbit tracks operating system releases and betas as they land: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, plus MikroTik RouterOS, Android, Windows and SteamOS for the Steam Deck, with a timeline and a version compare.">
 <meta property="og:url" content="https://orbit.szolotov.com/">
 <meta property="og:image" content="https://orbit.szolotov.com/og.png">
 <meta property="og:image:width" content="1200">
@@ -19,7 +19,7 @@
 <meta property="og:image:alt" content="A build sigil of iOS 27.2 beta 3 beside the Release Orbit dial of the last 26 weeks.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Release Orbit">
-<meta name="twitter:description" content="Release Orbit tracks operating system releases and betas as they land, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, with a timeline and a version compare.">
+<meta name="twitter:description" content="Release Orbit tracks operating system releases and betas as they land: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, plus MikroTik RouterOS, Android, Windows and SteamOS for the Steam Deck, with a timeline and a version compare.">
 <meta name="twitter:image" content="https://orbit.szolotov.com/og.png">
 <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -47,7 +47,7 @@
 <section class="wrap hero">
 <h1>Every OS release, <span>as it lands.</span></h1>
 <div class="side">
-<p class="lede">Release Orbit follows operating system releases and betas, Apple first: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, refreshed while you read.</p>
+<p class="lede">Release Orbit follows operating system releases and betas: iOS, iPadOS, macOS, watchOS, tvOS and visionOS, plus MikroTik RouterOS, Android, Windows and SteamOS for the Steam Deck, refreshed while you read.</p>
 <ul class="newest" id="newest" aria-label="Newest release per platform"></ul>
 <div class="actions"><a class="pill" href="/timeline/">Timeline</a><a class="pill" href="/compare/">Compare</a><a class="pill" href="/about/">About</a></div>
 </div>
@@ -78,7 +78,7 @@
 <div class="sec-head">
 <h2 id="latest-h" class="title">Latest per platform</h2>
 <p class="notice asof-note" id="latest-asof" hidden></p>
-<p class="small">The newest release or beta for each platform family. Source: <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>.</p>
+<p class="small">The newest release or beta for each platform family. Sources: <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://mikrotik.com/download/changelogs" target="_blank" rel="noopener noreferrer">MikroTik changelogs<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://source.android.com/docs/setup/reference/build-numbers" target="_blank" rel="noopener noreferrer">AOSP build numbers<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" rel="noopener noreferrer">Windows release health<span class="sr-only"> (opens in a new tab)</span></a> and <a href="https://store.steampowered.com/news/app/1675200" target="_blank" rel="noopener noreferrer">Steam Deck news<span class="sr-only"> (opens in a new tab)</span></a>.</p>
 </div>
 <ul class="grid" id="latest-grid">
 <li class="rel fam-ios reveal" data-family="iOS">
@@ -147,8 +147,52 @@
 </div>
 <div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
 </li>
+<li class="rel fam-routeros reveal" data-family="RouterOS">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#routeros">RouterOS</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://mikrotik.com/download/changelogs" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
+</li>
+<li class="rel fam-android reveal" data-family="Android">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#android">Android</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://source.android.com/docs/setup/reference/build-numbers" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
+</li>
+<li class="rel fam-windows reveal" data-family="Windows">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#windows">Windows</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
+</li>
+<li class="rel fam-steamos reveal" data-family="SteamOS">
+<div class="tile" aria-hidden="true"><span data-f="major">—</span></div>
+<div class="rel-body">
+<h3 class="rel-fam"><a href="#steamos">SteamOS</a></h3>
+<p class="rel-ver" data-f="ver">Loading…</p>
+<p class="rel-meta"><span class="badge" data-f="badge" hidden><span class="b-dot" aria-hidden="true"></span><span data-f="stage"></span></span> <span class="build" data-f="build"></span></p>
+<p class="rel-when small" data-f="when"></p>
+<a class="rel-apple" data-f="link" href="https://store.steampowered.com/news/app/1675200" target="_blank" rel="noopener noreferrer" hidden>View release<span class="sr-only"> (opens in a new tab)</span></a>
+</div>
+<div class="rel-sig"><span class="sigil" data-f="sigil"></span><p class="small rel-sigtxt" data-f="sigtxt"></p></div>
+</li>
 </ul>
-<noscript><p class="notice">The release cards need JavaScript. Read the releases at <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a> directly.</p></noscript>
+<noscript><p class="notice">The release cards need JavaScript. Read the releases at <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://mikrotik.com/download/changelogs" target="_blank" rel="noopener noreferrer">MikroTik changelogs<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://source.android.com/docs/setup/reference/build-numbers" target="_blank" rel="noopener noreferrer">AOSP build numbers<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" rel="noopener noreferrer">Windows release health<span class="sr-only"> (opens in a new tab)</span></a> or <a href="https://store.steampowered.com/news/app/1675200" target="_blank" rel="noopener noreferrer">Steam Deck news<span class="sr-only"> (opens in a new tab)</span></a> directly.</p></noscript>
 </section>
 <section id="ios" class="fam fam-ios" data-family="iOS" aria-labelledby="ios-h">
 <div class="wrap fam-grid">
@@ -340,6 +384,122 @@
 </figure>
 </div>
 </section>
+<section id="routeros" class="fam fam-routeros" data-family="RouterOS" aria-labelledby="routeros-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">MikroTik router</p>
+<h2 id="routeros-h" class="fam-title">RouterOS</h2>
+<p class="fam-lede">The operating system on MikroTik routers and switches.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=RouterOS">All RouterOS releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-router">
+<div class="rt-box">
+<div class="screen m-router">
+<p class="m-title">Release info</p>
+<div class="m-card">
+<p class="m-name" data-f="name">RouterOS</p>
+<p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
+<p class="m-sub" data-f="date"></p>
+</div>
+</div>
+<ul class="rt-ports" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li></ul>
+</div>
+</div>
+<figcaption class="small">A drawn MikroTik-style router showing the newest RouterOS release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
+<section id="android" class="fam fam-android fam-flip" data-family="Android" aria-labelledby="android-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">Android phone</p>
+<h2 id="android-h" class="fam-title">Android</h2>
+<p class="fam-lede">The mobile operating system from Google.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=Android">All Android releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-phone">
+<span class="phone-hole" aria-hidden="true"></span>
+<div class="screen m-android">
+<p class="m-bar" aria-hidden="true"><span>9:41</span><span class="m-batt"></span></p>
+<p class="m-title">Latest build</p>
+<div class="m-card">
+<p class="m-name" data-f="name">Android</p>
+<p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
+<p class="m-sub" data-f="date"></p>
+</div>
+</div>
+</div>
+<figcaption class="small">A drawn Android phone showing the newest Android release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
+<section id="windows" class="fam fam-windows" data-family="Windows" aria-labelledby="windows-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">Windows PC</p>
+<h2 id="windows-h" class="fam-title">Windows</h2>
+<p class="fam-lede">The operating system for PCs from Microsoft.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=Windows">All Windows releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-mac dev-pc">
+<div class="mac-lid">
+<div class="screen m-pc">
+<div class="m-win">
+<p class="m-name" data-f="name">Windows</p>
+<p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
+<p class="m-sub" data-f="date"></p>
+</div>
+<p class="m-task" aria-hidden="true"><span></span><span></span><span></span><span></span></p>
+</div>
+</div>
+<span class="mac-base" aria-hidden="true"></span>
+</div>
+<figcaption class="small">A drawn Windows laptop showing the newest Windows release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
+<section id="steamos" class="fam fam-steamos fam-flip" data-family="SteamOS" aria-labelledby="steamos-h">
+<div class="wrap fam-grid">
+<div class="fam-copy reveal">
+<p class="eyebrow">Steam Deck</p>
+<h2 id="steamos-h" class="fam-title">SteamOS</h2>
+<p class="fam-lede">The operating system on the Valve Steam Deck.</p>
+<p class="fam-latest" data-f="latest">Loading the latest release…</p>
+<h3 class="recent-h">Recent releases</h3>
+<ul class="recent" data-f="recent"></ul>
+<a class="more" href="/timeline/?family=SteamOS">All SteamOS releases<span aria-hidden="true"> →</span></a>
+</div>
+<figure class="stage reveal">
+<div class="dev dev-deck">
+<div class="deck-body">
+<span class="deck-stick" aria-hidden="true"></span>
+<div class="screen m-deck">
+<p class="m-title">Release info</p>
+<div class="m-card">
+<p class="m-name" data-f="name">SteamOS</p>
+<p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
+<p class="m-sub" data-f="date"></p>
+</div>
+</div>
+<span class="deck-stick" aria-hidden="true"></span>
+</div>
+</div>
+<figcaption class="small">A drawn Steam Deck handheld showing the newest SteamOS release from the data. Mock screen, not a real device.</figcaption>
+</figure>
+</div>
+</section>
 <section id="features" class="wrap features" aria-labelledby="features-h" hidden>
 <div class="sec-head">
 <h2 id="features-h" class="title">What's new for developers</h2>
@@ -352,8 +512,8 @@
 <div class="foot">
 <div>
 <p class="mark">Release Orbit</p>
-<p class="tag">Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, iPhone, iPad, Mac, Apple Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, tvOS and visionOS are trademarks of Apple Inc.</p>
-<p class="credit">Source: <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>. Code on <a href="https://github.com/greenblacked/orbit" target="_blank" rel="noopener noreferrer">GitHub<span class="sr-only"> (opens in a new tab)</span></a>.</p>
+<p class="tag">Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc., MikroTik, Google LLC, Microsoft Corporation or Valve Corporation. Apple, iPhone, iPad, Mac, Apple Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, tvOS and visionOS are trademarks of Apple Inc. MikroTik and RouterOS are trademarks of MikroTik. Android is a trademark of Google LLC. Windows is a trademark of the Microsoft group of companies. Steam, Steam Deck and SteamOS are trademarks and/or registered trademarks of Valve Corporation.</p>
+<p class="credit">Sources: <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://mikrotik.com/download/changelogs" target="_blank" rel="noopener noreferrer">MikroTik changelogs<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://source.android.com/docs/setup/reference/build-numbers" target="_blank" rel="noopener noreferrer">AOSP build numbers<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" rel="noopener noreferrer">Windows release health<span class="sr-only"> (opens in a new tab)</span></a> and <a href="https://store.steampowered.com/news/app/1675200" target="_blank" rel="noopener noreferrer">Steam Deck news<span class="sr-only"> (opens in a new tab)</span></a>. Code on <a href="https://github.com/greenblacked/orbit" target="_blank" rel="noopener noreferrer">GitHub<span class="sr-only"> (opens in a new tab)</span></a>.</p>
 </div>
 <nav aria-label="Footer"><a href="/" aria-current="page">Home</a><a href="/timeline/">Timeline</a><a href="/compare/">Compare</a><a href="/about/">About</a><a href="https://github.com/greenblacked/orbit" target="_blank" rel="noopener noreferrer">Source</a></nav>
 </div>

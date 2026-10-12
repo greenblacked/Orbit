@@ -29,7 +29,18 @@ except ImportError:
     )
 
 SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
-FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
+FAMILIES = [
+    "iOS",
+    "iPadOS",
+    "macOS",
+    "watchOS",
+    "tvOS",
+    "visionOS",
+    "RouterOS",
+    "Android",
+    "Windows",
+    "SteamOS",
+]
 NOW = datetime(2026, 10, 12, 12, 0, tzinfo=timezone.utc)  # noqa: UP017
 CLOCK = "(() => { const t = Date.parse('2026-10-12T12:00:00Z'); Date.now = () => t; })();"
 RECORD = """
@@ -170,6 +181,7 @@ def test_betas_are_shorter_and_thinner_than_releases_in_the_same_full_colour(pag
         }"""
     )
     assert rows["release"] and rows["beta"]
+    assert all(n["length"] > 0 for n in rows["release"] + rows["beta"])
     assert max(n["length"] for n in rows["beta"]) < min(n["length"] for n in rows["release"])
     assert max(n["width"] for n in rows["beta"]) < min(n["width"] for n in rows["release"])
     for note in rows["release"] + rows["beta"]:
@@ -339,7 +351,7 @@ def test_the_page_follows_the_hand_when_the_window_moves_past_it(page, base_url)
 
 
 def test_a_family_id_with_a_quote_does_not_stop_the_cadence_row(page, base_url):
-    odd = dict(SNAPSHOT["releases"][0])
+    odd = dict(next(r for r in SNAPSHOT["releases"] if r["vendor"] == "apple"))
     odd.update(
         id=odd["id"] + "-odd",
         url=odd["url"] + "-odd",
@@ -355,7 +367,8 @@ def test_a_family_id_with_a_quote_does_not_stop_the_cadence_row(page, base_url):
     page.on("pageerror", lambda error: errors.append(str(error)))
     open_front_page(page, base_url)
     page.wait_for_selector("#cadence li")
-    names = {r["family"] for r in data["releases"]}
+    # The fallback config lists Apple only, so only Apple families are shown.
+    names = {r["family"] for r in data["releases"] if r["vendor"] == "apple"}
     assert page.locator("#cadence li").count() == len(names)
     assert page.locator("#orbit-dial .ring.breath").count() >= 1
     assert not [e for e in errors if "selector" in e], errors

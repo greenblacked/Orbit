@@ -1,0 +1,40 @@
+{
+  "appnews": {
+    "newsitems": [
+      {
+        "gid": "1846018067937692",
+        "title": "Steam Beta Client Update: October 10th",
+        "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067937692",
+        "is_external_url": true,
+        "contents": "We have just shipped an updated ...",
+        "feedlabel": "Community Announcements",
+        "date": 1791688091,
+        "feedname": "steam_community_announcements",
+        "feed_type": 1,
+        "appid": 1675200,
+        "tags": [
+          "patchnotes",
+          "previewchannel",
+          "betachannel"
+        ]
+      },
+      {
+        "gid": "1846018067935020",
+        "title": "Steam Beta Client Update: October 9th",
+        "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067935020",
+        "is_external_url": true,
+        "contents": "We have just shipped an updated ...",
+        "feedlabel": "Community Announcements",
+        "date": 1791592950,
+        "feedname": "steam_community_announcements",
+        "feed_type": 1,
+        "appid": 1675200,
+        "tags": [
+          "patchnotes",
+          "previewchannel",
+          "betachannel"
+        ]
+      }
+    ]
+  }
+}

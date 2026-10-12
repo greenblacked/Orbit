@@ -14,7 +14,7 @@
   // A validation verdict may come with a released build once results exist; a beta, a release
   // candidate and anything without a verdict is untested (see docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
-  // Used when the families config cannot be read: Apple is the only vendor so far.
+  // Used when the families config cannot be read: Apple is the only vendor with a feed so far.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
 
   var config = { families: [], vendors: [] };
@@ -22,8 +22,9 @@
   var listeners = [];
   var toastTimer = 0;
 
+  // "26H2" splits into [26, 2], so a second half-year sorts above the first.
   function parts(v) {
-    return String(v).split(".").map(function (n) { return parseInt(n, 10) || 0; });
+    return String(v).split(/[.H]/i).map(function (n) { return parseInt(n, 10) || 0; });
   }
   function compareVersions(a, b) {
     var x = parts(a), y = parts(b);
@@ -70,7 +71,7 @@
   // Keep only entries the pages can show safely; null when nothing usable is left.
   function normalise(json) {
     if (!json || !Array.isArray(json.releases)) return null;
-    var seen = {};
+    var seen = Object.create(null);
     var list = [];
     json.releases.forEach(function (r) {
       if (!r || typeof r.id !== "string" || seen[r.id] || typeof r.vendor !== "string") return;

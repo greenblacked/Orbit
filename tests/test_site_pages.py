@@ -30,10 +30,19 @@ except ImportError:
 SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
 AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
+# A family with no release in the data says so. Every shipped family has snapshot rows now, so the
+# test serves the data without the rows of these.
+WAITING = ["SteamOS"]
+# The newest Apple row: tests that forge an Apple release copy this one, not the newest row.
+APPLE_FIRST = next(r for r in SNAPSHOT["releases"] if r["vendor"] == "apple")
 LEGAL = (
-    "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc. Apple, "
-    "iPhone, iPad, Mac, Apple Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, "
-    "tvOS and visionOS are trademarks of Apple Inc."
+    "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc., MikroTik, "
+    "Google LLC, Microsoft Corporation or Valve Corporation. Apple, iPhone, iPad, Mac, Apple "
+    "Watch, Apple TV, Apple Vision Pro, iOS, iPadOS, macOS, watchOS, tvOS and visionOS are "
+    "trademarks of Apple Inc. MikroTik and RouterOS are trademarks of MikroTik. Android is a "
+    "trademark of Google LLC. Windows is a trademark of the Microsoft group of companies. "
+    "Steam, Steam Deck and SteamOS are trademarks and/or registered trademarks of Valve "
+    "Corporation."
 )
 PAGES = ["/", "/timeline/", "/compare/", "/about/"]
 RECORD = """
@@ -124,7 +133,7 @@ def test_without_the_worker_the_page_falls_back_to_the_snapshot(page, base_url, 
 
 def test_the_page_drops_entries_it_cannot_show_safely(page, base_url):
     bad = copy.deepcopy(SNAPSHOT)
-    first = bad["releases"][0]
+    first = APPLE_FIRST
     for name, change in {
         "x": {"url": "https://evil.example/x"},
         "y": {"family": "Xcode"},
@@ -151,6 +160,75 @@ def test_each_family_has_a_section_with_a_device_and_recent_releases(page, base_
         assert section.locator("[data-f=name]").first.inner_text().startswith(name)
         link = f'#latest-grid [data-family="{name}"] a[href="#{name.lower()}"]'
         assert page.locator(link).count() == 1
+
+
+def test_windows_shows_the_newest_servicing_version_from_its_snapshot_rows(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="Windows"]')
+    assert card.locator("[data-f=ver]").inner_text() == "Windows 26H2"
+    link = card.locator("[data-f=link]")
+    assert link.get_attribute("href") == "https://support.microsoft.com/help/5124010"
+
+
+def test_a_family_without_a_release_says_so_instead_of_inventing_one(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [r for r in data["releases"] if r["family"] not in WAITING]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    for name in WAITING:
+        card = page.locator(f'#latest-grid [data-family="{name}"]')
+        assert card.locator("[data-f=ver]").inner_text() == "No release yet"
+        assert card.locator("[data-f=link]").is_hidden()
+        section = page.locator(f'section.fam[data-family="{name}"]')
+        assert section.locator(".dev .screen").count() == 1
+        assert section.locator(".recent li").count() == 0
+        assert section.locator("[data-f=name]").first.inner_text() == name
+        assert f"No {name} release" in section.locator("[data-f=latest]").inner_text()
+
+
+def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="RouterOS"]')
+    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.23.8"
+    assert card.locator("[data-f=link]").is_visible()
+    assert card.locator("[data-f=link]").get_attribute("href") == (
+        "https://mikrotik.com/download?v=7.23.8"
+    )
+    section = page.locator('section.fam[data-family="RouterOS"]')
+    recent = section.locator(".recent li")
+    assert recent.count() == len(releases("RouterOS")) == 3
+    assert "7.23.8" in recent.first.inner_text()
+    listed = section.locator(".recent").inner_text()
+    assert "7.25" in listed and "RC 1" in listed and "7.25rc1" in listed
+
+
+def test_android_shows_its_snapshot_release_with_a_link_to_the_aosp_page(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="Android"]')
+    assert "Android 17" in card.locator("[data-f=ver]").inner_text()
+    link = card.locator("[data-f=link]")
+    assert link.is_visible()
+    assert link.get_attribute("href").startswith("https://source.android.com/")
+    section = page.locator('section.fam[data-family="Android"]')
+    assert section.locator(".recent li").count() == 1
+
+
+def test_steamos_shows_its_snapshot_releases_with_a_link_to_the_news_page(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="SteamOS"]')
+    assert card.locator("[data-f=ver]").inner_text() == "SteamOS 3.9.2"
+    link = card.locator("[data-f=link]")
+    assert link.is_visible()
+    assert link.get_attribute("href") == "https://store.steampowered.com/news/app/1675200"
+    section = page.locator('section.fam[data-family="SteamOS"]')
+    recent = section.locator(".recent li")
+    assert recent.count() == len(releases("SteamOS")) == 2
+    assert "3.8.28" in section.locator(".recent").inner_text()
 
 
 def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
@@ -265,7 +343,7 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         fresh["releases"].insert(
             0,
             {
-                **fresh["releases"][0],
+                **APPLE_FIRST,
                 "id": "https://developer.apple.com/news/releases/?id=new1",
                 "title": "iOS 27.2 beta 4 (24B5105a)",
                 "version": "27.2",
@@ -417,8 +495,11 @@ def test_the_timeline_lists_everything_newest_first_grouped_by_month(page, base_
     assert page.inner_text("#count") == f"{len(SNAPSHOT['releases'])} releases"
     hrefs = page.locator(".tl-link").evaluate_all("els => els.map(a => a.href)")
     assert sorted(hrefs) == sorted(r["url"] for r in SNAPSHOT["releases"])
-    by_url = {r["url"]: r["date"] for r in SNAPSHOT["releases"]}
-    dates = [by_url[href] for href in hrefs]
+    # Releases of one source can share a link, so take the dates of a link newest first.
+    by_url = {}
+    for r in sorted(SNAPSHOT["releases"], key=lambda r: r["date"], reverse=True):
+        by_url.setdefault(r["url"], []).append(r["date"])
+    dates = [by_url[href].pop(0) for href in hrefs]
     assert dates == sorted(dates, reverse=True)
 
 
@@ -692,7 +773,7 @@ def test_a_poll_with_nothing_new_leaves_the_compare_page_alone(page, base_url):
 
 
 def test_a_failed_poll_keeps_the_live_data_instead_of_the_older_snapshot(page, base_url):
-    newest = copy.deepcopy(SNAPSHOT["releases"][0])
+    newest = copy.deepcopy(APPLE_FIRST)
     newest.update(
         id="https://developer.apple.com/news/releases/?id=live-only",
         version="99.1",
@@ -812,7 +893,15 @@ def test_pages_say_what_they_are_before_any_script_runs(browser, base_url):
         footer = page.inner_text("footer")
         assert footer.startswith("Release Orbit")
         assert LEGAL in footer
-        assert "Source: Apple Developer Releases" in footer
+        for name in (
+            "Apple Developer Releases",
+            "MikroTik changelogs",
+            "AOSP build numbers",
+            "Windows release health",
+            "Steam Deck news",
+        ):
+            assert name in footer
+        assert "Sources: Apple Developer Releases" in footer
     finally:
         context.close()
 
