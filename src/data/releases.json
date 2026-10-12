@@ -1,5 +1,5 @@
 {
-  "source": "apple-developer-releases",
+  "source": "apple-developer-releases,microsoft-windows-release-health",
   "fetchedAt": "2026-10-11T15:26:54Z",
   "stale": false,
   "snapshot": true,
@@ -89,6 +89,20 @@
       "source": "apple-developer-releases"
     },
     {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h2-26300.9550",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "26H2",
+      "major": 26,
+      "stage": "release",
+      "beta": null,
+      "build": "26300.9550",
+      "title": "Windows 11 26H2 (2026-09 D)",
+      "date": "2026-09-29T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5124010",
+      "source": "microsoft-windows-release-health"
+    },
+    {
       "id": "https://developer.apple.com/news/releases/?id=09282026e",
       "vendor": "apple",
       "family": "watchOS",
@@ -173,6 +187,48 @@
       "source": "apple-developer-releases"
     },
     {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#24h2-26100.9550",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "24H2",
+      "major": 24,
+      "stage": "release",
+      "beta": null,
+      "build": "26100.9550",
+      "title": "Windows 11 24H2 (2026-09 D)",
+      "date": "2026-09-22T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5124010",
+      "source": "microsoft-windows-release-health"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#25h2-26200.9550",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "25H2",
+      "major": 25,
+      "stage": "release",
+      "beta": null,
+      "build": "26200.9550",
+      "title": "Windows 11 25H2 (2026-09 D)",
+      "date": "2026-09-22T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5124010",
+      "source": "microsoft-windows-release-health"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h1-28000.3086",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "26H1",
+      "major": 26,
+      "stage": "release",
+      "beta": null,
+      "build": "28000.3086",
+      "title": "Windows 11 26H1 (2026-09 D)",
+      "date": "2026-09-22T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5124006",
+      "source": "microsoft-windows-release-health"
+    },
+    {
       "id": "https://developer.apple.com/news/releases/?id=09142026d",
       "vendor": "apple",
       "family": "tvOS",
@@ -199,6 +255,34 @@
       "date": "2026-09-14T17:00:00Z",
       "url": "https://developer.apple.com/news/releases/?id=09142026f",
       "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/release-information#22h2-19045.7727",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "22H2",
+      "major": 22,
+      "stage": "release",
+      "beta": null,
+      "build": "19045.7727",
+      "title": "Windows 10 22H2 (2026-09 OOB, end of updates)",
+      "date": "2026-09-14T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5129236",
+      "source": "microsoft-windows-release-health"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#23h2-22631.7584",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "23H2",
+      "major": 23,
+      "stage": "release",
+      "beta": null,
+      "build": "22631.7584",
+      "title": "Windows 11 23H2 (2026-09 OOB)",
+      "date": "2026-09-14T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5129242",
+      "source": "microsoft-windows-release-health"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=09092026g",
