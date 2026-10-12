@@ -532,10 +532,11 @@ describe('match', () => {
     );
     assert.deepEqual(gap, ['09', '10', '11', '12'].map((month) => bulletinUrl(`2025-${month}-01`)));
     assert.deepEqual(neededBulletins([], new Map()), []);
+    // 2008 is the earliest year a patch level may have: 226 months, capped to the newest 200.
     const many = neededBulletins(
       [rel('a'), rel('b')],
       new Map([
-        ['a', '2000-01-05'],
+        ['a', '2008-01-05'],
         ['b', '2026-10-05'],
       ]),
     );
