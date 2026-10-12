@@ -59,3 +59,29 @@ The Google adapter, `deploy/sources/android.js`, is connected on that basis:
 - The fixture is an excerpt of the probe's raw tables. The probe's raw excerpt stopped at 6,000 characters part-way through the `android-15.0.0_r17` row; the fixture keeps the complete rows up to and including `android-15.0.0_r20`, so older rows are not in it.
 - The snapshot holds `android-17.0.0_r1` only, the one row inside the dial's 26-week window. The Worker serves the live rows within the 180-day window described below, merged with the snapshot; older rows are not emitted. The snapshot's `fetchedAt` is still the Apple refresh time.
 - Open: the terms of use of the page have not been read for automated polling. The Worker reads it at most every ten minutes per Cloudflare location (the Cache API is per data centre) with the site's User-Agent, and the owner confirms the terms before the next release. The other three vendors are unchanged by this update.
+
+## Update: the Windows adapter (2026-10-12)
+
+Windows was the first of the four to meet the conditions above. A read-only probe fetched the pages from a GitHub runner on 2026-10-12 and recorded the answer of each (status, content type, size, SHA-256 and the raw tables). Both answered 200 `text/html` with no redirect:
+
+- <https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information> (132,531 bytes, SHA-256 `3c9fc9b33646c4ef971499c714960fc8718c6c1fef195da02c2ac94f69d20ceb`)
+- <https://learn.microsoft.com/en-us/windows/release-health/release-information>, the Windows 10 page (320,848 bytes, SHA-256 `7a66752e80d19cacbf08ddfbefffa5588a69e7e2a70efcf130089fd903c0243c`)
+
+Everything below is read from those records, and the recorded tables are committed under `tests/fixtures/microsoft/`:
+
+- The first table of each page lists the servicing versions with the columns Version, Servicing option, Availability date, two End of updates columns, Latest update (Latest update for ESU on the Windows 10 page), Latest revision date and Latest build. The Latest update cell links to `https://support.microsoft.com/help/<KB>` with a label such as `2026-09 D` or `2026-09 OOB`. The second table is the LTSC table, whose end-date columns are named differently, and the adapter ignores it.
+- The adapter emits one release per row whose servicing option is General Availability Channel: the family `Windows`, the version (`25H2`), the latest build (`26200.9550`), the latest revision date as midnight UTC, and the title `Windows 11 25H2 (2026-09 D)`. The stage is always `release`: these pages carry no pre-release channel, so nothing maps to `beta` or `rc`. The id carries the build, so each monthly update is a new entry once the snapshot merges.
+- The families stay one `Windows` family, as the config has it. The title says 11 or 10, which the adapter reads from the page title; a later `Windows 11` and `Windows 10` family pair would be picked up without a code change.
+- The contract has no end-of-support field, so a version whose End of updates cells all read "End of updates" says so in its title (Windows 10 22H2). A version still updated for some edition is not marked. The adapter does not compare dates with the clock, so parsing stays a pure function of the page.
+- The link is the KB article only when it is `https://support.microsoft.com/help/<digits>` with no port or credentials, and otherwise the release-health page. `support.microsoft.com` is therefore added to the Microsoft vendor's `hosts`, which the pages use to accept a release link.
+- The parser is a small strict scanner over the first table, bounded in input, rows and cell size, with no DOM and no `eval`. A page whose first table lacks the expected headers yields nothing, and the Worker then serves the last good copy.
+
+Not settled by the probe: Microsoft's terms of use for automated reads of Microsoft Learn were not read, so the third condition above is deferred, not met. The adapter is registered so the code, fixtures and tests are reviewable together, and the owner must read the terms (and `robots.txt`) and record the outcome and the poll interval here before the first Cut release that ships it. The Worker's existing ten-minute cache and identifying User-Agent apply meanwhile. The page text also points programmatic readers to the Windows Updates API in Microsoft Graph, which needs a tenant and credentials; the public page was chosen for that reason.
+
+Decisions taken in review:
+
+- The Worker's `Accept` header now lists `text/html` after the feed types, since two of its sources are HTML pages. The probe did not record its request headers, so the first deploy should be checked once with the Worker's exact User-Agent and `Accept`.
+- The scanner caps the first table at 256 KB and walks it with `indexOf`, so unclosed tags are read once and the work is linear, not quadratic.
+- The version is the bare `25H2`, so a Windows 10-only update shows as "Windows 22H2" on the front card; the title keeps 10 or 11. Splitting the family into Windows 11 and Windows 10 is a larger UI change for its own pull request.
+- A version is marked "end of updates" only when every edition has ended (Windows 11 23H2 is not, while Enterprise is still serviced). Marking it when any edition has ended is a one-word change (`every` to `some`) if the owner prefers.
+- If one of the two pages answers other than 200, the whole source fails and the last good copy is served until it expires. Tolerating one failed page belongs in its own Worker pull request.

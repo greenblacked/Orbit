@@ -30,9 +30,9 @@ except ImportError:
 SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
 AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
-# Listed beside them, with no release feed connected yet: their cards say so. RouterOS and
-# Android are not here: their feeds are connected and the snapshot holds releases.
-WAITING = ["Windows", "SteamOS"]
+# Listed beside them, with no release feed connected yet: their cards say so. RouterOS, Android
+# and Windows are not here: their feeds are connected and the snapshot holds releases.
+WAITING = ["SteamOS"]
 # The newest Apple row: tests that forge an Apple release copy this one, not the newest row.
 APPLE_FIRST = next(r for r in SNAPSHOT["releases"] if r["vendor"] == "apple")
 LEGAL = (
@@ -160,6 +160,15 @@ def test_each_family_has_a_section_with_a_device_and_recent_releases(page, base_
         assert section.locator("[data-f=name]").first.inner_text().startswith(name)
         link = f'#latest-grid [data-family="{name}"] a[href="#{name.lower()}"]'
         assert page.locator(link).count() == 1
+
+
+def test_windows_shows_the_newest_servicing_version_from_its_snapshot_rows(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="Windows"]')
+    assert card.locator("[data-f=ver]").inner_text() == "Windows 26H2"
+    link = card.locator("[data-f=link]")
+    assert link.get_attribute("href") == "https://support.microsoft.com/help/5124010"
 
 
 def test_a_family_without_a_connected_feed_says_so_instead_of_inventing_a_release(page, base_url):
