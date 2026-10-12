@@ -24,6 +24,17 @@ const STATUSES = [
 ];
 const CVE = /^CVE-\d{4}-\d{4,}$/;
 
+// A real https URL: the prefix alone would accept "https://" or "https://[bad".
+function isHttpsUrl(value) {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname !== '';
+  } catch {
+    return false;
+  }
+}
+
 const sortedUnique = (list) => list.every((item, i) => i === 0 || list[i - 1] < item);
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
@@ -42,7 +53,7 @@ function problems(payload, rows) {
   }
   if (found.length > 0) return found;
   for (const [url, note] of Object.entries(payload.notes)) {
-    if (!url.startsWith('https://')) found.push(`note ${url} is not https`);
+    if (!isHttpsUrl(url)) found.push(`note ${url} is not https`);
     if (!isObject(note)) {
       found.push(`note ${url} is not an object`);
       continue;
@@ -74,7 +85,7 @@ function problems(payload, rows) {
     }
     const known = new Set();
     for (const url of entry.notes) {
-      if (!url.startsWith('https://')) found.push(`${id} names a note that is not https`);
+      if (!isHttpsUrl(url)) found.push(`${id} names a note that is not https`);
       if (!(url in payload.notes)) found.push(`${id} names a note that is missing: ${url}`);
       else for (const cve of payload.notes[url].cves ?? []) known.add(cve?.id);
     }
@@ -150,6 +161,11 @@ describe('src/data/security.json', () => {
     bad((p) => ((p.releases.b1.notes = [note]), p), 'b1 must have no notes or cves and count null');
     bad((p) => ((p.notes['http://example.org/n'] = p.notes[note]), p), 'is not https');
     bad((p) => ((p.releases.r1.notes = ['http://example.org/n']), p), 'names a note that is not https');
+    for (const key of ['https://', 'https://[bad']) {
+      bad((p) => ((p.notes[key] = p.notes[note]), p), 'is not https');
+      bad((p) => ((p.releases.r1.notes = [key]), p), 'names a note that is not https');
+    }
+    bad((p) => ((p.releases.r1.notes = [42]), p), 'names a note that is not https');
     bad((p) => ((p.notes[note] = 'x'), p), 'is not an object');
     bad((p) => ((p.notes[note].source = 'other'), p), 'unknown source');
     bad((p) => ((p.notes[note].cves = [{ id: 'CVE-1' }]), p), 'has a bad CVE');
