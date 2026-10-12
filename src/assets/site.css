@@ -358,80 +358,6 @@ html[data-theme="night"] .sun { display: none; }
   .back { transition: transform 120ms ease, box-shadow 120ms ease; }
   .back:active { transform: scale(0.97); }
 }
-.back + .site-header:not(.away) ~ .dock { top: calc(4rem + 1px); }
-.dock.on { visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
-@media (prefers-reduced-motion: no-preference) {
-  .dock {
-    transition: opacity 150ms ease, transform 150ms ease, top 200ms ease,
-      visibility 0s linear 150ms;
-  }
-  .dock.on { transition: opacity 150ms ease, transform 150ms ease, top 200ms ease; }
-}
-.dock-in {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 0.5rem max(1.25rem, env(safe-area-inset-right)) 0.5rem
-    max(1.25rem, env(safe-area-inset-left));
-}
-/* To top floats at the bottom right: Material's place for a page's one floating
-   action, and the one place Liquid Glass is meant for, a control over the content.
-   Round with only the arrow on a narrow screen, where the column is all text, and
-   labelled once the margin beside the 72rem column can hold the label. Its tint is
-   denser than Back's, because it sits over running text rather than the solid bar,
-   and glyphs showing through compete with the arrow. Hidden, and out of the tab
-   order, until the script shows it. */
-.fab {
-  position: fixed;
-  right: max(1rem, env(safe-area-inset-right));
-  bottom: max(1rem, env(safe-area-inset-bottom));
-  z-index: 9;
-  justify-content: center;
-  background-color: color-mix(in srgb, var(--glass-tint) 55%, var(--bg));
-  width: 3rem;
-  min-height: 3rem;
-  padding: 0;
-  visibility: hidden;
-  opacity: 0;
-  transform: translateY(0.5rem);
-  pointer-events: none;
-}
-.fab span { display: none; }
-.fab.on { visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
-@media (prefers-reduced-motion: no-preference) {
-  .fab {
-    transition: opacity 150ms ease, transform 150ms ease, box-shadow 120ms ease,
-      visibility 0s linear 150ms;
-  }
-  .fab.on { transition: opacity 150ms ease, transform 150ms ease, box-shadow 120ms ease; }
-  .fab.on:active { transform: scale(0.97); }
-}
-@media (min-width: 40rem) {
-  .fab {
-    right: max(1.5rem, env(safe-area-inset-right));
-    bottom: max(1.5rem, env(safe-area-inset-bottom));
-  }
-}
-@media (min-width: 90rem) {
-  .fab { width: auto; padding: 0 1.25rem 0 1rem; }
-  .fab span { display: inline; }
-}
-/* A jump to a heading (an in-page link, a shared deep link, the finder) lands below
-   both bars rather than under them. A jump upwards brings the header back with the
-   bar stacked beneath it: 4rem and a border, then 0.5rem, a 2.75rem button, 0.5rem and
-   a border, 7.875rem in all, so 8.5rem leaves a gap. Zero specificity, so a rule that
-   sets its own margin wins. */
-:where([id]) { scroll-margin-top: 8.5rem; }
-.crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  margin-bottom: 2rem;
-  font-size: 0.875rem;
-  line-height: 1.4286;
-}
 /* The bar Back moves into once the page has scrolled past its own Back: a
    top app bar on the solid page colour, so text scrolls under it and never shows
    behind a button. It sits below the header while the header shows, and at the top when the
@@ -1473,7 +1399,9 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .tick { stroke: var(--muted); stroke-width: 1.2; }
 /* The dial is drawn in a 660-unit box that shrinks with the stage; orbit.js sets --upx, the
    units per CSS pixel, so the text is sized in screen pixels and capped so the hub (the date
-   and the notes inside the innermost ring) stays clear of the rings. */
+   and the notes inside the innermost ring) stays clear of the rings. On a phone the date is
+   therefore about 11 CSS px: a larger one would run into the innermost ring. The month labels
+   sit at OUTER + 38 so a capped label still ends inside the 330-unit box. */
 .mlabel { fill: var(--muted); font-family: var(--font-mono); font-size: min(12px * var(--upx, 1), 20px); letter-spacing: 0.06em; text-anchor: middle; dominant-baseline: central; }
 .c-date { fill: var(--ink); font-family: var(--font-mono); font-weight: 500; font-size: min(18px * var(--upx, 1), 22px); text-anchor: middle; }
 .c-note { fill: var(--muted); font-family: var(--font-mono); font-size: min(11px * var(--upx, 1), 18px); letter-spacing: 0.14em; text-anchor: middle; }
@@ -1481,7 +1409,7 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .notch .hit { pointer-events: stroke; stroke: transparent; fill: none; }
 .notch .nl { stroke: currentColor; stroke-linecap: butt; }
 .notch:focus-visible .nl, .notch:hover .nl { stroke-width: 7; }
-.notch:focus-visible .hit { stroke: color-mix(in srgb, currentColor 35%, transparent); }
+.notch:focus-visible .hit { stroke: color-mix(in srgb, currentColor 35%, transparent); stroke-width: 2px; }
 .mk { fill: none; stroke: currentColor; stroke-width: 1.4; }
 .mk-pass, .mk-warn { fill: currentColor; }
 .mk-fail { stroke-width: 2; }
@@ -1644,5 +1572,6 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
     border-color: Highlight;
   }
   .notch:focus-visible .nl, .hand:focus-visible .hl { stroke: Highlight; }
-  .notch:focus-visible .hit, .hand:focus-visible .hit { stroke: Highlight; }
+  .notch:focus-visible .hit { stroke: Highlight; stroke-width: 2px; stroke-dasharray: 3 2; }
+  .hand:focus-visible .hit { stroke: Highlight; }
 }
