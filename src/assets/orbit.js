@@ -20,6 +20,7 @@
   var OUTER = 268, STEP = 30, INNER = 120;         // outermost ring, gap between rings, the innermost ring's floor (the hub's date needs the rest)
   var LEN = { release: 22, rc: 15, beta: 12 };     // notch length
   var WID = { release: 4.5, rc: 3, beta: 2.4 };    // notch width
+  var MIN_LEN = 8, MIN_WID = 1.5;                  // floors for a crowded dial
   var FAN = 12;                                    // spacing of notches stamped at one moment
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   var VERDICT = {
@@ -110,7 +111,7 @@
     var base = layer("base");
     base.setAttribute("aria-hidden", "true");
     for (var m = nextMonth(start - 1); m <= now; m = nextMonth(m)) {
-      var a = angle(m), p0 = xy(a, OUTER + 16), p1 = xy(a, OUTER + 28), q = xy(a, OUTER + 44);
+      var a = angle(m), p0 = xy(a, OUTER + 16), p1 = xy(a, OUTER + 28), q = xy(a, OUTER + 38);
       el("line", { "class": "tick", x1: p0[0], y1: p0[1], x2: p1[0], y2: p1[1] }, base);
       var t = el("text", { "class": "mlabel", x: q[0], y: q[1] }, base);
       t.textContent = MONTHS[new Date(m).getUTCMonth()];
@@ -123,9 +124,9 @@
     // Rings are STEP apart while they fit between OUTER and INNER; with more families they
     // close up, and the notches, their markers and their grab areas shrink with the gap so
     // that adjacent rings never overlap.
-    var n = fams.length;
-    var step = n > 1 ? Math.min(STEP, (OUTER - INNER) / (n - 1)) : STEP;
-    var k = step / STEP, ms = Math.min(1, Math.max(0.55, k));
+    var nf = fams.length;
+    var step = nf > 1 ? Math.min(STEP, (OUTER - INNER) / (nf - 1)) : STEP;
+    var scale = step / STEP, ms = Math.min(1, Math.max(0.55, scale));
     fams.forEach(function (fam, i) {
       var lane = layer("lane " + famClass(fam.id));
       lane.style.setProperty("--lane", String(i));
@@ -143,7 +144,8 @@
         counts[fam.id]++;
         var n = stack[r.t], k = seat[r.t] || 0;
         seat[r.t] = k + 1;
-        var len = LEN[r.stage] * k, wid = WID[r.stage] * k;
+        // Never below a floor, so a notch stays visible and tappable on a crowded dial.
+        var len = Math.max(LEN[r.stage] * scale, MIN_LEN), wid = Math.max(WID[r.stage] * scale, MIN_WID);
         var reach = Math.min(len / 2 + 8, step / 2 - 1);
         var ang = angle(r.t) + (n > 1 ? (k - (n - 1) / 2) * FAN * 180 / (Math.PI * rad) : 0);
         var a0 = xy(ang, rad - len / 2), a1 = xy(ang, rad + len / 2);
@@ -154,8 +156,10 @@
         }, lane);
         el("line", { "class": "hit", x1: h0[0], y1: h0[1], x2: h1[0], y2: h1[1], "stroke-width": n > 1 ? FAN - 2 : 26 }, g);
         el("line", { "class": "nl", x1: a0[0], y1: a0[1], x2: a1[0], y2: a1[1], "stroke-width": r2(wid) }, g);
-        // Just past the notch's outer end, in the gap before the next ring out.
-        marker(g, xy(ang, rad + len / 2 + 1.1 + 3.4 * ms), r.status, ms);
+        // Just past the notch's outer end, sized to fit the free space before the next ring's
+        // notch (a diamond is 9 units across plus its stroke) down to the 0.55 floor.
+        var mk = Math.min(ms, Math.max(0.55, (step - len - 1.5) / 10.4));
+        marker(g, xy(ang, rad + len / 2 + 0.75 + 4.7 * mk), r.status, mk);
         notches.push(g);
         g.rel = r;
       });
@@ -450,7 +454,14 @@
   // A finger that starts on the hand moves the hand, not the page: that listener is on the hand
   // itself (see build), so a touch anywhere else on the dial scrolls without waiting for script.
   window.addEventListener("resize", sizeKnob, { passive: true });
-  window.addEventListener("scroll", function () { centres = null; }, { passive: true });
+  // Capture, so a scrolling ancestor counts too. The tilt and the lane lift also move the
+  // notches without a scroll or resize, so the centres are dropped when those end, and when the
+  // stage changes size for any other reason.
+  function forget() { centres = null; }
+  window.addEventListener("scroll", forget, { passive: true, capture: true });
+  stage.addEventListener("transitionend", forget);
+  stage.addEventListener("animationend", forget);
+  if (window.ResizeObserver) new ResizeObserver(sizeKnob).observe(stage);
   var back = document.getElementById("orbit-back");
   if (back) {
     back.addEventListener("click", function () {
