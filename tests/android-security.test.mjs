@@ -13,6 +13,8 @@ import adapter, {
   bulletinNote,
   bulletinUrl,
   match,
+  MAX_BULLETINS,
+  MAX_CVES,
   neededBulletins,
   parseBulletin,
   patchLevelsByTag,
@@ -42,6 +44,7 @@ const cveTable = (rows, last = 'Updated AOSP versions') =>
     )
     .join('')}</table>`;
 // Synthetic: a page that looks like the bulletin of `level`'s month, with the given tables.
+const NO_PATCHES = '<p>This bulletin has no security patches.</p>';
 const page = (level, body = '') =>
   `<title>Android Security Bulletin—Test | Android Open Source Project</title>` +
   `<em>Published  October 5, 2026</em><p>Security patch levels of\n  ${level} or higher ` +
@@ -79,7 +82,17 @@ describe('parseBulletin: the AOSP bulletin of October 2026', () => {
   });
 
   it('keeps no text but ids, labels, title and dates', () => {
-    assert.deepEqual(Object.keys(bulletin), ['title', 'published', 'updated', 'patchLevels', 'cves']);
+    assert.deepEqual(Object.keys(bulletin), [
+      'title',
+      'published',
+      'updated',
+      'patchLevels',
+      'cveTables',
+      'noPatches',
+      'cves',
+    ]);
+    assert.equal(bulletin.cveTables, 2);
+    assert.equal(bulletin.noPatches, false);
     for (const cve of bulletin.cves) assert.deepEqual(Object.keys(cve), ['id', 'severity']);
   });
 });
@@ -204,10 +217,35 @@ describe('parseBulletin: tables and sentences', () => {
   });
 
   it('never throws and gives the empty shape for input that is not a bulletin', () => {
-    const empty = { title: null, published: null, updated: null, patchLevels: [], cves: [] };
+    const empty = {
+      title: null,
+      published: null,
+      updated: null,
+      patchLevels: [],
+      cveTables: 0,
+      noPatches: false,
+      cves: [],
+    };
     for (const input of [undefined, null, '', 'plain text', '<table', '<!-- ', '<title>', 42]) {
       assert.deepEqual(parseBulletin(input), empty);
     }
+  });
+
+  it('keeps at most MAX_CVES ids, across tables', () => {
+    const ids = (from, to) =>
+      Array.from({ length: to - from }, (_, i) => [`CVE-2026-${String(from + i).padStart(5, '0')}`, 'High']);
+    const half = MAX_CVES / 2 + 100;
+    const body = cveTable(ids(0, half)) + cveTable(ids(half, 2 * half)) + cveTable(ids(2 * half, 3 * half));
+    const bulletin = parseBulletin(page('2026-10-01', body));
+    assert.equal(bulletin.cves.length, MAX_CVES);
+    assert.equal(bulletin.cveTables, 2);
+  });
+
+  it('reports the CVE tables and an explicit "no security patches" sentence', () => {
+    const empty = parseBulletin(page('2026-10-01', NO_PATCHES));
+    assert.equal(empty.cveTables, 0);
+    assert.equal(empty.noPatches, true);
+    assert.equal(parseBulletin(page('2026-10-01', cveTable([]))).cveTables, 1);
   });
 
   it('drops a CVE table that is never closed', () => {
@@ -319,6 +357,8 @@ describe('match', () => {
     rel('beta', { stage: 'beta' }),
     rel('wrong-month'),
     rel('no-date'),
+    rel('drift'),
+    rel('pixel-page'),
     { id: 'routeros-7', vendor: 'mikrotik', family: 'RouterOS', stage: 'release' },
   ];
   const patchLevels = new Map([
@@ -330,11 +370,22 @@ describe('match', () => {
     ['beta', '2026-10-05'],
     ['wrong-month', '2026-07-05'],
     ['no-date', '2026-06-05'],
+    ['drift', '2026-05-05'],
+    ['pixel-page', '2026-04-05'],
     ['routeros-7', '2026-10-05'],
   ]);
   const bulletins = new Map([
     [AOSP_URL, parseBulletin(AOSP)],
-    [bulletinUrl('2026-08-01'), parseBulletin(page('2026-08-01'))],
+    [bulletinUrl('2026-08-01'), parseBulletin(page('2026-08-01', NO_PATCHES))],
+    // Markup drift: the CVE header changed, so no row is read and the page says nothing else.
+    [
+      bulletinUrl('2026-05-01'),
+      parseBulletin(page('2026-05-01', cveTable([['CVE-2026-0001', 'High']]).replace('<th>CVE</th>', '<th>CVE ID</th>'))),
+    ],
+    // The Pixel page served at an AOSP URL is not the AOSP bulletin.
+    [bulletinUrl('2026-04-01'), parseBulletin(PIXEL.replaceAll('2026-10-05', '2026-04-05'))],
+    // A bulletin no release points at (a gap month) is still stored for Compare.
+    [bulletinUrl('2026-03-01'), parseBulletin(page('2026-03-01', cveTable([['CVE-2026-0003', 'Low']])))],
     // The page at the July URL names a September level: not the July bulletin.
     [bulletinUrl('2026-07-01'), parseBulletin(page('2026-09-01'))],
     // A page with no publish date is not recognised as a bulletin.
@@ -357,7 +408,10 @@ describe('match', () => {
   });
 
   it('stores one note per bulletin, in the payload shape', () => {
-    assert.deepEqual(Object.keys(result.notes).sort(), [AOSP_URL, bulletinUrl('2026-08-01')].sort());
+    assert.deepEqual(
+      Object.keys(result.notes).sort(),
+      [AOSP_URL, bulletinUrl('2026-08-01'), bulletinUrl('2026-03-01')].sort(),
+    );
     const note = result.notes[AOSP_URL];
     assert.deepEqual(Object.keys(note), ['source', 'title', 'published', 'cves', 'noCveEntries']);
     assert.equal(note.source, SOURCE_ID);
@@ -368,7 +422,27 @@ describe('match', () => {
     assert.ok(sortedUnique(note.cves.map((cve) => cve.id)));
   });
 
-  it('says no-cve-entries, count 0, for a bulletin that was read and lists none', () => {
+  it('stores the note of a gap month that no release points at', () => {
+    const note = result.notes[bulletinUrl('2026-03-01')];
+    assert.deepEqual(note.cves, [{ id: 'CVE-2026-0003', severity: 'Low' }]);
+    assert.equal(note.noCveEntries, false);
+  });
+
+  it('is unavailable, never 0, for a page that passes but yields no CVEs without saying so', () => {
+    const quiet = new Map([[AOSP_URL, parseBulletin(page('2026-10-01'))]]);
+    const entry = match([releases[0]], new Map([['listed-a', '2026-10-05']]), quiet, CHECKED);
+    assert.equal(entry.releases['listed-a'].status, 'unavailable');
+    assert.equal(entry.releases['listed-a'].count, null);
+    assert.deepEqual(entry.notes, {});
+    for (const id of ['drift', 'pixel-page']) {
+      assert.equal(result.releases[id].status, 'unavailable', id);
+      assert.equal(result.releases[id].count, null, id);
+    }
+    assert.equal(bulletinUrl('2026-05-01') in result.notes, false);
+    assert.equal(bulletinUrl('2026-04-01') in result.notes, false);
+  });
+
+  it('says no-cve-entries, count 0, only when the page says it has no security patches', () => {
     const entry = result.releases.empty;
     assert.equal(entry.status, 'no-cve-entries');
     assert.equal(entry.count, 0);
@@ -410,6 +484,7 @@ describe('match', () => {
   it('describes Android rows only', () => {
     assert.equal('routeros-7' in result.releases, false);
     assert.equal(Object.keys(result.releases).length, releases.length - 1);
+    assert.equal(MAX_CVES, 2000);
   });
 
   it('never joins the Pixel bulletin to a release', () => {
@@ -444,12 +519,28 @@ describe('match', () => {
 
   it('lists the bulletins a snapshot has to read', () => {
     assert.deepEqual(neededBulletins(releases, patchLevels), [
-      bulletinUrl('2026-06-01'),
-      bulletinUrl('2026-07-01'),
-      bulletinUrl('2026-08-01'),
-      bulletinUrl('2026-09-01'),
+      ...['04', '05', '06', '07', '08', '09'].map((month) => bulletinUrl(`2026-${month}-01`)),
       AOSP_URL,
     ]);
+    // A gap between two releases is listed too: 2025-09 to 2025-12 needs 10 and 11.
+    const gap = neededBulletins(
+      [rel('a'), rel('b')],
+      new Map([
+        ['a', '2025-09-05'],
+        ['b', '2025-12-05'],
+      ]),
+    );
+    assert.deepEqual(gap, ['09', '10', '11', '12'].map((month) => bulletinUrl(`2025-${month}-01`)));
+    assert.deepEqual(neededBulletins([], new Map()), []);
+    const many = neededBulletins(
+      [rel('a'), rel('b')],
+      new Map([
+        ['a', '2000-01-05'],
+        ['b', '2026-10-05'],
+      ]),
+    );
+    assert.equal(many.length, MAX_BULLETINS);
+    assert.ok(many.includes(AOSP_URL));
     const real = neededBulletins(RELEASES, patchLevelsByTag(BUILDS));
     assert.ok(real.includes('https://source.android.com/docs/security/bulletin/2026/2026-06-01'));
     assert.ok(real.includes('https://source.android.com/docs/security/bulletin/2025-12-01'));
