@@ -164,11 +164,7 @@
     render();
   });
 
-  // Three scripts load after the page has painted, never from the HTML. below.js (the mock
-  // screens and the developer highlights, all below the fold) as soon as the page has loaded,
-  // and told the releases on show when it arrives; the cadence row under the dial (also told
-  // the day the hand points at) and, when motion is allowed, the visual effects module once
-  // the browser is idle. The preview bundle (which embeds its data) has no files to load.
+  // Three scripts load after the page has painted, never from the HTML: below.js, the cadence row and the effects module (see docs/architecture.md).
   function load(src, type, onload) {
     var s = document.createElement("script");
     s.src = src;
