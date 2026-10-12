@@ -33,13 +33,19 @@
 
   function card(title, r) {
     var box = RO.h("div", "cmp-card fam-" + r.family.toLowerCase());
-    box.appendChild(RO.h("p", "f-label", title));
-    box.appendChild(RO.h("p", "cmp-ver", r.family + " " + RO.short(r)));
-    box.appendChild(RO.h("p", "build", r.build ? "Build " + r.build : "No build number"));
-    box.appendChild(RO.h("p", "small", RO.day(r.t)));
+    var sig = RO.h("span", "sigil");
+    box.appendChild(sig);
+    if (window.Sigil) window.Sigil.draw(sig, RO.sigilKey(r), { size: 64 });
+    else sig.hidden = true;
+    var text = RO.h("div", "cmp-text");
+    text.appendChild(RO.h("p", "f-label", title));
+    text.appendChild(RO.h("p", "cmp-ver", r.family + " " + RO.short(r)));
+    text.appendChild(RO.h("p", "build", r.build ? "Build " + r.build : RO.channel(r)));
+    text.appendChild(RO.h("p", "small", RO.day(r.t)));
     var a = RO.h("a", "rel-apple", "View release", { href: r.url, target: "_blank", rel: "noopener noreferrer" });
     a.appendChild(RO.h("span", "sr-only", " (opens in a new tab)"));
-    box.appendChild(a);
+    text.appendChild(a);
+    box.appendChild(text);
     return box;
   }
   function stat(value, name) {
