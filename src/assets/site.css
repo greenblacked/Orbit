@@ -671,9 +671,9 @@ html[data-theme="reactor"] { --aurora: 0.3; }
 /* Newest release per platform, on a phone only (home.js): the dial is far down the page. */
 .newest { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; margin-top: 1.25rem; }
 .newest[hidden] { display: none; }
-.newest a { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; min-height: 2.75rem; padding: 0.5rem 0; font-size: 0.9375rem; }
+.newest a { display: flex; flex-wrap: nowrap; align-items: baseline; gap: 0 0.5rem; min-height: 2.75rem; padding: 0.5rem 0; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; }
 .newest .n-fam { color: var(--fam-text-card); font-weight: 600; }
-.newest .n-ver { color: var(--muted); font-variant-numeric: tabular-nums; }
+.newest .n-ver { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* Five rows of two, kept while the list loads so the buttons below do not jump when it fills. */
 @media (max-width: 39.99rem) { .newest { min-height: 14.75rem; } }
 @media (min-width: 40rem) { .newest { display: none; } }
@@ -1660,8 +1660,10 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 
 /* Aurora (aurora.js): the WebGL canvas takes the place of the CSS gradient blobs, which stay
    as the fallback whenever the canvas is not there. */
-.aurora-gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
-.aurora.gl i { display: none; }
+.aurora-gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 0.6s ease; }
+.aurora i { transition: opacity 0.6s ease; }
+.aurora.gl .aurora-gl { opacity: 1; }
+.aurora.gl i { opacity: 0; }
 
 /* Windows High Contrast and other forced-colour modes: a selected chip or segment, the current
    page and a focused notch or hand must not rely on a background or stroke colour alone. */

@@ -150,8 +150,9 @@ export default function start(host, colors) {
     previous = now;
     gl.uniform1f(time, (now - begin) / 1000);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    // The CSS blobs give way only once the canvas has drawn something to take their place.
-    host.classList.add("gl");
+    // The CSS blobs give way (a fade) only once the probe has passed, so a slow device stops
+    // while they are still on screen and nothing blinks.
+    if (!probing && !host.classList.contains("gl")) host.classList.add("gl");
     frame = requestAnimationFrame(loop);
   };
   const wake = () => {
