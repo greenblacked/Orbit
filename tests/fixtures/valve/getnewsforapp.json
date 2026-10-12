@@ -1,0 +1,42 @@
+{
+  "appnews": {
+    "newsitems": [
+      {
+        "gid": "1846018067937692",
+        "title": "Steam Beta Client Update: October 10th",
+        "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067937692",
+        "is_external_url": true,
+        "author": "saml",
+        "contents": "We have just shipped an updated Steam Client to the Preview/Beta channel.Remote PlayFixed crashes when using the controller to interact with streaming dialogs.ScreenshotsFixed an issue where deleting an uploaded screenshot would only delete the local copy.",
+        "feedlabel": "Community Announcements",
+        "date": 1791688091,
+        "feedname": "steam_community_announcements",
+        "feed_type": 1,
+        "appid": 1675200,
+        "tags": [
+          "patchnotes",
+          "previewchannel",
+          "betachannel"
+        ]
+      },
+      {
+        "gid": "1846018067935020",
+        "title": "Steam Beta Client Update: October 9th",
+        "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067935020",
+        "is_external_url": true,
+        "author": "austinp_valve",
+        "contents": "We have just shipped an updated Steam Client to the Preview/Beta channel.GeneralImproved the layout of the QAM Voice Chat tab, added a mute toggle to the volume sliders, and fixed the link from the tab to the active chat to focus the textbox when opening to the chat windowSteam InputBy default, Stea...",
+        "feedlabel": "Community Announcements",
+        "date": 1791592950,
+        "feedname": "steam_community_announcements",
+        "feed_type": 1,
+        "appid": 1675200,
+        "tags": [
+          "patchnotes",
+          "previewchannel",
+          "betachannel"
+        ]
+      }
+    ]
+  }
+}

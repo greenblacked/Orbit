@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<item>
+      <title>Steam Beta Client Update: October 10th</title>
+      <description>&lt;p class="bb_paragraph"&gt;We have just shipped an updated Steam Client to the Preview/Beta channel.&lt;/p&gt;&lt;p class="bb_paragraph"&gt;&lt;/p&gt;&lt;p class="bb_paragraph"&gt;&lt;b&gt;Remote Play&lt;/b&gt;&lt;/p&gt;&lt;ul class="bb_ul"&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;Fixed crashes when using the controller to interact with streaming dialogs.&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;&lt;p class="bb_paragraph"&gt;&lt;b&gt;Screenshots&lt;/b&gt;&lt;/p&gt;&lt;ul class="bb_ul"&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;Fixed an issue where deleting an uploaded screenshot would only delete the local copy.&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;</description>
+      <link>https://store.steampowered.com/news/app/1675200/view/675134162359815102</link>
+      <pubDate>Sun, 11 Oct 2026 03:08:11 +0000</pubDate>
+      <guid isPermaLink="true">https://store.steampowered.com/news/app/1675200/view/675134162359815102</guid>
+    </item>
+<item>
+      <title>Steam Beta Client Update: October 9th</title>
+      <description>&lt;p class="bb_paragraph"&gt;We have just shipped an updated Steam Client to the Preview/Beta channel.&lt;/p&gt;&lt;p class="bb_paragraph"&gt;&lt;/p&gt;&lt;p class="bb_paragraph"&gt;&lt;b&gt;General&lt;/b&gt;&lt;/p&gt;&lt;ul class="bb_ul"&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;Improved the layout of the QAM Voice Chat tab, added a mute toggle to the volume sliders, and fixed the link from the tab to the active chat to focus the textbox when opening to the chat window&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;&lt;p class="bb_paragraph"&gt;&lt;b&gt;Steam Input&lt;/b&gt;&lt;/p&gt;&lt;ul class="bb_ul"&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;By default, Steam Frame controllers will now use gamepad input in VR games that don't support VR inputs. The preferred mode can be changed for any VR game in either the game's Steam Input settings or in VR Controller settings on the Now Playing page. Please report any titles that do not work out of the box. Note: both Frame and the PC must be on the beta channel for Steam and SteamVR&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;&lt;p class="bb_paragraph"&gt;&lt;b&gt;Remote Play&lt;/b&gt;&lt;/p&gt;&lt;ul class="bb_ul"&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;Fixed streaming launch failing if the host client had a cloud conflict.&lt;/p&gt;&lt;/li&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;Fixed dropping to a very low bitrate when hardware decoding is disabled.&lt;/p&gt;&lt;/li&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;Fixed the network health dialog popping up at the beginning of the stream.&lt;/p&gt;&lt;/li&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;Enable Vulkan video decoding when using the SteamRT3C Linux beta.&lt;/p&gt;&lt;/li&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;Automatically fall back to H.264 if HEVC isn't available.&lt;/p&gt;&lt;/li&gt;&lt;li&gt;&lt;p class="bb_paragraph"&gt;Disabled HDR when streaming to the OLED Steam Deck.&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;</description>
+      <link>https://store.steampowered.com/news/app/1675200/view/675134162359815000</link>
+      <pubDate>Sat, 10 Oct 2026 00:42:30 +0000</pubDate>
+      <guid isPermaLink="true">https://store.steampowered.com/news/app/1675200/view/675134162359815000</guid>
+    </item>
+</channel>
+</rss>
