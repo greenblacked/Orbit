@@ -24,7 +24,7 @@
       "source": {
         "name": "Android versions",
         "url": "https://developer.android.com/about/versions",
-        "hosts": ["developer.android.com"]
+        "hosts": ["developer.android.com", "source.android.com"]
       }
     },
     {

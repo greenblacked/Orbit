@@ -1,5 +1,5 @@
 {
-  "source": "apple-developer-releases",
+  "source": "apple-developer-releases,android-build-numbers",
   "fetchedAt": "2026-10-11T15:26:54Z",
   "stale": false,
   "snapshot": true,
@@ -325,6 +325,20 @@
       "date": "2026-07-27T17:00:00Z",
       "url": "https://developer.apple.com/news/releases/?id=07272026f",
       "source": "apple-developer-releases"
+    },
+    {
+      "id": "android-17.0.0_r1",
+      "vendor": "google",
+      "family": "Android",
+      "version": "17.0.0",
+      "major": 17,
+      "stage": "release",
+      "beta": null,
+      "build": "CP2A.260605.016",
+      "title": "Android 17 (android-17.0.0_r1)",
+      "date": "2026-06-05T00:00:00Z",
+      "url": "https://source.android.com/docs/setup/reference/build-numbers",
+      "source": "android-build-numbers"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=05112026i",

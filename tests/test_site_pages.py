@@ -30,8 +30,9 @@ except ImportError:
 SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
 AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
-# Listed beside them, with no release feed connected yet: their cards say so.
-WAITING = ["RouterOS", "Android", "Windows", "SteamOS"]
+# Listed beside them, with no release feed connected yet: their cards say so. Android is not
+# here: its feed is connected and the snapshot holds a release.
+WAITING = ["RouterOS", "Windows", "SteamOS"]
 LEGAL = (
     "Independent site. Not affiliated with, endorsed by or sponsored by Apple Inc., MikroTik, "
     "Google LLC, Microsoft Corporation or Valve Corporation. Apple, iPhone, iPad, Mac, Apple "

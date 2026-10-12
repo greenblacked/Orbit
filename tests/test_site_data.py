@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from urllib.parse import urlparse
 
 import pytest
 from helpers import REPO
@@ -36,7 +37,8 @@ def pages() -> list[str]:
 
 def test_the_snapshot_follows_the_data_contract():
     data = json.loads((SRC / "data" / "releases.json").read_text(encoding="utf-8"))
-    assert data["source"] == "apple-developer-releases"
+    sources = data["source"].split(",")
+    assert sources[0] == "apple-developer-releases"
     ids = [r["id"] for r in data["releases"]]
     assert len(ids) == len(set(ids))
     dates = [r["date"] for r in data["releases"]]
@@ -45,7 +47,10 @@ def test_the_snapshot_follows_the_data_contract():
     for r in data["releases"]:
         assert owner.get(r["family"]) == r["vendor"], r["id"]
         assert r["stage"] in {"release", "beta", "rc"}
-        assert r["url"].startswith("https://developer.apple.com/")
+        assert r["source"] in sources, r["id"]
+        hosts = next(v["source"]["hosts"] for v in CONFIG["vendors"] if v["id"] == r["vendor"])
+        assert urlparse(r["url"]).hostname in hosts, r["id"]
+        assert r["url"].startswith("https://"), r["id"]
         # A verdict is for a released build only: the dial would show it to everyone.
         assert "status" not in r or r["stage"] == "release", r["id"]
 
