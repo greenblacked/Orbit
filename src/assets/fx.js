@@ -105,7 +105,7 @@ function aurora() {
   if (navigator.hardwareConcurrency <= 4) return;
   // Six blobs, so the first six accents: one per vendor first, then the second of each, so a
   // vendor listed later (RouterOS, Android, Windows, SteamOS) is not crowded out by Apple's six.
-  const seen = {};
+  const seen = Object.create(null);
   const colors = window.RO
     ? RO.families()
         .map((f) => ({ accent: f.accent, rank: (seen[f.vendor] = (seen[f.vendor] || 0) + 1) }))

@@ -71,7 +71,7 @@
   // Keep only entries the pages can show safely; null when nothing usable is left.
   function normalise(json) {
     if (!json || !Array.isArray(json.releases)) return null;
-    var seen = {};
+    var seen = Object.create(null);
     var list = [];
     json.releases.forEach(function (r) {
       if (!r || typeof r.id !== "string" || seen[r.id] || typeof r.vendor !== "string") return;
