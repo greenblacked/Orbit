@@ -716,11 +716,23 @@ def test_a_failed_poll_keeps_the_live_data_instead_of_the_older_snapshot(page, b
     cards_ready(page)
     assert page.inner_text("#latest-grid [data-family=iOS] [data-f=ver]") == "iOS 99.1"
     answers.update(status=502, body="{}")
-    page.evaluate("RO.refresh()")
+    page.evaluate("() => RO.refresh()")
     assert page.inner_text("#latest-grid [data-family=iOS] [data-f=ver]") == "iOS 99.1"
-    answers.update(status=200, body=json.dumps(live))
-    page.evaluate("RO.refresh()")
-    cards_ready(page)
+    newer = copy.deepcopy(newest)
+    newer.update(
+        id="https://developer.apple.com/news/releases/?id=live-only-2",
+        version="99.2",
+        title="iOS 99.2",
+        date="2099-01-02T00:00:00Z",
+    )
+    recovered = copy.deepcopy(live)
+    recovered["releases"] = [newer, *live["releases"]]
+    answers.update(status=200, body=json.dumps(recovered))
+    page.evaluate("() => RO.refresh()")
+    page.wait_for_function(
+        "() => document.querySelector('#latest-grid [data-family=iOS] [data-f=ver]')"
+        ".textContent === 'iOS 99.2'"
+    )
 
 
 # --- every page, every theme ------------------------------------------------------------
