@@ -89,7 +89,6 @@ export default function start(host, colors) {
   resize();
   readStrength();
   host.insertBefore(canvas, host.firstChild);
-  host.classList.add("gl");
 
   let visible = true;
   let frame = 0;
@@ -151,6 +150,8 @@ export default function start(host, colors) {
     previous = now;
     gl.uniform1f(time, (now - begin) / 1000);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    // The CSS blobs give way only once the canvas has drawn something to take their place.
+    host.classList.add("gl");
     frame = requestAnimationFrame(loop);
   };
   const wake = () => {
