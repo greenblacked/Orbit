@@ -8,8 +8,9 @@
 //   parse   (text) => releases, with no I/O
 
 import apple from './apple.js';
+import windows from './windows.js';
 
-export const SOURCES = [apple];
+export const SOURCES = [apple, windows];
 
 /** True when `source` has the shape the Worker relies on. */
 export function isSource(source) {
