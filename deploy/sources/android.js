@@ -23,9 +23,12 @@
 // widen it. A row dated more than a day after the clock is refused (a typo such as
 // CP2A.990605.016 must not pin a release in 2099).
 // Dates: a row is dated by the day in its build id, unless its security patch level is in a
-// later month (branch builds such as BD4A.240925.111, patch level 2025-01-05, are dated
-// 2025-01-05), and by the patch level alone when the build id has no valid day.
-// Within one day the revision number orders the releases: the time of day is the revision in seconds (android-15.0.0_r36 is 00:00:36), so r36 sorts before r31.
+// later month, and by the patch level alone when the build id has no valid day. Any row can
+// move, not only branch builds: BD4A.240925.111 (patch level 2025-01-05) is dated 2025-01-05,
+// and an older launch build whose patch level is the next month (OPM1.171019.011, patch
+// level 2017-12-05) is dated by its patch level too.
+// Within one day the revision number orders the releases: the time of day is the revision in
+// seconds (android-15.0.0_r36 is 00:00:36), so r36 sorts before r31.
 //
 // The Worker calls parse(text, url). `parse` below takes the text alone, because parsePage's
 // later parameter (`now`) is for tests: passing the url on would make it `now`.
@@ -172,9 +175,9 @@ function isoDay(year, month, day, now) {
 }
 
 /**
- * The day a build was cut: its YYMMDD segment, but the security patch level when that names a
- * later month (a branch build such as BD4A.240925.111 is cut from an old base and shipped at
- * patch level 2025-01-05); the patch level alone when the segment is no day; null if neither.
+ * The day a release is dated: its build id's YYMMDD segment, but the security patch level when
+ * that names a later month (any row, e.g. the branch build BD4A.240925.111, patch level
+ * 2025-01-05); the patch level alone when the segment is no day; null if neither.
  */
 export function buildDate(build, patchLevel, now = Date.now()) {
   const fromBuild = BUILD_DATE_RE.exec(build);

@@ -332,7 +332,8 @@ describe('the bounds on what is emitted', () => {
   for (let i = 0; i < 120; i += 1) {
     const year = 2017 + Math.floor(i / 12);
     const month = String((i % 12) + 1).padStart(2, '0');
-    long.push(row(`CP2A.${String(year).slice(2)}${month}05.016`, `android-${i + 1}.0.0_r1`));
+    const yy = String(year).slice(2);
+    long.push(row(`CP2A.${yy}${month}05.016`, `android-${i + 1}.0.0_r1`, `${year}-${month}-05`));
   }
   const html = page(...long);
   const now = Date.UTC(2027, 0, 1);
@@ -365,7 +366,7 @@ describe('the bounds on what is emitted', () => {
 describe('releases on one day', () => {
   it('put the higher revision first, so r36 is newer than r31 and r10 newer than r9', () => {
     const rows = ['r31', 'r36', 'r9', 'r10', 'r100', 'r32'].map((r) =>
-      row('BP1A.250505.005', `android-15.0.0_${r}`),
+      row('BP1A.250505.005', `android-15.0.0_${r}`, '2025-05-05'),
     );
     const day = Date.UTC(2025, 4, 6); // the day after the rows' date
     const ids = at(page(...rows), day).map((r) => r.id.split('_r')[1]);
