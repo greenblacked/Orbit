@@ -15,7 +15,7 @@
 ## Consequences
 
 - The Android and SteamOS history grows with each refresh of the snapshot and with the live feed; the live Android timeline reaches back to 2017 (Android 8), so it will be long. The home page still lists the newest five per family.
-- The oldest Android row in the snapshot, `android-15.0.0_r24` (`BD4A.240925.111`), is dated by its build id (September 2024), although its patch level is 2025-01-05, so the timeline's last month comes from a build-id date and not a publication date (ADR 0006 already dates by build id).
+- Dating rule amended: a row is dated by the day in its build id unless its security patch level falls in a later month, in which case the patch level is used (and the patch level alone when the build id has no valid day). Branch builds such as `android-15.0.0_r24` (`BD4A.240925.111`, patch level 2025-01-05) are therefore dated 2025-01-05, not 2024-09-25, while `android-15.0.0_r25` (`BD4A.250405.003`, patch level 2025-02-05) keeps 2025-04-05. This supersedes the build-id-only dating that ADR 0006 and the earlier text of this ADR accepted. The snapshot dates change at its next refresh.
 - Supersedes the window part of ADR 0006 (the Bounds paragraph of the Android section, the snapshot sentence that follows it, and the SteamOS bounds). The rest of ADR 0006 stands.
 - The dial's 52-week widening is removed. A wider dial would be a new decision.
 - The fetch volume, the allowlist and the cache are unchanged.
