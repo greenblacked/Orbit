@@ -20,6 +20,9 @@ import steamos, {
   parseFeed,
   parseNews,
   parseTitle,
+  titlePattern,
+  linkOf,
+  WINDOW_DAYS,
 } from '../deploy/sources/steamos.js';
 
 const read = (name) => readFileSync(fileURLToPath(new URL(`./fixtures/valve/${name}`, import.meta.url)), 'utf8');
@@ -27,6 +30,12 @@ const RECORDED_JSON = read('getnewsforapp.json');
 const RECORDED_RSS = read('news.rss');
 const TITLES = read('getnewsforapp-steamos-titles.json');
 const PAGE = (slug) => `${NEWS_PAGE}#${slug}`;
+
+// The clock of the recorded data: the day after the probe. The registered parser reads the
+// real clock, so tests that go through parse() or the Worker stub it.
+const NOW = Date.UTC(2026, 9, 13);
+const news = (text, now = NOW, days) => parseNews(text, now, days);
+const feed = (text, now = NOW, days) => parseFeed(text, now, days);
 
 const post = (over) => ({
   title: 'SteamOS 3.7.15',
@@ -112,11 +121,11 @@ describe('parseTitle', () => {
 
 describe('parseNews', () => {
   it('skips every recorded Steam Client update', () => {
-    assert.deepEqual(parseNews(RECORDED_JSON), []);
+    assert.deepEqual(news(RECORDED_JSON), []);
   });
 
   it('keeps all 19 real SteamOS posts of the probe, newest first, without a gid or a link', () => {
-    const releases = parseNews(TITLES);
+    const releases = news(TITLES);
     assert.equal(releases.length, 19);
     assert.equal(releases.filter((r) => r.stage === 'release').length, 7);
     assert.deepEqual(
@@ -142,7 +151,7 @@ describe('parseNews', () => {
   });
 
   it('maps the real channel tags: stable wins, beta and preview are betas', () => {
-    const stage = Object.fromEntries(parseNews(TITLES).map((r) => [r.title, r.stage]));
+    const stage = Object.fromEntries(news(TITLES).map((r) => [r.title, r.stage]));
     assert.equal(stage['SteamOS 3.8.28'], 'release');
     assert.equal(stage['SteamOS 3.8.12'], 'release'); // stable, beta and preview tags together
     assert.equal(stage['SteamOS 3.8.28 Beta'], 'beta');
@@ -152,7 +161,7 @@ describe('parseNews', () => {
 
   it('keeps a link on the Steam hosts and replaces any other with the news page', () => {
     const good = 'https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1';
-    assert.equal(parseNews(doc(post({ url: good })))[0].url, good);
+    assert.equal(news(doc(post({ url: good })))[0].url, good);
     for (const url of [
       'http://store.steampowered.com/news/app/1675200/view/1',
       'https://store.steampowered.com.evil.example/x',
@@ -164,18 +173,18 @@ describe('parseNews', () => {
       undefined,
       42,
     ]) {
-      assert.equal(parseNews(doc(post({ url })))[0].url, NEWS_PAGE, String(url));
+      assert.equal(news(doc(post({ url })))[0].url, NEWS_PAGE, String(url));
     }
   });
 
   it('never keeps the post text', () => {
-    const text = parseNews(doc(post({ contents: 'Fixed a secret thing', author: 'someone' })));
+    const text = news(doc(post({ contents: 'Fixed a secret thing', author: 'someone' })));
     assert.ok(!JSON.stringify(text).includes('secret'));
     assert.ok(!JSON.stringify(text).includes('someone'));
   });
 
   it('skips malformed entries and keeps the good ones', () => {
-    const releases = parseNews(
+    const releases = news(
       doc(
         null,
         'text',
@@ -208,19 +217,19 @@ describe('parseNews', () => {
       '{"appnews":{"newsitems":{}}}',
       doc(),
     ]) {
-      assert.deepEqual(parseNews(text), [], text);
+      assert.deepEqual(news(text), [], text);
     }
   });
 
   it('keeps one release for a repeated title, and one for each channel of a version', () => {
-    assert.equal(parseNews(doc(post(), post())).length, 1);
-    const both = parseNews(doc(post(), post({ title: 'SteamOS 3.7.15 Beta', tags: ['betachannel'] })));
+    assert.equal(news(doc(post(), post())).length, 1);
+    const both = news(doc(post(), post({ title: 'SteamOS 3.7.15 Beta', tags: ['betachannel'] })));
     assert.deepEqual(both.map((r) => r.id).sort(), [PAGE('steamos-3.7.15'), PAGE('steamos-3.7.15-beta')]);
   });
 
   it('gives the same id to a post whether it came from the API, the feed or the snapshot', () => {
-    const [fromApi] = parseNews(doc(post()));
-    const [fromFeed] = parseFeed(
+    const [fromApi] = news(doc(post()));
+    const [fromFeed] = feed(
       '<rss><channel><item><title>SteamOS 3.7.15</title><link>https://store.steampowered.com/news/app/1675200/view/1</link>' +
         '<pubDate>Sat, 10 Oct 2026 00:42:30 +0000</pubDate></item></channel></rss>',
     );
@@ -237,11 +246,11 @@ describe('parseFeed (the RSS form)', () => {
 
   it('skips every recorded Steam Client update', () => {
     assert.equal((RECORDED_RSS.match(/<item>/g) ?? []).length, 2);
-    assert.deepEqual(parseFeed(RECORDED_RSS), []);
+    assert.deepEqual(feed(RECORDED_RSS), []);
   });
 
   it('decides the stage from the title alone', () => {
-    const releases = parseFeed(
+    const releases = feed(
       rss(
         item('SteamOS 3.7.13 Stable', LINK),
         item('SteamOS 3.7.14 Preview', `${LINK}2`, `${LINK}2`, 'Sun, 11 Oct 2026 03:08:11 +0000'),
@@ -258,7 +267,7 @@ describe('parseFeed (the RSS form)', () => {
   });
 
   it('skips a bad date, replaces a bad link host with the news page, and an empty or unreadable feed gives nothing', () => {
-    const bad = parseFeed(
+    const bad = feed(
       rss(
         item('SteamOS 3.7.13 Stable', LINK, LINK, 'yesterday'),
         item('SteamOS 3.7.14 Stable', 'https://evil.example/x'),
@@ -267,20 +276,95 @@ describe('parseFeed (the RSS form)', () => {
     );
     assert.deepEqual(bad.map((r) => r.version), ['3.7.14', '3.7.15']);
     assert.deepEqual(bad.map((r) => r.url), [NEWS_PAGE, NEWS_PAGE]);
-    assert.deepEqual(parseFeed(rss()), []);
-    assert.deepEqual(parseFeed(''), []);
-    assert.deepEqual(parseFeed(null), []);
-    assert.deepEqual(parseFeed('<html>nope</html>'), []);
+    assert.deepEqual(feed(rss()), []);
+    assert.deepEqual(feed(''), []);
+    assert.deepEqual(feed(null), []);
+    assert.deepEqual(feed('<html>nope</html>'), []);
   });
 });
 
 describe('parse', () => {
-  it('reads either document and survives garbage', () => {
+  it('reads the news JSON and survives garbage', (t) => {
+    t.mock.method(Date, 'now', () => NOW);
     assert.equal(parse(TITLES).length, 19);
     assert.deepEqual(parse(RECORDED_JSON), []);
     assert.deepEqual(parse(RECORDED_RSS), []);
     assert.deepEqual(parse(`  \n${doc(post())}`).map((r) => r.version), ['3.7.15']);
     assert.deepEqual(parse(''), []);
     assert.deepEqual(parse(undefined), []);
+  });
+
+  it('ignores the url the Worker passes as the second argument', (t) => {
+    t.mock.method(Date, 'now', () => NOW);
+    assert.deepEqual(steamos.parse(TITLES, NEWS_URL), steamos.parse(TITLES));
+    assert.deepEqual(steamos.parse(doc(post(), post({ date: 4102444800, title: 'SteamOS 9.9.9' })), NEWS_URL).map((r) => r.version), ['3.7.15']);
+  });
+
+  it('does not read RSS, so a body of unclosed <item> tags costs nothing', () => {
+    const started = performance.now();
+    assert.deepEqual(parse('<item>'.repeat(200000)), []);
+    assert.deepEqual(parse('<rss><channel><item><title>SteamOS 3.7.13 Stable</title></item></channel></rss>'), []);
+    assert.ok(performance.now() - started < 2000);
+  });
+});
+
+describe('the bounds on what is emitted', () => {
+  it('refuses a post dated more than a day ahead of the clock', () => {
+    const releases = news(
+      doc(
+        post({ title: 'SteamOS 3.7.16', date: 4102444800 }), // 2100-01-01
+        post({ title: 'SteamOS 3.7.15', date: Math.floor(NOW / 1000) + 3600 }),
+      ),
+    );
+    assert.deepEqual(releases.map((r) => r.version), ['3.7.15']);
+    const far = '<item><title>SteamOS 3.7.16 Stable</title><pubDate>Fri, 01 Jan 2100 00:00:00 +0000</pubDate></item>';
+    assert.deepEqual(feed(`<rss><channel>${far}</channel></rss>`), []);
+  });
+
+  it('keeps the posts within the window of the clock, and the newest always', () => {
+    assert.equal(WINDOW_DAYS, 180);
+    assert.equal(news(TITLES).length, 19);
+    const later = Date.UTC(2027, 3, 1); // every recorded post is older than 180 days
+    const kept = news(TITLES, later);
+    assert.deepEqual(kept.map((r) => r.version), ['3.9.2']);
+    const mid = Date.UTC(2026, 11, 1);
+    const floor = mid - WINDOW_DAYS * 86400000;
+    const some = news(TITLES, mid);
+    assert.ok(some.length >= 1 && some.length <= 19);
+    assert.ok(some.every((r, i) => i === 0 || Date.parse(r.date) >= floor));
+    assert.equal(news(TITLES, NOW, Infinity).length, 19);
+    assert.equal(news(TITLES, NOW, 0).length, 1);
+  });
+
+  it('keeps the posts within the window of the newest post when the clock is ahead of it', () => {
+    const day = 86400;
+    const base = Math.floor(NOW / 1000);
+    const releases = news(
+      doc(
+        post({ title: 'SteamOS 3.7.16', date: base - 10 * day }),
+        post({ title: 'SteamOS 3.7.15', date: base - 150 * day }),
+        post({ title: 'SteamOS 3.7.14', date: base - 200 * day }),
+      ),
+    );
+    assert.deepEqual(releases.map((r) => r.version), ['3.7.16', '3.7.15']);
+  });
+});
+
+describe('link and title hardening', () => {
+  it('rebuilds a link from its host and path, and refuses credentials and a port', () => {
+    const path = '/news/app/1675200/view/1';
+    assert.equal(linkOf(`https://store.steampowered.com${path}?x=1#y`), `https://store.steampowered.com${path}`);
+    assert.equal(linkOf(`https://user:pw@store.steampowered.com${path}`), NEWS_PAGE);
+    assert.equal(linkOf(`https://store.steampowered.com:8443${path}`), NEWS_PAGE);
+    assert.equal(parseNews(doc(post({ url: `https://user:pw@store.steampowered.com${path}` })), NOW)[0].url, NEWS_PAGE);
+  });
+
+  it('matches a family name with regular-expression characters literally', () => {
+    const re = titlePattern(['SteamOS (Deck)', 'Steam+']);
+    assert.equal(re.exec('SteamOS (Deck) 3.7.13')?.[1], 'SteamOS (Deck)');
+    assert.equal(re.exec('Steam+ 1.2')?.[1], 'Steam+');
+    assert.equal(re.exec('SteamOS Deck 3.7.13'), null);
+    assert.equal(re.exec('Steam 1.2'), null);
+    assert.equal(titlePattern(['SteamOS']).exec('SteamOS 3.7.13')?.[2], '3.7.13');
   });
 });

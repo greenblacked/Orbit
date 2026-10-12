@@ -3,12 +3,16 @@
 // Valve posts SteamOS releases to the Steam Deck news next to Steam Client updates. Only a
 // title that names a SteamOS version is an OS release; "Steam Beta Client Update: ..." and
 // the like are skipped. The primary source is the news API (JSON); the same posts are also
-// published as RSS (FALLBACK_URL), which parse() reads as well. See ADR 0006 for how both
-// were verified.
+// published as RSS (FALLBACK_URL); parseFeed() reads that form, but the registered parse()
+// reads the JSON only. See ADR 0006 for how both were verified.
 //
 // An adapter is { id, vendor, urls, parse }. `urls` is the allowlist the Worker fetches.
 // The RSS feed is not on it: the Worker treats one failing URL as a failed source and
 // merges the results of all of them, so a second URL would be a requirement, not a fallback.
+//
+// Bounds on what is emitted: a post dated more than a day after the clock is refused, and only
+// posts within WINDOW_DAYS (180, under the dial's 26 weeks) of the clock and of the newest post
+// are kept, the newest always, so a slow spell of Steam Client posts cannot widen the dial.
 
 import { familyIds } from '../families.js';
 import { field, isHttpsOn, mergeReleases, parseDate, rssItems } from '../releases.js';
@@ -24,10 +28,18 @@ export const FAMILIES = familyIds(VENDOR);
 export const LINK_HOSTS = ['store.steampowered.com', 'steamstore-a.akamaihd.net'];
 
 const MAX_ITEMS = 500;
+export const WINDOW_DAYS = 180;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_SKEW_MS = DAY_MS; // a post dated further ahead than this is not believed
 
 // "SteamOS 3.7.13", "SteamOS 3.8.1 Preview (20250522.1)", "SteamOS 3.7.13 Stable: Deck update".
 // The prefix is strict; the rest of the title is read loosely (see TITLE_OK).
-const TITLE_RE = new RegExp(`^(${FAMILIES.join('|')})\\s+(\\d+(?:\\.\\d+){1,3})(?=$|[\\s:,(])`, 'i');
+/** The title pattern for these family names, each matched literally. */
+export function titlePattern(names) {
+  const escaped = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`^(${escaped.join('|')})\\s+(\\d+(?:\\.\\d+){1,3})(?=$|[\\s:,(])`, 'i');
+}
+const TITLE_RE = titlePattern(FAMILIES);
 // A title is at most 200 characters with no markup or control characters.
 const TITLE_OK = /^[^<>\u0000-\u001f]{1,200}$/;
 const BUILD_RE = /(?:^|[\s(])(\d{8}\.\d{1,3})(?=$|[\s)])/;
@@ -75,12 +87,34 @@ function idOf(title) {
   return `${NEWS_PAGE}#${slug}`;
 }
 
-function linkOf(value) {
-  return typeof value === 'string' && LINK_HOSTS.some((host) => isHttpsOn(value, host)) ? value : NEWS_PAGE;
+// A post's link rebuilt from its host and path: no credentials, port, query or fragment.
+export function linkOf(value) {
+  if (typeof value !== 'string' || !LINK_HOSTS.some((host) => isHttpsOn(value, host))) {
+    return NEWS_PAGE;
+  }
+  const url = new URL(value);
+  if (url.username || url.password || url.port) return NEWS_PAGE;
+  return `https://${url.hostname}${url.pathname}`;
 }
 
-/** Releases in a GetNewsForApp JSON document, newest first; [] for anything unreadable. */
-export function parseNews(jsonText) {
+// Refuse a post dated far ahead of the clock, then keep what is within the window of the clock
+// and of the newest post (the newest always), newest first.
+function bounded(releases, now, windowDays) {
+  const sorted = mergeReleases(
+    [],
+    releases.filter((release) => Date.parse(release.date) <= now + MAX_SKEW_MS),
+  );
+  if (sorted.length === 0) return sorted;
+  const span = windowDays * DAY_MS;
+  const floor = Math.max(now - span, Date.parse(sorted[0].date) - span);
+  return sorted.filter((release, i) => i === 0 || Date.parse(release.date) >= floor);
+}
+
+/**
+ * Releases in a GetNewsForApp JSON document, newest first; [] for anything unreadable. `now`
+ * and `windowDays` are for tests: the registered parse() passes neither.
+ */
+export function parseNews(jsonText, now = Date.now(), windowDays = WINDOW_DAYS) {
   let doc;
   try {
     doc = JSON.parse(jsonText);
@@ -109,11 +143,11 @@ export function parseNews(jsonText) {
       source: ID,
     });
   }
-  return mergeReleases([], releases);
+  return bounded(releases, now, windowDays);
 }
 
 /** Releases in the RSS form of the same news; it carries no tags, so only the title decides. */
-export function parseFeed(xmlText) {
+export function parseFeed(xmlText, now = Date.now(), windowDays = WINDOW_DAYS) {
   const releases = [];
   for (const item of rssItems(xmlText).slice(0, MAX_ITEMS)) {
     const title = field(item, 'title');
@@ -123,13 +157,17 @@ export function parseFeed(xmlText) {
     if (!parsed || !date) continue;
     releases.push({ id: idOf(title), ...parsed, title, date, url: linkOf(link), source: ID });
   }
-  return mergeReleases([], releases);
+  return bounded(releases, now, windowDays);
 }
 
-/** Either document: JSON when it starts with a brace, otherwise RSS. */
+/**
+ * The registered parser: the news JSON only. Anything else, the RSS form included, gives [];
+ * the RSS item scanner is not bounded, and the RSS URL is not on the allowlist. The url the
+ * Worker passes is ignored.
+ */
 export function parse(text) {
   const body = String(text ?? '').trimStart();
-  return body.startsWith('{') ? parseNews(body) : parseFeed(body);
+  return body.startsWith('{') ? parseNews(body) : [];
 }
 
 export default {
