@@ -41,11 +41,11 @@ Security data differs from release data in four ways. It is per page, not per fe
 }
 ```
 
-- `releases[id].cves` is the sorted, de-duplicated union of the CVEs of that release's notes. `count` equals `cves.length` and is non-null only for `listed` and `no-cve-entries`.
+- `releases[id].cves` is the sorted, de-duplicated union of the CVEs of that release's notes, and `notes` is sorted and de-duplicated too. For `listed`, `count` equals `cves.length` (at least 1) and `notes` is not empty. For `no-cve-entries`, `cves` is empty and `count` is 0. For every other status, `notes` and `cves` are empty and `count` is null.
 - Android stores its `patchLevel` and the URLs of its own bulletin only, not a union over every earlier bulletin (about 130 since 2015-08, which would put thousands of ids in each row). Compare takes the bulletins with a month in (older patch level, newer patch level] from `notes` and does the set difference in the page. A `count` for Android covers only the CVEs listed in the bulletin read, which can include vendor-component CVEs and CVEs for other Android versions.
 - If a release id has no key in `releases`, the page shows the Not connected state when the family has no adapter, and otherwise the No match state.
 - The join key is the release id from `releases.json`, never a URL.
-- Tests enforce: every note URL is https on a host in the vendor's `security.hosts` list in the families data (a separate list from `source.hosts`, which bounds release links; Apple's security pages are on support.apple.com, which release links must not gain); every `releases[].notes` entry exists in `notes`; every release key exists in `releases.json`; only `stage: "release"` rows are `listed` or `no-cve-entries`, and betas and release candidates are `not-applicable` because vendors publish security pages only for released builds, following the same rule as [ADR 0005](0005-public-results-only-for-released-builds.md).
+- `tests/security.test.mjs` enforces today: `schema` is 1 and `generatedAt` is a date; `sources`, `notes` and `releases` are objects; every note URL (a key of `notes`, and every entry of `releases[].notes`) is a parseable `https` URL with a host; every note names a source in `sources`; every CVE id matches `CVE-YYYY-NNNN` or more digits, and the lists are sorted and unique; every `releases[].notes` entry exists in `notes`, and every CVE of a release comes from its notes; every release key exists in `releases.json`; only `stage: "release"` rows are `listed` or `no-cve-entries`, and every other row is `not-applicable`, because vendors publish security pages only for released builds, following the same rule as [ADR 0005](0005-public-results-only-for-released-builds.md). Still to add with the first adapter: a check that each note host is in the vendor's `security.hosts` list in the families data (a separate list from `source.hosts`, which bounds release links; Apple's security pages are on support.apple.com, which release links must not gain).
 - Caps on notes, CVEs per note and total payload bytes are chosen from measured fixtures when the first adapter lands, and tested. `check_site.py` weighs only files a page loads directly, so the payload cap is a test, not a budget.
 
 ### Empty and unknown states
@@ -76,7 +76,7 @@ An Android range with a missing bulletin is `unavailable` or `not-found`, never 
 - Coverage follows `releases.json`. Apple's feed may omit base releases that have a security page, and those rows show no note until the release adapter has them.
 - Joins by release id can orphan a row when an adapter changes an id. The invariant tests fail on it.
 - The Compare difference is only as good as the vendors' cumulative wording, which is why it is worded as a listing and not a claim.
-- Status: accepted. The payload, the route and the first adapters are added in follow-up changes; until they land, `/api/security.json` does not exist. When the route lands, the Failure modes and Limits sections of `docs/architecture.md` gain a row for it.
+- Status: accepted. The empty schema-1 payload (`src/data/security.json`), the Worker route `/api/security.json` and the local preview route have landed, and `docs/architecture.md` has its rows for them. There is no vendor data yet: the adapters follow one vendor at a time, each after a probe fixture with provenance is committed.
 - Terms of use for each source are unverified; the owner accepts or checks each before its adapter is admitted.
 
 ## Alternatives rejected
