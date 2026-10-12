@@ -17,7 +17,10 @@
     "vendor": "Apple",
     "kind": "security",
     "url": "https://support.apple.com/en-us/149226",
-    "raw_slice": {"start": "id=\"sections\"", "chars": 30000}
+    "raw_slice": [
+      {"start": "<h1", "chars": 27000},
+      {"start": "Published Date", "chars": 3000}
+    ]
   },
   {
     "id": "mikrotik-current-rss",
@@ -97,7 +100,6 @@
     "vendor": "Android",
     "kind": "security",
     "url": "https://source.android.com/docs/security/bulletin",
-    "raw_tables": 2,
     "raw_slice": {"start": "<table", "chars": 20000}
   },
   {
@@ -105,7 +107,8 @@
     "vendor": "Android",
     "kind": "security",
     "url": "https://source.android.com/docs/security/bulletin/2026/2026-10-01",
-    "raw_tables": 6
+    "raw_tables": 6,
+    "raw_slice": {"start": "<h1", "chars": 4000}
   },
   {
     "id": "android-pixel-bulletin-index",
@@ -118,7 +121,8 @@
     "vendor": "Android",
     "kind": "security",
     "url": "https://source.android.com/docs/security/bulletin/pixel/2026/2026-10-01",
-    "raw_tables": 6
+    "raw_tables": 6,
+    "raw_slice": {"start": "<h1", "chars": 4000}
   },
   {
     "id": "android-versions",

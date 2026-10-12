@@ -23,7 +23,7 @@ length, the SHA-256 of the body and a trimmed excerpt:
   mention security, release, bulletin, changelog or update.
 - Anything else: the first 1500 characters.
 
-Two optional fields change what is fetched and printed for one source:
+These optional fields change what is fetched and printed for one source:
 
 - `raw_tables: N` (an integer from 1 to 10), for an HTML source, prints after the excerpt the
   raw outer HTML of the first N top-level `<table>` elements, each cut at 6000 characters. The
@@ -36,7 +36,8 @@ Two optional fields change what is fetched and printed for one source:
   occurrence of the marker (1 to 80 characters, no control characters). It is for pages whose
   structure is not a table, such as the Apple security pages. If the marker is not in the body
   the log says `marker not found` and the run carries on. The slices of one source add up to at
-  most 30000 characters. The text goes through the same sanitising as the tables.
+  most 30000 characters. The text goes through the same sanitising as the tables. A slice, like a table cut at 6000 characters, can end mid-markup, so a fixture made from
+  one is a partial document and the parsers must tolerate truncation.
 - `accept` sets the `Accept` request header. It must be one of `application/json`,
   `application/xml` or `*/*` (the default). The same URL may be listed twice when the `accept`
   values differ, as `msrc-cvrf-2026-sep` and `msrc-cvrf-2026-sep-json` do, to see both

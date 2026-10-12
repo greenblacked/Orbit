@@ -527,7 +527,7 @@ def test_raw_slices_print_raw_characters_from_the_marker():
 
 
 def test_a_missing_marker_is_reported_not_raised():
-    out = probe.raw_slices(SLICE_PAGE, {"start": "id=\"sections\"", "chars": 100})
+    out = probe.raw_slices(SLICE_PAGE, {"start": 'id="sections"', "chars": 100})
     assert out[1] == "marker not found"
     page = probe.excerpt("text/html", SLICE_PAGE, slices={"start": "nope", "chars": 9})
     assert page.startswith("html\n") and "raw slices:" in page and "marker not found" in page
@@ -551,7 +551,7 @@ def test_a_slice_fault_keeps_the_html_excerpt(monkeypatch):
 
 
 def test_commands_inside_a_raw_slice_are_neutralised_in_the_report():
-    page = "<html><body><div id=\"s\">::error::boom\n##[add-mask]x\x1b[31m</div></body></html>"
+    page = '<html><body><div id="s">::error::boom\n##[add-mask]x\x1b[31m</div></body></html>'
     result = {
         "status": 200,
         "final_url": "https://a.example/x",
