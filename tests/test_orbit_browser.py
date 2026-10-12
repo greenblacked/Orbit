@@ -868,3 +868,268 @@ def test_nothing_scrolls_sideways_at_320_with_a_card_open_and_the_hand_moved(bro
         assert page.evaluate("() => window.__csp") == []
     finally:
         context.close()
+
+
+# --- the first seconds: nothing blinks ---------------------------------------------------
+
+# Installed before the page runs. It records, from the first byte, the child-list changes in
+# the parts of the page a refresh could redraw, every real change of data-theme, the first
+# paint, the cumulative layout shift, and the largest step a ring's opacity takes from one
+# frame to the next (a ring that breathes moves a little each frame, a restart jumps).
+WATCH = """
+(() => {
+  const SEL = '#orbit-dial, #cadence, #latest-grid, #newest';
+  const w = (window.__watch = {
+    mutations: [], themes: [], paintAt: null, cls: 0, clsSeen: false, jump: 0,
+  });
+  const owner = (node) => {
+    const el = node.nodeType === 1 ? node : node.parentElement;
+    return el && el.closest ? el.closest(SEL) : null;
+  };
+  const note = (records) => {
+    for (const r of records) {
+      const host = owner(r.target);
+      if (host && (r.addedNodes.length || r.removedNodes.length)) {
+        w.mutations.push({
+          host: host.id, direct: r.target === host,
+          added: r.addedNodes.length, removed: r.removedNodes.length,
+        });
+      }
+    }
+  };
+  const nodes = new MutationObserver(note);
+  nodes.observe(document, { childList: true, subtree: true });
+  w.take = () => note(nodes.takeRecords());
+  new MutationObserver((records) => {
+    const root = document.documentElement;
+    const mine = records.filter((r) => r.target === root);
+    mine.forEach((r, i) => {
+      const to = i + 1 < mine.length ? mine[i + 1].oldValue : root.getAttribute('data-theme');
+      if (to !== r.oldValue) w.themes.push({ from: r.oldValue, to, at: performance.now() });
+    });
+  }).observe(document, {
+    attributes: true, subtree: true, attributeOldValue: true, attributeFilter: ['data-theme'],
+  });
+  try {
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) if (e.name === 'first-paint') w.paintAt = e.startTime;
+    }).observe({ type: 'paint', buffered: true });
+  } catch (e) { /* no paint timing: the paint is not compared */ }
+  try {
+    const shifts = new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) if (!e.hadRecentInput) w.cls += e.value;
+    });
+    shifts.observe({ type: 'layout-shift', buffered: true });
+    w.clsSeen = true;
+    w.take_cls = () => {
+      for (const e of shifts.takeRecords()) if (!e.hadRecentInput) w.cls += e.value;
+    };
+  } catch (e) { w.take_cls = () => {}; }
+  const last = {};
+  const sample = () => {
+    document.querySelectorAll('.ring').forEach((ring) => {
+      const id = ring.getAttribute('data-family');
+      const opacity = parseFloat(getComputedStyle(ring).opacity);
+      if (id in last) w.jump = Math.max(w.jump, Math.abs(opacity - last[id]));
+      last[id] = opacity;
+    });
+    requestAnimationFrame(sample);
+  };
+  requestAnimationFrame(sample);
+})();
+"""
+# A theme that does not depend on the hour the test runs at.
+PIN_DAY = "try { localStorage.setItem('theme', 'day'); } catch (e) { /* none */ }"
+# The state to compare with once the page has settled: the nodes of the dial, the card's host
+# and the breathing of the rings.
+MARK = """
+() => {
+  __watch.take();
+  __watch.mutations.length = 0;
+  __watch.jump = 0;
+  const dial = document.getElementById('orbit-dial');
+  window.__before = {
+    layers: [...dial.children],
+    hand: dial.querySelector('.hand'),
+    card: document.getElementById('orbit-card'),
+    rings: [...dial.querySelectorAll('.ring')],
+    breathe: document.getAnimations()
+      .filter((a) => a.animationName === 'breathe')
+      .map((a) => ({ a, t: Number(a.currentTime) })),
+  };
+}
+"""
+REPORT = """
+() => {
+  __watch.take();
+  const dial = document.getElementById('orbit-dial');
+  const b = window.__before;
+  return {
+    mutations: __watch.mutations.slice(),
+    layers: b.layers.length === dial.children.length
+      && b.layers.every((layer, i) => dial.children[i] === layer),
+    hand: dial.querySelector('.hand') === b.hand,
+    card: document.getElementById('orbit-card') === b.card,
+    rings: b.rings.every((ring) => ring.isConnected),
+    notches: dial.querySelectorAll('.notch').length,
+    born: document.querySelectorAll('.sigil-svg.birth').length,
+    drawing: document.getAnimations()
+      .filter((a) => /^sigil-/.test(a.animationName || '')).length,
+    breathing: b.breathe.every(
+      ({ a, t }) => a.effect && a.effect.target.isConnected && Number(a.currentTime) >= t
+    ),
+    breathers: b.breathe.length,
+    jump: __watch.jump,
+  };
+}
+"""
+# Between two frames, a ring's opacity may move by this much; a restart moves it by a half.
+MAX_JUMP = 0.25
+CLS_LIMIT = 0.02
+EXTRA_ID = "https://developer.apple.com/news/releases/?id=09082026b"
+
+
+def serve_live(page, answers):
+    """Answer /api/releases.json with whatever answers["data"] holds now."""
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body=json.dumps(answers["data"])
+        ),
+    )
+
+
+def with_extra_release():
+    """The snapshot plus an older iOS release (so no card changes) and a newer fetchedAt."""
+    data = json.loads(json.dumps(SNAPSHOT))
+    source = [r for r in data["releases"] if r["family"] == "iOS"][2]
+    extra = dict(source, id=EXTRA_ID, url=source["url"] + "&extra=1", date="2026-09-08T17:30:00Z")
+    data["releases"] = sorted([*data["releases"], extra], key=lambda r: r["date"], reverse=True)
+    data["fetchedAt"] = "2026-10-12T11:59:00Z"
+    return data
+
+
+def frames(page):
+    """Two frames, so what a script queued has run and been styled."""
+    page.evaluate("() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))")
+
+
+def settled(page):
+    """Past the first seconds' own work: every card has its sigil (a build that is not an Apple
+    one waits for its rule), the cadence row is filled and the rings breathe (those load once
+    the page has painted, within about 1.5 s)."""
+    page.wait_for_function(
+        "() => [...document.querySelectorAll('#latest-grid [data-family]')].every((card) =>"
+        " !card.querySelector('[data-f=build]').textContent"
+        " || card.querySelector('[data-f=sigil] svg'))",
+        timeout=15000,
+    )
+    page.wait_for_selector("#cadence li", timeout=15000)
+    page.wait_for_function(
+        "() => document.getAnimations().some((a) => a.animationName === 'breathe')",
+        timeout=15000,
+    )
+    frames(page)
+
+
+def refresh(page):
+    page.evaluate("() => RO.refresh()")
+    frames(page)
+
+
+def test_a_refresh_with_new_data_patches_the_dial_and_replays_nothing(browser, base_url):
+    changed = with_extra_release()
+    assert in_window(26, changed) == in_window(26) + 1
+    context = make_context(browser, base_url, motion="no-preference", scripts=[WATCH])
+    try:
+        page = context.new_page()
+        answers = {"data": SNAPSHOT}
+        serve_live(page, answers)
+        open_front_page(page, base_url)
+        settled(page)
+        page.evaluate(MARK)
+        before = page.locator("#orbit-dial .notch").count()
+        assert before == in_window(26)
+        answers["data"] = changed
+        page.evaluate("() => RO.refresh()")
+        page.wait_for_function(
+            "n => document.querySelectorAll('#orbit-dial .notch').length === n",
+            arg=before + 1,
+            timeout=15000,
+        )
+        frames(page)
+        report = page.evaluate(REPORT)
+        # The new notch went in, and nothing else of the dial was taken out and put back.
+        assert any(m["host"] == "orbit-dial" and m["added"] for m in report["mutations"])
+        assert [m for m in report["mutations"] if m["host"] == "orbit-dial" and m["direct"]] == []
+        assert report["layers"], "a layer of the dial was replaced"
+        assert report["hand"] and report["card"] and report["rings"]
+        assert report["notches"] == before + 1
+        # No intro replays: no sigil draws itself in, and no ring starts breathing again.
+        assert report["born"] == 0
+        assert report["drawing"] == 0
+        assert report["breathers"] >= 1
+        assert report["breathing"], "a ring's breathing was restarted"
+        assert report["jump"] < MAX_JUMP
+    finally:
+        context.close()
+
+
+def test_the_same_data_again_changes_nothing_on_the_page(browser, base_url):
+    context = make_context(browser, base_url, motion="no-preference", scripts=[WATCH])
+    try:
+        page = context.new_page()
+        answers = {"data": SNAPSHOT}
+        serve_live(page, answers)
+        open_front_page(page, base_url)
+        settled(page)
+        page.evaluate(MARK)
+        # What the next poll brings is the same list of releases, fetched a minute later.
+        answers["data"] = dict(SNAPSHOT, fetchedAt="2026-10-12T11:59:00Z")
+        refresh(page)
+        refresh(page)
+        report = page.evaluate(REPORT)
+        # Not one node added to or removed from the dial, the cadence row or the cards.
+        assert report["mutations"] == []
+        assert report["layers"] and report["hand"] and report["card"] and report["rings"]
+        assert report["born"] == 0
+        assert report["drawing"] == 0
+        assert report["breathers"] >= 1
+        assert report["breathing"], "a ring's breathing was restarted"
+        assert report["jump"] < MAX_JUMP
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("width", [1280, 390])
+def test_the_first_three_seconds_neither_shift_the_layout_nor_change_the_theme(
+    browser, base_url, width
+):
+    context = make_context(
+        browser, base_url, width=width, motion="no-preference", scripts=[PIN_DAY, WATCH]
+    )
+    try:
+        page = context.new_page()
+        answers = {"data": SNAPSHOT}
+        serve_live(page, answers)
+        open_front_page(page, base_url)
+        settled(page)
+        # Three seconds of the page's life, whatever the machine's speed.
+        page.wait_for_function("() => performance.now() >= 3000", timeout=15000)
+        page.evaluate("() => { __watch.take_cls(); }")
+        report = page.evaluate(
+            "() => ({ cls: __watch.cls, seen: __watch.clsSeen, themes: __watch.themes,"
+            " paintAt: __watch.paintAt, jump: __watch.jump })"
+        )
+        assert report["seen"], "this browser does not report layout shifts"
+        assert report["cls"] < CLS_LIMIT, report["cls"]
+        # The theme is set once, by the script in the head, and never changes again.
+        assert [(t["from"], t["to"]) for t in report["themes"]] == [(None, "day")]
+        if report["paintAt"] is not None:
+            assert report["themes"][0]["at"] <= report["paintAt"]
+        assert page.get_attribute("html", "data-theme") == "day"
+        # The rings start at full opacity and move smoothly from there.
+        assert report["jump"] < MAX_JUMP
+        assert page.evaluate("() => window.__csp") == []
+    finally:
+        context.close()
