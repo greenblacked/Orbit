@@ -121,3 +121,19 @@ def test_every_token_is_a_plain_hex_colour(family, theme):
 def test_the_ratio_function_matches_known_values():
     assert round(ratio("#000000", "#ffffff"), 1) == 21.0
     assert ratio("#777777", "#ffffff") < 4.6
+
+
+@pytest.mark.parametrize("theme", THEMES)
+@pytest.mark.parametrize("family", FAMILIES, ids=ids())
+def test_every_family_has_the_far_end_of_its_gradient(family, theme):
+    # A family missing from a --fam-b list has no --fam-b: the .tile gradient turns invalid and
+    # its --fam-on text sits unseen on the light card.
+    assert "--fam-b" in tokens(family, theme), (family["id"], theme)
+
+
+def test_family_ids_are_one_plain_token():
+    # famClass() lowercases an id into a class name, so it must be one token of letters and digits.
+    for family in FAMILIES:
+        assert re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", family["id"]), family["id"]
+    assert len({family["id"].lower() for family in FAMILIES}) == len(FAMILIES)
+

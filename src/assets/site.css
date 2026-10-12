@@ -656,7 +656,22 @@ html[data-theme="night"] .sun { display: none; }
 .fam-watchos { --fam-text: #137883; --fam-text-card: #10666f; --fam-a: #137883; --fam-on: #ffffff; }
 .fam-tvos { --fam-text: #6a5ad5; --fam-text-card: #5a4db5; --fam-a: #6a5ad5; --fam-on: #ffffff; }
 .fam-visionos { --fam-text: #bd3293; --fam-text-card: #a12b7d; --fam-a: #bd3293; --fam-on: #ffffff; }
-.fam-ios, .fam-ipados, .fam-macos, .fam-watchos, .fam-tvos, .fam-visionos {
+.fam-routeros { --fam-text: #7c695c; --fam-text-card: #69594e; --fam-a: #7c695c; --fam-on: #ffffff; }
+.fam-android { --fam-text: #677303; --fam-text-card: #586203; --fam-a: #677303; --fam-on: #ffffff; }
+.fam-windows { --fam-text: #1773a4; --fam-text-card: #14628b; --fam-a: #1773a4; --fam-on: #ffffff; }
+.fam-steamos { --fam-text: #a85163; --fam-text-card: #8f4554; --fam-a: #a85163; --fam-on: #ffffff; }
+/* Every family listed in families.json sits in both --fam-b lists (tests/test_palette.py checks it):
+   a family left out has no --fam-b, its gradients turn invalid and its --fam-on text goes unseen. */
+.fam-ios,
+.fam-ipados,
+.fam-macos,
+.fam-watchos,
+.fam-tvos,
+.fam-visionos,
+.fam-routeros,
+.fam-android,
+.fam-windows,
+.fam-steamos {
   --fam-b: color-mix(in srgb, var(--fam-a) 72%, #000);
 }
 html[data-theme="night"] .fam-ios, html[data-theme="reactor"] .fam-ios { --fam-text: #d7452f; --fam-text-card: #dd614e; --fam-a: #d7452f; --fam-on: #000000; }
@@ -665,12 +680,20 @@ html[data-theme="night"] .fam-macos, html[data-theme="reactor"] .fam-macos { --f
 html[data-theme="night"] .fam-watchos, html[data-theme="reactor"] .fam-watchos { --fam-text: #158591; --fam-text-card: #3897a2; --fam-a: #158591; --fam-on: #000000; }
 html[data-theme="night"] .fam-tvos, html[data-theme="reactor"] .fam-tvos { --fam-text: #7869d9; --fam-text-card: #8c80df; --fam-a: #7869d9; --fam-on: #000000; }
 html[data-theme="night"] .fam-visionos, html[data-theme="reactor"] .fam-visionos { --fam-text: #cc3fa1; --fam-text-card: #d45caf; --fam-a: #cc3fa1; --fam-on: #000000; }
+html[data-theme="night"] .fam-routeros, html[data-theme="reactor"] .fam-routeros { --fam-text: #8a7566; --fam-text-card: #9c8a7d; --fam-a: #8a7566; --fam-on: #000000; }
+html[data-theme="night"] .fam-android, html[data-theme="reactor"] .fam-android { --fam-text: #738003; --fam-text-card: #889329; --fam-a: #738003; --fam-on: #000000; }
+html[data-theme="night"] .fam-windows, html[data-theme="reactor"] .fam-windows { --fam-text: #1a80b6; --fam-text-card: #3c93c1; --fam-a: #1a80b6; --fam-on: #000000; }
+html[data-theme="night"] .fam-steamos, html[data-theme="reactor"] .fam-steamos { --fam-text: #b26070; --fam-text-card: #be7885; --fam-a: #b26070; --fam-on: #000000; }
 html[data-theme="night"] .fam-ios, html[data-theme="reactor"] .fam-ios,
 html[data-theme="night"] .fam-ipados, html[data-theme="reactor"] .fam-ipados,
 html[data-theme="night"] .fam-macos, html[data-theme="reactor"] .fam-macos,
 html[data-theme="night"] .fam-watchos, html[data-theme="reactor"] .fam-watchos,
 html[data-theme="night"] .fam-tvos, html[data-theme="reactor"] .fam-tvos,
-html[data-theme="night"] .fam-visionos, html[data-theme="reactor"] .fam-visionos {
+html[data-theme="night"] .fam-visionos, html[data-theme="reactor"] .fam-visionos,
+html[data-theme="night"] .fam-routeros, html[data-theme="reactor"] .fam-routeros,
+html[data-theme="night"] .fam-android, html[data-theme="reactor"] .fam-android,
+html[data-theme="night"] .fam-windows, html[data-theme="reactor"] .fam-windows,
+html[data-theme="night"] .fam-steamos, html[data-theme="reactor"] .fam-steamos {
   --fam-b: color-mix(in srgb, var(--fam-a) 70%, #fff);
 }
 
