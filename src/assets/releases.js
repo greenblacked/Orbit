@@ -54,6 +54,13 @@
     }
     return FALLBACK;
   }
+  // A vendor's name as the config gives it; the id itself when the config could not be read.
+  function vendorName(vendor) {
+    for (var i = 0; i < config.vendors.length; i++) {
+      if (config.vendors[i].id === vendor && typeof config.vendors[i].name === "string") return config.vendors[i].name;
+    }
+    return String(vendor);
+  }
   function allowed(vendor, link) {
     try {
       var u = new URL(link);
@@ -265,7 +272,7 @@
 
   window.RO = {
     loadJson: loadJson, ready: loadConfig, families: function () { return config.families; },
-    familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
+    familyIds: familyIds, source: source, vendorName: vendorName, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
     channel: channel, sigilKey: sigilKey,
     latest: latest, newer: newer, compareVersions: compareVersions,
