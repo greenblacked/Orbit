@@ -45,10 +45,12 @@ EXCERPT_CHARS = 4000
 MIN_GAP = 1.0  # seconds between two requests to one host
 KINDS = ("release", "security", "enrichment")
 REQUIRED_KEYS = {"id", "vendor", "kind", "url"}
-OPTIONAL_KEYS = {"raw_tables", "accept", "max_bytes"}
+OPTIONAL_KEYS = {"raw_tables", "accept", "max_bytes", "match_titles"}
 ACCEPT_ALLOWED = ("application/json", "application/xml", "*/*")
 DEFAULT_ACCEPT = "*/*"
 MAX_RAW_TABLES = 10
+MATCH_TITLES_PATTERN = re.compile(r"^[A-Za-z0-9 ]{1,40}$")
+MAX_TITLE_MATCHES = 30
 RAW_TABLE_CHARS = 6000
 ID_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # Query parameter names that would mean a secret in the URL.
@@ -78,7 +80,7 @@ def validate_sources(data: object) -> list[str]:
             problems.append(f"{where}: not an object")
             continue
         keys = set(entry)
-        if not REQUIRED_KEYS <= keys or keys - REQUIRED_KEYS - OPTIONAL_KEYS:
+        if not keys >= REQUIRED_KEYS or keys - REQUIRED_KEYS - OPTIONAL_KEYS:
             problems.append(
                 f"{where}: keys must be id, vendor, kind, url and optionally "
                 + ", ".join(sorted(OPTIONAL_KEYS))
@@ -110,7 +112,7 @@ def validate_sources(data: object) -> list[str]:
 
 
 def option_problems(entry: dict) -> list[str]:
-    """Problems with the optional raw_tables, accept and max_bytes fields."""
+    """Problems with the optional raw_tables, accept, max_bytes and match_titles fields."""
     problems = []
     if "raw_tables" in entry:
         count = entry["raw_tables"]
@@ -124,6 +126,10 @@ def option_problems(entry: dict) -> list[str]:
         valid = isinstance(size, int) and not isinstance(size, bool)
         if not valid or not 1 <= size <= MAX_BYTES_CEILING:
             problems.append(f"max_bytes must be an integer from 1 to {MAX_BYTES_CEILING}")
+    if "match_titles" in entry:
+        needle = entry["match_titles"]
+        if not isinstance(needle, str) or not MATCH_TITLES_PATTERN.match(needle):
+            problems.append("match_titles must be 1 to 40 letters, digits and spaces")
     return problems
 
 
@@ -228,7 +234,20 @@ def first_list(value: object, depth: int = 0) -> tuple[str, list] | None:
     return None
 
 
-def json_excerpt(text: str) -> str:
+def title_matches(items: list, needle: str) -> list[dict]:
+    """Title, date and tags of the objects whose title contains needle, at most 30."""
+    needle = needle.lower()
+    found = []
+    for item in items:
+        title = item.get("title") if isinstance(item, dict) else None
+        if isinstance(title, str) and needle in title.lower():
+            found.append({"title": title, "date": item.get("date"), "tags": item.get("tags")})
+            if len(found) >= MAX_TITLE_MATCHES:
+                break
+    return found
+
+
+def json_excerpt(text: str, match_titles: str | None = None) -> str:
     data = json.loads(text)
     out: dict = {}
     if isinstance(data, dict):
@@ -239,7 +258,13 @@ def json_excerpt(text: str) -> str:
     if found:
         path, items = found
         out["first_list"] = {"path": path, "length": len(items), "first_2_items": items[:2]}
-    return cut(json.dumps(out, indent=2, ensure_ascii=False, default=str))
+    result = cut(json.dumps(out, indent=2, ensure_ascii=False, default=str))
+    if match_titles and found and any(isinstance(i, dict) and "title" in i for i in found[1]):
+        matches = title_matches(found[1], match_titles)
+        block = {"title_matches": {"contains": match_titles, "count": len(matches),
+                                   "items": matches}}  # fmt: skip
+        result += "\n" + cut(json.dumps(block, indent=2, ensure_ascii=False, default=str))
+    return result
 
 
 def local_name(tag: str) -> str:
@@ -384,15 +409,18 @@ def kind_of(content_type: str, text: str) -> str:
     return "text"
 
 
-def excerpt(content_type: str, text: str, tables: int = 0) -> str:
+def excerpt(
+    content_type: str, text: str, tables: int = 0, match_titles: str | None = None
+) -> str:
     """A trimmed, unsanitised excerpt. A parse failure falls back to plain text.
 
     ``tables`` > 0 appends the raw outer HTML of that many tables to an HTML excerpt.
+    ``match_titles`` appends the matching titles of a JSON list of objects to a JSON excerpt.
     """
     kind = kind_of(content_type, text)
     try:
         if kind == "json":
-            return "json\n" + json_excerpt(text)
+            return "json\n" + json_excerpt(text, match_titles)
         if kind == "xml":
             return "xml\n" + xml_excerpt(text)
         if kind == "html":
@@ -525,6 +553,7 @@ def report(source: dict, result: dict | None, error: BaseException | None) -> st
                 result["content_type"],
                 decode(body, result["charset"]),
                 source.get("raw_tables", 0),
+                source.get("match_titles"),
             )
         ),
     ]

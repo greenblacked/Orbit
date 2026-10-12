@@ -39,6 +39,8 @@ Two optional fields change what is fetched and printed for one source:
   source. The MSRC CVRF month is larger than 2 MB, so a cut body would not parse and only the
   document header would print; both CVRF sources set 16 MB.
 
+- `match_titles: "<text>"` (1 to 40 letters, digits and spaces) prints, after the JSON excerpt, the title, date and tags of up to 30 items whose title contains the text (case-insensitive); it applies only to a JSON list of objects with a `title` key, as for `steamos-getnewsforapp-1675200-100`.
+
 A failing source is reported with its error class and the run carries on. The exit status is 0
 unless the list file is invalid, then 1.
 

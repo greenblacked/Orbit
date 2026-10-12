@@ -193,6 +193,13 @@
     "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1675200&count=5&maxlength=300"
   },
   {
+    "id": "steamos-getnewsforapp-1675200-100",
+    "vendor": "Valve",
+    "kind": "release",
+    "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1675200&count=100&maxlength=1",
+    "match_titles": "SteamOS"
+  },
+  {
     "id": "cisa-kev-json",
     "vendor": "CISA",
     "kind": "enrichment",

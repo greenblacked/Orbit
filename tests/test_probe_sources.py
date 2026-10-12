@@ -421,3 +421,58 @@ def test_the_workflow_is_read_only_and_pinned_like_ci():
     for path in ("scripts/probe_sources.py", "scripts/probe_sources.json"):
         assert f"- {path}" in text
     assert "- .github/workflows/source-probe.yml" in text
+
+
+NEWS = json.dumps(
+    {
+        "appnews": {
+            "newsitems": [
+                {"title": "Steam Client Update", "date": 1, "tags": ["patchnotes"]},
+                {"title": "SteamOS 3.7 released", "date": 2, "tags": ["steamos"]},
+                {"title": "Beta for STEAMOS", "date": 3},
+                {"note": "no title"},
+                "text",
+            ]
+        }
+    }
+)
+
+
+@pytest.mark.parametrize("value", ["SteamOS", "a", "Steam OS 3", "x" * 40])
+def test_match_titles_accepts_short_plain_text(value):
+    entry = {"id": "a", "vendor": "V", "kind": "release", "url": "https://a.example/"}
+    assert probe.validate_sources([{**entry, "match_titles": value}]) == []
+
+
+@pytest.mark.parametrize("value", ["", "x" * 41, "a-b", "a.b", "é", 5, None, ["a"]])
+def test_match_titles_rejects_other_values(value):
+    entry = {"id": "a", "vendor": "V", "kind": "release", "url": "https://a.example/"}
+    problems = probe.validate_sources([{**entry, "match_titles": value}])
+    assert len(problems) == 1 and "match_titles" in problems[0]
+
+
+def test_match_titles_filters_case_insensitively_with_title_date_and_tags():
+    out = probe.json_excerpt(NEWS, "steamos")
+    block = json.loads(out[out.index('{\n  "title_matches"') :])["title_matches"]
+    assert block["count"] == 2
+    assert block["items"][0] == {"title": "SteamOS 3.7 released", "date": 2, "tags": ["steamos"]}
+    assert block["items"][1]["title"] == "Beta for STEAMOS"
+    assert "title_matches" not in probe.json_excerpt(NEWS)
+
+
+def test_match_titles_is_capped_and_ignores_lists_without_titles():
+    many = json.dumps([{"title": f"SteamOS {i}"} for i in range(50)])
+    assert f'"count": {probe.MAX_TITLE_MATCHES}' in probe.json_excerpt(many, "steamos")
+    assert "title_matches" not in probe.json_excerpt("[1, 2, 3]", "steamos")
+    assert "title_matches" not in probe.json_excerpt('{"a": [{"name": "SteamOS"}]}', "steamos")
+
+
+def test_match_titles_reaches_the_report_and_is_sanitised():
+    news = json.dumps([{"title": "SteamOS ##[error] x", "date": 1}])
+    source = {"id": "a", "vendor": "V", "kind": "release", "url": "https://a.example/",
+              "match_titles": "SteamOS"}  # fmt: skip
+    result = {"final_url": "https://a.example/", "status": 200, "truncated": False,
+              "content_type": "application/json", "charset": "utf-8",
+              "body": news.encode()}  # fmt: skip
+    text = probe.report(source, result, None)
+    assert "title_matches" in text and "# #[error]" in text and "##[" not in text
