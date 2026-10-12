@@ -59,7 +59,7 @@
       return u.protocol === "https:" && source(vendor).hosts.indexOf(u.hostname) >= 0;
     } catch (e) { return false; }
   }
-  // Without the config any family name is accepted.
+  // Without the config any family name is accepted, with its vendor's links only.
   function knownFamily(r) {
     if (!config.families.length) return typeof r.family === "string" && r.family !== "";
     var f = familyOf(r.family);

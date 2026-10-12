@@ -231,9 +231,11 @@ def test_the_newest_release_is_the_highest_version_not_the_latest_date(page, bas
         "date": "2098-12-01T00:00:00Z",
     }
     live = copy.deepcopy(SNAPSHOT) | {"snapshot": False, "stale": False}
-    live["releases"] = [
-        r for r in live["releases"] if r["family"] not in ("iOS", "RouterOS")
-    ] + [old_branch, new_major] + releases("RouterOS")
+    live["releases"] = (
+        [r for r in live["releases"] if r["family"] not in ("iOS", "RouterOS")]
+        + [old_branch, new_major]
+        + releases("RouterOS")
+    )
     page.route(
         "**/api/releases.json",
         lambda route: route.fulfill(
