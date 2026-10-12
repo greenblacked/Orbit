@@ -1,44 +1,42 @@
-// The MikroTik adapter: RouterOS 7 from MikroTik's own upgrade server and release feed.
+// The MikroTik adapter: RouterOS 7 from MikroTik's own upgrade server.
 //
-// Two kinds of document, both verified by a read-only probe from a GitHub runner on
-// 2026-10-12 (docs/adr/0006-list-vendors-before-their-feeds.md):
+// One kind of document, verified by a read-only probe from a GitHub runner on 2026-10-12
+// (docs/adr/0006-list-vendors-before-their-feeds.md):
 //
-//   NEWESTa7.<channel>                    plain text, one line "<version> <unix-seconds>", the
-//                                         newest RouterOS 7 of one channel (stable, long-term
-//                                         or testing). The channel is only in the URL.
-//   latest-stable-and-long-term.rss       RSS; items titled "RouterOS <version> [<channel>]"
-//                                         linking https://mikrotik.com/download?v=<version>.
+//   NEWESTa7.<channel>    plain text, one line "<version> <unix-seconds>", the newest
+//                         RouterOS 7 of one channel (stable, long-term or testing). The
+//                         channel is only in the URL.
+//
+// The release RSS feed is not read: it names the same versions as the stable and long-term
+// files, with a different date, and its failure would fail the whole source. Every date
+// therefore comes from one place, the NEWEST timestamps.
 //
 // An adapter is { id, vendor, urls, parse }; see apple.js. MikroTik has no build ids, so a
-// release's build is its version string (the build sigil hashes any string). The RSS item
-// body (content:encoded, the release notes) is never read. `parse(text, url)` needs the URL
-// of the document, because a NEWEST file does not say which channel it belongs to.
+// release's build is its version string (the build sigil hashes any string). `parse(text, url)`
+// needs the URL of the document, because a NEWEST file does not say which channel it is.
 
 import { familyIds } from '../families.js';
-import { field, isHttpsOn, mergeReleases, parseDate, rssItems } from '../releases.js';
 
 export const ID = 'mikrotik-routeros';
 export const VENDOR = 'mikrotik';
 export const FAMILY = 'RouterOS';
 export const FAMILIES = familyIds(VENDOR);
 
-export const RSS_URL = 'https://download.mikrotik.com/routeros/latest-stable-and-long-term.rss';
 export const NEWEST_URLS = {
   stable: 'https://upgrade.mikrotik.com/routeros/NEWESTa7.stable',
   'long-term': 'https://upgrade.mikrotik.com/routeros/NEWESTa7.long-term',
   testing: 'https://upgrade.mikrotik.com/routeros/NEWESTa7.testing',
 };
 
-const HOST = 'mikrotik.com';
 const CHANNELS = Object.keys(NEWEST_URLS);
 const MAX_TEXT = 256; // a NEWEST document is one short line
 const MAX_UNIX = 4102444800; // 2100-01-01: anything later is not a timestamp of ours
+const MAX_SKEW_MS = 24 * 60 * 60 * 1000; // a release dated further ahead than this is not believed
 
 const VERSION_RE = /^(\d{1,3})\.(\d{1,3})(?:\.(\d{1,4}))?(?:(rc|beta)(\d{1,3}))?$/;
 const LINE_RE = /^(\S+) (\d{1,11})$/;
-const TITLE_RE = new RegExp(`^RouterOS (\\S+) \\[(${CHANNELS.join('|')})\\]$`);
 
-/** The download page of one RouterOS version, as the feed links it. */
+/** The download page of one RouterOS version. */
 export const downloadUrl = (version) => `https://mikrotik.com/download?v=${version}`;
 
 /** Unix seconds to ISO-8601 UTC without milliseconds; null when not a plausible time. */
@@ -49,28 +47,30 @@ export function unixToIso(seconds) {
 }
 
 /**
- * One release row, or null when the version does not fit its channel. stable and long-term
- * carry a plain version ("7.23.8"); testing carries a pre-release ("7.25rc1", "7.25beta2").
+ * One release row, or null when the version does not fit its channel or its date lies in the
+ * future. stable and long-term carry a plain version ("7.23.8"); testing carries a
+ * pre-release ("7.25rc1", "7.25beta2"), whose `version` is the number alone ("7.25") and
+ * whose `build` is the full string. The link is always built from the version.
  */
-export function makeRelease({ version, channel, date, url }) {
+export function makeRelease({ version, channel, date, now = Date.now() }) {
   const m = VERSION_RE.exec(String(version ?? ''));
   if (!m || !CHANNELS.includes(channel) || !date || !FAMILIES.includes(FAMILY)) return null;
   const preRelease = m[4] !== undefined;
   if (preRelease !== (channel === 'testing')) return null;
-  const link = url ?? downloadUrl(version);
-  if (!isHttpsOn(link, HOST)) return null;
+  if (Date.parse(date) > now + MAX_SKEW_MS) return null;
+  const number = preRelease ? `${m[1]}.${m[2]}${m[3] === undefined ? '' : `.${m[3]}`}` : version;
   return {
     id: `routeros-${version}-${channel}`,
     vendor: VENDOR,
     family: FAMILY,
-    version,
+    version: number,
     major: Number(m[1]),
     stage: preRelease ? (m[4] === 'rc' ? 'rc' : 'beta') : 'release',
     beta: preRelease ? Number(m[5]) : null,
     build: version,
     title: preRelease ? `RouterOS ${version}` : `RouterOS ${version} ${channel}`,
     date,
-    url: link,
+    url: downloadUrl(version),
     source: ID,
   };
 }
@@ -85,26 +85,8 @@ export function parseNewest(text, channel) {
   return release ? [release] : [];
 }
 
-/** Releases of the RouterOS RSS feed, newest first. The item body is never read. */
-export function parseFeed(xmlText) {
-  const releases = [];
-  for (const item of rssItems(xmlText)) {
-    const m = TITLE_RE.exec(field(item, 'title'));
-    if (!m) continue;
-    const release = makeRelease({
-      version: m[1],
-      channel: m[2],
-      date: parseDate(field(item, 'pubDate')),
-      url: field(item, 'link'),
-    });
-    if (release) releases.push(release);
-  }
-  return mergeReleases([], releases);
-}
-
-/** Parse one fetched document; the URL says whether it is the feed or which NEWEST file. */
+/** Parse one fetched document; the URL says which NEWEST file it is. */
 export function parse(text, url = '') {
-  if (url === RSS_URL) return parseFeed(text);
   const channel = CHANNELS.find((name) => NEWEST_URLS[name] === url);
   return channel ? parseNewest(text, channel) : [];
 }
@@ -112,7 +94,6 @@ export function parse(text, url = '') {
 export default {
   id: ID,
   vendor: VENDOR,
-  // The feed first: where both name a release, the later NEWEST timestamp wins the merge.
-  urls: [RSS_URL, ...CHANNELS.map((name) => NEWEST_URLS[name])],
+  urls: CHANNELS.map((name) => NEWEST_URLS[name]),
   parse,
 };

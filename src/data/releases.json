@@ -1,6 +1,6 @@
 {
   "source": "apple-developer-releases,mikrotik-routeros",
-  "fetchedAt": "2026-10-11T15:26:54Z",
+  "fetchedAt": "2026-10-12T08:38:02Z",
   "stale": false,
   "snapshot": true,
   "releases": [
@@ -106,7 +106,7 @@
       "id": "routeros-7.25rc1-testing",
       "vendor": "mikrotik",
       "family": "RouterOS",
-      "version": "7.25rc1",
+      "version": "7.25",
       "major": 7,
       "stage": "rc",
       "beta": 1,
