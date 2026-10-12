@@ -743,6 +743,7 @@ def test_the_pages_switch_by_hash_and_the_title_follows(tab, served):
     heading(tab, "Not found")
     tab.goto(served + "/#/404.html")
     heading(tab, "Not found")
+    tab.wait_for_load_state("networkidle")
     assert tab.requested == []
     assert tab.errors == []
 
@@ -753,7 +754,8 @@ def test_an_in_page_anchor_scrolls_without_leaving_the_page(tab, served):
     tab.locator('a[href="#disclaimer"]').click()
     assert tab.evaluate("() => location.hash") == "#/about/"
     assert tab.evaluate("() => window.scrollY") > 200
-    tab.goto(served + "/#/about/#privacy")
+    tab.goto(served + "/#/about/#privacy")  # only the fragment changes: a hashchange, not a load
+    tab.wait_for_function("() => window.scrollY > 200")
     assert tab.evaluate("() => window.scrollY") > 200
 
 
@@ -781,6 +783,7 @@ def test_the_preview_strip_and_back_work(tab, served):
     tab.locator("#preview-note").get_by_role("link", name="/404.html").click()
     heading(tab, "Not found")
     tab.locator("main .back").click()
+    tab.wait_for_function("() => location.hash === '#/'")  # history.back() settles later
     assert tab.evaluate("() => location.hash") == "#/"
     assert tab.errors == []
 
@@ -872,6 +875,8 @@ def test_the_policy_alone_refuses_inline_handlers_and_script_urls(browser, previ
     assert page.locator("main").count() == 1
     if name == "javascript: link":
         page.locator("#hostile-js").click()
+    # The violation is reported in a later task; wait for it, then give the rest time to show.
+    page.wait_for_function("() => window.__csp.length > 0", timeout=10000)
     page.wait_for_timeout(600)
     here = page.url
     reported = page.evaluate("() => window.__csp")
@@ -900,7 +905,10 @@ def test_without_the_policy_the_same_page_does_leave_the_file(browser, preview, 
     page.goto(hostile.resolve().as_uri())
     if name == "javascript: link":
         page.locator("#hostile-js").click()
-    page.wait_for_timeout(800)
+    for _ in range(100):  # up to 10 s for the request or the window to appear
+        if outside(watched, hostile) or popups:
+            break
+        page.wait_for_timeout(100)
     context.close()
     assert outside(watched, hostile) != [] or popups, name
 
@@ -910,10 +918,11 @@ def test_without_the_policy_the_same_page_does_leave_the_file(browser, preview, 
 THEMES = ("day", "night", "reactor")
 
 
-def tour(browser, bundle_file) -> dict[str, dict[str, list[str]]]:
+def tour(browser, bundle_file, until=None) -> dict[str, dict[str, list[str]]]:
     """Open the bundle from disk once per theme and per route, and report for each theme
     the requests that were neither the file nor a ``data:`` URI, the console errors, and
-    the policy violations."""
+    the policy violations. ``until`` is a page function to wait for on each route before the
+    reads, for an event the caller knows will come."""
     routes = re.findall(r'<template data-route="([^"]+)"', bundle_file.read_text(encoding="utf-8"))
     assert routes == ["/", "/about/", "/compare/", "/timeline/", "/404.html"]
     report = {}
@@ -933,6 +942,9 @@ def tour(browser, bundle_file) -> dict[str, dict[str, list[str]]]:
             page.goto(bundle_file.resolve().as_uri() + "#" + route)
             page.locator("main h1").wait_for()
             assert page.evaluate("() => document.documentElement.dataset.theme") == theme
+            if until:
+                page.wait_for_function(until, timeout=10000)
+            page.wait_for_load_state("networkidle")
             page.wait_for_timeout(300)
             violated += page.evaluate("() => window.__csp")
         context.close()
@@ -968,7 +980,14 @@ def test_the_tour_catches_a_fetch_planted_only_in_the_reactor_branch(browser, tm
     planted = tmp_path / "planted.html"
     assert bundle.main(["--dist", str(dist), "--out", str(planted), "--commit", "abc1234"]) == 0
     try:
-        report = tour(browser, planted)
+        report = tour(
+            browser,
+            planted,
+            until=(
+                "() => document.documentElement.dataset.theme !== 'reactor'"
+                " || window.__csp.length > 0"
+            ),
+        )
     finally:
         planted.unlink()
     for theme in ("day", "night"):
@@ -1098,6 +1117,10 @@ def test_relative_assets_apply_and_run_in_the_browser(browser, tmp_path):
     )
     assert page.evaluate("() => window.__extra") == 1
     assert page.evaluate("() => window.__body") == 1
+    page.wait_for_function(
+        "() => { const i = document.getElementById('up-img');"
+        " return i.complete && i.naturalWidth > 0 }"
+    )
     assert page.evaluate("() => document.getElementById('up-img').naturalWidth") > 0
     context.close()
     assert errors == []
@@ -1337,8 +1360,10 @@ def test_a_page_only_stylesheet_applies_on_that_route_and_not_on_the_others(brow
     # and moving between routes in one load swaps it too
     page.goto(base + "#/about/")
     page.locator("main h1").wait_for()
+    about = page.locator("main h1").inner_text()
     page.evaluate("() => { location.hash = '#/' }")
-    page.wait_for_function("() => location.hash === '#/'")
+    # The route swaps on the hashchange event, a later task than the assignment.
+    page.wait_for_function("(t) => document.querySelector('main h1').textContent !== t", arg=about)
     assert page.evaluate(background) != "rgb(1, 2, 3)"
     assert violated == []
     context.close()
@@ -1715,7 +1740,10 @@ def test_a_get_form_to_another_page_lands_on_its_route_without_a_policy_violatio
     page.wait_for_selector("#go")
     page.click("#go button")
     page.wait_for_function("() => location.hash === '#/about/'")
-    assert page.locator("h1").inner_text().strip()
+    page.wait_for_function(
+        "() => document.querySelector('main h1').textContent === 'About Release Orbit'"
+    )
+    assert page.locator("main h1").inner_text().strip()
     assert "About Release Orbit" in page.content()
     page.close()
     assert problems == []
