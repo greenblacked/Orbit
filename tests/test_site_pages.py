@@ -595,6 +595,21 @@ def test_compare_counts_the_days_and_what_lies_between(page, base_url):
     assert page.locator(".cmp-card").all_inner_texts() == cards
 
 
+def test_compare_cards_draw_a_sigil_and_name_the_channel_without_a_build(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    page.select_option("#c-family", "SteamOS")
+    steam = releases("SteamOS")
+    page.select_option("#c-to", steam[0]["id"])
+    page.select_option("#c-from", steam[-1]["id"])
+    page.wait_for_selector(".cmp-card .sigil svg")
+    cards = page.locator(".cmp-card")
+    assert cards.count() == 2
+    assert page.locator(".cmp-card .sigil svg").count() == 2
+    words = " ".join(cards.all_inner_texts())
+    assert "No build number" not in words and "Stable" in words and "Beta" in words
+
+
 def test_compare_counts_betas_in_between_and_changes_family(page, base_url):
     page.goto(base_url + "/compare/")
     page.wait_for_selector(".cmp-cards")

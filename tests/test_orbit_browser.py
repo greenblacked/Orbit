@@ -224,6 +224,21 @@ def test_a_pre_release_never_shows_a_verdict_even_if_the_data_carries_one(page, 
     assert page.locator("#orbit-dial .mk-fail").count() == 0
 
 
+def test_a_release_without_a_build_still_shows_a_sigil_and_its_channel(page, base_url):
+    page.goto(base_url + "/")
+    page.wait_for_selector("#orbit-dial .notch")
+    notch = page.locator("#orbit-dial .notch[aria-label*='SteamOS 3.8.28']").first
+    notch.focus()
+    page.wait_for_selector("#orbit-card:not([hidden])")
+    card = page.locator("#orbit-card")
+    page.wait_for_selector("#orbit-card .sigil svg")
+    assert card.locator(".sigil").is_visible()
+    assert card.locator(".sigil").get_attribute("data-build") == "SteamOS 3.8.28"
+    words = card.inner_text()
+    assert "Stable" in words and "No build number" not in words
+    assert card.locator("a").get_attribute("href").startswith("https://")
+
+
 def test_a_notch_opens_a_card_with_its_sigil_build_date_and_link(page, base_url):
     open_front_page(page, base_url)
     notch = page.locator("#orbit-dial .notch[aria-label*='24B5099f']").first

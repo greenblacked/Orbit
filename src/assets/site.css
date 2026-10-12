@@ -1416,7 +1416,9 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .cmp-result { margin-top: 2rem; }
 .cmp-cards { display: grid; gap: 1rem; }
 @media (min-width: 40rem) { .cmp-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.cmp-card { padding: 1.25rem; border: 1px solid var(--line); border-top: 0.25rem solid var(--fam-a); border-radius: 1.25rem; background: var(--card); }
+.cmp-card { display: flex; gap: 1rem; padding: 1.25rem; border: 1px solid transparent; border-top: 0.25rem solid var(--fam-a); border-radius: 1.25rem; background-color: var(--card); color: var(--ink); }
+.cmp-card .sigil { width: 64px; height: 64px; }
+.cmp-text { min-width: 0; }
 .cmp-card .f-label { margin-bottom: 0.25rem; }
 .cmp-ver { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; overflow-wrap: anywhere; }
 .stats { display: grid; gap: 1rem; margin-top: 1.5rem; }
@@ -1500,9 +1502,10 @@ html[data-theme="reactor"] select { border-radius: 0; }
   gap: 0.75rem;
   width: min(17rem, 100%);
   padding: 0.75rem 0.9rem;
-  border: 1px solid var(--line);
   border-radius: 1rem;
-  background: var(--card);
+  background-color: var(--card);
+  border: 1px solid transparent;
+  color: var(--ink);
   box-shadow: 0 12px 28px -12px var(--glass-shadow);
 }
 .orbit-card .sigil { width: 64px; height: 64px; }
@@ -1516,6 +1519,24 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .orbit-key .sw { flex: none; width: 1.25rem; height: 0.25rem; background: var(--fam-a); }
 .orbit-key .k-n { margin-left: auto; color: var(--muted); font: 0.8125rem var(--font-mono); }
 html[data-theme="reactor"] .orbit-card { border-radius: 0; }
+/* Liquid Glass, as Back and To top: the card is the theme's glass tint over a solid base (the
+   opaque --card is the whole background where the blur is not supported; with it the tint
+   is mixed into --card, about 77 to 79% opaque, as Back and To top), a sheen, a
+   bright top edge, a hairline rim and a floating shadow. The family accent stays as the cmp
+   card's top rule. */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .orbit-card, .cmp-card {
+    background-color: color-mix(in srgb, var(--card) 45%, var(--glass-tint));
+    background-image: linear-gradient(180deg, var(--glass-sheen), transparent 65%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+  }
+}
+.orbit-card, .cmp-card {
+  box-shadow: inset 0 1px 0 0 var(--glass-edge),
+    inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent),
+    0 1px 2px var(--glass-shadow), 0 12px 28px -12px var(--glass-shadow);
+}
 
 /* The time machine: the hand is draggable and a slider; a notch after the chosen day dims. */
 .hand { cursor: grab; touch-action: none; }
@@ -1650,4 +1671,6 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   .notch:focus-visible .nl, .hand:focus-visible .hl { stroke: Highlight; }
   .notch:focus-visible .hit { stroke: Highlight; stroke-width: 2px; stroke-dasharray: 3 2; }
   .hand:focus-visible .hit { stroke: Highlight; }
+  /* The glass card is outlined by shadows, which this mode drops: its transparent border shows. */
+  .orbit-card, .cmp-card { border-color: CanvasText; }
 }

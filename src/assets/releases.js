@@ -201,6 +201,19 @@
     if (r.stage === "beta") return r.beta ? "Beta " + r.beta : "Beta";
     return r.beta ? "RC " + r.beta : "RC";
   }
+  // The release channel in a word, for a release that carries no build number. The stage is
+  // the contract's (release, beta, rc); the title tells a Valve preview or a long-term build.
+  function channel(r) {
+    var title = r.title || "";
+    if (r.stage === "rc") return "Release candidate";
+    if (r.stage === "beta") return /\bpreview\b/i.test(title) ? "Preview" : "Beta";
+    if (r.stage === "release") return /\b(long[- ]term|lts)\b/i.test(title) ? "Long-term" : "Stable";
+    return "Release";
+  }
+  // What a sigil is drawn from: the build when there is one, else a stable key of the release.
+  function sigilKey(r) {
+    return r.build || r.family + " " + r.version + (r.stage === "release" ? "" : " " + r.stage + (r.beta || ""));
+  }
   // "27.2 beta 3" for a release's version and stage, without the OS name.
   function short(r) {
     return r.version + (r.stage === "release" ? "" : " " + stageLabel(r).toLowerCase());
@@ -253,6 +266,7 @@
     loadJson: loadJson, ready: loadConfig, families: function () { return config.families; },
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
+    channel: channel, sigilKey: sigilKey,
     latest: latest, newer: newer, compareVersions: compareVersions,
     reduced: function () {
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;

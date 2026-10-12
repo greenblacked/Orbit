@@ -296,11 +296,11 @@
     card.setAttribute("data-id", r.id);
     var sig = RO.h("span", "sigil");
     card.appendChild(sig);
-    if (r.build && window.Sigil) window.Sigil.draw(sig, r.build, { size: 64 });
+    if (window.Sigil) window.Sigil.draw(sig, RO.sigilKey(r), { size: 64, onfail: function (el) { el.hidden = true; } });
     else sig.hidden = true;
     var text = RO.h("div", "oc-text");
     text.appendChild(RO.h("p", "oc-title", r.family + " " + RO.short(r)));
-    text.appendChild(RO.h("p", "oc-build", r.build ? "Build " + r.build : "No build number"));
+    text.appendChild(RO.h("p", "oc-build", r.build ? "Build " + r.build : RO.channel(r)));
     text.appendChild(RO.h("p", "oc-date small", RO.day(r.t) + " · " + VERDICT[r.status]));
     var link = RO.h("a", "rel-apple", "View release", { href: r.url, target: "_blank", rel: "noopener noreferrer" });
     link.appendChild(RO.h("span", "sr-only", " (opens in a new tab)"));
