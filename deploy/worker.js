@@ -3,7 +3,7 @@
 //
 //   GET /api/releases.json            the releases of every vendor
 //   GET /api/releases.json?vendor=X   only the releases of vendor X (400 for an unknown one)
-//   GET /api/security.json            the bundled security notes (/data/security.json), as is
+//   GET /api/security.json            the bundled security notes (/data/security.json), unchanged in content
 //   GET /api/health                   {ok, fetchedAt, stale, count, sources}
 //
 // The Worker iterates the registry of source adapters (sources/index.js). Each source has
@@ -118,7 +118,7 @@ async function readSnapshot(source, env, request) {
 }
 
 // The bundled security notes, or null when the asset is missing or is not a JSON object. They
-// are served as built into the deploy: the Worker fetches nothing for them.
+// are parsed and served unchanged in content: the Worker fetches nothing for them.
 async function readSecurity(env, request) {
   try {
     const res = await env.ASSETS.fetch(new URL('/data/security.json', request.url));
