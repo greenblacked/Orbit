@@ -72,6 +72,12 @@ OK_ENTRY = {"id": "a", "vendor": "V", "kind": "release", "url": "https://a.examp
         dict(OK_ENTRY, x=1),
         dict(OK_ENTRY, accept="text/html"),
         dict(OK_ENTRY, accept=1),
+        dict(OK_ENTRY, accept=["application/json"]),
+        dict(OK_ENTRY, accept={}),
+        dict(OK_ENTRY, max_bytes=0),
+        dict(OK_ENTRY, max_bytes=16 * 1024 * 1024 + 1),
+        dict(OK_ENTRY, max_bytes=True),
+        dict(OK_ENTRY, max_bytes="9"),
         dict(OK_ENTRY, raw_tables=0),
         dict(OK_ENTRY, raw_tables=99),
         dict(OK_ENTRY, raw_tables=True),
@@ -110,6 +116,12 @@ def test_optional_fields_are_accepted_and_the_same_url_may_differ_by_accept():
     assert probe.validate_sources([twin, dict(twin, id="c")])
 
 
+def test_max_bytes_is_accepted_up_to_the_ceiling():
+    base = {"id": "a", "vendor": "V", "kind": "release", "url": "https://a.example/"}
+    for size in (1, probe.MAX_BYTES_CEILING):
+        assert probe.validate_sources([dict(base, max_bytes=size)]) == []
+
+
 def test_the_list_sets_raw_tables_and_the_json_accept():
     by_id = {s["id"]: s for s in SOURCES}
     assert by_id["android-build-numbers"]["raw_tables"] == 3
@@ -117,6 +129,8 @@ def test_the_list_sets_raw_tables_and_the_json_accept():
     assert by_id["windows-release-health-10"]["raw_tables"] == 2
     assert by_id["android-pixel-factory-images"]["raw_tables"] == 2
     assert by_id["msrc-cvrf-2026-sep-json"]["accept"] == "application/json"
+    for ident in ("msrc-cvrf-2026-sep", "msrc-cvrf-2026-sep-json"):
+        assert by_id[ident]["max_bytes"] > probe.MAX_BYTES
     assert by_id["msrc-cvrf-2026-sep-json"]["url"] == by_id["msrc-cvrf-2026-sep"]["url"]
 
 
@@ -160,6 +174,28 @@ def test_a_redirect_to_a_local_or_ip_literal_host_is_refused(target):
     request = urllib.request.Request("https://a.example/")
     with pytest.raises(probe.RedirectRefusedError):
         handler.redirect_request(request, None, 302, "Found", {}, target)
+
+
+def test_read_body_honours_a_larger_or_smaller_limit():
+    class Endless:
+        def read(self, n):
+            return b"x" * n
+
+    body, note = probe.read_body(Endless(), limit=10)
+    assert len(body) == 11 and note == ""
+    body, _ = probe.read_body(Endless(), limit=probe.MAX_BYTES + 5)
+    assert len(body) == probe.MAX_BYTES + 6
+
+
+def test_a_table_fault_keeps_the_html_excerpt(monkeypatch):
+    def boom(text, count):
+        raise AssertionError("table bug")
+
+    monkeypatch.setattr(probe, "raw_tables", boom)
+    page = "<title>Hello</title><p>visible</p><table></table>"
+    out = probe.excerpt("text/html", page, tables=1)
+    assert out.startswith("html\n") and "Hello" in out and "visible" in out
+    assert "raw tables (parse failed: AssertionError)" in out
 
 
 def test_a_slow_body_stops_at_the_deadline():
@@ -245,9 +281,7 @@ TABLES_PAGE = (
 def test_raw_tables_returns_the_outer_html_of_the_first_n_tables():
     tables = probe.raw_tables(TABLES_PAGE, 2)
     assert tables[0] == '<table class="a">\n<tr><td>one</td></tr>\n</table>'
-    assert tables[1] == (
-        "<table><tr><td><table><tr><td>inner</td></tr></table></td></tr></table>"
-    )
+    assert tables[1] == "<table><tr><td><table><tr><td>inner</td></tr></table></td></tr></table>"
     assert len(probe.raw_tables(TABLES_PAGE, 1)) == 1
     assert len(probe.raw_tables(TABLES_PAGE, 10)) == 3
     assert "third" in probe.raw_tables(TABLES_PAGE, 3)[2]
@@ -363,7 +397,7 @@ def test_requests_to_one_host_are_paced(monkeypatch):
         {"id": "c", "vendor": "V", "kind": "release", "url": "https://o.example/3"},
     ]
 
-    def fake_fetch(url, accept="*/*"):
+    def fake_fetch(url, accept="*/*", limit=0):
         raise OSError(url)
 
     monkeypatch.setattr(probe, "fetch", fake_fetch)

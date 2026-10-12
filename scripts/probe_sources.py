@@ -40,11 +40,12 @@ READ_DEADLINE = 60  # seconds for the whole body
 MAX_SOURCES = 40
 MAX_REDIRECTS = 3
 MAX_BYTES = 2 * 1024 * 1024
+MAX_BYTES_CEILING = 16 * 1024 * 1024  # the most a source may ask for with max_bytes
 EXCERPT_CHARS = 4000
 MIN_GAP = 1.0  # seconds between two requests to one host
 KINDS = ("release", "security", "enrichment")
 REQUIRED_KEYS = {"id", "vendor", "kind", "url"}
-OPTIONAL_KEYS = {"raw_tables", "accept"}
+OPTIONAL_KEYS = {"raw_tables", "accept", "max_bytes"}
 ACCEPT_ALLOWED = ("application/json", "application/xml", "*/*")
 DEFAULT_ACCEPT = "*/*"
 MAX_RAW_TABLES = 10
@@ -100,7 +101,8 @@ def validate_sources(data: object) -> list[str]:
             continue
         problems.extend(f"{where}: {p}" for p in url_problems(url))
         # The same URL may be listed again only with a different Accept header.
-        pair = (url, entry.get("accept", DEFAULT_ACCEPT))
+        accept = entry.get("accept", DEFAULT_ACCEPT)
+        pair = (url, accept if accept in ACCEPT_ALLOWED else repr(accept))
         if pair in urls:
             problems.append(f"{where}: duplicate url {url}")
         urls.add(pair)
@@ -108,7 +110,7 @@ def validate_sources(data: object) -> list[str]:
 
 
 def option_problems(entry: dict) -> list[str]:
-    """Problems with the optional raw_tables and accept fields."""
+    """Problems with the optional raw_tables, accept and max_bytes fields."""
     problems = []
     if "raw_tables" in entry:
         count = entry["raw_tables"]
@@ -117,6 +119,11 @@ def option_problems(entry: dict) -> list[str]:
             problems.append(f"raw_tables must be an integer from 1 to {MAX_RAW_TABLES}")
     if "accept" in entry and entry["accept"] not in ACCEPT_ALLOWED:
         problems.append(f"accept must be one of {', '.join(ACCEPT_ALLOWED)}")
+    if "max_bytes" in entry:
+        size = entry["max_bytes"]
+        valid = isinstance(size, int) and not isinstance(size, bool)
+        if not valid or not 1 <= size <= MAX_BYTES_CEILING:
+            problems.append(f"max_bytes must be an integer from 1 to {MAX_BYTES_CEILING}")
     return problems
 
 
@@ -390,7 +397,12 @@ def excerpt(content_type: str, text: str, tables: int = 0) -> str:
             return "xml\n" + xml_excerpt(text)
         if kind == "html":
             out = "html\n" + html_excerpt(text)
-            return out + "\n" + tables_excerpt(text, tables) if tables else out
+            if tables:
+                try:
+                    out += "\n" + tables_excerpt(text, tables)
+                except Exception as exc:  # the excerpt that worked is kept
+                    out += f"\nraw tables (parse failed: {type(exc).__name__})"
+            return out
     except Exception as exc:  # best effort: a parser fault must not erase the report
         return f"{kind} (parse failed: {type(exc).__name__})\n" + text_excerpt(text)
     return "text\n" + text_excerpt(text)
@@ -422,15 +434,17 @@ class LimitedRedirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, target)
 
 
-def read_body(response, *, clock=time.monotonic) -> tuple[bytes, str]:
-    """Up to MAX_BYTES + 1 bytes in chunks, stopping at READ_DEADLINE. Returns (body, note)."""
+def read_body(
+    response, *, clock=time.monotonic, limit: int = MAX_BYTES
+) -> tuple[bytes, str]:
+    """Up to limit + 1 bytes in chunks, stopping at READ_DEADLINE. Returns (body, note)."""
     deadline = clock() + READ_DEADLINE
     chunks: list[bytes] = []
     got = 0
-    while got <= MAX_BYTES:
+    while got <= limit:
         if clock() > deadline:
             return b"".join(chunks), "read deadline"
-        chunk = response.read(min(65536, MAX_BYTES + 1 - got))
+        chunk = response.read(min(65536, limit + 1 - got))
         if not chunk:
             break
         chunks.append(chunk)
@@ -438,7 +452,7 @@ def read_body(response, *, clock=time.monotonic) -> tuple[bytes, str]:
     return b"".join(chunks), ""
 
 
-def fetch(url: str, accept: str = DEFAULT_ACCEPT) -> dict:
+def fetch(url: str, accept: str = DEFAULT_ACCEPT, limit: int = MAX_BYTES) -> dict:
     """One GET. Returns status, final_url, content_type, body, truncated; raises on failure.
 
     An HTTP error status is a result, not a failure: its body is often the useful part.
@@ -452,7 +466,7 @@ def fetch(url: str, accept: str = DEFAULT_ACCEPT) -> dict:
     except urllib.error.HTTPError as exc:
         response = exc
     with response:
-        body, note = read_body(response)
+        body, note = read_body(response, limit=limit)
         headers = response.headers
         status = response.status if hasattr(response, "status") else response.code
         final_url = response.geturl()
@@ -463,8 +477,9 @@ def fetch(url: str, accept: str = DEFAULT_ACCEPT) -> dict:
         "final_url": final_url,
         "content_type": content_type,
         "charset": charset,
-        "body": body[:MAX_BYTES],
-        "truncated": len(body) > MAX_BYTES or bool(note),
+        "body": body[:limit],
+        "limit": limit,
+        "truncated": len(body) > limit or bool(note),
         "note": note,
     }
 
@@ -501,7 +516,7 @@ def report(source: dict, result: dict | None, error: BaseException | None) -> st
         f"status: {result['status']}",
         f"content-type: {one_line(result['content_type'])}",
         f"bytes: {len(body)}"
-        + (f" (truncated at {MAX_BYTES})" if result["truncated"] else "")
+        + (f" (truncated at {result.get('limit', MAX_BYTES)})" if result["truncated"] else "")
         + (f" ({one_line(result['note'], 40)})" if result.get("note") else ""),
         f"sha256: {hashlib.sha256(body).hexdigest()}",
         "excerpt:",
@@ -525,7 +540,11 @@ def run(sources: list[dict], *, sleep=time.sleep, clock=time.monotonic, out=sys.
             sleep(wait)
         result = error = None
         try:
-            result = fetch(source["url"], source.get("accept", DEFAULT_ACCEPT))
+            result = fetch(
+                source["url"],
+                source.get("accept", DEFAULT_ACCEPT),
+                source.get("max_bytes", MAX_BYTES),
+            )
         except Exception as exc:  # any failure is recorded, never fatal
             error = exc
         last[host] = clock()

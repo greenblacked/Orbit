@@ -169,14 +169,16 @@
     "id": "msrc-cvrf-2026-sep",
     "vendor": "Microsoft",
     "kind": "security",
-    "url": "https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Sep"
+    "url": "https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Sep",
+    "max_bytes": 16777216
   },
   {
     "id": "msrc-cvrf-2026-sep-json",
     "vendor": "Microsoft",
     "kind": "security",
     "url": "https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Sep",
-    "accept": "application/json"
+    "accept": "application/json",
+    "max_bytes": 16777216
   },
   {
     "id": "steamos-news-rss-1675200",

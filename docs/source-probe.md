@@ -9,7 +9,7 @@ the job log.
 
 `scripts/probe_sources.py` reads `scripts/probe_sources.json`, a list of
 `{id, vendor, kind, url}` plus the optional `raw_tables` and `accept` below (`kind` is `release`, `security` or `enrichment`), and makes one GET
-per source: 20 second timeout, at most 3 redirects and only to https, at most 2 MB read, at
+per source: 20 second timeout, at most 3 redirects and only to https, at most 2 MB read (`max_bytes` below raises it), at
 least one second between two requests to the same host. A body that is still arriving after 60
 seconds is cut and marked. A list entry or a redirect to localhost, a `.local` or `.internal`
 name or an IP literal is refused.
@@ -35,6 +35,9 @@ Two optional fields change what is fetched and printed for one source:
   `application/xml` or `*/*` (the default). The same URL may be listed twice when the `accept`
   values differ, as `msrc-cvrf-2026-sep` and `msrc-cvrf-2026-sep-json` do, to see both
   representations of the MSRC CVRF month.
+- `max_bytes: N` (an integer from 1 to 16777216) raises or lowers the read limit of 2 MB for one
+  source. The MSRC CVRF month is larger than 2 MB, so a cut body would not parse and only the
+  document header would print; both CVRF sources set 16 MB.
 
 A failing source is reported with its error class and the run carries on. The exit status is 0
 unless the list file is invalid, then 1.
