@@ -53,11 +53,11 @@
     var d = new Date(t);
     return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
   }
-  function layer(cls) {
+  function layer(cls, parent) {
     return el("svg", {
       viewBox: -HALF + " " + -HALF + " " + 2 * HALF + " " + 2 * HALF,
       "class": "layer " + cls, focusable: "false"
-    }, dial);
+    }, parent);
   }
   // The knob's grab area is 22 CSS px in radius, in viewBox units.
   function sizeKnob() {
@@ -120,7 +120,7 @@
   function build() {
     var host = dial;
     // A dial already there is patched (sync), not torn down.
-    if (host.firstChild) dial = document.createElement("div");
+    var into = host.firstChild ? document.createElement("div") : host;
     now = Date.now();
     // The window is fixed: only the last 26 weeks are drawn or counted.
     weeks = WEEKS;
@@ -131,7 +131,7 @@
     host.setAttribute("aria-label", "Release dial: the releases of the last " + weeks + " weeks, one ring per platform");
     host.setAttribute("data-weeks", String(weeks));
 
-    var base = layer("base");
+    var base = layer("base", into);
     base.setAttribute("aria-hidden", "true");
     for (var m = nextMonth(start - 1); m <= now; m = nextMonth(m)) {
       var a = angle(m), p0 = xy(a, OUTER + 16), p1 = xy(a, OUTER + 28), q = xy(a, OUTER + 38);
@@ -149,7 +149,7 @@
     var step = nf > 1 ? Math.min(STEP, (OUTER - INNER) / (nf - 1)) : STEP;
     var scale = step / STEP, ms = Math.min(1, Math.max(0.55, scale));
     fams.forEach(function (fam, i) {
-      var lane = layer("lane " + famClass(fam.id));
+      var lane = layer("lane " + famClass(fam.id), into);
       lane.style.setProperty("--lane", String(i));
       lane.setAttribute("data-family", fam.id);
       var rad = OUTER - i * step;
@@ -184,7 +184,7 @@
     });
     centres = null;
 
-    var top = layer("hand-layer");
+    var top = layer("hand-layer", into);
     // The hand is the dial's slider: it sets the date the page shows (the time machine).
     ui.hand = el("g", {
       "class": "hand", transform: "rotate(360)", role: "slider", tabindex: "0",
@@ -201,7 +201,7 @@
 
     var byId = {};
     notches.forEach(function (g) { byId[g.rel.id] = g.rel; });
-    if (dial !== host) { sync(host, dial); dial = host; }
+    if (into !== host) sync(host, into);
     notches = [].slice.call(host.querySelectorAll(".notch"));
     notches.forEach(function (g) { g.rel = byId[g.getAttribute("data-id")]; });
     notches.sort(function (x, y) { return x.rel.t - y.rel.t; });
