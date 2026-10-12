@@ -15,11 +15,15 @@
 // tag and the build id.
 //
 // Bounds on what is emitted (ADR 0006): only rows dated within WINDOW_DAYS (180, a little
-// under the dial's 26 weeks) of the newest row are kept, so the live page's history back to
-// 2009 does not widen the dial to 52 weeks or fill the timeline with old device builds. A row
-// dated more than a day after the clock is refused (a typo such as CP2A.990605.016 must not
+// under the dial's 26 weeks) of both the clock and the newest row are kept, so neither the live
+// page's history back to 2009 nor a quiet spell widens the dial to 52 weeks or fills the
+// timeline with old device builds. The newest row is always kept, so the source is never
+// empty. A row dated more than a day after the clock is refused (a typo such as CP2A.990605.016 must not
 // pin a release in 2099). Within one day the revision number orders the releases: the time of
 // day is the revision in seconds (android-15.0.0_r36 is 00:00:36), so r36 sorts before r31.
+//
+// The Worker calls parse(text, url). `parse` below takes the text alone, because parsePage's
+// later parameters (`now`, `windowDays`) are for tests: passing the url on would make it `now`.
 
 import { familyIds } from '../families.js';
 import { mergeReleases } from '../releases.js';
@@ -212,7 +216,8 @@ export function parseRow(cells, columns, now = Date.now()) {
 
 /**
  * Releases of the Android family in the build-numbers page, newest first, within `windowDays`
- * of the newest one. `now` and `windowDays` are for tests; the Worker passes neither.
+ * of the clock and of the newest row (which is always kept). `now` and `windowDays` are for
+ * tests; the Worker passes neither.
  */
 export function parsePage(html, now = Date.now(), windowDays = WINDOW_DAYS) {
   if (!FAMILIES.includes(FAMILY)) return [];
@@ -225,9 +230,12 @@ export function parsePage(html, now = Date.now(), windowDays = WINDOW_DAYS) {
   }
   const sorted = mergeReleases([], releases);
   if (sorted.length === 0) return sorted;
-  // Keep what is within the window of the newest row; the page reaches back to 2009.
-  const floor = Date.parse(sorted[0].date) - windowDays * DAY_MS;
-  return sorted.filter((release) => Date.parse(release.date) >= floor);
+  // Keep what is within the window of the clock and of the newest row; the page reaches
+  // back to 2009. The window is anchored to the clock so that it holds the dial at 26 weeks
+  // however long ago the newest row was cut; the newest row itself is always kept.
+  const span = windowDays * DAY_MS;
+  const floor = Math.max(now - span, Date.parse(sorted[0].date) - span);
+  return sorted.filter((release, i) => i === 0 || Date.parse(release.date) >= floor);
 }
 
 // An HTML page: ask for it as one.
@@ -238,5 +246,5 @@ export default {
   vendor: VENDOR,
   accept: ACCEPT,
   urls: [PAGE_URL],
-  parse: parsePage,
+  parse: (html) => parsePage(html),
 };

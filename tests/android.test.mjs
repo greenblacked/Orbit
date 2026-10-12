@@ -65,7 +65,8 @@ describe('the Android adapter', () => {
     assert.equal(VENDOR, 'google');
     assert.deepEqual(android.urls, [PAGE_URL]);
     assert.equal(PAGE_URL, 'https://source.android.com/docs/setup/reference/build-numbers');
-    assert.equal(android.parse, parsePage);
+    assert.equal(typeof android.parse, 'function');
+    assert.notEqual(android.parse, parsePage, 'the url the Worker passes must not reach `now`');
     assert.equal(isSource(android), true);
     assert.deepEqual(FAMILIES, ['Android']);
     assert.ok(isHttpsOn(PAGE_URL, HOST));
@@ -335,8 +336,29 @@ describe('the bound on what is emitted', () => {
     assert.deepEqual(parsePage(page(), now), []);
   });
 
+  it('is anchored to the clock: rows older than the window go however old the newest is', () => {
+    // The newest row is 2026-12-05; a clock on 2027-07-01 puts the floor at 2027-01-02.
+    const later = Date.UTC(2027, 6, 1);
+    const releases = parsePage(html, later);
+    assert.deepEqual(releases.map((r) => r.id), ['android-120.0.0_r1']);
+    const soon = parsePage(html, Date.UTC(2027, 0, 1));
+    assert.equal(soon.length, 6);
+    assert.ok(soon.every((r) => Date.parse(r.date) >= Date.UTC(2027, 0, 1) - WINDOW_DAYS * 86400000));
+  });
+
+  it('always keeps the newest row, so a quiet source is not empty', () => {
+    const releases = parsePage(html, Date.UTC(2030, 0, 1));
+    assert.deepEqual(releases.map((r) => r.id), ['android-120.0.0_r1']);
+  });
+
   it('is applied by the adapter the Worker calls', () => {
     assert.equal(android.parse(PAGE).length, 1);
+  });
+
+  it('ignores the url the Worker passes as the second argument', () => {
+    assert.deepEqual(android.parse(PAGE, PAGE_URL), android.parse(PAGE));
+    const future = page(row('CP2A.260605.016', 'android-17.0.0_r1'), row('CP2A.990605.016', 'android-18.0.0_r1', ''));
+    assert.deepEqual(android.parse(future, PAGE_URL).map((r) => r.id), ['android-17.0.0_r1']);
   });
 });
 
@@ -513,6 +535,16 @@ describe('the Android adapter behind the Worker', () => {
     assert.deepEqual(state.upstream.calls.map((c) => c.url), [PAGE_URL]);
     assert.equal(state.upstream.calls[0].init.redirect, 'manual');
     assert.match(state.upstream.calls[0].init.headers.accept, /text\/html/);
+  });
+
+  it('refuses a row dated far in the future, and keeps the genuine rows', async () => {
+    const future = page(
+      row('CP2A.260605.016', 'android-17.0.0_r1'),
+      row('CP2A.990605.016', 'android-18.0.0_r1', ''),
+    );
+    stubUpstream(() => new Response(future));
+    const body = await (await ask()).json();
+    assert.deepEqual(body.releases.map((r) => r.id), ['android-17.0.0_r1']);
   });
 
   it('refuses a page whose layout changed instead of publishing nothing as fresh', async () => {
