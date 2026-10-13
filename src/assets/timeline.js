@@ -135,7 +135,7 @@
     var row = rows.filter(function (x) { return x.r.id === target; })[0];
     if (!row) {
       var all = releases.filter(function (r) { return r.id === target; })[0];
-      if (!all) { target = ""; return; }
+      if (!all) { target = ""; remember(); return; }
       state.family = "all";
       state.stage = "all";
       press("chips-family", "all");
@@ -145,6 +145,7 @@
       row = rows.filter(function (x) { return x.r.id === target; })[0];
     }
     target = "";
+    remember();
     var link = row && row.li.querySelector("a");
     if (!link) return;
     row.li.scrollIntoView({ block: "center" });

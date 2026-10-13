@@ -596,11 +596,31 @@ def test_each_release_in_the_toast_links_to_its_timeline_row(browser, base_url):
         context.close()
 
 
+def test_every_toast_link_is_a_44px_target(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        heights = page.eval_on_selector_all(
+            "#toast .toast-link", "els => els.map(e => e.getBoundingClientRect().height)"
+        )
+        assert heights and all(h >= 43.5 for h in heights)
+    finally:
+        context.close()
+
+
 def test_the_timeline_lands_on_the_row_named_by_id(page, base_url):
     serve_json(page, "**/api/releases.json", json.dumps(fresh_snapshot()))
     page.goto(base_url + "/timeline/?stage=release&id=" + quote(NEW_ID, safe=""))
     page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
     assert page.evaluate("document.activeElement.closest('.tl-item').dataset.id") == NEW_ID
+
+
+def test_the_used_id_leaves_the_address_when_the_filters_are_already_all(page, base_url):
+    serve_json(page, "**/api/releases.json", json.dumps(fresh_snapshot()))
+    page.goto(base_url + "/timeline/?id=" + quote(NEW_ID, safe=""))
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert page.evaluate("document.activeElement.closest('.tl-item').dataset.id") == NEW_ID
+    assert "id=" not in page.evaluate("() => window.location.search")
 
 
 # --- motion -----------------------------------------------------------------------------

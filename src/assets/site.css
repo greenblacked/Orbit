@@ -827,7 +827,16 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   font-weight: 500;
 }
 .toast-close:focus-visible { outline-color: var(--bg); }
-.toast-link { color: inherit; text-decoration: underline; text-underline-offset: 0.15em; }
+.toast-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.25rem;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
 .toast-link:focus-visible { outline-color: var(--bg); }
 
 /* Section links on the pages below the front page, for screens too narrow for the header's. */
