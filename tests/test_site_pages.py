@@ -14,6 +14,7 @@ import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import urlencode
 
 import pytest
 from helpers import REPO
@@ -839,6 +840,63 @@ def test_compare_states_where_the_history_starts_only_for_the_oldest_pick(page, 
     page.select_option("#c-from", ios[-2]["id"])
     assert page.locator(".stat").count() == 3
     assert page.locator("p.data-range").count() == 0
+
+
+def query_of(page):
+    return page.evaluate(
+        "Object.fromEntries(new URLSearchParams(window.location.search).entries())"
+    )
+
+
+def test_compare_writes_the_picks_to_the_address(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    older = next(r for r in ios if r["version"] == "15.8.8")
+    newer = next(r for r in ios if r["version"] == "27.0.1")
+    page.select_option("#c-from", older["id"])
+    assert query_of(page)["from"] == older["id"]
+    page.select_option("#c-to", newer["id"])
+    assert query_of(page) == {"family": "iOS", "from": older["id"], "to": newer["id"]}
+    page.select_option("#c-family", "macOS")
+    query = query_of(page)
+    assert query["family"] == "macOS"
+    macos_ids = [r["id"] for r in releases("macOS")]
+    assert query["from"] in macos_ids and query["to"] in macos_ids
+
+
+def test_compare_restores_the_picks_from_the_address(page, base_url):
+    ios = releases("iOS")
+    older = next(r for r in ios if r["version"] == "15.8.8")
+    newer = next(r for r in ios if r["version"] == "27.0.1")
+    query = urlencode({"family": "iOS", "from": older["id"], "to": newer["id"]})
+    page.goto(base_url + "/compare/?" + query)
+    page.wait_for_selector(".cmp-cards")
+    assert page.input_value("#c-from") == older["id"]
+    assert page.input_value("#c-to") == newer["id"]
+    cards = page.locator(".cmp-card").all_inner_texts()
+    assert older["build"] in cards[0] and newer["build"] in cards[1]
+
+
+def test_compare_ignores_ids_that_are_not_in_the_list(page, base_url):
+    macos = releases("macOS")[0]
+    query = urlencode({"family": "iOS", "from": "no-such-id", "to": macos["id"]})
+    page.goto(base_url + "/compare/?" + query)
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    # Neither id belongs to iOS: both selects keep the defaults.
+    assert page.input_value("#c-to") == ios[0]["id"]
+    assert page.input_value("#c-from") == default_from(ios)["id"]
+
+
+def test_home_compare_link_goes_to_the_family(page, base_url):
+    page.goto(base_url + "/")
+    link = page.locator("#macos a.more-cmp")
+    assert link.get_attribute("href") == "/compare/?family=macOS"
+    assert link.bounding_box()["height"] >= 44
+    link.click()
+    page.wait_for_selector(".cmp-cards")
+    assert page.input_value("#c-family") == "macOS"
 
 
 def test_a_poll_with_nothing_new_leaves_the_compare_page_alone(page, base_url):

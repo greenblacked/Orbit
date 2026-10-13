@@ -17,8 +17,15 @@
   var shown = null;
   var slot = null;
 
+  // The from and to ids in the address, used once when the first data arrives. An id that is not
+  // in the loaded list is ignored by fill(), which falls back to the defaults.
+  var initial = { from: "", to: "" };
+
   try {
-    var wanted = new URLSearchParams(window.location.search).get("family");
+    var params = new URLSearchParams(window.location.search);
+    initial.from = params.get("from") || "";
+    initial.to = params.get("to") || "";
+    var wanted = params.get("family");
     var offered = Array.prototype.map.call(selFamily.options, function (o) { return o.value; });
     if (offered.indexOf(wanted) >= 0) selFamily.value = wanted;
   } catch (e) { /* the default platform stays */ }
@@ -31,6 +38,15 @@
     list.forEach(function (r) { select.appendChild(RO.h("option", "", label(r), { value: r.id })); });
     var has = list.some(function (r) { return r.id === keep; });
     select.value = has ? keep : fallback;
+  }
+  // Keep the address in step with the picks, so a comparison can be shared.
+  function remember() {
+    var q = "family=" + encodeURIComponent(selFamily.value);
+    if (selFrom.value) q += "&from=" + encodeURIComponent(selFrom.value);
+    if (selTo.value) q += "&to=" + encodeURIComponent(selTo.value);
+    try {
+      window.history.replaceState(null, "", window.location.pathname + "?" + q);
+    } catch (e) { /* the comparison still works without a shareable address */ }
   }
   function days(a, b) { return Math.round(Math.abs(Math.floor(a / 864e5) - Math.floor(b / 864e5))); }
 
@@ -155,16 +171,18 @@
 
   function pick(reset) {
     list = all.filter(function (r) { return r.family === selFamily.value; });
-    var keepFrom = reset ? "" : selFrom.value, keepTo = reset ? "" : selTo.value;
+    var keepFrom = reset ? "" : initial.from || selFrom.value;
+    var keepTo = reset ? "" : initial.to || selTo.value;
+    initial = { from: "", to: "" };
     var newest = list.length ? list[0].id : "";
     signature = list.map(function (r) { return r.id; }).join("|");
     fill(selFrom, keepFrom, defaultFrom());
     fill(selTo, keepTo, newest);
     render();
   }
-  selFamily.addEventListener("change", function () { pick(true); });
-  selFrom.addEventListener("change", render);
-  selTo.addEventListener("change", render);
+  selFamily.addEventListener("change", function () { pick(true); remember(); });
+  selFrom.addEventListener("change", function () { render(); remember(); });
+  selTo.addEventListener("change", function () { render(); remember(); });
 
   RO.on(function (data) {
     if (!data) { out.textContent = "Could not load releases. The source is linked below."; return; }

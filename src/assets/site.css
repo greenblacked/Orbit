@@ -947,6 +947,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+.more-cmp { margin-left: 1.25rem; }
 .stage { display: grid; justify-items: center; gap: 1.25rem; }
 .stage figcaption { max-width: 26rem; text-align: center; }
 
