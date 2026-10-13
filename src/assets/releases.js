@@ -147,6 +147,7 @@
       state.data = data;
       state.failed = false;
       state.at = Date.now();
+      note(data);
       if (fresh.length) announce(fresh);
       listeners.forEach(function (fn) { fn(data, fresh); });
     }, function () {
@@ -247,6 +248,34 @@
     for (var i = 0; i < els.length; i++) els[i].textContent = ago(Number(els[i].getAttribute("data-rel")));
   }
 
+  // The one freshness line (#data-note on a page): when the data was checked, or that the
+  // live source is down and this is the saved copy. Its space is reserved in CSS.
+  function note(data) {
+    var el = document.getElementById("data-note");
+    if (!el) return;
+    var old = data.stale || data.snapshot;
+    var t = data.fetchedAt;
+    el.textContent = "";
+    el.classList.toggle("old", old);
+    if (old) {
+      el.appendChild(document.createTextNode("Live source unavailable, showing the saved copy" + (t ? " from " : ".")));
+      if (t) {
+        el.appendChild(h("time", null, day(t), { datetime: new Date(t).toISOString() }));
+        el.appendChild(document.createTextNode("."));
+      }
+    } else if (t) {
+      el.appendChild(document.createTextNode("Data checked "));
+      el.appendChild(when(t));
+      el.appendChild(document.createTextNode("."));
+    }
+  }
+  // "Now" for counting days: a stale or bundled copy is as of when it was fetched, so it does
+  // not look more dormant every day.
+  function clock() {
+    var d = state.data;
+    return d && (d.stale || d.snapshot) && d.fetchedAt ? d.fetchedAt : Date.now();
+  }
+
   function announce(fresh) {
     var box = document.getElementById("toast");
     if (!box) return;
@@ -279,7 +308,7 @@
     loadJson: loadJson, ready: loadConfig, families: function () { return config.families; },
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
-    channel: channel, sigilKey: sigilKey,
+    channel: channel, sigilKey: sigilKey, clock: clock,
     latest: latest, lead: lead, newer: newer, compareVersions: compareVersions,
     reduced: function () {
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;

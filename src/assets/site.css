@@ -1729,3 +1729,12 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   .sec-link, .cve { border-color: CanvasText; }
   .sec-link { color: LinkText; }
 }
+
+/* The data freshness line: its two lines of space are kept so the late text moves nothing.
+   The saved-copy notice adds a rule and the full ink colour, so it is not told by colour alone. */
+.data-note { min-height: 2.5rem; margin-top: 1rem; }
+.data-note.old {
+  color: var(--ink);
+  border-left: 3px solid var(--ink);
+  padding-left: 0.75rem;
+}
