@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 import re
 from urllib.parse import urlparse
@@ -106,19 +107,26 @@ LAZY = ("fx.js", "aurora.js")
 # (sigil.js loads it when a build that is not an Apple build appears). The script that loads
 # each one is the only file that names it.
 AFTER_PAINT = {"below.js": "home.js", "cadence.js": "home.js", "sigil-generic.js": "sigil.js"}
-FIRST_PAINT_BUDGET = 60_000
+# The first paint is budgeted on what crosses the wire: the sum of each script gzipped alone at
+# level 9 (the scripts are separate responses, so a per-file sum is what a visitor downloads;
+# a concatenation would flatter it). Today's busiest page is about 20,800 bytes; the limit is
+# 25% above that. A loose raw ceiling stays as a backstop for parse and memory cost.
+FIRST_PAINT_GZIP_BUDGET = 26_000
+FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
 AFTER_PAINT_BUDGET = 16_000
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])
-def test_the_scripts_a_page_loads_stay_under_the_first_paint_budget(name):
+def test_the_scripts_a_page_loads_stay_under_the_first_paint_budgets(name):
     loaded = re.findall(r'<script src="/assets/([a-z.-]+\.js)"', page(name))
     assert loaded, name
     assert not set(LAZY) & set(loaded), "the effects load after first paint, not from the page"
     assert not set(AFTER_PAINT) & set(loaded), "these load after first paint, not from the page"
-    total = sum((ASSETS / script).stat().st_size for script in loaded)
-    assert total < FIRST_PAINT_BUDGET, (name, total)
+    raw = sum((ASSETS / script).stat().st_size for script in loaded)
+    assert raw < FIRST_PAINT_RAW_BUDGET, (name, raw)
+    packed = sum(len(gzip.compress((ASSETS / script).read_bytes(), 9)) for script in loaded)
+    assert packed < FIRST_PAINT_GZIP_BUDGET, (name, packed)
 
 
 def test_the_lazily_loaded_effects_stay_small_and_are_only_loaded_by_the_scripts():
