@@ -70,6 +70,7 @@
 </div>
 </div>
 <ul class="cadence" id="cadence" aria-label="Release cadence per platform"></ul>
+<p class="small data-note" id="data-note"></p>
 <p class="sr-only" id="orbit-live" role="status" aria-live="polite"></p>
 <noscript><p class="notice">The dial needs JavaScript. The newest releases are listed below.</p></noscript>
 </section>
@@ -295,8 +296,9 @@
 </div>
 <div class="m-seg" role="group" aria-label="Release channel">
 <button type="button" class="m-segb" aria-pressed="true" data-ch="release" disabled>Release</button>
-<button type="button" class="m-segb" aria-pressed="false" data-ch="beta" disabled>Beta</button>
+<button type="button" class="m-segb" aria-pressed="false" data-ch="beta" aria-describedby="mac-betanote" disabled>Beta</button>
 </div>
+<p class="m-note" id="mac-betanote" data-f="betanote"></p>
 </div>
 </div>
 </div>
