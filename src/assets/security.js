@@ -1,8 +1,8 @@
 /* Security notes for the timeline and compare pages (docs/adr/0008). Loads the bundled snapshot
    /data/security.json first and then asks /api/security.json for a newer copy; a failure of
    either leaves the pages as they are. The file holds ids, titles, dates and links only, so
-   the wording here is ours: "listed in" and never "fixed in". Elements are built with
-   textContent, and a link is used only if it is an https address. Nothing here runs on the
+   the wording here is ours: "listed in" or "fixed after ... up to ...", never "newly fixed".
+   Elements are built with textContent, and a link is used only if it is an https address. Nothing here runs on the
    front page. window.Sec = { on, chip, compare }. */
 (function () {
   "use strict";
