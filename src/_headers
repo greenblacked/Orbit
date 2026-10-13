@@ -10,3 +10,10 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+# Static caching. Asset file names are not content-hashed, so the lifetimes stay short and a
+# release shows up within the hour (assets) or five minutes (data). The pages are not listed:
+# HTML keeps the platform default and revalidates on every visit.
+/assets/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+/data/*
+  Cache-Control: public, max-age=300

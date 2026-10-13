@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 
 import pytest
-from helpers import REPO
+from helpers import REPO, load_script
 
+serve = load_script("serve_site")
 HEADERS = (REPO / "src" / "_headers").read_text(encoding="utf-8")
 
 
@@ -73,3 +74,33 @@ def test_no_page_uses_what_the_csp_blocks(page):
     assert not re.search(r"\sstyle=", text), "style attribute"
     assert not re.search(r"\son[a-z]+=", text), "inline event handler"
     assert "javascript:" not in text
+
+
+def applied(path: str) -> dict[str, str]:
+    """The headers Cloudflare would add to ``path``: every matching block, in file order."""
+    found: dict[str, str] = {}
+    for pattern, pairs in serve.parse_headers(HEADERS):
+        if pattern.match(path):
+            found.update(pairs)
+    return found
+
+
+def test_assets_are_cached_for_an_hour_with_a_day_of_stale_revalidation():
+    # The file names carry no content hash, so the lifetime stays modest.
+    expected = "public, max-age=3600, stale-while-revalidate=86400"
+    for path in ("/assets/site.css", "/assets/site.js"):
+        assert applied(path)["Cache-Control"] == expected
+
+
+def test_data_is_cached_for_five_minutes():
+    assert applied("/data/releases.json")["Cache-Control"] == "public, max-age=300"
+
+
+def test_html_routes_get_no_cache_rule():
+    # Pages keep the platform default and revalidate, so a release shows at once.
+    for path in ("/", "/about/", "/compare/", "/timeline/", "/404.html", "/og.png"):
+        assert "Cache-Control" not in applied(path), path
+
+
+def test_the_cache_rules_leave_the_security_headers_on_assets():
+    assert "default-src 'self'" in applied("/assets/site.js")["Content-Security-Policy"]

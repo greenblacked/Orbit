@@ -106,11 +106,12 @@ def make_handler(root: Path):
             self.send_response(status)
             self.send_header("Content-Type", kind)
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            for pattern, pairs in rules:
-                if pattern.match(path):
-                    for name, value in pairs:
-                        self.send_header(name, value)
+            matched = [pairs for pattern, pairs in rules if pattern.match(path)]
+            if not any(name.lower() == "cache-control" for pairs in matched for name, _ in pairs):
+                self.send_header("Cache-Control", "no-store")
+            for pairs in matched:
+                for name, value in pairs:
+                    self.send_header(name, value)
             self.end_headers()
             if not head:
                 self.wfile.write(body)

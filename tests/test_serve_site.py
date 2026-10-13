@@ -132,3 +132,16 @@ def test_releases_answer_passes_an_unreadable_snapshot_through():
     assert serve.releases_answer(b"not json", "vendor=apple") == (200, b"not json")
     assert serve.releases_answer(b"[]", "vendor=apple") == (200, b"[]")
     assert serve.releases_answer(b'{"releases":[]}', "") == (200, b'{"releases":[]}')
+
+
+def test_a_cache_rule_in_headers_replaces_the_no_store_default(base_url):
+    def cache_control(path: str) -> list[str]:
+        opener = urllib.request.build_opener(NoRedirect)
+        with opener.open(base_url + path, timeout=5) as response:  # noqa: S310 - loopback
+            return response.headers.get_all("Cache-Control")
+
+    assert cache_control("/assets/site.css") == [
+        "public, max-age=3600, stale-while-revalidate=86400"
+    ]
+    assert cache_control("/data/releases.json") == ["public, max-age=300"]
+    assert cache_control("/") == ["no-store"]
