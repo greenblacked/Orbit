@@ -141,7 +141,7 @@ def test_a_cache_rule_in_headers_replaces_the_no_store_default(base_url):
             return response.headers.get_all("Cache-Control")
 
     assert cache_control("/assets/site.css") == [
-        "public, max-age=3600, stale-while-revalidate=3600"
+        "public, max-age=1800, stale-while-revalidate=1800"
     ]
     assert cache_control("/data/releases.json") == ["public, max-age=300"]
     assert cache_control("/") == ["no-store"]

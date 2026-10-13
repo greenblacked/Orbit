@@ -85,9 +85,9 @@ def applied(path: str) -> dict[str, str]:
     return found
 
 
-def test_assets_are_cached_for_an_hour_with_an_hour_of_stale_revalidation():
+def test_assets_are_cached_for_half_an_hour_with_half_an_hour_of_stale_revalidation():
     # The file names carry no content hash, so the lifetime stays modest.
-    expected = "public, max-age=3600, stale-while-revalidate=3600"
+    expected = "public, max-age=1800, stale-while-revalidate=1800"
     for path in ("/assets/site.css", "/assets/site.js"):
         assert applied(path)["Cache-Control"] == expected
 

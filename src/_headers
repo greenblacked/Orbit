@@ -11,12 +11,13 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 # Static caching. Asset file names are not content-hashed, so the lifetimes stay short and a
-# release shows up within the hour (assets) or five minutes (data). The stale window is as
-# short as the lifetime, so an old script or style never runs against new markup for long.
+# release shows up within the hour (assets) or five minutes (data). Assets are fresh for half
+# an hour and may be served stale for another half hour while they revalidate, so an old
+# script or style never outlives new markup by more than one hour.
 # The pages are not listed: HTML keeps the platform default and revalidates on every visit.
 # The rules match the request path, so a missing /assets/ or /data/ file answers its 404
 # page with the same lifetime.
 /assets/*
-  Cache-Control: public, max-age=3600, stale-while-revalidate=3600
+  Cache-Control: public, max-age=1800, stale-while-revalidate=1800
 /data/*
   Cache-Control: public, max-age=300
