@@ -50,6 +50,8 @@ flowchart LR
 
 `/api/releases.json` (optionally `?vendor=apple`) answers one document, and `/api/health` reports each source.
 
+`/api/security.json` answers the bundled security notes from `src/data/security.json` (schema 1; Apple and Android are the adapters, refreshed by `node deploy/snapshot_security.mjs`; the file stays empty until the first refresh, after the owner has checked the vendors' terms of use). The document holds `schema`, `generatedAt`, `sources`, `notes` (keyed by an `https` note URL, each with a `source` and its sorted `cves`) and `releases` (keyed by a release id from `releases.json`, each with a `status`, sorted `notes` and `cves`, and a `count`). A `status` is one of `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` or `not-connected`; only a `release` is ever `listed` or `no-cve-entries`, and every other release is `not-applicable`. `tests/security.test.mjs` is the executable contract; the reasoning is in [ADR 0008](docs/adr/0008-security-notes-are-a-separate-payload.md).
+
 ```json
 {
   "source": "apple-developer-releases",
@@ -110,6 +112,8 @@ bash scripts/preview.sh --channel chrome         # or --executable PATH, or PLAY
 
 To refresh the bundled snapshot, run `node deploy/snapshot_releases.mjs` and commit the result.
 
+To refresh the security notes, run `node deploy/snapshot_releases.mjs` first and then `node deploy/snapshot_security.mjs`, and commit the result. The second reads each vendor's security index and the note page of every released build in `releases.json` that matches a row (one request a second, each page once), and writes only CVE ids, titles, dates and URLs to `src/data/security.json`. A vendor whose index cannot be read keeps its old data, is marked `failed` and makes the script exit non-zero. Apple and Android are driven so far (Android reads the AOSP build-numbers page for patch levels and one bulletin per month; the build-numbers page and up to 200 bulletins); the adapters are in `deploy/security/`.
+
 ## Engineering standards
 
 - **Performance budgets.** The scripts a page loads for first paint stay under 60,000 bytes, and the two lazily loaded effect modules are budgeted apart (`tests/test_site_data.py`). A page with everything it loads stays under 500,000 bytes and any image under 200,000 bytes (`scripts/check_site.py`). Effects load on idle, never from the HTML.
@@ -147,10 +151,13 @@ The preferred rollback is a new patch release with the change reverted. The one-
 ├── src/                   the site: pages, assets/, data/, _headers, og.png
 │   ├── assets/            site.css, theme.js, site.js, releases.js, home.js,
 │   │                      timeline.js, compare.js, sigil.js, orbit.js,
-│   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js
-│   └── data/              releases.json (snapshot), families.json, features.json
+│   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js,
+│   │                      security.js
+│   └── data/              releases.json (snapshot), security.json, families.json, features.json
 ├── deploy/                the Worker (worker.js, releases.js, families.js,
-│   └── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs
+│   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs,
+│   │                      snapshot_security.mjs
+│   └── security/          security-notes adapters (snapshot step only: Apple, Android)
 ├── scripts/               build, checks, preview, screenshots and the source probe (standard library only)
 ├── results/               one JSON file per publicly released, tested build
 ├── tests/                 Python and Node tests, fixtures

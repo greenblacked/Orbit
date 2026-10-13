@@ -13,6 +13,9 @@
   var list = [];
   // null until the first data arrives, so an empty platform still renders once.
   var signature = null;
+  // The two releases on show and the place their security section goes (null off a comparison).
+  var shown = null;
+  var slot = null;
 
   try {
     var wanted = new URLSearchParams(window.location.search).get("family");
@@ -55,8 +58,20 @@
     return d;
   }
 
+  // The security notes of the two builds, once security.json has loaded: nothing without them.
+  function secure() {
+    if (!slot) return;
+    slot.textContent = "";
+    var section = null;
+    try { section = window.Sec ? window.Sec.compare(shown.newer, shown.older) : null; } catch (e) { section = null; }
+    if (section) slot.appendChild(section);
+  }
+  if (window.Sec) window.Sec.on(secure);
+
   function render() {
     out.textContent = "";
+    shown = null;
+    slot = null;
     var i = list.map(function (r) { return r.id; }).indexOf(selFrom.value);
     var j = list.map(function (r) { return r.id; }).indexOf(selTo.value);
     if (i < 0 || j < 0) { out.appendChild(RO.h("p", "small", "No releases for this platform in the data.")); return; }
@@ -103,6 +118,11 @@
       track.appendChild(dot);
     });
     out.appendChild(track);
+
+    shown = { newer: newer, older: older };
+    slot = RO.h("div", "sec-slot");
+    out.appendChild(slot);
+    secure();
 
     out.appendChild(RO.h("h2", "month-h", "In between"));
     if (!between.length) { out.appendChild(RO.h("p", "small", "Nothing was published between these two.")); return; }

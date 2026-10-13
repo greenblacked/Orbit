@@ -57,8 +57,12 @@ def releases(family: str, data=SNAPSHOT):
     return [r for r in data["releases"] if r["family"] == family]
 
 
-def make_context(browser, base_url, width=1280, motion="reduce", theme=None):
-    context = browser.new_context(viewport={"width": width, "height": 900}, reduced_motion=motion)
+def make_context(browser, base_url, width=1280, motion="reduce", theme=None, script=True):
+    context = browser.new_context(
+        viewport={"width": width, "height": 900},
+        reduced_motion=motion,
+        java_script_enabled=script,
+    )
     context.add_init_script(RECORD)
     if theme:
         context.add_init_script(
@@ -105,7 +109,7 @@ def test_the_cards_show_the_newest_release_of_each_family(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
     for name in FAMILIES:
-        newest = releases(name)[0]
+        newest = next(r for r in releases(name) if r["stage"] == "release")
         card = page.locator(f'#latest-grid [data-family="{name}"]')
         assert card.locator("[data-f=ver]").inner_text() == f"{name} {newest['version']}"
         assert newest["build"] in card.locator("[data-f=build]").inner_text()
@@ -146,7 +150,7 @@ def test_the_page_drops_entries_it_cannot_show_safely(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
     assert page.locator("a[href*='evil.example']").count() == 0
-    assert page.locator("#latest-grid [data-family=iOS] [data-f=ver]").inner_text() == "iOS 27.2"
+    assert page.locator("#latest-grid [data-family=iOS] [data-f=ver]").inner_text() == "iOS 27.0.1"
 
 
 def test_each_family_has_a_section_with_a_device_and_recent_releases(page, base_url):
@@ -192,10 +196,10 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     page.goto(base_url + "/")
     cards_ready(page)
     card = page.locator('#latest-grid [data-family="RouterOS"]')
-    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.23.8"
+    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.24.5"
     assert card.locator("[data-f=link]").is_visible()
     assert card.locator("[data-f=link]").get_attribute("href") == (
-        "https://mikrotik.com/download?v=7.23.8"
+        "https://mikrotik.com/download?v=7.24.5"
     )
     section = page.locator('section.fam[data-family="RouterOS"]')
     recent = section.locator(".recent li")
@@ -203,6 +207,54 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     assert "7.23.8" in recent.first.inner_text()
     listed = section.locator(".recent").inner_text()
     assert "7.25" in listed and "RC 1" in listed and "7.25rc1" in listed
+    assert page.locator("#newest .fam-routeros .n-ver").text_content() == "7.24.5"
+    assert "RouterOS 7.24.5" in section.locator("[data-f=latest]").inner_text()
+    assert "Next: 7.25 rc 1" in section.locator("[data-f=latest]").inner_text()
+    pre = card.locator("[data-f=pre] a")
+    assert pre.inner_text().startswith("Next: 7.25 rc 1")
+    assert pre.get_attribute("href") == "https://mikrotik.com/download?v=7.25rc1"
+    assert pre.get_attribute("target") == "_blank"
+    assert pre.get_attribute("rel") == "noopener noreferrer"
+    assert pre.locator(".sr-only").text_content() == " (opens in a new tab)"
+
+
+def test_the_newest_release_is_the_highest_version_not_the_latest_date(page, base_url):
+    ios = [r for r in SNAPSHOT["releases"] if r["family"] == "iOS" and r["stage"] == "release"]
+    old_branch = copy.deepcopy(ios[0]) | {
+        "id": "ios-18.7.9-test",
+        "version": "18.7.9",
+        "major": 18,
+        "title": "iOS 18.7.9",
+        "build": "22H999",
+        "date": "2099-01-01T00:00:00Z",
+    }
+    new_major = copy.deepcopy(ios[0]) | {
+        "id": "ios-26.1-test",
+        "version": "26.1",
+        "major": 26,
+        "title": "iOS 26.1",
+        "build": "23B100",
+        "date": "2098-12-01T00:00:00Z",
+    }
+    live = copy.deepcopy(SNAPSHOT) | {"snapshot": False, "stale": False}
+    live["releases"] = (
+        [r for r in live["releases"] if r["family"] not in ("iOS", "RouterOS")]
+        + [old_branch, new_major]
+        + releases("RouterOS")
+    )
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body=json.dumps(live)
+        ),
+    )
+    page.goto(base_url + "/")
+    cards_ready(page)
+    assert page.inner_text("#latest-grid [data-family=iOS] [data-f=ver]") == "iOS 26.1"
+    # Every card headlines the newest stable by version: not the dated 7.23.8 or the 7.25 RC.
+    assert page.inner_text("#latest-grid [data-family=RouterOS] [data-f=ver]") == "RouterOS 7.24.5"
+    section = page.locator('section.fam[data-family="RouterOS"]')
+    assert "RouterOS 7.24.5" in section.locator("[data-f=latest]").inner_text()
 
 
 def test_android_shows_its_snapshot_releases_with_a_link_to_the_aosp_page(page, base_url):
@@ -224,7 +276,7 @@ def test_steamos_shows_its_snapshot_releases_with_a_link_to_the_news_page(page, 
     page.goto(base_url + "/")
     cards_ready(page)
     card = page.locator('#latest-grid [data-family="SteamOS"]')
-    assert card.locator("[data-f=ver]").inner_text() == "SteamOS 3.9.2"
+    assert card.locator("[data-f=ver]").inner_text() == "SteamOS 3.8.28"
     link = card.locator("[data-f=link]")
     assert link.is_visible()
     assert link.get_attribute("href") == "https://store.steampowered.com/news/app/1675200"
@@ -240,10 +292,11 @@ def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     cards_ready(page)
     mocks_ready(page)
     page.click("[data-act=check]")
-    page.wait_for_function(
-        "() => document.querySelector('[data-f=result]').textContent.length > 20"
-    )
     public = next(r for r in releases("iOS") if r["stage"] == "release")
+    page.wait_for_function(
+        "b => document.querySelector('[data-f=result]').textContent.includes(b)",
+        arg=public["build"],
+    )
     text = page.inner_text("[data-f=result]")
     assert public["version"] in text and public["build"] in text
     assert "newest beta is iOS 27.2 beta 3" in text
@@ -257,6 +310,10 @@ def test_the_mock_screens_and_highlights_wait_for_their_script_and_then_paint(pa
     with page.expect_request("**/assets/below.js"):
         page.goto(base_url + "/")
     cards_ready(page)
+    for _ in range(200):
+        if held:
+            break
+        page.wait_for_timeout(50)
     assert held, "below.js was never requested"
     assert page.inner_text("[data-f=pubrow]") == ""
     assert page.inner_text("[data-f=betarow]") == ""
@@ -312,7 +369,7 @@ def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
     mocks_ready(page)
-    newest = releases("watchOS")[0]
+    newest = next(r for r in releases("watchOS") if r["stage"] == "release")
     seen = [page.text_content(".m-comp .k")]
     assert page.text_content(".m-comp .v") == newest["version"]
     for _ in range(2):
@@ -372,11 +429,15 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         page.clock.run_for(5 * 60 * 1000 + 1000)
         page.wait_for_function("() => document.getElementById('toast').classList.contains('on')")
         assert "iOS 27.2 beta 4" in page.inner_text("#toast")
-        assert page.inner_text("#latest-grid [data-family=iOS] [data-f=stage]") == "Beta 4"
+        ios = "#latest-grid [data-family=iOS]"
+        assert page.inner_text(f"{ios} [data-f=stage]") == "Release"
+        assert page.inner_text(f"{ios} [data-f=pre] a").startswith("Next: 27.2 beta 4")
         page.click("#toast button")
         assert "on" not in page.get_attribute("#toast", "class").split()
         # The same data again is not news.
-        page.clock.run_for(5 * 60 * 1000 + 1000)
+        # Wait for the third poll's answer itself; the short pause then lets the page read it.
+        with page.expect_response("**/api/releases.json"):
+            page.clock.run_for(5 * 60 * 1000 + 1000)
         page.wait_for_timeout(200)
         assert "on" not in page.get_attribute("#toast", "class").split()
     finally:
@@ -414,9 +475,12 @@ def test_with_motion_allowed_everything_still_ends_up_visible(browser, base_url)
         )
         step = page.evaluate("() => innerHeight")
         for y in range(0, page.evaluate("() => document.body.scrollHeight"), step // 2):
-            page.evaluate("y => window.scrollTo(0, y)", y)
+            page.evaluate("y => window.scrollTo({ top: y, behavior: 'instant' })", y)
             page.wait_for_timeout(30)
-        page.wait_for_timeout(700)
+        page.wait_for_function(
+            "() => [...document.querySelectorAll('.reveal')]"
+            ".every(e => getComputedStyle(e).opacity === '1')"
+        )
         hidden = page.evaluate(
             "() => [...document.querySelectorAll('.reveal')]"
             ".filter(e => getComputedStyle(e).opacity !== '1').length"
@@ -480,9 +544,10 @@ def test_the_highlights_section_shows_with_sources_and_hides_when_empty(page, ba
     assert links and all(href.startswith("https://developer.apple.com/") for href in links)
     empty = page.context.new_page()
     serve_json(empty, "**/data/features.json", "[]")
-    empty.goto(base_url + "/")
+    with empty.expect_response("**/data/features.json"):
+        empty.goto(base_url + "/")
     cards_ready(empty)
-    empty.wait_for_timeout(300)
+    empty.wait_for_load_state("networkidle")
     assert empty.locator("#features").is_hidden()
 
 
@@ -846,6 +911,20 @@ def wait_for_data(page, path):
     }.get(path)
     if selector:
         page.wait_for_selector(selector)
+    # below.js paints the mock screens, cadence.js its row and fx.js its effects after the page
+    # has painted (home.js, from an idle callback that may wait 1500 ms). Network idle alone can
+    # come before those scripts are even requested, so wait for what they leave behind: the
+    # Cadence global and its row (cadence.js loads under reduced motion too, fx.js does not),
+    # then one more idle callback for the module, then the network.
+    if path == "/":
+        mocks_ready(page)
+        page.wait_for_function(
+            "() => { const row = document.getElementById('cadence');"
+            " return !row || (!!window.Cadence && row.children.length > 0); }",
+            timeout=10000,
+        )
+        page.evaluate("() => new Promise(r => requestIdleCallback(() => r(), { timeout: 2000 }))")
+    page.wait_for_load_state("networkidle")
 
 
 @pytest.mark.parametrize("theme", ["day", "night", "reactor"])
@@ -896,7 +975,7 @@ def test_every_new_control_is_big_enough(browser, base_url):
 
 
 def test_pages_say_what_they_are_before_any_script_runs(browser, base_url):
-    context = browser.new_context(java_script_enabled=False)
+    context = make_context(browser, base_url, script=False)
     try:
         page = context.new_page()
         for path, heading in (
@@ -930,3 +1009,39 @@ def test_the_links_to_other_pages_are_in_the_header_and_footer(page, base_url):
     for label, href in (("Timeline", "/timeline/"), ("Compare", "/compare/"), ("About", "/about/")):
         assert page.locator(f'header nav a[href="{href}"]').inner_text() == label
         assert page.locator(f'footer nav a[href="{href}"]').inner_text() == label
+
+
+def test_cards_headline_the_stable_release_with_a_line_for_a_newer_pre_release(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+
+    def card(name):
+        return page.locator(f'#latest-grid [data-family="{name}"]')
+
+    assert card("iOS").locator("[data-f=ver]").inner_text() == "iOS 27.0.1"
+    assert card("iOS").locator("[data-f=stage]").inner_text() == "Release"
+    assert card("iOS").locator("[data-f=pre] a").inner_text().startswith("Next: 27.2 beta 3")
+    assert card("RouterOS").locator("[data-f=ver]").inner_text() == "RouterOS 7.24.5"
+    assert card("SteamOS").locator("[data-f=ver]").inner_text() == "SteamOS 3.8.28"
+    assert card("SteamOS").locator("[data-f=pre] a").inner_text().startswith("Next: 3.9.2 beta")
+    assert card("tvOS").locator("[data-f=pre] a").inner_text().startswith("Next: 27.2 beta 3")
+    # No newer pre-release: no second line, and the space is not reserved.
+    for name in ("Windows", "Android"):
+        assert card(name).locator("[data-f=pre]").is_hidden()
+        assert card(name).locator("[data-f=pre] a").count() == 0
+    assert page.locator("#newest .fam-ios .n-ver").text_content() == "27.0.1"
+    assert page.locator("#newest .fam-steamos .n-ver").text_content() == "3.8.28"
+    assert page.locator("#newest li a").count() == 10
+
+
+def test_a_family_with_only_pre_releases_headlines_the_newest_of_them(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [
+        r for r in data["releases"] if r["family"] != "SteamOS" or r["stage"] != "release"
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="SteamOS"]')
+    assert card.locator("[data-f=ver]").inner_text() == "SteamOS 3.9.2"
+    assert card.locator("[data-f=pre]").is_hidden()

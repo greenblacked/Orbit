@@ -1,13 +1,11 @@
-/* Release Orbit dial: one ring per platform family (the first family outermost), one notch per
-   release placed by date over a trailing window, drawn as SVG from the same data as the rest of
-   the page. A release is a long, broad notch; a beta or release candidate a shorter, thinner one,
-   in the same full accent colour. Each notch carries a small marker for its validation status
-   (pass, warn, fail; untested until a verdict exists). A notch is a button: hover, focus or a tap
-   opens a card with the build's sigil, version, build, date and a link. The dial is a stack of
-   SVG layers (base, one per ring, hand) so the rings can separate in 3D (see "Signature" in
-   site.css). The hand is a slider and the time machine: drag it (pointer or touch) or use the
-   arrow keys, Page Up and Page Down, Home and End, and the page below shows the releases that
-   had landed by that day; "Back to now" is the only way back, so nothing springs on its own.
+/* Release Orbit dial: one ring per platform family (the first outermost), one notch per release
+   by date over a trailing window, drawn as SVG from the page's data. A release is a long, broad
+   notch; a beta or RC a shorter, thinner one, in the same accent, with a status marker (pass,
+   warn, fail; untested until a verdict). A notch is a button: hover, focus or a tap opens a card
+   with the sigil, version, build, date and a link. The dial is SVG layers (base, one per ring,
+   hand) so the rings can separate in 3D (see "Signature" in site.css). The hand is a slider and
+   the time machine: drag it or use arrows, Page Up/Down, Home and End, and the page below shows
+   the releases landed by that day; "Back to now" is the only way back.
    Text goes in with textContent and attributes only. */
 (function () {
   "use strict";
@@ -46,24 +44,23 @@
     var a = deg * Math.PI / 180;
     return [r2(r * Math.sin(a)), r2(-r * Math.cos(a))];
   }
-  // Degrees clockwise from 12 o'clock: the start of the window and now are both at the top.
+  // Degrees clockwise from 12 o'clock: window start and now are both at the top.
   function angle(t) { return 360 * (t - start) / span; }
   function famClass(id) { return "fam-" + String(id).toLowerCase(); }
   function nextMonth(t) {
     var d = new Date(t);
     return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
   }
-  function layer(cls) {
+  function layer(cls, parent) {
     return el("svg", {
       viewBox: -HALF + " " + -HALF + " " + 2 * HALF + " " + 2 * HALF,
       "class": "layer " + cls, focusable: "false"
-    }, dial);
+    }, parent);
   }
   // The knob's grab area is 22 CSS px in radius, in viewBox units.
   function sizeKnob() {
     var w = stage.clientWidth;
-    // Units per CSS pixel: the dial's text is sized in it (see .mlabel in site.css) so it keeps
-    // a readable size when the stage shrinks on a phone.
+    // Units per CSS pixel: the dial's text is sized in it (.mlabel in site.css).
     if (w > 0) stage.style.setProperty("--upx", String(r2(2 * HALF / w)));
     centres = null;
     if (!ui.knob) return;
@@ -74,7 +71,7 @@
       RO.day(r.t) + ", validation " + VERDICT[r.status];
   }
 
-  // The marker beside a notch's outer end: its shape carries the verdict, never colour alone.
+  // The marker by a notch's outer end: its shape carries the verdict, not colour alone.
   function marker(g, c, status, s) {
     var x = c[0], y = c[1], m, d = r2(4.5 * s), e = r2(3.5 * s);
     if (status === "warn") {
@@ -95,19 +92,43 @@
       .map(function (r) { return { id: r.family, name: r.family }; });
   }
 
+  // Make a's children match b's, keeping every node that is already right.
+  function sync(a, b) {
+    var xs = [].slice.call(a.childNodes), ys = [].slice.call(b.childNodes);
+    ys.forEach(function (y, i) {
+      var x = xs[i];
+      if (!x) a.appendChild(y);
+      else if (x.isEqualNode(y)) return;
+      else if (x.nodeName !== y.nodeName) a.replaceChild(y, x);
+      else if (x.nodeType !== 1) x.nodeValue = y.nodeValue;
+      else {
+        [].slice.call(x.attributes).forEach(function (t) {
+          if (!y.hasAttribute(t.name)) x.removeAttribute(t.name);
+        });
+        [].slice.call(y.attributes).forEach(function (t) {
+          if (x.getAttribute(t.name) !== t.value) x.setAttribute(t.name, t.value);
+        });
+        sync(x, y);
+      }
+    });
+    xs.slice(ys.length).forEach(function (x) { a.removeChild(x); });
+  }
+
   function build() {
+    var host = dial;
+    // A dial already there is patched (sync), not torn down.
+    var into = host.firstChild ? document.createElement("div") : host;
     now = Date.now();
     // The window is fixed: only the last 26 weeks are drawn or counted.
     weeks = WEEKS;
     span = weeks * 7 * DAY;
     start = now - span;
-    dial.textContent = "";
     notches = [];
     var fams = families();
-    dial.setAttribute("aria-label", "Release dial: the releases of the last " + weeks + " weeks, one ring per platform");
-    dial.setAttribute("data-weeks", String(weeks));
+    host.setAttribute("aria-label", "Release dial: the releases of the last " + weeks + " weeks, one ring per platform");
+    host.setAttribute("data-weeks", String(weeks));
 
-    var base = layer("base");
+    var base = layer("base", into);
     base.setAttribute("aria-hidden", "true");
     for (var m = nextMonth(start - 1); m <= now; m = nextMonth(m)) {
       var a = angle(m), p0 = xy(a, OUTER + 16), p1 = xy(a, OUTER + 28), q = xy(a, OUTER + 38);
@@ -125,13 +146,19 @@
     var step = nf > 1 ? Math.min(STEP, (OUTER - INNER) / (nf - 1)) : STEP;
     var scale = step / STEP, ms = Math.min(1, Math.max(0.55, scale));
     fams.forEach(function (fam, i) {
-      var lane = layer("lane " + famClass(fam.id));
+      var lane = layer("lane " + famClass(fam.id), into);
       lane.style.setProperty("--lane", String(i));
       lane.setAttribute("data-family", fam.id);
       var rad = OUTER - i * step;
-      el("circle", { "class": "ring", r: rad, "data-family": fam.id }, lane);
+      var ring = el("circle", { "class": "ring", r: rad, "data-family": fam.id }, lane);
+      // Keep the breath cadence.js put on the live ring, so a patch leaves it be.
+      [].forEach.call(dial.querySelectorAll(".ring.breath"), function (n) {
+        if (n.getAttribute("data-family") !== fam.id) return;
+        ring.setAttribute("class", n.getAttribute("class"));
+        ring.style.setProperty("--breath", n.style.getPropertyValue("--breath"));
+      });
       counts[fam.id] = 0;
-      // Releases stamped at one moment fan out FAN units apart, each with a narrower grab area.
+      // Releases stamped at one moment fan out FAN units apart, with narrower grab areas.
       var mine = all.filter(function (r) { return r.family === fam.id && r.t >= start && r.t <= now; });
       var stack = {}, seat = {};
       mine.forEach(function (r) { stack[r.t] = (stack[r.t] || 0) + 1; });
@@ -139,7 +166,7 @@
         counts[fam.id]++;
         var n = stack[r.t], k = seat[r.t] || 0;
         seat[r.t] = k + 1;
-        // Never below a floor, so a notch stays visible and tappable on a crowded dial.
+        // Floors keep a notch visible and tappable on a crowded dial.
         var len = Math.max(LEN[r.stage] * scale, MIN_LEN), wid = Math.max(WID[r.stage] * scale, MIN_WID);
         var reach = Math.min(len / 2 + 8, step / 2 - 1);
         var ang = angle(r.t) + (n > 1 ? (k - (n - 1) / 2) * FAN * 180 / (Math.PI * rad) : 0);
@@ -159,10 +186,8 @@
       });
     });
     centres = null;
-    notches.sort(function (x, y) { return x.rel.t - y.rel.t; });
-    if (notches.length) notches[notches.length - 1].setAttribute("tabindex", "0");
 
-    var top = layer("hand-layer");
+    var top = layer("hand-layer", into);
     // The hand is the dial's slider: it sets the date the page shows (the time machine).
     ui.hand = el("g", {
       "class": "hand", transform: "rotate(360)", role: "slider", tabindex: "0",
@@ -177,7 +202,19 @@
     el("circle", { "class": "hk", cx: 0, cy: -(OUTER + 24), r: 6 }, ui.hand);
     el("circle", { "class": "hk", cx: 0, cy: -110, r: 4 }, ui.hand);
 
-    // The window start moved on: the hand cannot stay before it.
+    var byId = {};
+    notches.forEach(function (g) { byId[g.rel.id] = g.rel; });
+    if (into !== host) sync(host, into);
+    notches = [].slice.call(host.querySelectorAll(".notch"));
+    notches.forEach(function (g) { g.rel = byId[g.getAttribute("data-id")]; });
+    notches.sort(function (x, y) { return x.rel.t - y.rel.t; });
+    if (notches.length) notches[notches.length - 1].setAttribute("tabindex", "0");
+    ui.hand = host.querySelector(".hand");
+    ui.knob = ui.hand.querySelector(".hit");
+    ui.date = host.querySelector(".c-date");
+    ui.note = host.querySelector(".c-note");
+
+    // The hand cannot stay before the window start.
     var before = asOf;
     if (asOf !== null) asOf = Math.max(asOf, snap(start));
     paintKey(fams, counts);
@@ -189,7 +226,7 @@
     document.dispatchEvent(new CustomEvent("ro:orbit"));
   }
 
-  // The time machine. asOf is null for now, else the end of a UTC day; the page listens for "ro:asof".
+  // The time machine. asOf is null for now, else the end of a UTC day; "ro:asof" announces it.
   var asOf = null, announceTimer = 0;
   function snap(t) { return Math.floor(t / DAY) * DAY + DAY - 1; }
   function paintView() {
@@ -238,7 +275,7 @@
     announce();
     document.dispatchEvent(new CustomEvent("ro:asof", { detail: { t: asOf, dragging: !!drag } }));
   }
-  // A drag moves the hand once per frame at most: the page below listens to every change.
+  // A drag moves the hand once per frame at most: the page below hears every change.
   var pending = null, frame = 0;
   function flush() {
     if (frame) window.cancelAnimationFrame(frame);
@@ -320,8 +357,7 @@
   function hide(force) {
     window.clearTimeout(hideTimer);
     if (pinned && !force) return;
-    // Focus inside the card would fall to the page start when the card goes: give it back to
-    // the notch the card belongs to, or to the roving one.
+    // Focus in the card would fall to the page start: give it to its notch, or the roving one.
     if (force && !card.hidden && card.contains(document.activeElement)) {
       var id = card.getAttribute("data-id");
       var home = notches.filter(function (n) { return n.rel.id === id; })[0] ||
@@ -353,8 +389,7 @@
   function nearest(x, y, reach) {
     var best = null, bestD = reach;
     var sr = stage.getBoundingClientRect();
-    // The centres are read once and kept until the layout changes (build, resize, scroll), so
-    // a pointer move costs one rect, not one per notch.
+    // Read once, kept until the layout changes (build, resize, scroll).
     if (!centres) {
       centres = notches.map(function (g) {
         var r = g.getBoundingClientRect();
@@ -376,7 +411,7 @@
     var g = notchOf(e.target);
     if (g) { show(g, false); return; }
     if (!card.contains(e.target)) return;
-    // A card still closing can sit over another notch: only a pointer arriving from outside the stage opens it.
+    // A closing card can sit over a notch: only a pointer from outside the stage opens it.
     var from = e.relatedTarget;
     if (e.pointerType !== "touch" && !pinned && !(from && stage.contains(from))) {
       var covered = nearest(e.clientX, e.clientY, 6);
@@ -417,7 +452,7 @@
   });
   stage.addEventListener("pointermove", function (e) {
     if (!drag) {
-      // Hovering the knob shows the card of a notch under it, as hovering the notch would.
+      // Hovering the knob shows the card of the notch under it.
       if (e.pointerType !== "touch" && inHand(e.target)) {
         var under = nearest(e.clientX, e.clientY, 22);
         if (under) show(under, false);
@@ -447,10 +482,9 @@
   }
   stage.addEventListener("pointerup", drop);
   stage.addEventListener("pointercancel", drop);
-  // A finger that starts on the hand moves the hand, not the page: that listener is on the hand
-  // itself (see build), so a touch anywhere else on the dial scrolls without waiting for script.
+  // A finger on the hand moves the hand, not the page (listener on the hand, see build).
   window.addEventListener("resize", sizeKnob, { passive: true });
-  // Capture, so a scrolling ancestor counts; the tilt and lane lift drop the centres when they end.
+  // Capture, so a scrolling ancestor counts; tilt and lane lift drop centres at the end.
   function forget() { centres = null; }
   window.addEventListener("scroll", forget, { passive: true, capture: true });
   stage.addEventListener("transitionend", forget);

@@ -1,9 +1,7 @@
-/* Release data for every page: loads the families config (/data/families.json) and
-   /api/releases.json (the Worker), falls back to the bundled /data/releases.json, polls
-   every five minutes while the page is visible, and tells a toast (aria-live) when ids the
-   page has not shown before appear. Pages ask for the data with RO.on(fn). Nothing here
-   writes HTML from data: text goes in with textContent and a link only if it points at the
-   host its vendor's source allows. */
+/* Release data for every page: loads the families config and /api/releases.json (the Worker),
+   falls back to the bundled /data/releases.json, polls every five minutes while the page is
+   visible, and tells a toast (aria-live) about new ids. Pages ask with RO.on(fn). Nothing here
+   writes HTML from data: text goes in with textContent, a link only to its vendor's hosts. */
 (function () {
   "use strict";
   var API = "/api/releases.json";
@@ -11,10 +9,9 @@
   var CONFIG = "/data/families.json";
   var POLL = 5 * 60 * 1000;
   var STAGES = ["release", "beta", "rc"];
-  // A validation verdict may come with a released build once results exist; a beta, a release
-  // candidate and anything without a verdict is untested (see docs/adr/0005).
+  // Only a released build may carry a verdict (docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
-  // Used when the families config cannot be read: Apple is the only vendor with a feed so far.
+  // Used when the families config cannot be read.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
 
   var config = { families: [], vendors: [] };
@@ -47,7 +44,7 @@
     for (var i = 0; i < config.families.length; i++) if (config.families[i].id === id) return config.families[i];
     return null;
   }
-  // The source a vendor's data comes from: its name, page and the hosts its links may use.
+  // A vendor's source: its name, page and allowed link hosts.
   function source(vendor) {
     for (var i = 0; i < config.vendors.length; i++) {
       if (config.vendors[i].id === vendor && config.vendors[i].source) return config.vendors[i].source;
@@ -60,14 +57,14 @@
       return u.protocol === "https:" && source(vendor).hosts.indexOf(u.hostname) >= 0;
     } catch (e) { return false; }
   }
-  // The config only orders and accents: without it any family name is accepted, with its vendor's links only.
+  // Without the config any family name is accepted, with its vendor's links only.
   function knownFamily(r) {
     if (!config.families.length) return typeof r.family === "string" && r.family !== "";
     var f = familyOf(r.family);
     return !!f && f.vendor === r.vendor;
   }
 
-  // Keep only entries the pages can show safely; null when nothing usable is left.
+  // Keep only entries safe to show; null if none.
   function normalise(json) {
     if (!json || !Array.isArray(json.releases)) return null;
     var seen = Object.create(null);
@@ -100,7 +97,7 @@
     };
   }
 
-  // The preview bundle cannot fetch: it embeds data/*.json as data-seed blocks instead.
+  // The preview bundle embeds data/*.json as data-seed.
   function seeded(url) {
     var key = url === API ? SNAPSHOT : url;
     var el = document.querySelector('script[data-seed="' + key + '"]');
@@ -113,14 +110,14 @@
       return res.json();
     });
   }
-  function getJson(url) {
-    return loadJson(url).then(function (json) {
+  function getJson(url, early) {
+    return (early || loadJson(url)).then(function (json) {
       var data = normalise(json);
       if (!data) throw new Error("no releases in " + url);
       return data;
     });
   }
-  // The families config loads once, before the first data is read.
+  // The config loads once, before the first data.
   var ready = null;
   function loadConfig() {
     if (!ready) {
@@ -133,9 +130,11 @@
   function refresh() {
     if (state.busy) return Promise.resolve();
     state.busy = true;
-    // The bundled snapshot is only for a first load: a later failed poll keeps the data
-    // already on screen (it may be newer than the snapshot).
-    return loadConfig().then(function () { return getJson(API); }).catch(function (err) {
+    // The snapshot is for a first load only; a failed poll keeps the data on screen.
+    // Asked for at once with the config; only reading it waits.
+    var early = loadJson(API);
+    early.catch(function () {});
+    return loadConfig().then(function () { return getJson(API, early); }).catch(function (err) {
       if (state.data) throw err;
       return getJson(SNAPSHOT);
     }).then(function (data) {
@@ -208,19 +207,35 @@
     if (r.stage === "release") return /\b(long[- ]term|lts)\b/i.test(title) ? "Long-term" : "Stable";
     return "Release";
   }
-  // What a sigil is drawn from: the build when there is one, else a stable key of the release.
+  // What a sigil is drawn from: the build, else a stable key.
   function sigilKey(r) {
     return r.build || r.family + " " + r.version + (r.stage === "release" ? "" : " " + r.stage + (r.beta || ""));
   }
-  // "27.2 beta 3" for a release's version and stage, without the OS name.
+  // "27.2 beta 3": version and stage, no OS name.
   function short(r) {
     return r.version + (r.stage === "release" ? "" : " " + stageLabel(r).toLowerCase());
   }
+  var NUM = /^\d+([.H]\d+)*$/;
+  // Higher version (date if not numeric), then stage, iteration, date.
+  function better(a, b) {
+    return ((NUM.test(a.version) && NUM.test(b.version) ? compareVersions(a.version, b.version) : a.t - b.t) ||
+      (RANK[a.stage] - RANK[b.stage]) || ((a.beta || 0) - (b.beta || 0)) || (a.t - b.t)) > 0;
+  }
   function latest(list, family, publicOnly) {
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].family === family && (!publicOnly || list[i].stage === "release")) return list[i];
-    }
-    return null;
+    var best = null;
+    list.forEach(function (r) {
+      if (r.family === family && (!publicOnly || r.stage === "release") && (!best || better(r, best))) best = r;
+    });
+    return best;
+  }
+  // A card's headline: the newest stable release (else any stage) and a higher beta or RC.
+  function lead(list, family) {
+    var main = latest(list, family, true) || latest(list, family, false);
+    var any = main && latest(list, family, false);
+    var pre = any && any.stage !== "release" && main.stage === "release" &&
+      (NUM.test(any.version) && NUM.test(main.version) ?
+        compareVersions(any.version, main.version) > 0 : any.t > main.t) ? any : null;
+    return { main: main, pre: pre };
   }
   function when(t) {
     var el = h("time", "when", ago(t), { datetime: new Date(t).toISOString() });
@@ -265,12 +280,12 @@
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
     channel: channel, sigilKey: sigilKey,
-    latest: latest, newer: newer, compareVersions: compareVersions,
+    latest: latest, lead: lead, newer: newer, compareVersions: compareVersions,
     reduced: function () {
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
   };
-  // Scroll reveals: below-the-fold .reveal elements get .pre, then .in; the CSS does the rest.
+  // Scroll reveals: below-fold .reveal elements get .pre, then .in.
   (function reveal() {
     var els = document.querySelectorAll(".reveal");
     if (!els.length || !("IntersectionObserver" in window) || !window.matchMedia) return;

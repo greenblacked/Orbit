@@ -670,10 +670,12 @@ html[data-theme="reactor"] { --aurora: 0.3; }
 }
 /* Newest release per platform, on a phone only (home.js): the dial is far down the page. */
 .newest { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; margin-top: 1.25rem; }
-.newest:empty { display: none; }
-.newest a { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; min-height: 2.75rem; padding: 0.5rem 0; font-size: 0.9375rem; }
+.newest[hidden] { display: none; }
+.newest a { display: flex; flex-wrap: nowrap; align-items: baseline; gap: 0 0.5rem; min-height: 2.75rem; padding: 0.5rem 0; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; }
 .newest .n-fam { color: var(--fam-text-card); font-weight: 600; }
-.newest .n-ver { color: var(--muted); font-variant-numeric: tabular-nums; }
+.newest .n-ver { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Five rows of two, kept while the list loads so the buttons below do not jump when it fills. */
+@media (max-width: 39.99rem) { .newest { min-height: 14.75rem; } }
 @media (min-width: 40rem) { .newest { display: none; } }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
 .actions .pill { margin-top: 0; }
@@ -743,6 +745,8 @@ html[data-theme="reactor"] { --aurora: 0.3; }
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
+.rel-pre { margin-top: 0.25rem; font-size: 0.9375rem; }
+.rel-pre a { display: inline-flex; min-height: 2.75rem; align-items: center; color: var(--fam-text-card); text-decoration: underline; text-underline-offset: 4px; overflow-wrap: anywhere; }
 .rel-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin-top: 0.5rem; }
 .badge {
   display: inline-flex;
@@ -780,7 +784,7 @@ html[data-theme="reactor"] .prose-lab pre {
 /* The console theme is square everywhere: the pages after the front page follow it too. */
 html[data-theme="reactor"] .cmp-card, html[data-theme="reactor"] .stat,
 html[data-theme="reactor"] .feat, html[data-theme="reactor"] .chip,
-html[data-theme="reactor"] .chip-link {
+html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, html[data-theme="reactor"] .cve {
   border-radius: 0;
 }
 
@@ -1386,6 +1390,25 @@ button.m-comp:active { filter: brightness(1.2); }
 .tl-fam { min-width: 4.5rem; color: var(--fam-text); font-size: 0.875rem; font-weight: 500; }
 .tl-ver { font-weight: 500; }
 @media (max-width: 36rem) { .tl-day { width: 100%; } }
+/* Security notes (security.js): one line under a timeline row. Only a link is a control, and it
+   keeps the 44px floor; a state with nothing to open is plain text. */
+.tl-item.has-sec .tl-link { border-bottom: 0; padding-bottom: 0.25rem; }
+.sec { margin: 0; padding: 0 0 0.5rem 1.25rem; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.875rem; line-height: 1.4286; }
+.sec-link {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0.25rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1.375rem;
+  background: var(--card);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.sec-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.sec-text { display: inline-block; max-width: 100%; padding: 0.25rem 0; overflow-wrap: anywhere; }
+.sec-missing .sec-text, .sec-unavailable .sec-text { font-style: italic; }
 @media (min-width: 40rem) { .page .filters { grid-template-columns: repeat(2, auto); justify-content: start; gap: 2rem 3rem; } }
 
 /* Compare. */
@@ -1442,6 +1465,30 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .pin.end { width: 1rem; height: 1rem; margin: -0.5rem 0 0 -0.5rem; background: var(--ink); }
 .cmp-result .month-h { margin-top: 2rem; }
 .cmp-result .notice { margin-bottom: 1rem; }
+/* Security notes on Compare (security.js): what one build's notes list that the other's do not.
+   Severity is the vendor's own label, shown as text; the classes only weigh the first two. */
+.sec-cmp { margin-top: 2rem; }
+.sec-cmp .month-h { margin-top: 0; }
+.sec-lead { margin-top: 0.75rem; font-weight: 500; overflow-wrap: anywhere; }
+.sec-count { margin-top: 0.25rem; color: var(--muted); font-size: 0.875rem; }
+.sec-say { margin-top: 0.75rem; }
+.sec-cmp .small { margin-top: 0.5rem; }
+.cve-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0 0; padding: 0; list-style: none; }
+.cve {
+  display: inline-flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+.cve-id { font-family: var(--font-mono); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.sev { color: var(--muted); font-size: 0.75rem; }
+.sev-critical, .sev-high, .sev-important { color: var(--ink); font-weight: 500; }
+.sec-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
 
 
 /* Build sigils (sigil.js, docs/sigils.md): drawn in the family colour and never rotated, since
@@ -1513,8 +1560,10 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .oc-title { font-weight: 500; line-height: 1.25; overflow-wrap: anywhere; }
 .oc-build { color: var(--muted); font: 0.8125rem var(--font-mono); overflow-wrap: anywhere; }
 .orbit-side { display: grid; gap: 1.25rem; align-content: center; }
-.orbit-asof { font-size: 1.0625rem; font-weight: 500; line-height: 1.35; }
-.orbit-key { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; max-width: 22rem; }
+.orbit-asof { font-size: 1.0625rem; font-weight: 500; line-height: 1.35; min-height: 2.7em; }
+/* Three lines on a phone: the sentence that replaces "Loading the dial…" must not push the key down. */
+@media (max-width: 39.99rem) { .orbit-asof { min-height: 4.05em; } }
+.orbit-key { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; max-width: 22rem; min-height: 9.75rem; }
 .orbit-key li { display: flex; align-items: center; gap: 0.5rem; min-height: 1.75rem; font-size: 0.9375rem; }
 .orbit-key .sw { flex: none; width: 1.25rem; height: 0.25rem; background: var(--fam-a); }
 .orbit-key .k-n { margin-left: auto; color: var(--muted); font: 0.8125rem var(--font-mono); }
@@ -1582,8 +1631,8 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .ring.breath { animation: breathe var(--breath, 6s) ease-in-out infinite; }
   @keyframes breathe {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
   .orbit-stage.idle .ring.breath { animation-play-state: paused; }
 }
@@ -1656,8 +1705,12 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
 
 /* Aurora (aurora.js): the WebGL canvas takes the place of the CSS gradient blobs, which stay
    as the fallback whenever the canvas is not there. */
-.aurora-gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
-.aurora.gl i { display: none; }
+.aurora-gl { position: absolute; inset: 0; display: block; width: 100%; height: 100%; opacity: 0; }
+.aurora.gl .aurora-gl { opacity: 1; }
+.aurora.gl i { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .aurora-gl, .aurora i { transition: opacity 0.6s ease; }
+}
 
 /* Windows High Contrast and other forced-colour modes: a selected chip or segment, the current
    page and a focused notch or hand must not rely on a background or stroke colour alone. */
@@ -1673,4 +1726,6 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   .hand:focus-visible .hit { stroke: Highlight; }
   /* The glass card is outlined by shadows, which this mode drops: its transparent border shows. */
   .orbit-card, .cmp-card { border-color: CanvasText; }
+  .sec-link, .cve { border-color: CanvasText; }
+  .sec-link { color: LinkText; }
 }

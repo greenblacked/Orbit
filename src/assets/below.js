@@ -31,7 +31,7 @@
     var all = document.querySelectorAll("section.fam");
     for (var i = 0; i < all.length; i++) {
       var family = all[i].getAttribute("data-family");
-      var r = RO.latest(releases, family, false);
+      var r = RO.lead(releases, family).main;
       text(all[i], "name", r ? r.family + " " + RO.short(r) : family);
       text(all[i], "stage", r ? RO.stageLabel(r) + " ·" : "");
       text(all[i], "build", r && r.build ? "Build " + r.build : "");
@@ -78,7 +78,7 @@
     var v = box.querySelector('[data-f="v"]');
     if (!v) return;
     box.querySelector('[data-act="cycle"]').disabled = false;
-    var r = RO.latest(releases, "watchOS", false);
+    var r = RO.lead(releases, "watchOS").main;
     var values = r ? [r.version, r.build || "None", RO.day(r.t).replace(/, \d{4}$/, "")] : ["None", "None", "None"];
     text(box, "k", MODES[mode]);
     text(box, "v", values[mode]);

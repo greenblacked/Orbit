@@ -200,6 +200,18 @@ describe('buildDate', () => {
     assert.equal(buildDate('CP2A.260230.016', '2026-03-01', NOW), '2026-03-01T00:00:00Z');
   });
 
+  it('prefers a patch level in a later month than the build id, as for branch builds', () => {
+    assert.equal(buildDate('BD4A.240925.111', '2025-01-05', NOW), '2025-01-05T00:00:00Z');
+    assert.equal(buildDate('BD4A.250405.003', '2025-02-05', NOW), '2025-04-05T00:00:00Z');
+    // The same month keeps the build id day; an earlier patch level never moves it back.
+    assert.equal(buildDate('CP2A.260502.001', '2026-05-05', NOW), '2026-05-02T00:00:00Z');
+    assert.equal(buildDate('CP2A.260605.016', '2026-05-05', NOW), '2026-06-05T00:00:00Z');
+    // A bad build date or patch level never invents a day.
+    assert.equal(buildDate('BD4A.240925.111', '2025-13-05', NOW), '2024-09-25T00:00:00Z');
+    assert.equal(buildDate('BD4A.240925.111', '2099-01-05', NOW), '2024-09-25T00:00:00Z');
+    assert.equal(buildDate('BD4A.241399.111', '2025-13-05', NOW), null);
+  });
+
   it('refuses a day more than a day ahead of the clock, falling back to the patch level', () => {
     const now = Date.UTC(2026, 9, 12, 12);
     assert.equal(buildDate('CP2A.261012.001', '', now), '2026-10-12T00:00:00Z');
@@ -278,10 +290,11 @@ describe('parsePage on the recorded page', () => {
     assert.equal(byId('android-16.0.0_r4').version, '16.0.0');
   });
 
-  it('takes the date from the build id even when the patch level differs', () => {
+  it('dates a branch build from its patch level when that is a later month', () => {
     // The page lists patch level 2025-01-05 for this build, whose id says 2024-09-25.
     assert.equal(byId('android-15.0.0_r24').build, 'BD4A.240925.111');
-    assert.equal(byId('android-15.0.0_r24').date, '2024-09-25T00:00:24Z');
+    assert.equal(byId('android-15.0.0_r24').date, '2025-01-05T00:00:24Z');
+    // Build id 2025-04-05 is later than its patch level 2025-02-05: the build id stands.
     assert.equal(byId('android-15.0.0_r25').date, '2025-04-05T00:00:25Z');
   });
 
@@ -319,7 +332,8 @@ describe('the bounds on what is emitted', () => {
   for (let i = 0; i < 120; i += 1) {
     const year = 2017 + Math.floor(i / 12);
     const month = String((i % 12) + 1).padStart(2, '0');
-    long.push(row(`CP2A.${String(year).slice(2)}${month}05.016`, `android-${i + 1}.0.0_r1`));
+    const yy = String(year).slice(2);
+    long.push(row(`CP2A.${yy}${month}05.016`, `android-${i + 1}.0.0_r1`, `${year}-${month}-05`));
   }
   const html = page(...long);
   const now = Date.UTC(2027, 0, 1);
@@ -352,7 +366,7 @@ describe('the bounds on what is emitted', () => {
 describe('releases on one day', () => {
   it('put the higher revision first, so r36 is newer than r31 and r10 newer than r9', () => {
     const rows = ['r31', 'r36', 'r9', 'r10', 'r100', 'r32'].map((r) =>
-      row('BP1A.250505.005', `android-15.0.0_${r}`),
+      row('BP1A.250505.005', `android-15.0.0_${r}`, '2025-05-05'),
     );
     const day = Date.UTC(2025, 4, 6); // the day after the rows' date
     const ids = at(page(...rows), day).map((r) => r.id.split('_r')[1]);

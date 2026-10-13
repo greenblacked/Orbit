@@ -35,6 +35,12 @@ def pages() -> list[str]:
     return sorted(p.relative_to(SRC).as_posix() for p in SRC.rglob("*.html"))
 
 
+def test_a_family_has_no_headline_setting():
+    # Every card headlines its newest stable release; there is nothing to configure.
+    for family in CONFIG["families"]:
+        assert "headline" not in family, family["id"]
+
+
 def test_the_snapshot_follows_the_data_contract():
     data = json.loads((SRC / "data" / "releases.json").read_text(encoding="utf-8"))
     sources = data["source"].split(",")

@@ -53,7 +53,7 @@
 
   function paint() {
     var at = asOf === null ? Date.now() : asOf;
-    row.textContent = "";
+    var next = document.createDocumentFragment();
     families().forEach(function (fam) {
       var s = stats(all, fam.id, at);
       var li = RO.h("li", "fam-" + String(fam.id).toLowerCase());
@@ -68,7 +68,7 @@
         nums.appendChild(RO.h("span", "c-part", part));
       });
       li.appendChild(nums);
-      row.appendChild(li);
+      next.appendChild(li);
       // Compared, not put into a selector: an id may hold a quote or a backslash.
       var ring = Array.prototype.filter.call(document.querySelectorAll(".ring"), function (n) {
         return n.getAttribute("data-family") === fam.id;
@@ -82,6 +82,11 @@
         ring.classList.add("breath");
       }
     });
+    // The same text again (a poll that found nothing new) leaves the row alone.
+    if (row.textContent !== next.textContent || !row.firstChild) {
+      row.textContent = "";
+      row.appendChild(next);
+    }
   }
 
   function at(t) {

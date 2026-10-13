@@ -58,6 +58,7 @@ describe('the families config', () => {
       assert.match(family.accent, /^#[0-9a-f]{6}$/i, family.id);
       assert.match(family.accentText, /^#[0-9a-f]{6}$/i, family.id);
       assert.ok(family.vendor && family.name, family.id);
+      assert.equal(family.headline, undefined, family.id);
     }
     assert.equal(new Set(FAMILIES.map((family) => family.id)).size, FAMILIES.length);
   });

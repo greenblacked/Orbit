@@ -15,6 +15,7 @@
   };
   var state = { family: "all", stage: "all" };
   var releases = [];
+  var rows = [];
   var signature = "";
 
   // The values a group of chips offers: a query string can only pick one of those.
@@ -36,7 +37,8 @@
   }
 
   function item(r) {
-    var li = RO.h("li", "tl-item fam-" + r.family.toLowerCase());
+    var li = RO.h("li", "tl-item fam-" + r.family.toLowerCase(), null, { "data-id": r.id });
+    rows.push({ li: li, r: r });
     var a = RO.h("a", "tl-link", null, { href: r.url, target: "_blank", rel: "noopener noreferrer" });
     a.appendChild(RO.h("span", "tl-day", RO.day(r.t)));
     a.appendChild(RO.h("span", "tl-fam", r.family));
@@ -48,12 +50,35 @@
     if (r.build) a.appendChild(RO.h("span", "build", r.build));
     a.appendChild(RO.h("span", "sr-only", " (opens the release page in a new tab)"));
     li.appendChild(a);
+    note(li, r);
     return li;
   }
+
+  function hrefOf(el) {
+    var a = el.querySelector("a");
+    return a ? a.getAttribute("href") : "";
+  }
+  // The security note under a row, when security.json has an entry for the release. The notes
+  // arrive after the list, so they are added to the rows already on the page.
+  function note(li, r) {
+    var old = li.querySelector(".sec");
+    var chip = null;
+    try { chip = window.Sec ? window.Sec.chip(r) : null; } catch (e) { chip = null; }
+    // Keep the line (and the focus on its link) when it would be rebuilt the same.
+    if (old && chip && old.className === chip.className && old.textContent === chip.textContent &&
+        hrefOf(old) === hrefOf(chip)) return;
+    if (old) li.removeChild(old);
+    li.classList.remove("has-sec");
+    if (!chip) return;
+    li.appendChild(chip);
+    li.classList.add("has-sec");
+  }
+  if (window.Sec) window.Sec.on(function () { rows.forEach(function (row) { note(row.li, row.r); }); });
 
   function render() {
     var list = releases.filter(matches);
     host.textContent = "";
+    rows = [];
     var group = null, list_ = null;
     list.forEach(function (r) {
       var m = RO.month(r.t);
