@@ -157,7 +157,7 @@ jobs:
           # means the checks the branch ruleset on `dev` requires already passed.
           #
           # A merge made with GITHUB_TOKEN does not trigger a push-triggered workflow
-          # on main, so this does not chain into another run of `ci` or `security`; the
+          # on dev, so this does not chain into another run of `ci` or `security`; the
           # pull request's own checks, already required and already green, are what
           # gated the tree this creates.
           gh pr merge --auto --squash "${PR_URL}"
