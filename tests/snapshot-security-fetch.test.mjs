@@ -66,6 +66,24 @@ describe('snapshot_security fetchPage', () => {
     }
   });
 
+  it('refuses a protocol-relative and a trailing-dot Location', async () => {
+    for (const bad of ['//evil.example/x', 'https://source.android.com./x']) {
+      const calls = [];
+      await assert.rejects(fetchPage(START, HOSTS, OPTIONS({ [START]: bad }, calls, [])), /not allowed/);
+      assert.deepEqual(calls, [START]);
+    }
+  });
+
+  it('refuses a 3xx without a Location', async () => {
+    const calls = [];
+    const fetchImpl = async (url) => {
+      calls.push(url);
+      return new Response(null, { status: 302 });
+    };
+    await assert.rejects(fetchPage(START, HOSTS, { pauseMs: 0, log: () => {}, fetchImpl }), /without a Location/);
+    assert.deepEqual(calls, [START]);
+  });
+
   it('refuses a loop and a chain over 3 redirects', async () => {
     const a = 'https://source.android.com/a';
     const b = 'https://source.android.com/b';
@@ -76,7 +94,9 @@ describe('snapshot_security fetchPage', () => {
     const chain = {};
     for (let i = 0; i < 5; i += 1) chain[`https://source.android.com/${i}`] = `https://source.android.com/${i + 1}`;
     chain['https://source.android.com/5'] = { html: 'x' };
-    await assert.rejects(fetchPage('https://source.android.com/0', HOSTS, OPTIONS(chain, [], [])), /more than 3 times/);
+    const chainCalls = [];
+    await assert.rejects(fetchPage('https://source.android.com/0', HOSTS, OPTIONS(chain, chainCalls, [])), /more than 3 times/);
+    assert.equal(chainCalls.length, 4);
 
     // Exactly 3 redirects is still fine.
     const three = {

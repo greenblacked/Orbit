@@ -63,17 +63,20 @@ export async function fetchPage(url, hosts, options = {}) {
       throw new Error(`${url} answered ${res.status} with an unreadable Location`);
     }
     if (!onHosts(next.href, hosts) || next.username || next.password || next.port) {
-      throw new Error(`${url} answered ${res.status} to ${next.host || location}, which is not allowed (${hosts.join(', ')})`);
+      throw new Error(
+        `${url} answered ${res.status} to ${next.protocol}//${next.host}, which is not allowed (https only, no userinfo or port, on ${hosts.join(', ')})`,
+      );
     }
     log(`followed redirect ${current} -> ${next.href}`);
     current = next.href;
   }
-  if (res.status !== 200) throw new Error(`${url} answered ${res.status}`);
+  const where = current === url ? url : `${url} (via ${current})`;
+  if (res.status !== 200) throw new Error(`${where} answered ${res.status}`);
   if (!/^text\/html\b/i.test(res.headers.get('content-type') ?? '')) {
-    throw new Error(`${url} is not HTML`);
+    throw new Error(`${where} is not HTML`);
   }
   const declared = Number(res.headers.get('content-length'));
-  if (declared > MAX_BYTES) throw new Error(`${url} is over ${MAX_BYTES} bytes`);
+  if (declared > MAX_BYTES) throw new Error(`${where} is over ${MAX_BYTES} bytes`);
   // Read the body in chunks and stop at the cap, so a page without a length is not buffered whole.
   const chunks = [];
   let size = 0;
@@ -81,7 +84,7 @@ export async function fetchPage(url, hosts, options = {}) {
     size += chunk.byteLength;
     if (size > MAX_BYTES) {
       await res.body.cancel();
-      throw new Error(`${url} is over ${MAX_BYTES} bytes`);
+      throw new Error(`${where} is over ${MAX_BYTES} bytes`);
     }
     chunks.push(chunk);
   }
