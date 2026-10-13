@@ -229,6 +229,10 @@ html[data-theme="reactor"] .track { background: #1c2816; }
   color: var(--bg);
   box-shadow: 0 1px 2px rgba(20, 20, 19, 0.35), 0 2px 6px rgba(20, 20, 19, 0.2);
 }
+/* The on look follows the theme set before paint as well as the ARIA state that site.js
+   sets later, so a slow script never shows an off switch against a dark page. */
+html[data-theme="night"] #dark-switch .knob,
+html[data-theme="reactor"] #dark-switch .knob,
 #dark-switch[aria-checked="true"] .knob { transform: translateX(1.25rem); }
 html[data-theme="night"] .knob {
   background: var(--bg);
@@ -236,7 +240,11 @@ html[data-theme="night"] .knob {
 }
 .knob svg { width: 0.875rem; height: 0.875rem; }
 .moon { display: none; }
+html[data-theme="night"] #dark-switch .moon,
+html[data-theme="reactor"] #dark-switch .moon,
 #dark-switch[aria-checked="true"] .moon { display: block; }
+html[data-theme="night"] #dark-switch .sun,
+html[data-theme="reactor"] #dark-switch .sun,
 #dark-switch[aria-checked="true"] .sun { display: none; }
 @media (prefers-reduced-motion: no-preference) {
   .track { transition: background-color 300ms cubic-bezier(0.2, 0, 0, 1); }

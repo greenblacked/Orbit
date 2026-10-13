@@ -384,6 +384,22 @@ def test_the_theme_controls_report_the_theme_in_all_three_themes(
     assert moon == (switch == "true")
 
 
+@pytest.mark.parametrize("choice", ["night", "reactor"])
+def test_the_switch_is_already_on_before_site_js_runs_in_a_dark_theme(page, base_url, choice):
+    page.add_init_script(f"try {{ localStorage.setItem('theme', '{choice}') }} catch (e) {{}}")
+    page.route("**/assets/site.js", lambda route: route.abort())
+    page.goto(base_url + "/")
+    assert theme(page) == choice
+    # site.js never ran, so the markup still says off; the picture must already say on.
+    assert page.get_attribute("#dark-switch", "aria-checked") == "false"
+    moved = page.evaluate(
+        "getComputedStyle(document.querySelector('#dark-switch .knob')).transform !== 'none'"
+    )
+    assert moved
+    assert page.is_visible("#dark-switch .moon")
+    assert not page.is_visible("#dark-switch .sun")
+
+
 def test_a_click_still_wins_over_a_system_change_when_storage_is_blocked(page, base_url):
     page.add_init_script(
         "Storage.prototype.setItem = function () { throw new Error('blocked'); };"
