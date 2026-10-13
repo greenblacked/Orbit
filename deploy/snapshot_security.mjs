@@ -38,7 +38,8 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
  * allowlist) with no userinfo and no port; anything else fails the page. Every request asks for
  * English with Accept-Language. `options.lang` ({ param, value }, an adapter's `lang`) is for a
  * host that picks the language from a query parameter: each request carries param=value, and a
- * redirect to the same parameter with another value is refused (an English variant such as en-US is followed as sent), so a localized page is never
+ * redirect to the same parameter with another value (any one of several) is refused (an English
+ * variant such as en-US is followed as sent), so a localized page is never
  * parsed. The caller keeps keying the page by the URL it passed in. `options` is also for tests:
  * `fetchImpl` replaces fetch, `pauseMs` the pause between requests, `log` the progress line.
  */
@@ -80,12 +81,14 @@ export async function fetchPage(url, hosts, options = {}) {
         `${url} answered ${res.status} to ${next.protocol}//${next.host}, which is not allowed (https only, no userinfo or port, on ${hosts.join(', ')})`,
       );
     }
-    if (lang && next.searchParams.has(lang.param)) {
-      const asked = next.searchParams.get(lang.param).toLowerCase();
-      if (asked !== lang.value && !asked.startsWith(`${lang.value}-`)) {
-        throw new Error(
-          `${url} answered ${res.status} to ${next.href}: redirected to a non-English variant (${lang.param}=${next.searchParams.get(lang.param)}, asked for ${lang.value})`,
-        );
+    if (lang) {
+      for (const value of next.searchParams.getAll(lang.param)) {
+        const asked = value.toLowerCase();
+        if (asked !== lang.value && !asked.startsWith(`${lang.value}-`)) {
+          throw new Error(
+            `${url} answered ${res.status} to ${next.href}: redirected to a non-English variant (${lang.param}=${value}, asked for ${lang.value})`,
+          );
+        }
       }
     }
     // An accepted English value on the target is followed as it is; withLang only fills a missing one.

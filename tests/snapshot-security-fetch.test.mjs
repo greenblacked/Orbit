@@ -145,6 +145,16 @@ describe('snapshot_security fetchPage', () => {
       assert.deepEqual(calls, [EN]);
     });
 
+    it('refuses a redirect that repeats hl with a non-English value', async () => {
+      const calls = [];
+      const routes = { [EN]: `${START}?hl=en&hl=it` };
+      await assert.rejects(
+        fetchPage(START, HOSTS, withLang(routes, calls, [])),
+        /non-English variant \(hl=it/,
+      );
+      assert.deepEqual(calls, [EN]);
+    });
+
     it('follows a redirect to hl=en and to a page without hl', async () => {
       const target = 'https://source.android.com/docs/security/bulletin/2025/2025-01-01';
       const calls = [];
@@ -200,7 +210,9 @@ describe('snapshot_security fetchPage', () => {
     it('refuses an exact repeat of a URL already requested', async () => {
       const US = `${START}?hl=en-US`;
       const routes = { [EN]: US, [US]: EN };
-      await assert.rejects(fetchPage(START, HOSTS, withLang(routes, [], [])), /back to itself/);
+      const calls = [];
+      await assert.rejects(fetchPage(START, HOSTS, withLang(routes, calls, [])), /back to itself/);
+      assert.deepEqual(calls, [EN, US]);
     });
 
     it('names a redirect that strips hl and so loops back to itself', async () => {
