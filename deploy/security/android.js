@@ -389,6 +389,9 @@ export default {
   family: FAMILY,
   host: HOST,
   hosts: [HOST],
+  // source.android.com redirects a page to a random localized variant (?hl=it); the parser reads
+  // English only, so every request asks for hl=en and the snapshot refuses any other hl.
+  lang: { param: 'hl', value: 'en' },
   index: PAGE_URL,
   maxPages: MAX_BULLETINS,
   parseIndex: patchLevelsByTag,

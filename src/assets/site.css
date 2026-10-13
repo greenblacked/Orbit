@@ -229,15 +229,23 @@ html[data-theme="reactor"] .track { background: #1c2816; }
   color: var(--bg);
   box-shadow: 0 1px 2px rgba(20, 20, 19, 0.35), 0 2px 6px rgba(20, 20, 19, 0.2);
 }
+/* The on look follows the theme set before paint as well as the ARIA state that site.js
+   sets later, so a slow script never shows an off switch against a dark page. */
+html[data-theme="night"] #dark-switch .knob,
+html[data-theme="reactor"] #dark-switch .knob,
+#dark-switch[aria-checked="true"] .knob { transform: translateX(1.25rem); }
 html[data-theme="night"] .knob {
-  transform: translateX(1.25rem);
   background: var(--bg);
   color: var(--ink);
 }
 .knob svg { width: 0.875rem; height: 0.875rem; }
 .moon { display: none; }
-html[data-theme="night"] .moon { display: block; }
-html[data-theme="night"] .sun { display: none; }
+html[data-theme="night"] #dark-switch .moon,
+html[data-theme="reactor"] #dark-switch .moon,
+#dark-switch[aria-checked="true"] .moon { display: block; }
+html[data-theme="night"] #dark-switch .sun,
+html[data-theme="reactor"] #dark-switch .sun,
+#dark-switch[aria-checked="true"] .sun { display: none; }
 @media (prefers-reduced-motion: no-preference) {
   .track { transition: background-color 300ms cubic-bezier(0.2, 0, 0, 1); }
   .knob { transition: transform 300ms cubic-bezier(0.2, 0, 0, 1); }
@@ -1730,4 +1738,16 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   .orbit-card, .cmp-card { border-color: CanvasText; }
   .sec-link, .cve { border-color: CanvasText; }
   .sec-link { color: LinkText; }
+}
+
+/* The data freshness line: its two lines of space are kept so the late text moves nothing.
+   The saved-copy notice adds a rule and the full ink colour, so it is not told by colour alone. */
+.data-note { min-height: 2.5rem; margin-top: 1rem; }
+/* Three lines on a narrow phone, where the console theme's monospace face wraps the saved-copy text. */
+@media (max-width: 30rem) { .data-note { min-height: 3.75rem; } }
+.data-note.none { min-height: 0; margin-top: 0; }
+.data-note.old {
+  color: var(--ink);
+  border-left: 3px solid var(--ink);
+  padding-left: 0.75rem;
 }

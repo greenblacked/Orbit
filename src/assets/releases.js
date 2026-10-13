@@ -147,10 +147,15 @@
       state.data = data;
       state.failed = false;
       state.at = Date.now();
+      note(data);
       if (fresh.length) announce(fresh);
       listeners.forEach(function (fn) { fn(data, fresh); });
     }, function () {
       state.failed = true;
+      if (state.data) note(state.data, true);
+      // Nothing to say and nothing ever will: give back the space the line keeps for itself.
+      var line = document.getElementById("data-note");
+      if (line && !state.data) line.classList.add("none");
       listeners.forEach(function (fn) { fn(state.data, [], true); });
     }).then(function () { state.busy = false; });
   }
@@ -247,6 +252,42 @@
     for (var i = 0; i < els.length; i++) els[i].textContent = ago(Number(els[i].getAttribute("data-rel")));
   }
 
+  // The one freshness line (#data-note on a page): when the data was checked, or that the
+  // live source is down and this is the saved copy (or, after a failed poll, the last load).
+  // Its space is reserved in CSS.
+  function note(data, failed) {
+    var el = document.getElementById("data-note");
+    if (!el) return;
+    var saved = data.stale || data.snapshot;
+    var old = !!(saved || failed);
+    var t = data.fetchedAt;
+    el.textContent = "";
+    el.classList.remove("none");
+    // old is a real boolean: toggle(name, undefined) ignores the force argument and flips the class.
+    el.classList.toggle("old", old);
+    if (old) {
+      var what = saved ? "the saved copy" : "the last data";
+      el.appendChild(document.createTextNode("Live source unavailable, showing " + what + (t ? (saved ? " from " : ", checked ") : ".")));
+      if (t) {
+        el.appendChild(saved ? h("time", null, day(t), { datetime: new Date(t).toISOString() }) : when(t));
+        el.appendChild(document.createTextNode("."));
+      }
+    } else if (t) {
+      el.appendChild(document.createTextNode("Data checked "));
+      el.appendChild(when(t));
+      el.appendChild(document.createTextNode("."));
+    }
+  }
+  // "Now" for counting days: a stale or bundled copy is as of when it was fetched, so it does
+  // not look more dormant every day.
+  // A failed poll keeps Date.now(): the data on screen is the last good live load. Only a stale or
+  // saved copy freezes time at its fetch.
+  function clock() {
+    var d = state.data;
+    // Never earlier than the newest release it holds: one source may have fallen back to an old copy.
+    return d && (d.stale || d.snapshot) && d.fetchedAt ? Math.max(d.fetchedAt, d.releases[0].t) : Date.now();
+  }
+
   function announce(fresh) {
     var box = document.getElementById("toast");
     if (!box) return;
@@ -279,7 +320,7 @@
     loadJson: loadJson, ready: loadConfig, families: function () { return config.families; },
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
-    channel: channel, sigilKey: sigilKey,
+    channel: channel, sigilKey: sigilKey, clock: clock,
     latest: latest, lead: lead, newer: newer, compareVersions: compareVersions,
     reduced: function () {
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;

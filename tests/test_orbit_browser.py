@@ -911,6 +911,134 @@ def test_the_cadence_row_starts_on_the_day_the_hand_points_at_after_a_late_load(
     assert f"last {since} day" in ios_row, ios_row
 
 
+# --- the freshness line ------------------------------------------------------------------
+
+NOTE = "#data-note"
+LIVE = dict(SNAPSHOT, snapshot=False, stale=False, fetchedAt="2026-10-12T11:55:00Z")
+SAVED = dict(SNAPSHOT, snapshot=True, stale=True, fetchedAt="2026-09-20T12:00:00Z")
+# A saved copy that is consistent: it holds nothing newer than the day it was fetched.
+OLD_COPY = dict(
+    SAVED, releases=[r for r in SNAPSHOT["releases"] if when(r["date"]) <= when(SAVED["fetchedAt"])]
+)
+
+
+def note_text(page, base_url, path):
+    page.goto(base_url + path)
+    page.wait_for_function(
+        "(sel) => document.querySelector(sel).textContent.trim() !== ''", arg=NOTE
+    )
+    return text(page, NOTE)
+
+
+@pytest.mark.parametrize("path", ["/", "/timeline/", "/compare/"])
+def test_live_data_says_when_it_was_checked(page, base_url, path):
+    serve(page, LIVE)
+    assert note_text(page, base_url, path) == "Data checked 5 minutes ago."
+    assert page.get_attribute(f"{NOTE} time", "datetime") == "2026-10-12T11:55:00.000Z"
+    assert "old" not in (page.get_attribute(NOTE, "class") or "").split()
+
+
+@pytest.mark.parametrize("path", ["/", "/timeline/", "/compare/"])
+def test_a_saved_copy_is_named_with_the_day_it_is_from(page, base_url, path):
+    serve(page, SAVED)
+    expected = "Live source unavailable, showing the saved copy from Sep 20, 2026."
+    assert note_text(page, base_url, path) == expected
+    assert page.get_attribute(f"{NOTE} time", "datetime") == "2026-09-20T12:00:00.000Z"
+    assert "old" in page.get_attribute(NOTE, "class").split()
+
+
+def test_a_failed_poll_after_a_good_load_says_so_and_recovery_restores_it(page, base_url):
+    answers = {"status": 200}
+
+    def answer(route):
+        if answers["status"] == 200:
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(LIVE))
+        else:
+            route.fulfill(status=answers["status"], body="down")
+
+    page.route("**/api/releases.json", answer)
+    assert note_text(page, base_url, "/timeline/") == "Data checked 5 minutes ago."
+    answers["status"] = 503
+    page.evaluate("() => RO.refresh()")
+    page.wait_for_selector(f"{NOTE}.old")
+    expected = "Live source unavailable, showing the last data, checked 5 minutes ago."
+    assert text(page, NOTE) == expected
+    assert page.get_attribute(f"{NOTE} time", "datetime") == "2026-10-12T11:55:00.000Z"
+    answers["status"] = 200
+    page.evaluate("() => RO.refresh()")
+    page.wait_for_selector(f"{NOTE}:not(.old)")
+    assert text(page, NOTE) == "Data checked 5 minutes ago."
+
+
+def test_the_freshness_line_keeps_its_space_so_nothing_shifts(page, base_url):
+    serve(page, LIVE)
+    note_text(page, base_url, "/timeline/")
+    assert page.evaluate("(sel) => document.querySelector(sel).offsetHeight", NOTE) >= 40
+
+
+def test_the_freshness_line_gives_its_space_back_when_nothing_loads(page, base_url):
+    page.route("**/api/releases.json", lambda route: route.fulfill(status=500, body="no"))
+    page.route("**/data/releases.json", lambda route: route.fulfill(status=500, body="no"))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(f"{NOTE}.none", state="attached")
+    assert page.evaluate("(sel) => document.querySelector(sel).offsetHeight", NOTE) == 0
+
+
+def last_ios_days(as_of):
+    days = sorted(
+        {
+            when(r["date"]).date()
+            for r in SNAPSHOT["releases"]
+            if r["family"] == "iOS" and when(r["date"]) <= as_of
+        }
+    )
+    return (as_of.date() - days[-1]).days
+
+
+def test_cadence_counts_from_the_fetch_time_of_a_saved_copy(page, base_url):
+    serve(page, OLD_COPY)
+    open_front_page(page, base_url)
+    page.wait_for_selector("#cadence li.fam-ios")
+    saved = last_ios_days(when(SAVED["fetchedAt"]).replace(hour=23, minute=59, second=59))
+    ios_row = text(page, "#cadence li.fam-ios")
+    assert f"last {saved} day" in ios_row, ios_row
+    # Counted from today it would read differently, which is what this test guards against.
+    assert saved != last_ios_days(NOW)
+
+
+def test_the_time_machine_never_counts_more_days_than_a_saved_copy_does_at_now(page, base_url):
+    serve(page, OLD_COPY)
+    open_front_page(page, base_url)
+    page.wait_for_selector("#cadence li.fam-ios")
+    before = text(page, "#cadence li.fam-ios")
+    page.focus(HAND)
+    page.keyboard.press("ArrowLeft")
+    pending(page)
+    assert page.get_attribute(HAND, "aria-valuetext") == "As of Oct 11, 2026"
+    assert text(page, "#cadence li.fam-ios") == before
+
+
+def test_a_release_newer_than_the_saved_copys_date_is_still_counted(page, base_url):
+    # One source fell back to an old copy, so the answer is stale with an old fetchedAt.
+    newest = next(r for r in SNAPSHOT["releases"] if r["family"] == "iOS")
+    fresh = dict(newest, id=newest["id"] + "-live", version="27.9", date="2026-10-12T09:00:00Z")
+    fresh["url"] = newest["url"] + "-live"
+    mixed = dict(SAVED, releases=[fresh] + SNAPSHOT["releases"])
+    serve(page, mixed)
+    open_front_page(page, base_url)
+    page.wait_for_selector("#cadence li.fam-ios")
+    ios_row = text(page, "#cadence li.fam-ios")
+    assert "last 0 days ago" in ios_row, ios_row
+
+
+def test_cadence_counts_from_now_for_live_data(page, base_url):
+    serve(page, LIVE)
+    open_front_page(page, base_url)
+    page.wait_for_selector("#cadence li.fam-ios")
+    live = last_ios_days(NOW)
+    assert f"last {live} day" in text(page, "#cadence li.fam-ios")
+
+
 # --- layout and security ---------------------------------------------------------------
 
 

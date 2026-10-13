@@ -35,21 +35,35 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 /**
  * One page as text; throws unless it answers 200 HTML within the size cap. A redirect is followed
  * by hand, at most MAX_REDIRECTS times, and only to an https URL on `hosts` (the adapter's own
- * allowlist) with no userinfo and no port; anything else fails the page. `options` is for tests:
+ * allowlist) with no userinfo and no port; anything else fails the page. Every request asks for
+ * English with Accept-Language. `options.lang` ({ param, value }, an adapter's `lang`) is for a
+ * host that picks the language from a query parameter: each request carries param=value, and a
+ * redirect to the same parameter with another value (any one of several) is refused (an English
+ * variant such as en-US is followed as sent), so a localized page is never
+ * parsed. The caller keeps keying the page by the URL it passed in. `options` is also for tests:
  * `fetchImpl` replaces fetch, `pauseMs` the pause between requests, `log` the progress line.
  */
 export async function fetchPage(url, hosts, options = {}) {
-  const { fetchImpl = fetch, pauseMs = PAUSE_MS, log = console.log } = options;
+  const { fetchImpl = fetch, pauseMs = PAUSE_MS, log = console.log, lang = null } = options;
   let current = url;
+  // The URL actually requested: `current` with the language parameter set, unless a redirect
+  // already carried an accepted English value, which is kept as it is.
+  let request = withLang(url, lang);
+  const seen = new Set();
   let res;
   for (let hops = 0; ; hops += 1) {
     const wait = lastRequest + pauseMs - Date.now();
     if (wait > 0) await sleep(wait);
     lastRequest = Date.now();
-    res = await fetchImpl(current, {
+    seen.add(request);
+    res = await fetchImpl(request, {
       redirect: 'manual',
       signal: AbortSignal.timeout(20000),
-      headers: { 'user-agent': USER_AGENT, accept: 'text/html, application/xhtml+xml;q=0.9' },
+      headers: {
+        'user-agent': USER_AGENT,
+        accept: 'text/html, application/xhtml+xml;q=0.9',
+        'accept-language': 'en-US,en;q=0.9',
+      },
     });
     if (!REDIRECTS.has(res.status)) break;
     await res.body?.cancel();
@@ -67,8 +81,24 @@ export async function fetchPage(url, hosts, options = {}) {
         `${url} answered ${res.status} to ${next.protocol}//${next.host}, which is not allowed (https only, no userinfo or port, on ${hosts.join(', ')})`,
       );
     }
+    if (lang) {
+      for (const value of next.searchParams.getAll(lang.param)) {
+        const asked = value.toLowerCase();
+        if (asked !== lang.value && !asked.startsWith(`${lang.value}-`)) {
+          throw new Error(
+            `${url} answered ${res.status} to ${next.href}: redirected to a non-English variant (${lang.param}=${value}, asked for ${lang.value})`,
+          );
+        }
+      }
+    }
+    // An accepted English value on the target is followed as it is; withLang only fills a missing one.
+    const nextRequest = lang && next.searchParams.has(lang.param) ? next.href : withLang(next.href, lang);
+    if (lang && (nextRequest === request || seen.has(nextRequest))) {
+      throw new Error(`${url} redirects ${lang.param}=${lang.value} back to itself`);
+    }
     log(`followed redirect ${current} -> ${next.href}`);
     current = next.href;
+    request = nextRequest;
   }
   const where = current === url ? url : `${url} (via ${current})`;
   if (res.status !== 200) throw new Error(`${where} answered ${res.status}`);
@@ -89,6 +119,14 @@ export async function fetchPage(url, hosts, options = {}) {
     chunks.push(chunk);
   }
   return new TextDecoder('utf-8').decode(Buffer.concat(chunks));
+}
+
+/** `url` with the adapter's language parameter set, other query parameters kept. */
+function withLang(url, lang) {
+  if (!lang) return url;
+  const parsed = new URL(url);
+  parsed.searchParams.set(lang.param, lang.value);
+  return parsed.href;
 }
 
 /** True when `url` is https on one of `hosts`: a page is never read from anywhere else. */
@@ -118,6 +156,22 @@ function readJson(path, required) {
   }
 }
 
+/**
+ * Fetch each canonical URL of `adapter` into `pages`, keyed by that same URL: the adapter's `lang`
+ * only changes the request (inside fetchPage), never the key, so note ids stay stable.
+ */
+export async function readPages(adapter, urls, cache, pages, options = {}) {
+  for (const url of urls) {
+    try {
+      if (!onHosts(url, adapter.hosts)) throw new Error(`${url} is not on ${adapter.hosts.join(', ')}`);
+      if (!cache.has(url)) cache.set(url, await fetchPage(url, adapter.hosts, { ...options, lang: adapter.lang }));
+      pages.set(url, cache.get(url));
+    } catch (error) {
+      console.error(`failed: ${adapter.id}: ${error.message}`);
+    }
+  }
+}
+
 async function main() {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const target = resolve(root, 'src', 'data', 'security.json');
@@ -134,16 +188,8 @@ async function main() {
     let rows = null;
     const pages = new Map();
     try {
-      rows = adapter.parseIndex(await fetchPage(adapter.index, adapter.hosts));
-      for (const url of pagesFor(adapter, releases, rows, MAX_PAGES)) {
-        try {
-          if (!onHosts(url, adapter.hosts)) throw new Error(`${url} is not on ${adapter.hosts.join(', ')}`);
-          if (!cache.has(url)) cache.set(url, await fetchPage(url, adapter.hosts));
-          pages.set(url, cache.get(url));
-        } catch (error) {
-          console.error(`failed: ${adapter.id}: ${error.message}`);
-        }
-      }
+      rows = adapter.parseIndex(await fetchPage(adapter.index, adapter.hosts, { lang: adapter.lang }));
+      await readPages(adapter, pagesFor(adapter, releases, rows, MAX_PAGES), cache, pages);
     } catch (error) {
       console.error(`failed: ${adapter.id}: ${error.message}`);
     }
