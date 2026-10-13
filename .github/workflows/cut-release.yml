@@ -38,6 +38,8 @@ jobs:
       contents: write
       # Spent on dispatching release.yml on that new tag, nothing else.
       actions: write
+      # Spent on reading the check runs of the commit being tagged, nothing else.
+      checks: read
     env:
       VERSION: ${{ inputs.version }}
     steps:
@@ -76,6 +78,38 @@ jobs:
             | python3 "$GITHUB_WORKSPACE/scripts/check_release_order.py" --include-equal "v$VERSION"
           if [ "$(git rev-parse refs/remotes/origin/main)" != "$GITHUB_SHA" ]; then
             echo "::error::$GITHUB_SHA is not the tip of main" >&2
+            exit 1
+          fi
+
+      - name: Require green ci and security on this commit
+        # The tag is cut from the exact commit this run checked out, so the gate reads the
+        # check runs of that SHA: the aggregate `ci` and `security` jobs must both have
+        # concluded success. Missing, queued, running, failed or skipped all refuse.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          runs=$(gh api --paginate "repos/$GH_REPO/commits/$GITHUB_SHA/check-runs?per_page=100" \
+            --jq '.check_runs[] | [.name, .status, (.conclusion // "none")] | @tsv')
+          bad=0
+          for required in ci security; do
+            found=0
+            while IFS=$'\t' read -r name status conclusion; do
+              [ "$name" = "$required" ] || continue
+              found=1
+              if [ "$status" != "completed" ] || [ "$conclusion" != "success" ]; then
+                echo "::error::check '$required' on $GITHUB_SHA is $status/$conclusion, not success" >&2
+                bad=1
+              fi
+            done <<< "$runs"
+            if [ "$found" -eq 0 ]; then
+              echo "::error::check '$required' has not run on $GITHUB_SHA" >&2
+              bad=1
+            fi
+          done
+          if [ "$bad" -ne 0 ]; then
+            echo "::error::refusing to tag v$VERSION: ci and security must both be green on $GITHUB_SHA" >&2
             exit 1
           fi
 
