@@ -196,22 +196,28 @@
   }
 
   // The security section of Compare for two releases of one family, or null for nothing.
-  function compare(newer, older) {
+  // `between` is Compare's in-between list: its public releases count toward a non-Android range.
+  function compare(newer, older, between) {
     if (!payload || newer.family !== older.family) return null;
     var en = read(newer.id), eo = read(older.id);
     if (!en && !eo) return null;
+    var android = newer.family === "Android";
+    var mids = android ? [] : (Array.isArray(between) ? between : []).filter(function (r) {
+      return plain(r) && r.stage === "release" && r.family === newer.family;
+    }).map(function (r) { return [r, read(r.id)]; });
     var box = RO.h("section", "sec-cmp");
     box.appendChild(RO.h("h2", "month-h", "Security notes"));
     var say = function (text) { box.appendChild(RO.h("p", "small sec-say", text)); return box; };
     var sides = [[newer, en], [older, eo]];
-    var names = function (pick) {
-      return sides.filter(function (s) { return pick(s[1]); }).map(function (s) { return name(s[0]); }).join(" and ");
+    var counted = sides.concat(mids);
+    var names = function (pick, from) {
+      return (from || sides).filter(function (s) { return pick(s[1]); }).map(function (s) { return name(s[0]); }).join(" and ");
     };
     var unknown = names(function (e) {
       return !e || stale(e) || ["listed", "linked", "no-cve-entries"].indexOf(e.status) < 0;
-    });
+    }, counted);
     if (unknown) return say("Security comparison unavailable: no known note for " + unknown);
-    var linked = names(function (e) { return e.status === "linked"; });
+    var linked = names(function (e) { return e.status === "linked"; }, counted);
     if (linked) return say("Cannot compare: CVEs not counted for " + linked);
 
     var urls = en.notes, seen = Object.create(null), ids;
@@ -233,11 +239,19 @@
         }); });
       ids = Object.keys(union).sort();
     } else {
-      ids = en.cves;
+      // Every release after the older one, up to the newer: Apple's notes list one release each.
+      var all = Object.create(null);
+      mids.concat([[newer, en]]).forEach(function (s) {
+        s[1].cves.forEach(function (c) { all[c] = true; });
+        s[1].notes.forEach(function (u) { if (urls.indexOf(u) < 0) urls = urls.concat(u); });
+      });
+      ids = Object.keys(all).sort();
     }
     ids = ids.filter(function (c) { return !seen[c]; });
 
-    box.appendChild(RO.h("p", "sec-lead", "Listed in " + name(newer) + "'s notes, not in " + name(older) + "'s"));
+    box.appendChild(RO.h("p", "sec-lead", android
+      ? "Listed in " + name(newer) + "'s notes, not in " + name(older) + "'s"
+      : "Fixed after " + name(older) + ", up to " + name(newer)));
     box.appendChild(RO.h("p", "sec-count", ids.length ? ids.length + (ids.length === 1 ? " CVE" : " CVEs") : "No CVEs"));
     if (ids.length) {
       var sev = severities(urls);

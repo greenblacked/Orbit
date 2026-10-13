@@ -306,7 +306,7 @@ def test_compare_lists_what_the_newer_notes_have_and_the_older_do_not(browser, b
         page.wait_for_selector(".sec-cmp")
         section = page.locator(".sec-cmp")
         assert section.locator("h2").inner_text() == "Security notes"
-        lead = f"Listed in iOS {ios[0]['version']}'s notes, not in iOS {ios[1]['version']}'s"
+        lead = f"Fixed after iOS {ios[1]['version']}, up to iOS {ios[0]['version']}"
         assert section.locator(".sec-lead").inner_text() == lead
         assert section.locator(".sec-count").inner_text() == "2 CVEs"
         assert section.locator(".cve-id").all_inner_texts() == [cve(1), cve(2)]
@@ -317,6 +317,54 @@ def test_compare_lists_what_the_newer_notes_have_and_the_older_do_not(browser, b
         assert order[:2] == ["Security notes", "In between"]
         assert section.locator(".sec-link").count() == 2
         assert errors == []
+    finally:
+        context.close()
+
+
+def three_notes(middle="listed"):
+    ios = releases("iOS")
+    a, b, c = APPLE + "100001", APPLE + "100002", APPLE + "100003"
+    notes = {
+        a: note("apple", "iOS newest", [1, 2], {1: "High"}),
+        b: note("apple", "iOS middle", [3, 4], {3: "Critical"}),
+        c: note("apple", "iOS oldest", [4, 9]),
+    }
+    rows = {
+        ios[0]["id"]: entry("listed", [a], [1, 2]),
+        ios[1]["id"]: entry("listed", [b], [3, 4]) if middle == "listed" else entry(middle),
+        ios[2]["id"]: entry("listed", [c], [4, 9]),
+    }
+    return payload(notes, rows)
+
+
+def test_compare_counts_the_public_releases_between_the_two_picks(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, three_notes(), "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        section = page.locator(".sec-cmp")
+        lead = f"Fixed after iOS {ios[2]['version']}, up to iOS {ios[0]['version']}"
+        assert section.locator(".sec-lead").inner_text() == lead
+        assert section.locator(".sec-count").inner_text() == "4 CVEs"
+        assert section.locator(".cve-id").all_inner_texts() == [cve(n) for n in (1, 2, 3, 4)]
+        assert section.locator(".sev").all_inner_texts() == ["High", "Critical"]
+        assert errors == []
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("middle", ["not-found", "unavailable"])
+def test_compare_is_unavailable_when_a_release_between_has_no_known_note(
+    browser, base_url, middle
+):
+    ios = releases("iOS")
+    body = three_notes(middle)
+    context, page, _ = open_compare(browser, base_url, body, "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        text = page.locator(".sec-cmp .sec-say").inner_text()
+        assert text == f"Security comparison unavailable: no known note for iOS {ios[1]['version']}"
+        assert page.locator(".sec-cmp .cve, .sec-cmp .sec-count").count() == 0
     finally:
         context.close()
 

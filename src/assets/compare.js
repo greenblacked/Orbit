@@ -63,7 +63,7 @@
     if (!slot) return;
     slot.textContent = "";
     var section = null;
-    try { section = window.Sec ? window.Sec.compare(shown.newer, shown.older) : null; } catch (e) { section = null; }
+    try { section = window.Sec ? window.Sec.compare(shown.newer, shown.older, shown.between) : null; } catch (e) { section = null; }
     if (section) slot.appendChild(section);
   }
   if (window.Sec) window.Sec.on(secure);
@@ -119,7 +119,7 @@
     });
     out.appendChild(track);
 
-    shown = { newer: newer, older: older };
+    shown = { newer: newer, older: older, between: between };
     slot = RO.h("div", "sec-slot");
     out.appendChild(slot);
     secure();
