@@ -360,9 +360,7 @@ def test_compare_counts_the_public_releases_between_the_two_picks(browser, base_
 
 
 @pytest.mark.parametrize("middle", ["not-found", "unavailable", "stale"])
-def test_compare_is_unavailable_when_a_release_between_has_no_known_note(
-    browser, base_url, middle
-):
+def test_compare_is_unavailable_when_a_release_between_has_no_known_note(browser, base_url, middle):
     ios = releases("iOS")
     body = three_notes(middle)
     context, page, _ = open_compare(browser, base_url, body, "iOS", ios[0], ios[2])
@@ -377,9 +375,7 @@ def test_compare_is_unavailable_when_a_release_between_has_no_known_note(
 
 def test_compare_says_so_when_a_release_between_is_only_linked(browser, base_url):
     ios = releases("iOS")
-    context, page, _ = open_compare(
-        browser, base_url, three_notes("linked"), "iOS", ios[0], ios[2]
-    )
+    context, page, _ = open_compare(browser, base_url, three_notes("linked"), "iOS", ios[0], ios[2])
     try:
         page.wait_for_selector(".sec-cmp")
         text = page.locator(".sec-cmp .sec-say").inner_text()
