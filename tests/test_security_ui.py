@@ -93,9 +93,9 @@ def apple_payload(big=False):
     return payload(notes, rows)
 
 
-def android_payload(missing=None, newer_patch="2026-06-05"):
+def android_payload(missing=None, newer_patch="2026-06-05", pair=None):
     android = releases("Android")
-    newer, older = android[0], android[1]
+    newer, older = pair or (android[0], android[1])
     months = ["2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"]
     notes = {}
     for index, month in enumerate(months):
@@ -392,6 +392,20 @@ def test_compare_lists_what_the_newer_notes_have_and_the_older_do_not(browser, b
         context.close()
 
 
+def test_compare_announces_the_cve_count_in_a_separate_live_region(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[1])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        assert page.get_attribute("#cmp-result", "aria-live") is None
+        assert page.locator("#cmp-result [aria-live]").count() == 0
+        want = f"2 CVEs. Fixed after iOS {ios[1]['version']}, up to iOS {ios[0]['version']}"
+        assert page.inner_text("#cmp-live") == want
+        assert errors == []
+    finally:
+        context.close()
+
+
 def three_notes(middle="listed"):
     ios = releases("iOS")
     a, b, c = APPLE + "100001", APPLE + "100002", APPLE + "100003"
@@ -414,6 +428,20 @@ def three_notes(middle="listed"):
     return payload(notes, rows)
 
 
+def test_compare_announces_the_range_the_section_shows(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, three_notes(), "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        said = page.inner_text("#cmp-live")
+        assert "3 CVEs" in said
+        assert f"Fixed after iOS {ios[2]['version']}, up to iOS {ios[0]['version']}" in said
+        assert "listed in" not in said.lower()
+        assert errors == []
+    finally:
+        context.close()
+
+
 def test_compare_counts_the_public_releases_between_the_two_picks(browser, base_url):
     ios = releases("iOS")
     context, page, errors = open_compare(browser, base_url, three_notes(), "iOS", ios[0], ios[2])
@@ -427,6 +455,19 @@ def test_compare_counts_the_public_releases_between_the_two_picks(browser, base_
         assert section.locator(".cve-id").all_inner_texts() == [cve(n) for n in (1, 2, 3)]
         assert section.locator(".sev").all_inner_texts() == ["High", "Critical"]
         assert "Severity not published for 1 of 3." in section.inner_text()
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_compare_announces_why_the_security_comparison_is_unavailable(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[3])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        live = page.inner_text("#cmp-live")
+        assert live.startswith("Comparing iOS ")
+        assert "Security comparison unavailable: no known note for" in live
         assert errors == []
     finally:
         context.close()
@@ -595,3 +636,22 @@ def test_android_in_one_bulletin_month_or_from_a_first_part_level_is_unavailable
             assert page.locator(".sec-cmp .sec-count").count() == 0
         finally:
             context.close()
+
+
+def test_security_notes_name_two_releases_of_one_version_apart(browser, base_url):
+    same = [r for r in releases("Android") if r["version"] == "16.0.0" and r["build"]]
+    assert len(same) >= 2
+    newer, older = same[0], same[1]
+    body = android_payload(pair=(newer, older))
+    context, page, errors = open_compare(browser, base_url, body, "Android", newer, older)
+    try:
+        page.wait_for_selector(".sec-cmp")
+        lead = page.locator(".sec-cmp .sec-lead").inner_text()
+        assert newer["build"] in lead and older["build"] in lead, lead
+        names = page.locator(".sec-cmp .sec-link").all_inner_texts()
+        assert len(names) == 2 and len(set(names)) == 2, names
+        assert any(newer["build"] in n for n in names)
+        assert any(older["build"] in n for n in names)
+        assert errors == []
+    finally:
+        context.close()

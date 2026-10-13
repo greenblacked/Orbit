@@ -724,6 +724,96 @@ def test_compare_counts_the_days_and_what_lies_between(page, base_url):
     assert page.locator(".cmp-card").all_inner_texts() == cards
 
 
+def test_compare_announces_one_sentence_and_the_result_is_not_a_live_region(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    assert page.get_attribute("#cmp-result", "aria-live") is None
+    assert page.locator("#cmp-result [aria-live]").count() == 0
+    assert page.get_attribute("#cmp-live", "aria-live") == "polite"
+    ios = releases("iOS")
+    newer, older = ios[0], ios[2]
+    page.select_option("#c-to", newer["id"])
+    page.select_option("#c-from", older["id"])
+    live = page.inner_text("#cmp-live")
+    assert live.startswith("Comparing ")
+    assert f"iOS {older['version']}" in live and f"iOS {newer['version']}" in live
+    assert page.eval_on_selector("#cmp-live", "e => getComputedStyle(e).position") == "absolute"
+    page.select_option("#c-from", newer["id"])
+    assert page.inner_text("#cmp-live").startswith("Compare unavailable: pick two different")
+
+
+def test_compare_announces_when_the_platform_has_no_releases(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [r for r in data["releases"] if r["family"] != "visionOS"]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/compare/?family=visionOS")
+    page.wait_for_function("() => document.getElementById('cmp-live').textContent !== ''")
+    assert page.inner_text("#cmp-live").startswith("Compare unavailable: no releases")
+
+
+def link_names(page, selector):
+    return page.evaluate(
+        """sel => [...document.querySelectorAll(sel)]
+          .filter(e => !e.hidden && e.offsetParent !== null)
+          .map(e => e.textContent.replace(/\\s+/g, ' ').trim())""",
+        selector,
+    )
+
+
+def test_every_view_release_link_has_its_own_name(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    page.wait_for_function(
+        "() => [...document.querySelectorAll('#latest-grid [data-f=link]')].every(a => !a.hidden)"
+    )
+    names = link_names(page, "#latest-grid [data-f=link]")
+    cards = page.eval_on_selector_all(
+        "#latest-grid [data-family]", "els => els.map(e => e.getAttribute('data-family'))"
+    )
+    assert len(names) == len(cards)
+    assert len(set(names)) == len(names), names
+    for name in cards:
+        # The card shows the highest version, which is not always the most recent date.
+        stable = [r for r in releases(name) if r["stage"] == "release"]
+        newest = max(stable, key=lambda r: [int(n) for n in re.split(r"[.H]", r["version"])])
+        want = f"View release {name} {newest['version']} (opens in a new tab)"
+        assert want in names
+    # The visible words are unchanged; the name sits in the hidden suffix.
+    assert (
+        page.locator("#latest-grid [data-f=link]").first.evaluate("a => a.firstChild.data")
+        == "View release"
+    )
+
+
+def test_compare_view_release_links_are_distinct(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    names = link_names(page, ".cmp-card .rel-apple")
+    assert len(names) == 2 and len(set(names)) == 2, names
+    assert all(n.startswith("View release iOS ") for n in names)
+    assert all(n.endswith("(opens in a new tab)") and n.count("(opens") == 1 for n in names)
+
+
+def test_compare_tells_two_releases_of_one_version_apart(page, base_url):
+    page.goto(base_url + "/compare/?family=Android")
+    page.wait_for_selector(".cmp-cards")
+    same = [r for r in releases("Android") if r["version"] == "16.0.0" and r["build"]]
+    assert len(same) >= 2
+    newer, older = same[0], same[1]
+    page.select_option("#c-to", newer["id"])
+    page.select_option("#c-from", older["id"])
+    names = link_names(page, ".cmp-card .rel-apple")
+    assert len(names) == 2 and len(set(names)) == 2, names
+    assert any(older["build"] in n for n in names) and any(newer["build"] in n for n in names)
+    page.wait_for_function("() => document.getElementById('cmp-live').textContent !== ''")
+    live = page.inner_text("#cmp-live")
+    assert older["build"] in live and newer["build"] in live, live
+    # Two different versions keep the plain names.
+    other = next(r for r in releases("Android") if r["version"] != "16.0.0")
+    page.select_option("#c-from", other["id"])
+    assert all("(" not in n.split(" (opens")[0] for n in link_names(page, ".cmp-card .rel-apple"))
+
+
 def test_compare_cards_draw_a_sigil_and_name_the_channel_without_a_build(page, base_url):
     page.goto(base_url + "/compare/")
     page.wait_for_selector(".cmp-cards")

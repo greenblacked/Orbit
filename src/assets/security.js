@@ -141,7 +141,7 @@
 
   // --- compare ---------------------------------------------------------------------------
 
-  function name(r) { return r.family + " " + RO.short(r); }
+  function plainName(r) { return r.family + " " + RO.short(r); }
   function month(note, url) {
     var m = /(\d{4})-(0[1-9]|1[0-2])/.exec(String(note.title || "")) || /(\d{4})-(0[1-9]|1[0-2])/.exec(url);
     return m ? m[1] + "-" + m[2] : "";
@@ -188,7 +188,9 @@
 
   // The security section of Compare for two releases of one family, or null for nothing.
   // `between` is Compare's in-between list: its public releases count toward a non-Android range.
-  function compare(newer, older, between) {
+  // `label` names a release (twin-aware); the plain "family version" is the default.
+  function compare(newer, older, between, label) {
+    var name = typeof label === "function" ? label : plainName;
     if (!payload || newer.family !== older.family) return null;
     var en = read(newer.id), eo = read(older.id);
     if (!en && !eo) return null;

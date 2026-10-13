@@ -79,6 +79,9 @@
     var link = card.querySelector('[data-f="link"]');
     link.href = r.url;
     link.hidden = false;
+    // The visible text stays "View release"; the name makes each link distinct out of context.
+    var hint = link.querySelector(".sr-only");
+    if (hint) hint.textContent = " " + r.family + " " + r.version + " (opens in a new tab)";
     card.querySelector('[data-f="badge"]').hidden = false;
   }
 
