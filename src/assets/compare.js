@@ -73,7 +73,7 @@
     if (!slot) return;
     slot.textContent = "";
     var section = null;
-    try { section = window.Sec ? window.Sec.compare(shown.newer, shown.older) : null; } catch (e) { section = null; }
+    try { section = window.Sec ? window.Sec.compare(shown.newer, shown.older, name) : null; } catch (e) { section = null; }
     if (section) slot.appendChild(section);
     var between = name(shown.older) + " and " + name(shown.newer);
     var count = section && section.querySelector(".sec-count");

@@ -93,9 +93,9 @@ def apple_payload(big=False):
     return payload(notes, rows)
 
 
-def android_payload(missing=None, newer_patch="2026-06-05"):
+def android_payload(missing=None, newer_patch="2026-06-05", pair=None):
     android = releases("Android")
-    newer, older = android[0], android[1]
+    newer, older = pair or (android[0], android[1])
     months = ["2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"]
     notes = {}
     for index, month in enumerate(months):
@@ -465,3 +465,22 @@ def test_android_in_one_bulletin_month_or_from_a_first_part_level_is_unavailable
             assert page.locator(".sec-cmp .sec-count").count() == 0
         finally:
             context.close()
+
+
+def test_security_notes_name_two_releases_of_one_version_apart(browser, base_url):
+    same = [r for r in releases("Android") if r["version"] == "16.0.0" and r["build"]]
+    assert len(same) >= 2
+    newer, older = same[0], same[1]
+    body = android_payload(pair=(newer, older))
+    context, page, errors = open_compare(browser, base_url, body, "Android", newer, older)
+    try:
+        page.wait_for_selector(".sec-cmp")
+        lead = page.locator(".sec-cmp .sec-lead").inner_text()
+        assert newer["build"] in lead and older["build"] in lead, lead
+        names = page.locator(".sec-cmp .sec-link").all_inner_texts()
+        assert len(names) == 2 and len(set(names)) == 2, names
+        assert any(newer["build"] in n for n in names)
+        assert any(older["build"] in n for n in names)
+        assert errors == []
+    finally:
+        context.close()
