@@ -898,6 +898,32 @@ def test_compare_rewrites_a_bad_shared_address_to_what_is_shown(page, base_url):
     assert query["to"] == [ios[0]["id"]]
 
 
+def test_compare_keeps_the_address_in_step_when_a_poll_drops_a_pick(page, base_url):
+    ios = releases("iOS")
+    older = next(r for r in ios if r["version"] == "15.8.8")
+    query = urlencode({"family": "iOS", "from": older["id"], "to": ios[0]["id"]})
+    fresh = copy.deepcopy(SNAPSHOT)
+    fresh["releases"] = [r for r in fresh["releases"] if r["id"] != older["id"]]
+    answers = {"body": json.dumps(SNAPSHOT)}
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(content_type="application/json", body=answers["body"]),
+    )
+    page.goto(base_url + "/compare/?" + query)
+    page.wait_for_selector(".cmp-cards")
+    assert page.input_value("#c-from") == older["id"]
+    answers["body"] = json.dumps(fresh)
+    page.evaluate("() => RO.refresh()")
+    page.wait_for_function(
+        "(id) => document.getElementById('c-from').value !== id && "
+        "!document.querySelector('#c-from option[value=\"' + id + '\"]')",
+        arg=older["id"],
+    )
+    shown = {"family": "iOS", "from": page.input_value("#c-from"), "to": page.input_value("#c-to")}
+    assert shown["from"] != older["id"]
+    assert query_of(page) == shown
+
+
 def test_home_compare_link_does_not_indent_when_it_wraps(page, base_url):
     page.set_viewport_size({"width": 360, "height": 800})
     page.goto(base_url + "/")

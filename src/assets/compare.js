@@ -195,8 +195,11 @@
     var next = all.filter(function (r) { return r.family === selFamily.value; })
       .map(function (r) { return r.id; }).join("|");
     if (next === signature && out.firstChild) return;
+    var first = signature === null, was = selFrom.value + "|" + selTo.value;
     pick(false);
-    // A shared address that named ids or a platform not in the list is rewritten to what is shown.
-    if (shared) { shared = false; remember(); }
+    // The address follows what is shown: a shared one that named ids not in the list, and a poll
+    // that dropped a picked release. A bare first visit leaves it alone.
+    if (shared || (!first && was !== selFrom.value + "|" + selTo.value)) remember();
+    shared = false;
   });
 })();
