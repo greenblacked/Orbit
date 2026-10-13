@@ -377,6 +377,7 @@
 
   window.RO = {
     loadJson: loadJson, ready: loadConfig, families: function () { return config.families; },
+    vendors: function () { return config.vendors; },
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
     channel: channel, sigilKey: sigilKey, clock: clock,
