@@ -14,7 +14,7 @@ import json
 import os
 import re
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, quote, urlencode, urlsplit
 
 import pytest
 from helpers import REPO
@@ -460,20 +460,7 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         page = context.new_page()
         page.clock.install()
         answers = {"count": 0}
-        fresh = copy.deepcopy(SNAPSHOT)
-        fresh["releases"].insert(
-            0,
-            {
-                **APPLE_FIRST,
-                "id": "https://developer.apple.com/news/releases/?id=new1",
-                "title": "iOS 27.2 beta 4 (24B5105a)",
-                "version": "27.2",
-                "beta": 4,
-                "build": "24B5105a",
-                "date": "2026-10-12T17:00:00Z",
-                "url": "https://developer.apple.com/news/releases/?id=new1",
-            },
-        )
+        fresh = fresh_snapshot()
 
         def answer(route):
             answers["count"] += 1
@@ -502,6 +489,218 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         assert "on" not in page.get_attribute("#toast", "class").split()
     finally:
         context.close()
+
+
+NEW_ID = "https://developer.apple.com/news/releases/?id=new1"
+
+
+def fresh_snapshot(count=1):
+    """The snapshot with `count` new Apple releases in front; the first has NEW_ID."""
+    fresh = copy.deepcopy(SNAPSHOT)
+    for n in range(count):
+        release_id = NEW_ID if n == 0 else f"{NEW_ID}-{n}"
+        fresh["releases"].insert(
+            n,
+            {
+                **APPLE_FIRST,
+                "id": release_id,
+                "title": f"iOS 27.{2 + n} beta {4 - n} (24B5105a)",
+                "version": f"27.{2 + n}",
+                "beta": 4 - n,
+                "build": "24B5105a",
+                "date": "2026-10-12T17:00:00Z",
+                "url": release_id,
+            },
+        )
+    return fresh
+
+
+def toast_page(browser, base_url, width=1280, count=1):
+    """A page whose second poll brings `count` new releases; the clock is faked."""
+    context = make_context(browser, base_url, width=width)
+    page = context.new_page()
+    page.clock.install()
+    fresh = fresh_snapshot(count)
+    answers = {"count": 0}
+
+    def answer(route):
+        answers["count"] += 1
+        body = SNAPSHOT if answers["count"] == 1 else fresh
+        route.fulfill(content_type="application/json", body=json.dumps(body))
+
+    page.route("**/api/releases.json", answer)
+    page.goto(base_url + "/")
+    cards_ready(page)
+    return context, page
+
+
+def show_toast(page):
+    page.clock.run_for(5 * 60 * 1000 + 1000)
+    page.wait_for_function("() => document.getElementById('toast').classList.contains('on')")
+
+
+def toast_on(page):
+    return "on" in page.get_attribute("#toast", "class").split()
+
+
+def test_the_toast_stays_while_it_has_focus_and_then_hides_after_12_seconds(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        page.clock.run_for(30 * 1000)
+        assert toast_on(page)
+        assert page.evaluate("document.activeElement.className") == "toast-close"
+        page.evaluate("document.activeElement.blur()")
+        page.clock.run_for(1)
+        page.clock.run_for(11 * 1000)
+        assert toast_on(page)
+        page.clock.run_for(2 * 1000)
+        assert not toast_on(page)
+    finally:
+        context.close()
+
+
+def test_the_toast_stays_while_the_pointer_is_over_it(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.hover("#toast .toast-close")
+        page.clock.run_for(30 * 1000)
+        assert toast_on(page)
+        page.mouse.move(2, 2)
+        page.clock.run_for(11 * 1000)
+        assert toast_on(page)
+        page.clock.run_for(2 * 1000)
+        assert not toast_on(page)
+    finally:
+        context.close()
+
+
+def test_hiding_the_toast_returns_focus_to_where_it_was(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    pill = ".actions a.pill[href='/timeline/']"
+    try:
+        page.focus(pill)
+        assert page.evaluate("document.activeElement !== document.body")
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        page.keyboard.press("Enter")
+        assert not toast_on(page)
+        assert page.evaluate("(sel) => document.activeElement.matches(sel)", pill)
+    finally:
+        context.close()
+
+
+def test_hiding_the_toast_returns_focus_to_the_element_focus_came_from(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.focus("footer a")
+        page.focus("#toast .toast-close")
+        page.keyboard.press("Enter")
+        assert not toast_on(page)
+        assert page.evaluate("document.activeElement.matches('footer a')")
+    finally:
+        context.close()
+
+
+def test_a_second_announcement_keeps_focus_in_the_toast(browser, base_url):
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        page.clock.install()
+        first = fresh_snapshot()
+        second = fresh_snapshot()
+        newer = {**second["releases"][0], "id": NEW_ID + "2", "url": NEW_ID + "2", "beta": 5}
+        second["releases"].insert(0, newer)
+        answers = {"count": 0}
+
+        def answer(route):
+            answers["count"] += 1
+            body = [SNAPSHOT, first][answers["count"] - 1] if answers["count"] < 3 else second
+            route.fulfill(content_type="application/json", body=json.dumps(body))
+
+        page.route("**/api/releases.json", answer)
+        page.goto(base_url + "/")
+        cards_ready(page)
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        with page.expect_response("**/api/releases.json"):
+            page.clock.run_for(5 * 60 * 1000 + 1000)
+        page.wait_for_timeout(200)
+        assert toast_on(page)
+        assert page.evaluate("document.activeElement.className") == "toast-close"
+    finally:
+        context.close()
+
+
+def test_hiding_the_toast_without_a_previous_focus_lands_on_the_content(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        page.keyboard.press("Enter")
+        assert not toast_on(page)
+        assert page.evaluate("document.activeElement.id") == "content"
+    finally:
+        context.close()
+
+
+def test_each_release_in_the_toast_links_to_its_timeline_row(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        link = page.locator("#toast a.toast-link").first
+        assert link.inner_text() == "iOS 27.2 beta 4"
+        assert link.get_attribute("href") == "/timeline/?id=" + quote(NEW_ID, safe="-_.!~*'()")
+    finally:
+        context.close()
+
+
+def test_every_toast_link_is_a_44px_target(browser, base_url):
+    context, page = toast_page(browser, base_url, width=360, count=3)
+    try:
+        show_toast(page)
+        heights = page.eval_on_selector_all(
+            "#toast .toast-link", "els => els.map(e => e.getBoundingClientRect().height)"
+        )
+        assert len(heights) == 3 and all(h >= 43.5 for h in heights)
+        inside = page.evaluate(
+            """() => {
+                const toast = document.querySelector('#toast');
+                const box = toast.getBoundingClientRect();
+                const links = [...toast.querySelectorAll('.toast-link')];
+                return {
+                    left: box.left,
+                    right: box.right,
+                    width: window.innerWidth,
+                    scroll: toast.scrollWidth,
+                    client: toast.clientWidth,
+                    links: links.map(a => a.getBoundingClientRect().right),
+                };
+            }"""
+        )
+        assert inside["left"] >= 0 and inside["right"] <= inside["width"]
+        assert inside["scroll"] <= inside["client"]
+        assert all(r <= inside["right"] + 0.5 for r in inside["links"])
+    finally:
+        context.close()
+
+
+def test_the_timeline_lands_on_the_row_named_by_id(page, base_url):
+    serve_json(page, "**/api/releases.json", json.dumps(fresh_snapshot()))
+    page.goto(base_url + "/timeline/?stage=release&id=" + quote(NEW_ID, safe=""))
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert page.evaluate("document.activeElement.closest('.tl-item').dataset.id") == NEW_ID
+
+
+def test_the_used_id_leaves_the_address_when_the_filters_are_already_all(page, base_url):
+    serve_json(page, "**/api/releases.json", json.dumps(fresh_snapshot()))
+    page.goto(base_url + "/timeline/?id=" + quote(NEW_ID, safe=""))
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert page.evaluate("document.activeElement.closest('.tl-item').dataset.id") == NEW_ID
+    assert "id=" not in page.evaluate("() => window.location.search")
 
 
 # --- motion -----------------------------------------------------------------------------

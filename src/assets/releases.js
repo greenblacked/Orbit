@@ -252,6 +252,35 @@
     for (var i = 0; i < els.length; i++) els[i].textContent = ago(Number(els[i].getAttribute("data-rel")));
   }
 
+  var toastBack = null, toastHover = false, toastWired = null;
+  function toastHeld(box) { return toastHover || box.contains(document.activeElement); }
+  function armToast(box) {
+    window.clearTimeout(toastTimer);
+    if (!toastHeld(box)) toastTimer = window.setTimeout(hideToast, 12000);
+  }
+  function wireToast(box) {
+    if (toastWired === box) return;
+    toastWired = box;
+    box.addEventListener("focusin", function (e) {
+      window.clearTimeout(toastTimer);
+      // Where focus came from is where Dismiss should send it back to.
+      if (e.relatedTarget && !box.contains(e.relatedTarget)) toastBack = e.relatedTarget;
+    });
+    box.addEventListener("focusout", function (e) {
+      if (!e.relatedTarget || !box.contains(e.relatedTarget)) {
+        window.setTimeout(function () { if (box.classList.contains("on")) armToast(box); }, 0);
+      }
+    });
+    box.addEventListener("pointerenter", function () {
+      toastHover = true;
+      window.clearTimeout(toastTimer);
+    });
+    box.addEventListener("pointerleave", function () {
+      toastHover = false;
+      if (box.classList.contains("on")) armToast(box);
+    });
+  }
+
   // The one freshness line (#data-note on a page): when the data was checked, or that the
   // live source is down and this is the saved copy (or, after a failed poll, the last load).
   // Its space is reserved in CSS.
@@ -291,21 +320,51 @@
   function announce(fresh) {
     var box = document.getElementById("toast");
     if (!box) return;
-    var names = fresh.slice(0, 3).map(function (r) { return r.title.replace(/ \(.*\)$/, ""); });
-    var text = "New: " + names.join(", ") +
-      (fresh.length > 3 ? " and " + (fresh.length - 3) + " more" : "") + ".";
+    wireToast(box);
+    var shown = fresh.slice(0, 3);
+    var p = h("p", "toast-text", "New: ");
+    shown.forEach(function (r, i) {
+      if (i) p.appendChild(document.createTextNode(", "));
+      p.appendChild(h("a", "toast-link", r.title.replace(/ \(.*\)$/, ""), {
+        href: "/timeline/?id=" + encodeURIComponent(r.id)
+      }));
+    });
+    p.appendChild(document.createTextNode(
+      (fresh.length > 3 ? " and " + (fresh.length - 3) + " more" : "") + "."));
+    var wasOn = box.classList.contains("on");
+    var active = document.activeElement;
+    if (!wasOn || !toastBack) toastBack = active && !box.contains(active) ? active : null;
+    var held = box.contains(active);
     box.textContent = "";
-    box.appendChild(h("p", "toast-text", text));
+    box.appendChild(p);
     var close = h("button", "toast-close", "Dismiss", { type: "button" });
     close.addEventListener("click", hideToast);
     box.appendChild(close);
+    // Rebuilding the toast must not drop the focus it held onto the page body.
+    if (held) close.focus();
     box.classList.add("on");
-    window.clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(hideToast, 12000);
+    armToast(box);
   }
   function hideToast() {
     var box = document.getElementById("toast");
-    if (box) box.classList.remove("on");
+    window.clearTimeout(toastTimer);
+    if (!box) return;
+    if (box.contains(document.activeElement)) {
+      var back = toastBack && toastBack !== document.body && document.contains(toastBack) ?
+        toastBack : null;
+      if (!back) {
+        back = document.getElementById("content");
+        if (back && !back.hasAttribute("tabindex")) {
+          back.setAttribute("tabindex", "-1");
+          back.addEventListener("blur", function () { back.removeAttribute("tabindex"); },
+            { once: true });
+        }
+      }
+      if (back) back.focus({ preventScroll: true });
+    }
+    toastBack = null;
+    toastHover = false;
+    box.classList.remove("on");
   }
 
   function visible() { return document.visibilityState === "visible"; }
