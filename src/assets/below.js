@@ -61,13 +61,16 @@
     var box = sec("macOS");
     var seg = box.querySelectorAll("[data-ch]");
     if (!seg.length) return;
-    var beta = newestBeta("macOS");
+    var beta = RO.lead(releases, "macOS").pre;
+    if (!beta) channel = "release";
     var r = channel === "beta" ? beta : RO.latest(releases, "macOS", true);
     for (var i = 0; i < seg.length; i++) {
       seg[i].setAttribute("aria-pressed", String(seg[i].getAttribute("data-ch") === channel));
     }
     seg[0].disabled = false;
     seg[1].disabled = !beta;
+    seg[1].setAttribute("aria-disabled", String(!beta));
+    text(box, "betanote", beta ? "" : "No newer beta");
     text(box, "name", r ? r.family + " " + RO.short(r) : "macOS");
     text(box, "version", r ? r.version : "None in the data");
     text(box, "build", r && r.build ? r.build : "None");

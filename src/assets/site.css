@@ -1294,6 +1294,8 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 .m-rows li + li { border-top: 1px solid rgba(255, 255, 255, 0.14); }
 .m-rows li span:last-child { color: rgba(255, 255, 255, 0.85); text-align: right; }
 .m-seg { display: flex; gap: 0.4rem; margin-top: 0.7em; padding: 0.2rem; border-radius: 99px; background: rgba(255, 255, 255, 0.12); }
+.m-note { margin-top: 0.4em; font-size: 0.85em; color: rgba(255, 255, 255, 0.85); text-align: center; }
+.m-note:empty { display: none; }
 .m-segb {
   flex: 1;
   min-height: 2.75rem;
