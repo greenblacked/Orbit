@@ -1,5 +1,6 @@
 /* Cadence pulse: per platform family, the median gap between its releases and the days since
-   its last one (counted from when the data was fetched, if it is a saved copy), as a quiet row under the dial and as a slow breathing of the family's ring.
+   its last one (counted from when the data was fetched, if it is a saved copy), as a quiet row
+   under the dial and as a slow breathing of the family's ring.
    The breath's period is the median gap scaled down: half a second per day, between 2 and 14
    seconds (CSS reads it from --breath; it is off under reduced motion). Both follow the time
    machine: the numbers are as of the chosen day. The page loads this file once it has painted (home.js). Gaps count distinct UTC days, so a beta and
@@ -52,7 +53,8 @@
   }
 
   function paint() {
-    var at = asOf === null ? RO.clock() : asOf;
+    var c = RO.clock();
+    var at = asOf === null ? c : Math.min(asOf, c);
     var next = document.createDocumentFragment();
     families().forEach(function (fam) {
       var s = stats(all, fam.id, at);

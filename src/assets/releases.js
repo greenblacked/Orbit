@@ -152,6 +152,9 @@
       listeners.forEach(function (fn) { fn(data, fresh); });
     }, function () {
       state.failed = true;
+      // Nothing to say and nothing ever will: give back the space the line keeps for itself.
+      var line = document.getElementById("data-note");
+      if (line && !state.data) line.classList.add("none");
       listeners.forEach(function (fn) { fn(state.data, [], true); });
     }).then(function () { state.busy = false; });
   }
@@ -256,6 +259,7 @@
     var old = data.stale || data.snapshot;
     var t = data.fetchedAt;
     el.textContent = "";
+    el.classList.remove("none");
     el.classList.toggle("old", old);
     if (old) {
       el.appendChild(document.createTextNode("Live source unavailable, showing the saved copy" + (t ? " from " : ".")));
@@ -273,7 +277,8 @@
   // not look more dormant every day.
   function clock() {
     var d = state.data;
-    return d && (d.stale || d.snapshot) && d.fetchedAt ? d.fetchedAt : Date.now();
+    // Never earlier than the newest release it holds: one source may have fallen back to an old copy.
+    return d && (d.stale || d.snapshot) && d.fetchedAt ? Math.max(d.fetchedAt, d.releases[0].t) : Date.now();
   }
 
   function announce(fresh) {
