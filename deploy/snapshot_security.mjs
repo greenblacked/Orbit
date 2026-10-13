@@ -38,19 +38,24 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
  * allowlist) with no userinfo and no port; anything else fails the page. Every request asks for
  * English with Accept-Language. `options.lang` ({ param, value }, an adapter's `lang`) is for a
  * host that picks the language from a query parameter: each request carries param=value, and a
- * redirect to the same parameter with another value is refused, so a localized page is never
+ * redirect to the same parameter with another value is refused (an English variant such as en-US is followed as sent), so a localized page is never
  * parsed. The caller keeps keying the page by the URL it passed in. `options` is also for tests:
  * `fetchImpl` replaces fetch, `pauseMs` the pause between requests, `log` the progress line.
  */
 export async function fetchPage(url, hosts, options = {}) {
   const { fetchImpl = fetch, pauseMs = PAUSE_MS, log = console.log, lang = null } = options;
   let current = url;
+  // The URL actually requested: `current` with the language parameter set, unless a redirect
+  // already carried an accepted English value, which is kept as it is.
+  let request = withLang(url, lang);
+  const seen = new Set();
   let res;
   for (let hops = 0; ; hops += 1) {
     const wait = lastRequest + pauseMs - Date.now();
     if (wait > 0) await sleep(wait);
     lastRequest = Date.now();
-    res = await fetchImpl(withLang(current, lang), {
+    seen.add(request);
+    res = await fetchImpl(request, {
       redirect: 'manual',
       signal: AbortSignal.timeout(20000),
       headers: {
@@ -83,11 +88,14 @@ export async function fetchPage(url, hosts, options = {}) {
         );
       }
     }
-    if (lang && withLang(next.href, lang) === withLang(current, lang)) {
+    // An accepted English value on the target is followed as it is; withLang only fills a missing one.
+    const nextRequest = lang && next.searchParams.has(lang.param) ? next.href : withLang(next.href, lang);
+    if (lang && (nextRequest === request || seen.has(nextRequest))) {
       throw new Error(`${url} redirects ${lang.param}=${lang.value} back to itself`);
     }
     log(`followed redirect ${current} -> ${next.href}`);
     current = next.href;
+    request = nextRequest;
   }
   const where = current === url ? url : `${url} (via ${current})`;
   if (res.status !== 200) throw new Error(`${where} answered ${res.status}`);

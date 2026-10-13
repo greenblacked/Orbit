@@ -177,12 +177,30 @@ describe('snapshot_security fetchPage', () => {
       assert.deepEqual(plain, ['en-US,en;q=0.9']);
     });
 
-    it('accepts hl=EN and hl=en-GB redirects', async () => {
+    it('accepts hl=EN and hl=en-GB redirects and keeps them on the next request', async () => {
       for (const variant of ['EN', 'en-GB']) {
         const target = `${START}/x?hl=${variant}`;
-        const routes = { [EN]: target, [`${START}/x?hl=en`]: { html: 'ok' } };
-        assert.equal(await fetchPage(START, HOSTS, withLang(routes, [], [])), 'ok');
+        const calls = [];
+        const routes = { [EN]: target, [target]: { html: 'ok' } };
+        assert.equal(await fetchPage(START, HOSTS, withLang(routes, calls, [])), 'ok');
+        assert.deepEqual(calls, [EN, target]);
       }
+    });
+
+    it('follows a redirect from hl=en to the same path with hl=en-US or hl=EN', async () => {
+      for (const variant of ['en-US', 'EN']) {
+        const same = `${START}?hl=${variant}`;
+        const calls = [];
+        const routes = { [EN]: same, [same]: { html: 'ok' } };
+        assert.equal(await fetchPage(START, HOSTS, withLang(routes, calls, [])), 'ok');
+        assert.deepEqual(calls, [EN, same]);
+      }
+    });
+
+    it('refuses an exact repeat of a URL already requested', async () => {
+      const US = `${START}?hl=en-US`;
+      const routes = { [EN]: US, [US]: EN };
+      await assert.rejects(fetchPage(START, HOSTS, withLang(routes, [], [])), /back to itself/);
     });
 
     it('names a redirect that strips hl and so loops back to itself', async () => {
