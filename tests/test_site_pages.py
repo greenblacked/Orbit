@@ -401,20 +401,7 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         page = context.new_page()
         page.clock.install()
         answers = {"count": 0}
-        fresh = copy.deepcopy(SNAPSHOT)
-        fresh["releases"].insert(
-            0,
-            {
-                **APPLE_FIRST,
-                "id": "https://developer.apple.com/news/releases/?id=new1",
-                "title": "iOS 27.2 beta 4 (24B5105a)",
-                "version": "27.2",
-                "beta": 4,
-                "build": "24B5105a",
-                "date": "2026-10-12T17:00:00Z",
-                "url": "https://developer.apple.com/news/releases/?id=new1",
-            },
-        )
+        fresh = fresh_snapshot()
 
         def answer(route):
             answers["count"] += 1
@@ -530,14 +517,58 @@ def test_the_toast_stays_while_the_pointer_is_over_it(browser, base_url):
 
 def test_hiding_the_toast_returns_focus_to_where_it_was(browser, base_url):
     context, page = toast_page(browser, base_url)
+    pill = ".actions a.pill[href='/timeline/']"
     try:
-        page.locator("main a").first.focus()
-        before = page.evaluate("document.activeElement.outerHTML")
+        page.focus(pill)
+        assert page.evaluate("document.activeElement !== document.body")
         show_toast(page)
         page.focus("#toast .toast-close")
         page.keyboard.press("Enter")
         assert not toast_on(page)
-        assert page.evaluate("document.activeElement.outerHTML") == before
+        assert page.evaluate("(sel) => document.activeElement.matches(sel)", pill)
+    finally:
+        context.close()
+
+
+def test_hiding_the_toast_returns_focus_to_the_element_focus_came_from(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.focus("footer a")
+        page.focus("#toast .toast-close")
+        page.keyboard.press("Enter")
+        assert not toast_on(page)
+        assert page.evaluate("document.activeElement.matches('footer a')")
+    finally:
+        context.close()
+
+
+def test_a_second_announcement_keeps_focus_in_the_toast(browser, base_url):
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        page.clock.install()
+        first = fresh_snapshot()
+        second = fresh_snapshot()
+        newer = {**second["releases"][0], "id": NEW_ID + "2", "url": NEW_ID + "2", "beta": 5}
+        second["releases"].insert(0, newer)
+        answers = {"count": 0}
+
+        def answer(route):
+            answers["count"] += 1
+            body = [SNAPSHOT, first][answers["count"] - 1] if answers["count"] < 3 else second
+            route.fulfill(content_type="application/json", body=json.dumps(body))
+
+        page.route("**/api/releases.json", answer)
+        page.goto(base_url + "/")
+        cards_ready(page)
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        with page.expect_response("**/api/releases.json"):
+            page.clock.run_for(5 * 60 * 1000 + 1000)
+        page.wait_for_timeout(200)
+        assert toast_on(page)
+        assert page.evaluate("document.activeElement.className") == "toast-close"
     finally:
         context.close()
 

@@ -140,6 +140,7 @@
       state.stage = "all";
       press("chips-family", "all");
       press("chips-stage", "all");
+      remember();
       render();
       row = rows.filter(function (x) { return x.r.id === target; })[0];
     }

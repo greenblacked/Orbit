@@ -256,7 +256,11 @@
   function wireToast(box) {
     if (toastWired === box) return;
     toastWired = box;
-    box.addEventListener("focusin", function () { window.clearTimeout(toastTimer); });
+    box.addEventListener("focusin", function (e) {
+      window.clearTimeout(toastTimer);
+      // Where focus came from is where Dismiss should send it back to.
+      if (e.relatedTarget && !box.contains(e.relatedTarget)) toastBack = e.relatedTarget;
+    });
     box.addEventListener("focusout", function (e) {
       if (!e.relatedTarget || !box.contains(e.relatedTarget)) {
         window.setTimeout(function () { if (box.classList.contains("on")) armToast(box); }, 0);
@@ -288,11 +292,14 @@
     var wasOn = box.classList.contains("on");
     var active = document.activeElement;
     if (!wasOn || !toastBack) toastBack = active && !box.contains(active) ? active : null;
+    var held = box.contains(active);
     box.textContent = "";
     box.appendChild(p);
     var close = h("button", "toast-close", "Dismiss", { type: "button" });
     close.addEventListener("click", hideToast);
     box.appendChild(close);
+    // Rebuilding the toast must not drop the focus it held onto the page body.
+    if (held) close.focus();
     box.classList.add("on");
     armToast(box);
   }
@@ -302,13 +309,16 @@
     if (!box) return;
     if (box.contains(document.activeElement)) {
       var back = toastBack && toastBack !== document.body && document.contains(toastBack) ?
-        toastBack : document.getElementById("content");
-      if (back) {
-        if (!back.hasAttribute("tabindex") && !/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(back.tagName)) {
+        toastBack : null;
+      if (!back) {
+        back = document.getElementById("content");
+        if (back && !back.hasAttribute("tabindex")) {
           back.setAttribute("tabindex", "-1");
+          back.addEventListener("blur", function () { back.removeAttribute("tabindex"); },
+            { once: true });
         }
-        back.focus();
       }
+      if (back) back.focus({ preventScroll: true });
     }
     toastBack = null;
     toastHover = false;
