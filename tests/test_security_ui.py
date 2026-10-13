@@ -299,6 +299,68 @@ def test_with_the_empty_payload_the_pages_show_no_security_line_and_no_error(
         context.close()
 
 
+def count_requests(page):
+    seen: list[str] = []
+    page.on("request", lambda r: seen.append(r.url.split("?")[0]))
+    return seen
+
+
+def test_the_timeline_asks_for_security_and_families_once_each(browser, base_url):
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        seen = count_requests(page)
+        serve_security(page, apple_payload())
+        page.goto(base_url + "/timeline/")
+        page.wait_for_selector(".sec")
+        page.wait_for_load_state("networkidle")
+        assert len([u for u in seen if u.endswith("/api/security.json")]) == 1
+        assert [u for u in seen if u.endswith("/data/security.json")] == []
+        assert len([u for u in seen if u.endswith("/data/families.json")]) == 1
+    finally:
+        context.close()
+
+
+def test_compare_asks_for_security_and_families_once_each(browser, base_url):
+    ios = releases("iOS")
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        seen = count_requests(page)
+        serve_security(page, apple_payload())
+        page.goto(base_url + "/compare/")
+        page.wait_for_selector(".cmp-cards")
+        page.select_option("#c-family", "iOS")
+        page.select_option("#c-to", ios[0]["id"])
+        page.select_option("#c-from", ios[1]["id"])
+        page.wait_for_selector(".sec-cmp")
+        page.wait_for_load_state("networkidle")
+        assert len([u for u in seen if u.endswith("/api/security.json")]) == 1
+        assert [u for u in seen if u.endswith("/data/security.json")] == []
+        assert len([u for u in seen if u.endswith("/data/families.json")]) == 1
+    finally:
+        context.close()
+
+
+def test_the_snapshot_is_the_fallback_when_the_api_fails(browser, base_url):
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        seen = count_requests(page)
+        text = json.dumps(apple_payload())
+        page.route("**/api/security.json", lambda route: route.fulfill(status=503, body="down"))
+        page.route(
+            "**/data/security.json",
+            lambda route: route.fulfill(status=200, content_type="application/json", body=text),
+        )
+        page.goto(base_url + "/timeline/")
+        page.wait_for_selector(".sec")
+        assert len([u for u in seen if u.endswith("/api/security.json")]) == 1
+        assert len([u for u in seen if u.endswith("/data/security.json")]) == 1
+    finally:
+        context.close()
+
+
 def test_compare_lists_what_the_newer_notes_have_and_the_older_do_not(browser, base_url):
     ios = releases("iOS")
     context, page, errors = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[1])
