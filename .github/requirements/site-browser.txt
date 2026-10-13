@@ -1,10 +1,10 @@
-# Everything the `site-browser` job in ci.yml installs, pinned and hashed. pip runs with
-# --require-hashes, so a wheel that does not match the digest PyPI published for it is
-# refused before any of its code runs. Each entry lists every file PyPI holds for that
-# version, so whichever wheel suits the runner is covered. Regenerate the whole file, with
-# its digests, when a version moves. This file is the only place playwright and pytest are
-# pinned; ci.yml names no version for them, and tests/test_pipeline.py checks that the
-# job runs the preview loop, not these pins.
+# Everything the `build` and `site-browser` jobs in ci.yml install, pinned and hashed.
+# pip runs with --require-hashes, so a wheel that does not match the digest PyPI
+# published for it is refused before any of its code runs. Each entry lists every file
+# PyPI holds for that version, so whichever wheel suits the runner is covered.
+# Regenerate the whole file, with its digests, when a version moves. This file is the
+# only place playwright and pytest are pinned; ci.yml names no version for them, and no
+# test checks these pins.
 
 greenlet==3.2.5 \
     --hash=sha256:04633da773ae432649a3f092a8e4add390732cc9e1ab52c8ff2c91b8dc86f202 \
