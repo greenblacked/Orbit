@@ -25,7 +25,7 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 1. A browser asks the Worker for a page. Static assets are answered directly, with the headers in `src/_headers`.
 2. `releases.js` reads `/data/families.json`, then fetches `/api/releases.json`.
 3. For each source in the registry the Worker reads its own edge-cache entry. A copy under 10 minutes old is served as is. An older copy, up to 24 hours, is served at once while a refresh runs in the background. The cache keeps a live copy for 7 days from the fetch.
-4. A refresh fetches only the URLs on the source's allowlist, with an 8 second timeout and no redirect followed, parses the feed, and merges the result into the bundled snapshot so history outlives the feed's short window.
+4. A refresh fetches only the URLs on the source's allowlist, with an 8 second timeout and no redirect followed, parses the feed, and merges the result with the cached copy and the bundled snapshot so history outlives the feed's short window.
 5. The answer carries `stale` when any source could not be reached and `snapshot` when part of it is the bundled copy.
 6. The page keeps only entries whose family belongs to the entry's vendor and whose link is on a host that vendor's source allows, and writes text with `textContent`. It polls every five minutes while the tab is visible and shows a toast when new ids appear.
 7. The sigils, the dial and the pages below the fold are drawn from that one list of releases. The dial's time machine re-draws them as of a chosen day.
