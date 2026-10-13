@@ -53,9 +53,7 @@ def new_context(browser, base_url: str, width: int = 1280, color_scheme: str = "
     or changes with it; the fallback font is what is measured.
     """
     made = browser.new_context(
-        viewport={"width": width, "height": 800},
-        reduced_motion="reduce",
-        color_scheme=color_scheme,
+        viewport={"width": width, "height": 800}, reduced_motion="reduce", color_scheme=color_scheme
     )
     # Anchored on the server's own origin and a slash, so neither another local port
     # nor a userinfo trick such as http://127.0.0.1:1@elsewhere/ gets through.
@@ -297,6 +295,9 @@ def test_without_a_choice_the_theme_follows_the_system_setting(browser, base_url
     context = new_context(browser, base_url, color_scheme=scheme)
     try:
         page = context.new_page()
+        # The clock says the opposite of the system setting, so the old clock rule fails both.
+        noon_or_late = "2026-10-06T12:30:00" if scheme == "dark" else "2026-10-06T23:30:00"
+        page.clock.install(time=noon_or_late)
         page.goto(base_url + "/")
         assert theme(page) == expected
         assert page.get_attribute("#dark-switch", "aria-checked") == str(scheme == "dark").lower()
@@ -352,10 +353,10 @@ def test_no_timer_changes_the_theme_of_a_page_that_is_open(browser, base_url, sc
     context = new_context(browser, base_url, color_scheme=scheme)
     try:
         page = context.new_page()
-        page.clock.install(time="2026-10-06T12:30:00")
+        page.clock.install(time="2026-10-06T19:50:00")
         page.goto(base_url + "/")
         before = theme(page)
-        page.clock.run_for(12 * 60 * 60 * 1000)
+        page.clock.run_for(20 * 60 * 1000)
         assert theme(page) == before
         assert page.get_attribute("html", "data-theme") == ("night" if scheme == "dark" else "day")
     finally:
@@ -374,6 +375,29 @@ def test_the_theme_controls_report_the_theme_in_all_three_themes(
     assert theme(page) == choice
     assert page.get_attribute("#dark-switch", "aria-checked") == switch
     assert page.get_attribute("#console-theme", "aria-pressed") == console
+    # The picture matches the state: the knob is moved and the moon is shown when it is on.
+    moved = page.evaluate(
+        "getComputedStyle(document.querySelector('#dark-switch .knob')).transform !== 'none'"
+    )
+    assert moved == (switch == "true")
+    moon = page.is_visible("#dark-switch .moon")
+    assert moon == (switch == "true")
+
+
+def test_a_click_still_wins_over_a_system_change_when_storage_is_blocked(page, base_url):
+    page.add_init_script(
+        "Storage.prototype.setItem = function () { throw new Error('blocked'); };"
+        "Storage.prototype.getItem = function () { throw new Error('blocked'); };"
+    )
+    page.goto(base_url + "/")
+    assert theme(page) == "day"
+    page.click("#dark-switch")
+    assert theme(page) == "night"
+    page.emulate_media(color_scheme="light")
+    page.emulate_media(color_scheme="dark")
+    page.emulate_media(color_scheme="light")
+    page.wait_for_timeout(100)
+    assert theme(page) == "night"
 
 
 def test_turning_the_dark_switch_off_in_the_console_theme_goes_to_day(page, base_url):

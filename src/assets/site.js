@@ -36,22 +36,28 @@
       else localStorage.removeItem(KEY);
     } catch (e) {}
   }
+  // Set once the visitor clicks a control, so a system change never overrides a click even
+  // when storage is blocked and nothing was saved.
+  var chosen = false;
   dark.addEventListener("click", function () {
+    chosen = true;
     var next = root.getAttribute("data-theme") === "day" ? "night" : "day";
     store(next);
     apply(next);
   });
   consoleTheme.addEventListener("click", function () {
     if (root.getAttribute("data-theme") === "reactor") {
+      chosen = false;
       store(null);
       apply(system());
       return;
     }
+    chosen = true;
     store("reactor");
     apply("reactor");
   });
   apply(preferred());
-  function follow() { if (!stored()) apply(system()); }
+  function follow() { if (!chosen && !stored()) apply(system()); }
   if (scheme && scheme.addEventListener) scheme.addEventListener("change", follow);
   else if (scheme && scheme.addListener) scheme.addListener(follow);
 
