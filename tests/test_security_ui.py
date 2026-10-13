@@ -359,6 +359,27 @@ def test_compare_counts_the_public_releases_between_the_two_picks(browser, base_
         context.close()
 
 
+def test_compare_links_the_note_of_a_release_between_that_adds_a_cve(browser, base_url):
+    ios = releases("iOS")
+    body = three_notes()
+    a, b, c = APPLE + "100001", APPLE + "100002", APPLE + "100003"
+    body["notes"][a] = note("apple", "iOS newest", [])
+    body["notes"][c] = note("apple", "iOS oldest", [])
+    body["releases"][ios[0]["id"]] = entry("no-cve-entries", [a])
+    body["releases"][ios[2]["id"]] = entry("no-cve-entries", [c])
+    context, page, errors = open_compare(browser, base_url, body, "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        section = page.locator(".sec-cmp")
+        assert section.locator(".cve-id").all_inner_texts() == [cve(3), cve(4)]
+        hrefs = section.locator(".sec-links .sec-link").evaluate_all("l => l.map(a => a.href)")
+        assert b in hrefs
+        assert len(hrefs) == len(set(hrefs))
+        assert errors == []
+    finally:
+        context.close()
+
+
 @pytest.mark.parametrize("middle", ["not-found", "unavailable", "stale"])
 def test_compare_is_unavailable_when_a_release_between_has_no_known_note(browser, base_url, middle):
     ios = releases("iOS")

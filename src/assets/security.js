@@ -263,8 +263,15 @@
       if (bare) box.appendChild(RO.h("p", "small", "Severity not published for " + bare + " of " + ids.length + "."));
     }
     var links = RO.h("p", "sec-links");
-    sides.forEach(function (s) {
-      if (s[1].notes[0]) links.appendChild(anchor(name(s[0]) + " notes", s[1].notes[0]));
+    // Both picks, then every release in between whose note adds a CVE to the list above.
+    var shown = Object.create(null), seenUrl = Object.create(null);
+    ids.forEach(function (id) { shown[id] = true; });
+    var adds = function (s) { return s[1].cves.some(function (c) { return shown[c]; }); };
+    sides.slice(0, 1).concat(mids.filter(adds), sides.slice(1)).forEach(function (s) {
+      var u = s[1].notes[0];
+      if (!u || seenUrl[u]) return;
+      seenUrl[u] = true;
+      links.appendChild(anchor(name(s[0]) + " notes", u));
     });
     if (links.firstChild) box.appendChild(links);
     return box;
