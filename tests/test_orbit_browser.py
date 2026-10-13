@@ -219,6 +219,51 @@ def test_a_notch_is_untested_until_a_verdict_exists(page, base_url):
     )
 
 
+def test_no_untested_label_shows_while_no_results_are_published(page, base_url):
+    open_front_page(page, base_url)
+    assert page.locator("#orbit-dial .notch").count() > 0
+    assert page.locator("#orbit-dial .mk").count() == 0
+    labels = page.eval_on_selector_all(
+        "#orbit-dial .notch", "els => els.map(e => e.getAttribute('aria-label'))"
+    )
+    assert labels and not any("validation" in label or "untested" in label for label in labels)
+    notch = page.locator("#orbit-dial .notch[aria-label*='24B5099f']").first
+    notch.focus()
+    page.wait_for_selector("#orbit-card:not([hidden])")
+    card = page.locator("#orbit-card").inner_text()
+    assert "untested" not in card.lower() and "validation" not in card.lower()
+    assert " · " not in page.locator("#orbit-card .oc-date").inner_text()
+    assert "untested" not in page.inner_text("body").lower()
+
+
+def test_the_verdict_shows_on_the_notch_and_card_once_results_exist(page, base_url):
+    data = json.loads(json.dumps(SNAPSHOT))
+    next(r for r in data["releases"] if r["family"] == "iOS" and r["version"] == "27.0.1")[
+        "status"
+    ] = "pass"
+    serve(page, data)
+    open_front_page(page, base_url)
+    assert page.locator("#orbit-dial .mk-pass").count() == 1
+    assert page.locator("#orbit-dial .mk-untested").count() > 0
+    notch = page.locator("#orbit-dial .notch[data-status='pass']")
+    notch.focus()
+    page.wait_for_selector("#orbit-card:not([hidden])")
+    assert "passed" in page.locator("#orbit-card .oc-date").inner_text()
+
+
+def test_the_dial_card_link_names_the_release(page, base_url):
+    open_front_page(page, base_url)
+    notch = page.locator("#orbit-dial .notch[aria-label*='24B5099f']").first
+    notch.focus()
+    page.wait_for_selector("#orbit-card:not([hidden])")
+    link = page.locator("#orbit-card a.rel-apple")
+    assert link.evaluate("a => a.firstChild.data") == "View release"
+    name = link.evaluate("a => a.textContent")
+    assert name.startswith("View release ") and name.count("(opens in a new tab)") == 1
+    title = page.locator("#orbit-card .oc-title").inner_text()
+    assert title in name
+
+
 def test_a_pre_release_never_shows_a_verdict_even_if_the_data_carries_one(page, base_url):
     data = json.loads(json.dumps(SNAPSHOT))
     for r in data["releases"]:

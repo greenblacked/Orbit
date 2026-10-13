@@ -321,6 +321,31 @@ def test_compare_lists_what_the_newer_notes_have_and_the_older_do_not(browser, b
         context.close()
 
 
+def test_compare_announces_the_cve_count_in_a_separate_live_region(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[1])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        assert page.get_attribute("#cmp-result", "aria-live") is None
+        assert page.locator("#cmp-result [aria-live]").count() == 0
+        want = f"2 CVEs fixed between iOS {ios[1]['version']} and iOS {ios[0]['version']}"
+        assert page.inner_text("#cmp-live") == want
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_compare_announces_why_the_security_comparison_is_unavailable(browser, base_url):
+    ios = releases("iOS")
+    context, page, _ = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[3])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        live = page.inner_text("#cmp-live")
+        assert live.startswith("Compare unavailable: Security comparison unavailable")
+    finally:
+        context.close()
+
+
 def test_compare_caps_a_long_list_and_says_how_many_more(browser, base_url):
     ios = releases("iOS")
     context, page, _ = open_compare(
