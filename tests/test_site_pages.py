@@ -706,14 +706,16 @@ def test_every_view_release_link_has_its_own_name(page, base_url):
     page.wait_for_function(
         "() => [...document.querySelectorAll('#latest-grid [data-f=link]')].every(a => !a.hidden)"
     )
-    names = link_names(page, "#latest-grid .rel-apple")
+    names = link_names(page, "#latest-grid [data-f=link]")
     cards = page.eval_on_selector_all(
         "#latest-grid [data-family]", "els => els.map(e => e.getAttribute('data-family'))"
     )
     assert len(names) == len(cards)
     assert len(set(names)) == len(names), names
     for name in cards:
-        newest = next(r for r in releases(name) if r["stage"] == "release")
+        # The card shows the highest version, which is not always the most recent date.
+        stable = [r for r in releases(name) if r["stage"] == "release"]
+        newest = max(stable, key=lambda r: [int(n) for n in re.split(r"[.H]", r["version"])])
         want = f"View release {name} {newest['version']} (opens in a new tab)"
         assert want in names
     # The visible words are unchanged; the name sits in the hidden suffix.
