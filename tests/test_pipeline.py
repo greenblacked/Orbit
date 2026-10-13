@@ -289,6 +289,11 @@ def test_cut_release_requires_green_ci_and_security_on_the_tagged_sha():
     assert "commits/$GITHUB_SHA/check-runs" in step
     assert "for required in ci security" in step
     assert '"$conclusion" != "success"' in step
+    assert '"$status" != "completed"' in step
+    assert '"$found" -eq 0' in step
+    assert "exit 1" in step
+    assert 'select(.app.slug == "github-actions")' in step
+    assert "max_by(.id)" in step
     assert "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in step
     run = step.split("run: |", 1)[1]
     assert "${{" not in run, "values reach the shell through env: only"

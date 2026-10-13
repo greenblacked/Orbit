@@ -10,7 +10,7 @@
 # a tag ref, so every check there (ancestor of main, the environment rule) is unchanged.
 #
 # A hand-pushed `vX.Y.Z` tag on a commit that is on main still works and reaches the
-# same workflow.
+# same workflow. A hand-pushed tag skips the green-checks gate in this workflow.
 name: Cut release
 
 on:
@@ -85,13 +85,18 @@ jobs:
         # The tag is cut from the exact commit this run checked out, so the gate reads the
         # check runs of that SHA: the aggregate `ci` and `security` jobs must both have
         # concluded success. Missing, queued, running, failed or skipped all refuse.
+        # Only runs from the github-actions app count, and when a name has several runs
+        # (a re-run) only the newest one is judged, so a green re-run clears an old failure.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -Eeuo pipefail
-          runs=$(gh api --paginate "repos/$GH_REPO/commits/$GITHUB_SHA/check-runs?per_page=100" \
-            --jq '.check_runs[] | [.name, .status, (.conclusion // "none")] | @tsv')
+          runs=$(gh api --paginate --slurp \
+            "repos/$GH_REPO/commits/$GITHUB_SHA/check-runs?per_page=100" |
+            jq -r '[.[].check_runs[] | select(.app.slug == "github-actions")]
+              | group_by(.name) | map(max_by(.id))[]
+              | [.name, .status, (.conclusion // "none")] | @tsv')
           bad=0
           for required in ci security; do
             found=0
