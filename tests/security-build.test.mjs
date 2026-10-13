@@ -111,7 +111,12 @@ describe('buildPayload with both sources', () => {
     assert.equal(payload.releases['android-17.0.0_r1'].status, 'unavailable');
     assert.equal(payload.releases['android-17.0.0_r1'].patchLevel, '2026-06-05');
     assert.equal(payload.releases['droid-beta'].status, 'not-applicable');
-    assert.equal('mikrotik' in payload.releases, false);
+    // RouterOS has no adapter: written as not-connected, with no source (ADR 0008).
+    assert.equal(payload.releases.mikrotik.status, 'not-connected');
+    assert.equal('source' in payload.releases.mikrotik, false);
+    assert.equal(payload.releases.ios.source, apple.id);
+    assert.equal(payload.releases.droid.source, android.id);
+    assert.equal('source' in payload.releases['ios-beta'], false);
     // The June bulletin was never fetched: that is reported, and nothing was invented for it.
     assert.ok(failures.some((line) => line.includes(bulletinUrl('2026-06-01'))));
     assert.equal(failures.every((line) => line.startsWith(android.id)), true);
@@ -242,5 +247,96 @@ describe('Android pages that were not read', () => {
     assert.deepEqual(problems(payload, releases), []);
     assert.deepEqual(payload.releases.droid, before.releases.droid);
     assert.ok(failures.some((line) => line.includes('no longer has a patch level')));
+  });
+});
+
+describe('families without an adapter', () => {
+  const more = [
+    ...releases,
+    row('win', 'microsoft', 'Windows', '11 26H1', 'release', '2026-10-01T00:00:00Z'),
+    row('win-beta', 'microsoft', 'Windows', '11 26H2', 'beta', '2026-10-02T00:00:00Z'),
+    row('steam', 'valve', 'SteamOS', '3.8', 'release', '2026-10-03T00:00:00Z'),
+    row('steam-beta', 'valve', 'SteamOS', '3.9', 'preview', '2026-10-04T00:00:00Z'),
+    row('mikrotik-rc', 'mikrotik', 'RouterOS', '7.24rc1', 'rc', '2026-10-09T00:00:00Z'),
+  ];
+  const run = (extra = {}) =>
+    buildPayload({ previous: null, releases: more, sources: [appleSource(), androidSource()], now: NOW, ...extra });
+
+  it('writes not-connected for a released build and not-applicable for its pre-releases', () => {
+    const { payload } = run();
+    assert.deepEqual(problems(payload, more), []);
+    for (const id of ['mikrotik', 'win', 'steam']) {
+      assert.equal(payload.releases[id].status, 'not-connected', id);
+      assert.equal('source' in payload.releases[id], false, id);
+    }
+    for (const id of ['win-beta', 'steam-beta', 'mikrotik-rc']) {
+      assert.equal(payload.releases[id].status, 'not-applicable', id);
+    }
+    assert.equal(Object.keys(payload.releases).length, more.length);
+  });
+
+  it('does not overwrite an entry kept from the previous payload', () => {
+    const before = run().payload;
+    before.releases.win = {
+      status: 'unavailable', notes: [], cves: [], count: null, patchLevel: null, checkedAt: NOW,
+    };
+    const { payload } = run({ previous: before, now: LATER });
+    assert.equal(payload.releases.win.status, 'unavailable');
+    assert.equal(payload.releases.win.checkedAt, NOW);
+    assert.equal(payload.releases.steam.status, 'not-connected');
+  });
+});
+
+describe('a row with no note whose source later fails', () => {
+  // A source that reads one release as "no CVE entries" with no link, like Apple's linkless rows.
+  const quiet = {
+    id: 'quiet',
+    vendor: 'apple',
+    family: null,
+    kind: 'index',
+    index: 'https://example.org/quiet',
+    match: (all) =>
+      all
+        .filter((release) => release.vendor === 'apple' && release.stage === 'release')
+        .map((release) => ({ id: release.id, status: 'matched', row: { noCveEntries: true, note: null } })),
+  };
+  const only = releases.filter((release) => release.vendor === 'apple');
+  const run = (rows, previous = null, now = NOW) =>
+    buildPayload({ previous, releases: only, sources: [{ adapter: quiet, rows, pages: new Map() }], now });
+
+  it('keeps the row, records its source and marks the source failed', () => {
+    const before = run([{}]).payload;
+    assert.equal(before.releases.ios.status, 'no-cve-entries');
+    assert.deepEqual(before.releases.ios.notes, []);
+    assert.equal(before.releases.ios.source, 'quiet');
+    assert.deepEqual(problems(before, only), []);
+
+    const { payload, failures } = run(null, before, LATER);
+    assert.equal(payload.sources.quiet.status, 'failed');
+    assert.equal(payload.releases.ios.status, 'no-cve-entries');
+    assert.equal(payload.releases.ios.checkedAt, NOW);
+    assert.equal(payload.releases.ios.source, 'quiet');
+    assert.equal(failures.length, 1);
+    assert.deepEqual(problems(payload, only), []);
+  });
+
+  it('adds the source to a kept row an older payload wrote without one', () => {
+    const before = run([{}]).payload;
+    delete before.releases.ios.source;
+    const { payload } = run(null, before, LATER);
+    assert.equal(payload.releases.ios.source, 'quiet');
+  });
+
+  it('the contract accepts a source that is a key of sources and nothing else', () => {
+    const { payload } = run([{}]);
+    const bad = structuredClone(payload);
+    bad.releases.ios.source = 'nope';
+    assert.ok(problems(bad, only).some((line) => line.includes('ios names an unknown source')));
+    const worse = structuredClone(payload);
+    worse.releases['ios-beta'].source = 'quiet';
+    assert.ok(problems(worse, only).some((line) => line.includes('ios-beta is not-applicable')));
+    const odd = structuredClone(payload);
+    odd.releases.ios.source = 3;
+    assert.ok(problems(odd, only).some((line) => line.includes('unknown source')));
   });
 });

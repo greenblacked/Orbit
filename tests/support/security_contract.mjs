@@ -71,6 +71,13 @@ export function problems(payload, rows) {
     if (entry.patchLevel !== undefined && entry.patchLevel !== null && !isDay(entry.patchLevel)) {
       found.push(`${id} has a bad patchLevel`);
     }
+    if (entry.source !== undefined) {
+      if (typeof entry.source !== 'string' || !Object.hasOwn(payload.sources, entry.source)) {
+        found.push(`${id} names an unknown source`);
+      } else if (entry.status === 'not-applicable' || entry.status === 'not-connected') {
+        found.push(`${id} is ${entry.status} and must not name a source`);
+      }
+    }
     const listsNotes = entry.status === 'listed' || entry.status === 'no-cve-entries';
     if (listsNotes && stage !== 'release') found.push(`${id} lists notes but is a ${stage}`);
     if (stage && stage !== 'release' && entry.status !== 'not-applicable') {

@@ -81,6 +81,7 @@
     if (e.status === "no-cve-entries" ? e.count !== 0 : e.status !== "listed" && e.count !== null) return null;
     return {
       status: e.status, notes: notes, cves: cves, count: e.count,
+      source: typeof e.source === "string" && own(payload.sources, e.source) ? e.source : "",
       patchLevel: typeof e.patchLevel === "string" && /^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(e.patchLevel) ? e.patchLevel : "",
       checkedAt: Date.parse(e.checkedAt)
     };
@@ -88,6 +89,8 @@
   // A failed source, or a check older than 30 days, means the row is not trustworthy now.
   function stale(e) {
     if (e.status === "not-applicable" || e.status === "not-connected") return false;
+    var origin = e.source ? payload.sources[e.source] : null;
+    if (plain(origin) && origin.status === "failed") return true;
     for (var i = 0; i < e.notes.length; i++) {
       var src = payload.sources[payload.notes[e.notes[i]].source];
       if (plain(src) && src.status === "failed") return true;
