@@ -82,6 +82,10 @@ describe('the registry', () => {
     assert.equal(isSecuritySource({ ...android, neededPages: undefined }), false);
     assert.equal(isSecuritySource({ ...android, family: undefined }), false);
     assert.equal(isSecuritySource({ ...android, bulletinUrl: undefined }), false);
+    assert.equal(isSecuritySource({ ...android, lang: { param: '' } }), false);
+    assert.equal(isSecuritySource({ ...android, lang: { param: 'hl', value: '' } }), false);
+    assert.equal(isSecuritySource({ ...android, lang: 'en' }), false);
+    assert.equal(isSecuritySource({ ...android, lang: { param: 'hl', value: 'en' } }), true);
   });
 
   it('names the pages each source needs', () => {
@@ -91,6 +95,7 @@ describe('the registry', () => {
     assert.ok(urls.includes(SEP_URL));
     assert.ok(urls.includes(bulletinUrl('2026-06-01')));
     assert.equal(urls.length, 5);
+    for (const url of urls) assert.ok(!url.includes('?'), url);
   });
 });
 
