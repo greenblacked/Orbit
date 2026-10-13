@@ -270,6 +270,10 @@ def test_a_pre_release_never_shows_a_verdict_even_if_the_data_carries_one(page, 
         if r["stage"] != "release":
             r["status"] = "fail"
     assert any(r["stage"] != "release" for r in data["releases"])
+    released = next(
+        r for r in data["releases"] if r["family"] == "iOS" and r["version"] == "27.0.1"
+    )
+    released["status"] = "pass"
     serve(page, data)
     open_front_page(page, base_url)
     for stage in ("beta", "rc"):
@@ -278,6 +282,8 @@ def test_a_pre_release_never_shows_a_verdict_even_if_the_data_carries_one(page, 
         )
         assert set(statuses) <= {"untested"}, stage
     assert page.locator("#orbit-dial .mk-fail").count() == 0
+    assert page.locator("#orbit-dial .mk-pass").count() == 1
+    assert page.locator("#orbit-dial .notch.beta .mk-untested").count() > 0
 
 
 def test_a_release_without_a_build_still_shows_a_sigil_and_its_channel(page, base_url):

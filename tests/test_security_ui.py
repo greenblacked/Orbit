@@ -328,7 +328,7 @@ def test_compare_announces_the_cve_count_in_a_separate_live_region(browser, base
         page.wait_for_selector(".sec-cmp")
         assert page.get_attribute("#cmp-result", "aria-live") is None
         assert page.locator("#cmp-result [aria-live]").count() == 0
-        want = f"2 CVEs fixed between iOS {ios[1]['version']} and iOS {ios[0]['version']}"
+        want = f"2 CVEs listed in iOS {ios[0]['version']}'s notes, not in iOS {ios[1]['version']}'s"
         assert page.inner_text("#cmp-live") == want
         assert errors == []
     finally:
@@ -337,11 +337,13 @@ def test_compare_announces_the_cve_count_in_a_separate_live_region(browser, base
 
 def test_compare_announces_why_the_security_comparison_is_unavailable(browser, base_url):
     ios = releases("iOS")
-    context, page, _ = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[3])
+    context, page, errors = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[3])
     try:
         page.wait_for_selector(".sec-cmp")
         live = page.inner_text("#cmp-live")
-        assert live.startswith("Compare unavailable: Security comparison unavailable")
+        assert live.startswith("Comparing iOS ")
+        assert "Security comparison unavailable: no known note for" in live
+        assert errors == []
     finally:
         context.close()
 

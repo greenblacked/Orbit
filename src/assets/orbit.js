@@ -1,8 +1,8 @@
 /* Release Orbit dial: one ring per platform family (the first outermost), one notch per release
    by date over a trailing window, drawn as SVG from the page's data. A release is a long, broad
    notch; a beta or RC a shorter, thinner one, in the same accent, with a status marker (pass,
-   warn, fail; untested until a verdict). A notch is a button: hover, focus or a tap opens a card
-   with the sigil, version, build, date and a link. The dial is SVG layers (base, one per ring,
+   warn, fail; none until any release has a verdict). A notch is a button: hover, focus or a tap
+   opens a card with the sigil, version, build, date and a link. The dial is SVG layers (base, one per ring,
    hand) so the rings can separate in 3D (see "Signature" in site.css). The hand is a slider and
    the time machine: drag it or use arrows, Page Up/Down, Home and End, and the page below shows
    the releases landed by that day; "Back to now" is the only way back.

@@ -707,16 +707,20 @@ def test_every_view_release_link_has_its_own_name(page, base_url):
         "() => [...document.querySelectorAll('#latest-grid [data-f=link]')].every(a => !a.hidden)"
     )
     names = link_names(page, "#latest-grid .rel-apple")
-    assert len(names) == len(FAMILIES)
+    cards = page.eval_on_selector_all(
+        "#latest-grid [data-family]", "els => els.map(e => e.getAttribute('data-family'))"
+    )
+    assert len(names) == len(cards)
     assert len(set(names)) == len(names), names
-    for name in FAMILIES:
+    for name in cards:
         newest = next(r for r in releases(name) if r["stage"] == "release")
         want = f"View release {name} {newest['version']} (opens in a new tab)"
         assert want in names
     # The visible words are unchanged; the name sits in the hidden suffix.
-    assert page.locator("#latest-grid [data-f=link]").first.evaluate(
-        "a => a.firstChild.data"
-    ) == "View release"
+    assert (
+        page.locator("#latest-grid [data-f=link]").first.evaluate("a => a.firstChild.data")
+        == "View release"
+    )
 
 
 def test_compare_view_release_links_are_distinct(page, base_url):

@@ -72,8 +72,8 @@
     var between = name(shown.older) + " and " + name(shown.newer);
     var count = section && section.querySelector(".sec-count");
     var say = section && section.querySelector(".sec-say");
-    if (count) announce(count.textContent + " fixed between " + between);
-    else if (say) announce("Compare unavailable: " + say.textContent);
+    if (count) announce(count.textContent + " listed in " + name(shown.newer) + "'s notes, not in " + name(shown.older) + "'s");
+    else if (say) announce("Comparing " + between + ". " + say.textContent);
     else announce("Comparing " + between);
   }
   if (window.Sec) window.Sec.on(secure);

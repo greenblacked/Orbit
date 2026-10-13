@@ -83,7 +83,7 @@ flowchart LR
 
 `results/<vendor>/<family>/<build>.json` holds the outcome of testing one build. The schema is in [results/README.md](results/README.md) and `python scripts/check_results.py` enforces it.
 
-Only results for publicly released builds (stage `release`) are committed or published, and the dial shows a `status` only on a released build. The validated files are copied to `/data/results/`; joining them to the releases on the dial is not wired yet, so every build reads as untested for now. A result for a beta or a release candidate is refused by the check, by CI and by the site build, so pre-release findings never reach the repository or the site. The reasoning is in [ADR 0005](docs/adr/0005-public-results-only-for-released-builds.md).
+Only results for publicly released builds (stage `release`) are committed or published, and the dial shows a `status` only on a released build. The validated files are copied to `/data/results/`; joining them to the releases on the dial is not wired yet, so no verdict is shown on the dial or card until a result is published. A result for a beta or a release candidate is refused by the check, by CI and by the site build, so pre-release findings never reach the repository or the site. The reasoning is in [ADR 0005](docs/adr/0005-public-results-only-for-released-builds.md).
 
 ### Build sigils
 
