@@ -34,9 +34,29 @@
     card.querySelector('[data-f="sigtxt"]').textContent = text;
   }
 
-  function paintCard(card, r) {
+  function external(link) {
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.appendChild(RO.h("span", "sr-only", " (opens in a new tab)"));
+  }
+  // The second line: the newest beta or RC, when above the stable release headlined.
+  function paintPre(card, pre) {
+    var line = card.querySelector('[data-f="pre"]');
+    var old = line.firstChild;
+    var text = pre ? "Next: " + RO.short(pre) : "";
+    line.hidden = !pre;
+    if (pre && old && old.getAttribute("href") === pre.url && old.firstChild.data === text) return;
+    line.textContent = "";
+    if (!pre) return;
+    var a = RO.h("a", "rel-pre-a", text, { href: pre.url });
+    external(a);
+    line.appendChild(a);
+  }
+
+  function paintCard(card, r, pre) {
     var set = function (name, text) { card.querySelector('[data-f="' + name + '"]').textContent = text; };
     paintSigil(card, r);
+    paintPre(card, pre);
     if (!r) {
       set("ver", "No release yet");
       ["stage", "build", "when"].forEach(function (name) { set(name, ""); });
@@ -70,7 +90,7 @@
     ul.hidden = false;
     for (var i = 0; i < cards.length; i++) {
       var family = cards[i].getAttribute("data-family");
-      var r = RO.latest(list, family, false);
+      var r = RO.lead(list, family).main;
       if (!r) continue;
       var li = RO.h("li", "fam-" + String(family).toLowerCase());
       var a = RO.h("a", "", null, { href: "#" + String(family).toLowerCase() });
@@ -83,8 +103,7 @@
     // Nothing to list: give back the space the list keeps while it loads.
     ul.hidden = !ul.firstChild;
   }
-  // Neither the live data nor the saved copy loaded: say so on every card and section rather
-  // than leaving them on "Loading…".
+  // Neither the live data nor the saved copy loaded: say so rather than stay on "Loading…".
   function paintFailed() {
     for (var i = 0; i < cards.length; i++) {
       paintCard(cards[i], null);
@@ -97,21 +116,17 @@
     var els = root.querySelectorAll('[data-f="' + name + '"]');
     for (var i = 0; i < els.length; i++) els[i].textContent = value;
   }
-  function external(link) {
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.appendChild(RO.h("span", "sr-only", " (opens in a new tab)"));
-  }
   function paintSection(sec, list) {
     var family = sec.getAttribute("data-family");
-    var r = RO.latest(list, family, false);
+    var lead = RO.lead(list, family);
+    var r = lead.main;
     var recent = sec.querySelector('[data-f="recent"]');
     recent.textContent = "";
     var shown = list.filter(function (x) { return x.family === family; }).slice(0, 5);
     shown.forEach(function (x) {
       var item = RO.h("li");
       var a = RO.h("a", "", null, { href: x.url });
-      // Connected before it draws: a draw waiting for the sigil rule needs its mark in the document.
+      // Connected before it draws (a draw awaiting the sigil rule needs its mark in the document).
       item.appendChild(a);
       recent.appendChild(item);
       if (x.build && window.Sigil) {
@@ -125,14 +140,14 @@
       a.appendChild(RO.h("span", "r-date", RO.day(x.t)));
       external(a);
     });
-    // The mock screens' fields (name, stage, build, date, version) are below.js's to paint.
+    // The mock screens' fields are below.js's to paint.
     text(sec, "latest", r
-      ? "Newest: " + r.title + ", " + RO.day(r.t)
+      ? "Newest: " + r.title + ", " + RO.day(r.t) +
+        (lead.pre ? ". Next: " + RO.short(lead.pre) + ", " + RO.day(lead.pre.t) : "")
       : "No " + family + " release in the data" + (asOf === null ? " yet." : " by then."));
   }
 
-  // The time machine (orbit.js) sets asOf: the releases after that day are left out of
-  // everything below the dial, as if it were that day. null is now.
+  // The time machine (orbit.js) sets asOf: later releases are left out of everything below the dial. null is now.
   var all = [];
   var asOf = null;
   function render() {
@@ -146,7 +161,8 @@
     if (next === signature) return;
     signature = next;
     for (var i = 0; i < cards.length; i++) {
-      paintCard(cards[i], RO.latest(list, cards[i].getAttribute("data-family"), false));
+      var lead = RO.lead(list, cards[i].getAttribute("data-family"));
+      paintCard(cards[i], lead.main, lead.pre);
     }
     current = list;
     for (var j = 0; j < sections.length; j++) paintSection(sections[j], list);

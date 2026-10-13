@@ -252,6 +252,21 @@ def test_a_failed_source_turns_a_listed_row_into_the_unavailable_state(browser, 
         context.close()
 
 
+def test_a_failed_source_marks_a_linkless_no_cve_entries_row_unavailable(browser, base_url):
+    ios = releases("iOS")
+    row = entry("no-cve-entries")
+    row["source"] = "apple"
+    body = payload({}, {ios[0]["id"]: row})
+    body["sources"]["apple"] = {"status": "failed"}
+    context, page, _ = open_timeline(browser, base_url, body)
+    try:
+        line = page.locator(f'.tl-item[data-id="{ios[0]["id"]}"] .sec')
+        assert said(line).startswith("Could not refresh security data")
+        assert line.locator("a").count() == 0
+    finally:
+        context.close()
+
+
 @pytest.mark.parametrize("theme", ["day", "night", "reactor"])
 def test_the_timeline_notes_fit_a_phone_and_their_links_are_big_enough(browser, base_url, theme):
     context, page, errors = open_timeline(browser, base_url, apple_payload(), 360, theme)

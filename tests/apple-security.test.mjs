@@ -344,13 +344,15 @@ describe('buildPayload', () => {
       count: 1,
       patchLevel: null,
       checkedAt: NOW,
+      source: 'apple-security-releases',
     });
     assert.equal(status('ipad').status, 'listed');
     assert.deepEqual([status('mac').status, status('mac').count], ['no-cve-entries', 0]);
     assert.equal(status('beta').status, 'not-applicable');
     assert.equal(status('old').status, 'not-found');
     assert.equal(status('old').count, null);
-    assert.equal('pixel' in payload.releases, false);
+    assert.equal(payload.releases.pixel.status, 'not-connected');
+    assert.equal('source' in payload.releases.pixel, false);
   });
 
   it('is stable: the same input gives the same bytes, with sorted keys', () => {

@@ -186,7 +186,9 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
       // Keep what the last good run read; a release it never covered is unavailable.
       for (const release of mine) {
         if (release.stage !== 'release') outReleases[release.id] = entry('not-applicable', now);
-        else if (!outReleases[release.id]) outReleases[release.id] = entry('unavailable', now);
+        else if (!outReleases[release.id] || outReleases[release.id].status === 'not-connected') {
+          outReleases[release.id] = entry('unavailable', now);
+        }
       }
       continue;
     }
@@ -241,6 +243,36 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
         }
       }
     }
+  }
+
+  // Every entry a source wrote or kept names that source, so the page can tell that a row came
+  // from a source that has since failed (an Apple row with no note has no other link to it).
+  // Rows a source does not describe (not-applicable, not-connected) carry none.
+  const covered = new Set();
+  for (const { adapter } of sources) {
+    for (const release of releasesOf(adapter, releases)) {
+      covered.add(release.id);
+      const value = outReleases[release.id];
+      if (!value) continue;
+      if (value.status === 'not-applicable' || value.status === 'not-connected') {
+        if ('source' in value) {
+          const { source: _drop, ...rest } = value;
+          outReleases[release.id] = rest;
+        }
+      } else {
+        outReleases[release.id] = { ...value, source: adapter.id };
+      }
+    }
+  }
+
+  // A release no source describes (RouterOS, Windows, SteamOS until their adapters land) is
+  // written as not-connected, and its pre-releases as not-applicable (ADR 0008). A family that
+  // loses its adapter drops its old rows; an unchanged row keeps its checkedAt.
+  for (const release of releases) {
+    if (covered.has(release.id)) continue;
+    const status = release.stage === 'release' ? 'not-connected' : 'not-applicable';
+    const old = outReleases[release.id];
+    outReleases[release.id] = entry(status, old?.status === status && old.checkedAt ? old.checkedAt : now);
   }
 
   // A note that no release refers to any more is dropped.

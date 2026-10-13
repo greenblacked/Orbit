@@ -1,10 +1,9 @@
 /* Build sigil: a deterministic glyph drawn from a build string. Same build, same sigil.
-   The rule is written out in docs/sigils.md, and tests/test_sigil_doc.py holds the constants
-   in SPEC to that page. An Apple build such as 24B5099f follows the Apple rule exactly; any
-   other string (an Android, Windows or Ubuntu build) goes through generic(), which hashes
-   its characters into the same parameters; that rule is sigil-generic.js, loaded only when
-   such a build first appears. The glyph is built with createElementNS, never
-   with markup strings. The colour is not part of the rule: the SVG strokes with currentColor. */
+   The rule is in docs/sigils.md, and tests/test_sigil_doc.py holds SPEC's constants to that page.
+   An Apple build such as 24B5099f follows the Apple rule exactly; any other string goes through
+   generic(), which hashes its characters into the same parameters (sigil-generic.js, loaded when
+   such a build first appears). Built with createElementNS, never markup strings. The colour is
+   not part of the rule: the SVG strokes with currentColor. */
 (function (global) {
   "use strict";
   var NS = "http://www.w3.org/2000/svg";
@@ -53,9 +52,7 @@
     waiting.splice(0).forEach(function (w) { if (w[name]) w[name](); });
   }
   function use(fn) { flush(fn, "run"); }
-  // One request per host (key); hosts off the page are dropped. fail runs if the rule cannot
-  // load: at once in a preview bundle built without the rule (data-seed) and after one failed
-  // load, where nothing queues.
+  // One request per host (key); others are dropped. fail runs at once in a bundle, or after a failed load.
   function ready(run, key, fail) {
     if (generic) return run();
     var doc = global.document;
@@ -139,8 +136,7 @@
     return out;
   }
 
-  // The glyph as an SVG element. opts: doc (default document), color (default currentColor),
-  // guide (the optional r = 1 circle), birth (mark the shapes for the draw-in), label.
+  // The glyph as an SVG. opts: doc, color (currentColor), guide (r = 1 circle), birth (draw-in marks), label.
   function svg(build, size, opts) {
     opts = opts || {};
     var doc = opts.doc || global.document;
@@ -183,8 +179,7 @@
         }, root);
       }
       if (opts.birth) {
-        // The draw-in is CSS: stroke-dashoffset runs from 1 to 0 along a path normalised to
-        // length 1, staggered by --i. Dots fade in instead.
+        // The draw-in is CSS: dashoffset 1 to 0 on a length-1 path, staggered by --i; dots fade.
         if (p[0] !== "d") el.setAttribute("pathLength", "1");
         el.style.setProperty("--i", String(n++));
       }
@@ -193,8 +188,7 @@
     return root;
   }
 
-  // Draw into a host element, replacing what it holds; a glyph that is already there for the
-  // same build and size is left alone, so only a new or changed sigil draws itself in.
+  // Draw into a host; a glyph there for the same build and size is left alone (only a new one draws in).
   function draw(host, build, opts) {
     opts = opts || {};
     var size = opts.size || 64, prev = host.getAttribute("data-build");
