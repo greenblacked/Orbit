@@ -827,6 +827,8 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   font-weight: 500;
 }
 .toast-close:focus-visible { outline-color: var(--bg); }
+.toast-link { color: inherit; text-decoration: underline; text-underline-offset: 0.15em; }
+.toast-link:focus-visible { outline-color: var(--bg); }
 
 /* Section links on the pages below the front page, for screens too narrow for the header's. */
 .subnav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }

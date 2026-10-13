@@ -247,24 +247,72 @@
     for (var i = 0; i < els.length; i++) els[i].textContent = ago(Number(els[i].getAttribute("data-rel")));
   }
 
+  var toastBack = null, toastHover = false, toastWired = null;
+  function toastHeld(box) { return toastHover || box.contains(document.activeElement); }
+  function armToast(box) {
+    window.clearTimeout(toastTimer);
+    if (!toastHeld(box)) toastTimer = window.setTimeout(hideToast, 12000);
+  }
+  function wireToast(box) {
+    if (toastWired === box) return;
+    toastWired = box;
+    box.addEventListener("focusin", function () { window.clearTimeout(toastTimer); });
+    box.addEventListener("focusout", function (e) {
+      if (!e.relatedTarget || !box.contains(e.relatedTarget)) {
+        window.setTimeout(function () { if (box.classList.contains("on")) armToast(box); }, 0);
+      }
+    });
+    box.addEventListener("pointerenter", function () {
+      toastHover = true;
+      window.clearTimeout(toastTimer);
+    });
+    box.addEventListener("pointerleave", function () {
+      toastHover = false;
+      if (box.classList.contains("on")) armToast(box);
+    });
+  }
   function announce(fresh) {
     var box = document.getElementById("toast");
     if (!box) return;
-    var names = fresh.slice(0, 3).map(function (r) { return r.title.replace(/ \(.*\)$/, ""); });
-    var text = "New: " + names.join(", ") +
-      (fresh.length > 3 ? " and " + (fresh.length - 3) + " more" : "") + ".";
+    wireToast(box);
+    var shown = fresh.slice(0, 3);
+    var p = h("p", "toast-text", "New: ");
+    shown.forEach(function (r, i) {
+      if (i) p.appendChild(document.createTextNode(", "));
+      p.appendChild(h("a", "toast-link", r.title.replace(/ \(.*\)$/, ""), {
+        href: "/timeline/?id=" + encodeURIComponent(r.id)
+      }));
+    });
+    p.appendChild(document.createTextNode(
+      (fresh.length > 3 ? " and " + (fresh.length - 3) + " more" : "") + "."));
+    var wasOn = box.classList.contains("on");
+    var active = document.activeElement;
+    if (!wasOn || !toastBack) toastBack = active && !box.contains(active) ? active : null;
     box.textContent = "";
-    box.appendChild(h("p", "toast-text", text));
+    box.appendChild(p);
     var close = h("button", "toast-close", "Dismiss", { type: "button" });
     close.addEventListener("click", hideToast);
     box.appendChild(close);
     box.classList.add("on");
-    window.clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(hideToast, 12000);
+    armToast(box);
   }
   function hideToast() {
     var box = document.getElementById("toast");
-    if (box) box.classList.remove("on");
+    window.clearTimeout(toastTimer);
+    if (!box) return;
+    if (box.contains(document.activeElement)) {
+      var back = toastBack && toastBack !== document.body && document.contains(toastBack) ?
+        toastBack : document.getElementById("content");
+      if (back) {
+        if (!back.hasAttribute("tabindex") && !/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(back.tagName)) {
+          back.setAttribute("tabindex", "-1");
+        }
+        back.focus();
+      }
+    }
+    toastBack = null;
+    toastHover = false;
+    box.classList.remove("on");
   }
 
   function visible() { return document.visibilityState === "visible"; }

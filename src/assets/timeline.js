@@ -17,6 +17,7 @@
   var releases = [];
   var rows = [];
   var signature = "";
+  var target = "";
 
   // The values a group of chips offers: a query string can only pick one of those.
   function offered(group) {
@@ -29,6 +30,7 @@
       var q = new URLSearchParams(window.location.search);
       if (offered("chips-family").indexOf(q.get("family")) >= 0) state.family = q.get("family");
       if (offered("chips-stage").indexOf(q.get("stage")) >= 0) state.stage = q.get("stage");
+      target = (q.get("id") || "").slice(0, 300);
     } catch (e) { /* no query support: show everything */ }
   })();
 
@@ -128,6 +130,26 @@
   press("chips-family", state.family);
   press("chips-stage", state.stage);
 
+  // A link with ?id= (the toast's) lands on that row, whatever the filters hide.
+  function reveal() {
+    var row = rows.filter(function (x) { return x.r.id === target; })[0];
+    if (!row) {
+      var all = releases.filter(function (r) { return r.id === target; })[0];
+      if (!all) { target = ""; return; }
+      state.family = "all";
+      state.stage = "all";
+      press("chips-family", "all");
+      press("chips-stage", "all");
+      render();
+      row = rows.filter(function (x) { return x.r.id === target; })[0];
+    }
+    target = "";
+    var link = row && row.li.querySelector("a");
+    if (!link) return;
+    row.li.scrollIntoView({ block: "center" });
+    link.focus();
+  }
+
   RO.on(function (data, fresh, failed) {
     if (!data) {
       count.textContent = "Could not load releases. The source is linked below.";
@@ -141,5 +163,6 @@
     signature = next;
     releases = data.releases;
     render();
+    if (target) reveal();
   });
 })();

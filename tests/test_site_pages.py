@@ -14,6 +14,7 @@ import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 import pytest
 from helpers import REPO
@@ -442,6 +443,133 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         assert "on" not in page.get_attribute("#toast", "class").split()
     finally:
         context.close()
+
+
+NEW_ID = "https://developer.apple.com/news/releases/?id=new1"
+
+
+def fresh_snapshot():
+    fresh = copy.deepcopy(SNAPSHOT)
+    fresh["releases"].insert(
+        0,
+        {
+            **APPLE_FIRST,
+            "id": NEW_ID,
+            "title": "iOS 27.2 beta 4 (24B5105a)",
+            "version": "27.2",
+            "beta": 4,
+            "build": "24B5105a",
+            "date": "2026-10-12T17:00:00Z",
+            "url": NEW_ID,
+        },
+    )
+    return fresh
+
+
+def toast_page(browser, base_url):
+    """A page whose second poll brings a new release; the clock is faked."""
+    context = make_context(browser, base_url)
+    page = context.new_page()
+    page.clock.install()
+    fresh = fresh_snapshot()
+    answers = {"count": 0}
+
+    def answer(route):
+        answers["count"] += 1
+        body = SNAPSHOT if answers["count"] == 1 else fresh
+        route.fulfill(content_type="application/json", body=json.dumps(body))
+
+    page.route("**/api/releases.json", answer)
+    page.goto(base_url + "/")
+    cards_ready(page)
+    return context, page
+
+
+def show_toast(page):
+    page.clock.run_for(5 * 60 * 1000 + 1000)
+    page.wait_for_function("() => document.getElementById('toast').classList.contains('on')")
+
+
+def toast_on(page):
+    return "on" in page.get_attribute("#toast", "class").split()
+
+
+def test_the_toast_stays_while_it_has_focus_and_then_hides_after_12_seconds(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        page.clock.run_for(30 * 1000)
+        assert toast_on(page)
+        assert page.evaluate("document.activeElement.className") == "toast-close"
+        page.evaluate("document.activeElement.blur()")
+        page.clock.run_for(1)
+        page.clock.run_for(11 * 1000)
+        assert toast_on(page)
+        page.clock.run_for(2 * 1000)
+        assert not toast_on(page)
+    finally:
+        context.close()
+
+
+def test_the_toast_stays_while_the_pointer_is_over_it(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.hover("#toast .toast-close")
+        page.clock.run_for(30 * 1000)
+        assert toast_on(page)
+        page.mouse.move(2, 2)
+        page.clock.run_for(11 * 1000)
+        assert toast_on(page)
+        page.clock.run_for(2 * 1000)
+        assert not toast_on(page)
+    finally:
+        context.close()
+
+
+def test_hiding_the_toast_returns_focus_to_where_it_was(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        page.locator("main a").first.focus()
+        before = page.evaluate("document.activeElement.outerHTML")
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        page.keyboard.press("Enter")
+        assert not toast_on(page)
+        assert page.evaluate("document.activeElement.outerHTML") == before
+    finally:
+        context.close()
+
+
+def test_hiding_the_toast_without_a_previous_focus_lands_on_the_content(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        page.keyboard.press("Enter")
+        assert not toast_on(page)
+        assert page.evaluate("document.activeElement.id") == "content"
+    finally:
+        context.close()
+
+
+def test_each_release_in_the_toast_links_to_its_timeline_row(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        link = page.locator("#toast a.toast-link").first
+        assert link.inner_text() == "iOS 27.2 beta 4"
+        assert link.get_attribute("href") == "/timeline/?id=" + quote(NEW_ID, safe="-_.!~*'()")
+    finally:
+        context.close()
+
+
+def test_the_timeline_lands_on_the_row_named_by_id(page, base_url):
+    serve_json(page, "**/api/releases.json", json.dumps(fresh_snapshot()))
+    page.goto(base_url + "/timeline/?stage=release&id=" + quote(NEW_ID, safe=""))
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert page.evaluate("document.activeElement.closest('.tl-item').dataset.id") == NEW_ID
 
 
 # --- motion -----------------------------------------------------------------------------
