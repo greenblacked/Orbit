@@ -376,9 +376,7 @@ def test_the_about_this_mac_mock_switches_between_release_and_beta(page, base_ur
 
 
 @pytest.mark.parametrize("width", [1280, 360], ids=["desktop", "phone"])
-def test_the_about_this_mac_mock_turns_the_beta_off_when_no_beta_is_newer(
-    browser, base_url, width
-):
+def test_the_about_this_mac_mock_turns_the_beta_off_when_no_beta_is_newer(browser, base_url, width):
     data = copy.deepcopy(SNAPSHOT)
     old = next(r for r in data["releases"] if r["family"] == "macOS" and r["stage"] != "release")
     old_build = old["build"]
