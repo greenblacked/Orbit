@@ -351,18 +351,79 @@ def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
     assert below["y"] > screen["y"] + screen["height"] * 0.4
 
 
+def version_key(row):
+    return tuple(int(x) for x in row["version"].split("."))
+
+
 def test_the_about_this_mac_mock_switches_between_release_and_beta(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
     mocks_ready(page)
-    public = next(r for r in releases("macOS") if r["stage"] == "release")
-    beta = next(r for r in releases("macOS") if r["stage"] != "release")
+    mac = releases("macOS")
+    public = next(r for r in mac if r["stage"] == "release")
+    pre = [r for r in mac if r["stage"] != "release"]
+    beta = max(pre, key=version_key)
+    # The snapshot has a beta newer than the release; the "no beta" case has its own test.
+    assert version_key(beta) > version_key(public) and beta["date"] > public["date"]
     info = page.locator(".m-mac .m-info")
     assert public["build"] in info.inner_text()
+    assert page.inner_text("[data-f=betanote]") == ""
+    assert page.get_attribute("[data-ch=beta]", "aria-disabled") == "false"
     page.click("[data-ch=beta]")
     assert beta["build"] in info.inner_text()
     assert page.get_attribute("[data-ch=beta]", "aria-pressed") == "true"
     assert page.get_attribute("[data-ch=release]", "aria-pressed") == "false"
+
+
+@pytest.mark.parametrize("width", [1280, 360], ids=["desktop", "phone"])
+def test_the_about_this_mac_mock_turns_the_beta_off_when_no_beta_is_newer(
+    browser, base_url, width
+):
+    data = copy.deepcopy(SNAPSHOT)
+    old = next(r for r in data["releases"] if r["family"] == "macOS" and r["stage"] != "release")
+    old_build = old["build"]
+    old.update(
+        id="https://developer.apple.com/news/releases/?id=09012026a",
+        url="https://developer.apple.com/news/releases/?id=09012026a",
+        version="27.0",
+        beta=1,
+        build="26A5000a",
+        date="2026-09-01T17:00:00Z",
+        title="macOS 27.0 beta 1 (26A5000a)",
+    )
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        serve_json(page, "**/api/releases.json", json.dumps(data))
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        public = next(r for r in releases("macOS", data) if r["stage"] == "release")
+        beta = page.locator("[data-ch=beta]")
+        assert beta.is_disabled()
+        assert beta.get_attribute("aria-disabled") == "true"
+        assert beta.get_attribute("aria-describedby") == "mac-betanote"
+        assert page.inner_text("[data-f=betanote]") == "No newer beta"
+        assert page.get_attribute("[data-ch=release]", "aria-pressed") == "true"
+        info = page.locator(".m-mac .m-info").inner_text()
+        assert public["build"] in info
+        assert old_build not in info and "26A5000a" not in info
+        assert beta.bounding_box()["height"] >= 44
+        mac = page.locator(".m-mac").bounding_box()
+        note = page.locator("[data-f=betanote]").bounding_box()
+        assert note["y"] >= mac["y"] and note["x"] >= mac["x"]
+        assert note["y"] + note["height"] <= mac["y"] + mac["height"]
+        assert note["x"] + note["width"] <= mac["x"] + mac["width"]
+    finally:
+        context.close()
+
+
+def test_the_empty_mac_note_takes_no_space(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    assert page.inner_text("[data-f=betanote]") == ""
+    assert page.eval_on_selector("[data-f=betanote]", "e => getComputedStyle(e).display") == "none"
 
 
 def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
