@@ -41,6 +41,14 @@ export function isSecuritySource(source) {
       source.hosts.length > 0 &&
       typeof source.parseIndex === 'function' &&
       typeof source.match === 'function' &&
+      (source.lang === undefined ||
+        Boolean(
+          source.lang &&
+            typeof source.lang.param === 'string' &&
+            source.lang.param &&
+            typeof source.lang.value === 'string' &&
+            source.lang.value,
+        )) &&
       (source.kind === 'bulletins'
         ? typeof source.parseBulletin === 'function' &&
           typeof source.bulletinUrl === 'function' &&
