@@ -259,10 +259,11 @@
     var el = document.getElementById("data-note");
     if (!el) return;
     var saved = data.stale || data.snapshot;
-    var old = saved || failed;
+    var old = !!(saved || failed);
     var t = data.fetchedAt;
     el.textContent = "";
     el.classList.remove("none");
+    // old is a real boolean: toggle(name, undefined) ignores the force argument and flips the class.
     el.classList.toggle("old", old);
     if (old) {
       var what = saved ? "the saved copy" : "the last data";
