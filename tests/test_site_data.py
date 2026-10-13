@@ -109,8 +109,8 @@ LAZY = ("fx.js", "aurora.js")
 AFTER_PAINT = {"below.js": "home.js", "cadence.js": "home.js", "sigil-generic.js": "sigil.js"}
 # The first paint is budgeted on what crosses the wire: the sum of each script gzipped alone at
 # level 9 (the scripts are separate responses, so a per-file sum is what a visitor downloads;
-# a concatenation would flatter it). Today's busiest page is about 20,800 bytes; the limit is
-# 25% above that. A loose raw ceiling stays as a backstop for parse and memory cost.
+# a concatenation would flatter it). When set, the front page was 20,767 bytes and the limit
+# about 25% above that. A loose raw ceiling stays as a backstop for parse and memory cost.
 FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
