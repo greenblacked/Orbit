@@ -33,7 +33,13 @@
     var has = list.some(function (r) { return r.id === keep; });
     select.value = has ? keep : fallback;
   }
-  function name(r) { return r.family + " " + RO.short(r); }
+  // Two picks that share a family and version are told apart by build (or date without one),
+  // the same details the pickers show, so each link and the announcement name its own release.
+  var twins = false;
+  function name(r) {
+    var base = r.family + " " + RO.short(r);
+    return twins ? base + " (" + (r.build || RO.day(r.t)) + ")" : base;
+  }
   // One sentence for a screen reader; the result itself is rebuilt silently.
   function announce(text) { if (live) live.textContent = text; }
   function days(a, b) { return Math.round(Math.abs(Math.floor(a / 864e5) - Math.floor(b / 864e5))); }
@@ -82,6 +88,7 @@
     out.textContent = "";
     shown = null;
     slot = null;
+    twins = false;
     var i = list.map(function (r) { return r.id; }).indexOf(selFrom.value);
     var j = list.map(function (r) { return r.id; }).indexOf(selTo.value);
     if (i < 0 || j < 0) {
@@ -103,6 +110,7 @@
     }
     var newerAt = Math.min(i, j), olderAt = Math.max(i, j);
     var newer = list[newerAt], older = list[olderAt];
+    twins = newer.family === older.family && RO.short(newer) === RO.short(older);
     var between = list.slice(newerAt + 1, olderAt);
     var pre = between.filter(function (r) { return r.stage !== "release"; }).length;
     var span = newer.t - older.t;

@@ -734,6 +734,26 @@ def test_compare_view_release_links_are_distinct(page, base_url):
     assert all(n.endswith("(opens in a new tab)") and n.count("(opens") == 1 for n in names)
 
 
+def test_compare_tells_two_releases_of_one_version_apart(page, base_url):
+    page.goto(base_url + "/compare/?family=Android")
+    page.wait_for_selector(".cmp-cards")
+    same = [r for r in releases("Android") if r["version"] == "16.0.0" and r["build"]]
+    assert len(same) >= 2
+    newer, older = same[0], same[1]
+    page.select_option("#c-to", newer["id"])
+    page.select_option("#c-from", older["id"])
+    names = link_names(page, ".cmp-card .rel-apple")
+    assert len(names) == 2 and len(set(names)) == 2, names
+    assert any(older["build"] in n for n in names) and any(newer["build"] in n for n in names)
+    page.wait_for_function("() => document.getElementById('cmp-live').textContent !== ''")
+    live = page.inner_text("#cmp-live")
+    assert older["build"] in live and newer["build"] in live, live
+    # Two different versions keep the plain names.
+    other = next(r for r in releases("Android") if r["version"] != "16.0.0")
+    page.select_option("#c-from", other["id"])
+    assert all("(" not in n.split(" (opens")[0] for n in link_names(page, ".cmp-card .rel-apple"))
+
+
 def test_compare_cards_draw_a_sigil_and_name_the_channel_without_a_build(page, base_url):
     page.goto(base_url + "/compare/")
     page.wait_for_selector(".cmp-cards")
