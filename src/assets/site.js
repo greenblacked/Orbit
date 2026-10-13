@@ -7,17 +7,27 @@
   var meta = document.querySelector('meta[name="theme-color"]');
   var dark = document.getElementById("dark-switch");
   var consoleTheme = document.getElementById("console-theme");
-  function isNight(hour) { return hour >= 20 || hour < 6; }
-  function clock() { return isNight(new Date().getHours()) ? "night" : "day"; }
-  function preferred() {
-    var stored = null;
-    try { stored = localStorage.getItem(KEY); } catch (e) {}
-    return stored === "night" || stored === "day" || stored === "reactor" ? stored : clock();
+  // With no stored choice the theme is the system setting, read when the page loads and
+  // again when the system changes it. The clock is only the fallback for a browser without
+  // matchMedia, and nothing re-themes a visible page on a timer.
+  var scheme = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  function system() {
+    var hour = new Date().getHours();
+    var night = scheme ? scheme.matches : hour >= 20 || hour < 6;
+    return night ? "night" : "day";
   }
+  function stored() {
+    var value = null;
+    try { value = localStorage.getItem(KEY); } catch (e) {}
+    return value === "night" || value === "day" || value === "reactor" ? value : null;
+  }
+  function preferred() { return stored() || system(); }
   function apply(theme) {
     root.setAttribute("data-theme", theme);
     if (meta) meta.setAttribute("content", COLORS[theme]);
-    dark.setAttribute("aria-checked", theme === "night" ? "true" : "false");
+    // Both dark themes are dark: the switch is on in the night and the console themes, and
+    // turning it off from the console theme goes to day.
+    dark.setAttribute("aria-checked", theme === "day" ? "false" : "true");
     consoleTheme.setAttribute("aria-pressed", theme === "reactor" ? "true" : "false");
   }
   function store(value) {
@@ -27,24 +37,23 @@
     } catch (e) {}
   }
   dark.addEventListener("click", function () {
-    var next = root.getAttribute("data-theme") === "night" ? "day" : "night";
+    var next = root.getAttribute("data-theme") === "day" ? "night" : "day";
     store(next);
     apply(next);
   });
   consoleTheme.addEventListener("click", function () {
     if (root.getAttribute("data-theme") === "reactor") {
       store(null);
-      apply(clock());
+      apply(system());
       return;
     }
     store("reactor");
     apply("reactor");
   });
   apply(preferred());
-  window.setInterval(function () { apply(preferred()); }, 60000);
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible") apply(preferred());
-  });
+  function follow() { if (!stored()) apply(system()); }
+  if (scheme && scheme.addEventListener) scheme.addEventListener("change", follow);
+  else if (scheme && scheme.addListener) scheme.addListener(follow);
 
   var home = document.getElementById("home");
   home.addEventListener("click", function (event) {

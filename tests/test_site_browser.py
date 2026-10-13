@@ -44,7 +44,7 @@ DEEP_PATH = "/about/"
 TARGET = 44
 
 
-def new_context(browser, base_url: str, width: int = 1280):
+def new_context(browser, base_url: str, width: int = 1280, color_scheme: str = "light"):
     """A fresh profile: no history, no storage, nothing fetched from outside.
 
     Reduced motion turns the page's own transitions and smooth scrolling off, so what a
@@ -52,7 +52,11 @@ def new_context(browser, base_url: str, width: int = 1280):
     leave the local server, the web fonts, are refused, so no test waits on the network
     or changes with it; the fallback font is what is measured.
     """
-    made = browser.new_context(viewport={"width": width, "height": 800}, reduced_motion="reduce")
+    made = browser.new_context(
+        viewport={"width": width, "height": 800},
+        reduced_motion="reduce",
+        color_scheme=color_scheme,
+    )
     # Anchored on the server's own origin and a slash, so neither another local port
     # nor a userinfo trick such as http://127.0.0.1:1@elsewhere/ gets through.
     made.route(re.compile("^(?!" + re.escape(base_url) + "/)"), lambda route: route.abort())
@@ -288,13 +292,98 @@ def theme(page) -> str:
     return page.get_attribute("html", "data-theme")
 
 
-@pytest.mark.parametrize(
-    ("hour", "expected"), [(21, "night"), (5, "night"), (6, "day"), (19, "day")]
-)
-def test_without_a_choice_the_theme_follows_the_clock(page, base_url, hour, expected):
-    page.clock.install(time=f"2026-10-06T{hour:02d}:30:00")
+@pytest.mark.parametrize(("scheme", "expected"), [("dark", "night"), ("light", "day")])
+def test_without_a_choice_the_theme_follows_the_system_setting(browser, base_url, scheme, expected):
+    context = new_context(browser, base_url, color_scheme=scheme)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        assert theme(page) == expected
+        assert page.get_attribute("#dark-switch", "aria-checked") == str(scheme == "dark").lower()
+    finally:
+        context.close()
+
+
+def test_the_system_setting_wins_over_the_clock(browser, base_url):
+    context = new_context(browser, base_url, color_scheme="light")
+    try:
+        page = context.new_page()
+        page.clock.install(time="2026-10-06T23:30:00")
+        page.goto(base_url + "/")
+        assert theme(page) == "day"
+    finally:
+        context.close()
+
+
+def test_the_theme_follows_a_change_of_the_system_setting_until_a_choice_is_made(page, base_url):
     page.goto(base_url + "/")
-    assert theme(page) == expected
+    assert theme(page) == "day"
+    page.emulate_media(color_scheme="dark")
+    page.wait_for_function("() => document.documentElement.dataset.theme === 'night'")
+    assert page.get_attribute("#dark-switch", "aria-checked") == "true"
+    page.emulate_media(color_scheme="light")
+    page.wait_for_function("() => document.documentElement.dataset.theme === 'day'")
+    page.click("#dark-switch")
+    assert theme(page) == "night"
+    page.emulate_media(color_scheme="dark")
+    page.emulate_media(color_scheme="light")
+    page.wait_for_timeout(100)
+    assert theme(page) == "night"
+
+
+@pytest.mark.parametrize("choice", ["day", "night", "reactor"])
+def test_a_stored_choice_wins_over_the_system_setting(browser, base_url, choice):
+    system = "light" if choice != "day" else "dark"
+    context = new_context(browser, base_url, color_scheme=system)
+    try:
+        page = context.new_page()
+        page.add_init_script(f"try {{ localStorage.setItem('theme', '{choice}') }} catch (e) {{}}")
+        page.goto(base_url + "/")
+        assert theme(page) == choice
+        page.emulate_media(color_scheme="dark" if system == "light" else "light")
+        page.wait_for_timeout(100)
+        assert theme(page) == choice
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("scheme", ["dark", "light"])
+def test_no_timer_changes_the_theme_of_a_page_that_is_open(browser, base_url, scheme):
+    context = new_context(browser, base_url, color_scheme=scheme)
+    try:
+        page = context.new_page()
+        page.clock.install(time="2026-10-06T12:30:00")
+        page.goto(base_url + "/")
+        before = theme(page)
+        page.clock.run_for(12 * 60 * 60 * 1000)
+        assert theme(page) == before
+        assert page.get_attribute("html", "data-theme") == ("night" if scheme == "dark" else "day")
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize(
+    ("choice", "switch", "console"),
+    [("day", "false", "false"), ("night", "true", "false"), ("reactor", "true", "true")],
+)
+def test_the_theme_controls_report_the_theme_in_all_three_themes(
+    page, base_url, choice, switch, console
+):
+    page.add_init_script(f"try {{ localStorage.setItem('theme', '{choice}') }} catch (e) {{}}")
+    page.goto(base_url + "/")
+    assert theme(page) == choice
+    assert page.get_attribute("#dark-switch", "aria-checked") == switch
+    assert page.get_attribute("#console-theme", "aria-pressed") == console
+
+
+def test_turning_the_dark_switch_off_in_the_console_theme_goes_to_day(page, base_url):
+    page.goto(base_url + "/")
+    page.click("#console-theme")
+    assert page.get_attribute("#dark-switch", "aria-checked") == "true"
+    page.click("#dark-switch")
+    assert theme(page) == "day"
+    assert page.get_attribute("#dark-switch", "aria-checked") == "false"
+    assert page.get_attribute("#console-theme", "aria-pressed") == "false"
 
 
 def test_the_dark_switch_flips_the_theme_and_the_choice_survives_a_reload(page, base_url):
@@ -316,7 +405,7 @@ def test_the_console_theme_toggles_and_forgets_itself_when_turned_off(page, base
     page.reload()
     assert theme(page) == "reactor"
     page.click("#console-theme")
-    assert theme(page) in {"day", "night"}
+    assert theme(page) == "day"  # the system setting, light here
     assert page.evaluate("() => localStorage.getItem('theme')") is None
 
 
