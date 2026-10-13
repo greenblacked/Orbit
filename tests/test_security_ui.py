@@ -332,7 +332,9 @@ def three_notes(middle="listed"):
     rows = {
         ios[0]["id"]: entry("listed", [a], [1, 2]),
         ios[1]["id"]: (
-            entry("listed", [b], [3, 4]) if middle in ("listed", "stale") else entry(middle)
+            entry("listed", [b], [3, 4])
+            if middle in ("listed", "stale")
+            else entry(middle, [b] if middle == "linked" else ())
         ),
         ios[2]["id"]: entry("listed", [c], [4, 9]),
     }
