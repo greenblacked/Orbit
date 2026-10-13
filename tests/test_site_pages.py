@@ -435,30 +435,33 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
 NEW_ID = "https://developer.apple.com/news/releases/?id=new1"
 
 
-def fresh_snapshot():
+def fresh_snapshot(count=1):
+    """The snapshot with `count` new Apple releases in front; the first has NEW_ID."""
     fresh = copy.deepcopy(SNAPSHOT)
-    fresh["releases"].insert(
-        0,
-        {
-            **APPLE_FIRST,
-            "id": NEW_ID,
-            "title": "iOS 27.2 beta 4 (24B5105a)",
-            "version": "27.2",
-            "beta": 4,
-            "build": "24B5105a",
-            "date": "2026-10-12T17:00:00Z",
-            "url": NEW_ID,
-        },
-    )
+    for n in range(count):
+        release_id = NEW_ID if n == 0 else f"{NEW_ID}-{n}"
+        fresh["releases"].insert(
+            n,
+            {
+                **APPLE_FIRST,
+                "id": release_id,
+                "title": f"iOS 27.{2 + n} beta {4 - n} (24B5105a)",
+                "version": f"27.{2 + n}",
+                "beta": 4 - n,
+                "build": "24B5105a",
+                "date": "2026-10-12T17:00:00Z",
+                "url": release_id,
+            },
+        )
     return fresh
 
 
-def toast_page(browser, base_url):
-    """A page whose second poll brings a new release; the clock is faked."""
-    context = make_context(browser, base_url)
+def toast_page(browser, base_url, width=1280, count=1):
+    """A page whose second poll brings `count` new releases; the clock is faked."""
+    context = make_context(browser, base_url, width=width)
     page = context.new_page()
     page.clock.install()
-    fresh = fresh_snapshot()
+    fresh = fresh_snapshot(count)
     answers = {"count": 0}
 
     def answer(route):
@@ -597,13 +600,15 @@ def test_each_release_in_the_toast_links_to_its_timeline_row(browser, base_url):
 
 
 def test_every_toast_link_is_a_44px_target(browser, base_url):
-    context, page = toast_page(browser, base_url)
+    context, page = toast_page(browser, base_url, width=360, count=3)
     try:
+        page.set_viewport_size({"width": 360, "height": 740})
         show_toast(page)
         heights = page.eval_on_selector_all(
             "#toast .toast-link", "els => els.map(e => e.getBoundingClientRect().height)"
         )
-        assert heights and all(h >= 43.5 for h in heights)
+        assert len(heights) == 3 and all(h >= 43.5 for h in heights)
+        assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth")
     finally:
         context.close()
 

@@ -832,7 +832,6 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   align-items: center;
   min-height: 2.75rem;
   min-width: 2.75rem;
-  padding: 0 0.25rem;
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 0.15em;
