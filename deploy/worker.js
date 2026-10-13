@@ -12,9 +12,10 @@
 // `stale` when any of them is out of date or has nothing at all.
 //
 // A source's feed carries only its latest items, so a live result is merged with the
-// bundled snapshot (/data/releases.json) and history survives beyond it. `stale` means "the
-// source could not be reached, this is the last good copy"; `snapshot` means the copy is the
-// one built into the deploy. A copy past its fresh window is still served at once while a
+// bundled snapshot (/data/releases.json) and with the copy already cached, and history
+// survives beyond both the feed and the snapshot. `stale` means "the source could not be
+// reached, this is the last good copy"; `snapshot` means the copy is the one built into
+// the deploy. A copy past its fresh window is still served at once while a
 // refresh runs in the background. A refresh that fails leaves a `failedAt` mark on the
 // cached copy: from then on the copy is served with stale true, and the source is not asked
 // again until RETRY_MS has passed. With nothing cached, a failed fetch leaves a short
@@ -161,7 +162,7 @@ async function readCapped(res) {
 }
 
 // Fetch every URL on the source's allowlist and parse it. One URL failing fails the source.
-async function fetchLive(source, env, request) {
+async function fetchLive(source, env, request, cached) {
   const found = [];
   for (const url of source.urls) {
     const res = await fetch(url, {
@@ -188,7 +189,12 @@ async function fetchLive(source, env, request) {
     fetchedAt: now(),
     stale: false,
     snapshot: false,
-    releases: mergeReleases(snapshot ? snapshot.releases : [], live),
+    // Snapshot, then the copy already cached, then the live feed: a release that has left a
+    // short feed since the last fetch stays in the history.
+    releases: mergeReleases(
+      mergeReleases(snapshot ? snapshot.releases : [], cached ? cached.releases : []),
+      live,
+    ),
   };
 }
 
@@ -224,13 +230,14 @@ const inflight = new Map();
 
 // One live fetch per source at a time, whoever asks: a background refresh and requests on a
 // cold cache share it. A success is cached; a failure rejects for each caller to handle.
-function fetchAndStore(source, env, request) {
+// `cached` is the copy the caller holds, if any: its releases are kept in the merge.
+function fetchAndStore(source, env, request, cached) {
   if (!inflight.has(source.id)) {
     inflight.set(
       source.id,
       (async () => {
         try {
-          const live = await fetchLive(source, env, request);
+          const live = await fetchLive(source, env, request, cached);
           await writeCache(source, live);
           return live;
         } finally {
@@ -244,7 +251,7 @@ function fetchAndStore(source, env, request) {
 
 // A background refresh; a failure leaves the retry mark on the copy it was refreshing.
 function refresh(source, env, request, cached) {
-  return fetchAndStore(source, env, request).then(
+  return fetchAndStore(source, env, request, cached).then(
     () => undefined,
     () => markFailed(source, cached),
   );
@@ -276,7 +283,7 @@ async function load(source, request, env, ctx) {
     }
   }
   try {
-    return await fetchAndStore(source, env, request);
+    return await fetchAndStore(source, env, request, cached);
   } catch {
     if (cached) {
       await markFailed(source, cached);

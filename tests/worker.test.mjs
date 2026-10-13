@@ -82,6 +82,26 @@ describe('the Worker: /api/releases.json', () => {
     assert.equal((await next.json()).releases.length, 29);
   });
 
+  it('keeps a release that has left the feed since the cached copy was fetched', async () => {
+    const gone = {
+      ...SNAPSHOT.releases[0],
+      id: 'https://developer.apple.com/news/releases/?id=gone1',
+      url: 'https://developer.apple.com/news/releases/?id=gone1',
+      title: 'iOS 25.9 (22Z1)',
+      date: '2025-06-01T17:00:00Z',
+    };
+    await seed(ago(30 * 60 * 1000), {}, APPLE_ID, [gone]); // in the cache, not in feed or snapshot
+    const ctx = fakeCtx();
+    await call('/api/releases.json', fakeEnv(), ctx);
+    await ctx.settle();
+    const body = await (await call('/api/releases.json', fakeEnv())).json();
+    assert.equal(body.stale, false);
+    const ids = body.releases.map((release) => release.id);
+    assert.ok(ids.includes(gone.id), 'the cached release survives the refresh');
+    assert.ok(ids.includes(SNAPSHOT.releases[0].id), 'and so does the snapshot one');
+    assert.equal(body.releases.length, 30); // 28 from the feed + snapshot + cached
+  });
+
   it('shares one background refresh between concurrent requests', async () => {
     await seed(ago(30 * 60 * 1000));
     let answer;
