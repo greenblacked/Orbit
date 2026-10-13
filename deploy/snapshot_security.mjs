@@ -75,10 +75,16 @@ export async function fetchPage(url, hosts, options = {}) {
         `${url} answered ${res.status} to ${next.protocol}//${next.host}, which is not allowed (https only, no userinfo or port, on ${hosts.join(', ')})`,
       );
     }
-    if (lang && next.searchParams.has(lang.param) && next.searchParams.get(lang.param) !== lang.value) {
-      throw new Error(
-        `${url} answered ${res.status} to ${next.href}, which is a non-English variant (redirected to a non-English variant: ${lang.param}=${next.searchParams.get(lang.param)}, asked for ${lang.value})`,
-      );
+    if (lang && next.searchParams.has(lang.param)) {
+      const asked = next.searchParams.get(lang.param).toLowerCase();
+      if (asked !== lang.value && !asked.startsWith(`${lang.value}-`)) {
+        throw new Error(
+          `${url} answered ${res.status} to ${next.href}: redirected to a non-English variant (${lang.param}=${next.searchParams.get(lang.param)}, asked for ${lang.value})`,
+        );
+      }
+    }
+    if (lang && withLang(next.href, lang) === withLang(current, lang)) {
+      throw new Error(`${url} redirects ${lang.param}=${lang.value} back to itself`);
     }
     log(`followed redirect ${current} -> ${next.href}`);
     current = next.href;
@@ -139,6 +145,22 @@ function readJson(path, required) {
   }
 }
 
+/**
+ * Fetch each canonical URL of `adapter` into `pages`, keyed by that same URL: the adapter's `lang`
+ * only changes the request (inside fetchPage), never the key, so note ids stay stable.
+ */
+export async function readPages(adapter, urls, cache, pages, options = {}) {
+  for (const url of urls) {
+    try {
+      if (!onHosts(url, adapter.hosts)) throw new Error(`${url} is not on ${adapter.hosts.join(', ')}`);
+      if (!cache.has(url)) cache.set(url, await fetchPage(url, adapter.hosts, { ...options, lang: adapter.lang }));
+      pages.set(url, cache.get(url));
+    } catch (error) {
+      console.error(`failed: ${adapter.id}: ${error.message}`);
+    }
+  }
+}
+
 async function main() {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const target = resolve(root, 'src', 'data', 'security.json');
@@ -156,15 +178,7 @@ async function main() {
     const pages = new Map();
     try {
       rows = adapter.parseIndex(await fetchPage(adapter.index, adapter.hosts, { lang: adapter.lang }));
-      for (const url of pagesFor(adapter, releases, rows, MAX_PAGES)) {
-        try {
-          if (!onHosts(url, adapter.hosts)) throw new Error(`${url} is not on ${adapter.hosts.join(', ')}`);
-          if (!cache.has(url)) cache.set(url, await fetchPage(url, adapter.hosts, { lang: adapter.lang }));
-          pages.set(url, cache.get(url));
-        } catch (error) {
-          console.error(`failed: ${adapter.id}: ${error.message}`);
-        }
-      }
+      await readPages(adapter, pagesFor(adapter, releases, rows, MAX_PAGES), cache, pages);
     } catch (error) {
       console.error(`failed: ${adapter.id}: ${error.message}`);
     }

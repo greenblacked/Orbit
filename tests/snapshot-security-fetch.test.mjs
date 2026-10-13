@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { fetchPage } from '../deploy/snapshot_security.mjs';
+import { fetchPage, readPages } from '../deploy/snapshot_security.mjs';
 
 const HOSTS = ['source.android.com'];
 const START = 'https://source.android.com/docs/security/bulletin/2025-01-01';
@@ -175,6 +175,30 @@ describe('snapshot_security fetchPage', () => {
         },
       });
       assert.deepEqual(plain, ['en-US,en;q=0.9']);
+    });
+
+    it('accepts hl=EN and hl=en-GB redirects', async () => {
+      for (const variant of ['EN', 'en-GB']) {
+        const target = `${START}/x?hl=${variant}`;
+        const routes = { [EN]: target, [`${START}/x?hl=en`]: { html: 'ok' } };
+        assert.equal(await fetchPage(START, HOSTS, withLang(routes, [], [])), 'ok');
+      }
+    });
+
+    it('names a redirect that strips hl and so loops back to itself', async () => {
+      const routes = { [EN]: START };
+      await assert.rejects(fetchPage(START, HOSTS, withLang(routes, [], [])), /back to itself/);
+    });
+
+    it('keeps the canonical URL as the page key while the request carries hl=en', async () => {
+      const calls = [];
+      const cache = new Map();
+      const pages = new Map();
+      const adapter = { id: 'x', hosts: HOSTS, lang: LANG };
+      await readPages(adapter, [START], cache, pages, withLang({ [EN]: { html: 'en' } }, calls, []));
+      assert.deepEqual(calls, [EN]);
+      assert.deepEqual([...pages.keys()], [START]);
+      assert.deepEqual([...cache.keys()], [START]);
     });
 
     it('declares the parameter on the Android adapter only', async () => {
