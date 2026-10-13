@@ -310,6 +310,7 @@ def test_the_timeline_asks_for_security_and_families_once_each(browser, base_url
     try:
         page = context.new_page()
         seen = count_requests(page)
+        errors = watch(page)
         serve_security(page, apple_payload())
         page.goto(base_url + "/timeline/")
         page.wait_for_selector(".sec")
@@ -317,6 +318,8 @@ def test_the_timeline_asks_for_security_and_families_once_each(browser, base_url
         assert len([u for u in seen if u.endswith("/api/security.json")]) == 1
         assert [u for u in seen if u.endswith("/data/security.json")] == []
         assert len([u for u in seen if u.endswith("/data/families.json")]) == 1
+        assert page.evaluate("() => window.__csp") == []
+        assert errors == []
     finally:
         context.close()
 
@@ -327,6 +330,7 @@ def test_compare_asks_for_security_and_families_once_each(browser, base_url):
     try:
         page = context.new_page()
         seen = count_requests(page)
+        errors = watch(page)
         serve_security(page, apple_payload())
         page.goto(base_url + "/compare/")
         page.wait_for_selector(".cmp-cards")
@@ -338,6 +342,8 @@ def test_compare_asks_for_security_and_families_once_each(browser, base_url):
         assert len([u for u in seen if u.endswith("/api/security.json")]) == 1
         assert [u for u in seen if u.endswith("/data/security.json")] == []
         assert len([u for u in seen if u.endswith("/data/families.json")]) == 1
+        assert page.evaluate("() => window.__csp") == []
+        assert errors == []
     finally:
         context.close()
 
@@ -355,8 +361,11 @@ def test_the_snapshot_is_the_fallback_when_the_api_fails(browser, base_url):
         )
         page.goto(base_url + "/timeline/")
         page.wait_for_selector(".sec")
-        assert len([u for u in seen if u.endswith("/api/security.json")]) == 1
-        assert len([u for u in seen if u.endswith("/data/security.json")]) == 1
+        page.wait_for_load_state("networkidle")
+        api = [i for i, u in enumerate(seen) if u.endswith("/api/security.json")]
+        snapshot = [i for i, u in enumerate(seen) if u.endswith("/data/security.json")]
+        assert len(api) == 1 and len(snapshot) == 1
+        assert api[0] < snapshot[0]
     finally:
         context.close()
 
