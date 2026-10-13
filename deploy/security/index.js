@@ -10,6 +10,7 @@
 //   parseNote   (html) => { title, released, cves, ... } or null, with no I/O
 //   match       (releases, rows) => [{ id, status, row }], with no I/O
 //   covers      optional (page, release) => boolean: whether a parsed note is the release's own
+//   lang        optional { param, value }: a host that picks the language by query parameter (hl=en)
 //
 // A source with `kind: 'bulletins'` (Android) has another shape, because its releases are joined
 // to a monthly page by a patch level and not by an index row:
