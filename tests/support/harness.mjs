@@ -75,7 +75,9 @@ export function fakeCache() {
 }
 
 // An ASSETS binding that serves `snapshot` at /data/releases.json and "asset" elsewhere.
-export function fakeEnv(snapshot = SNAPSHOT) {
+// With `version`, /version.txt answers it (the key the Worker memoises the snapshot by);
+// without, there is no such file.
+export function fakeEnv(snapshot = SNAPSHOT, version = null) {
   const calls = [];
   return {
     calls,
@@ -83,6 +85,9 @@ export function fakeEnv(snapshot = SNAPSHOT) {
       async fetch(input) {
         const request = input instanceof Request ? input : new Request(input);
         calls.push(new URL(request.url).pathname);
+        if (new URL(request.url).pathname === '/version.txt') {
+          return version ? new Response(`${version}\n`) : new Response('', { status: 404 });
+        }
         if (new URL(request.url).pathname === '/data/releases.json' && snapshot) {
           return Response.json(snapshot);
         }

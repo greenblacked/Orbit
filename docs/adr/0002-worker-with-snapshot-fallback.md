@@ -6,7 +6,7 @@ Releases come from public vendor feeds. A browser cannot fetch them directly: th
 
 ## Decision
 
-A Cloudflare Worker answers `/api/releases.json` and `/api/health`, and everything else is static assets. The Worker reads one adapter per source, fetches only that adapter's allowlisted URLs, and caches each source on its own: fresh for 10 minutes, served at once while refreshing for up to 24 hours, kept for 7 days. A failed refresh marks the copy stale and backs off for 5 minutes. A live result is merged with the copy already cached and with a snapshot of the releases committed with the site, which is also the last fallback, and the page falls back to the same file if the API itself is unavailable.
+A Cloudflare Worker answers `/api/releases.json` and `/api/health`, and everything else is static assets. The Worker reads one adapter per source, fetches only that adapter's allowlisted URLs, and caches each source on its own: fresh for 10 minutes, served at once while refreshing for up to 24 hours, kept for 7 days. A source's URLs are fetched together under one 8 second deadline. A failed refresh marks the copy stale and backs off for 5 minutes. A live result is merged with the copy already cached and with a snapshot of the releases committed with the site, which is also the last fallback, and the page falls back to the same file if the API itself is unavailable.
 
 ## Consequences
 
