@@ -10,6 +10,7 @@
 //   parseNote   (html) => { title, released, cves, ... } or null, with no I/O
 //   match       (releases, rows) => [{ id, status, row }], with no I/O
 //   covers      optional (page, release) => boolean: whether a parsed note is the release's own
+//   lang        optional { param, value }: a host that picks the language by query parameter (hl=en)
 //
 // A source with `kind: 'bulletins'` (Android) has another shape, because its releases are joined
 // to a monthly page by a patch level and not by an index row:
@@ -40,6 +41,14 @@ export function isSecuritySource(source) {
       source.hosts.length > 0 &&
       typeof source.parseIndex === 'function' &&
       typeof source.match === 'function' &&
+      (source.lang === undefined ||
+        Boolean(
+          source.lang &&
+            typeof source.lang.param === 'string' &&
+            source.lang.param &&
+            typeof source.lang.value === 'string' &&
+            source.lang.value,
+        )) &&
       (source.kind === 'bulletins'
         ? typeof source.parseBulletin === 'function' &&
           typeof source.bulletinUrl === 'function' &&
