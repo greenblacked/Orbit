@@ -73,7 +73,8 @@ describe('the Worker: /api/releases.json', () => {
     const body = await res.json();
     assert.equal(body.releases.length, 1); // the old copy, served without waiting
     assert.equal(body.stale, false);
-    assert.equal(ctx.pending.length, 1);
+    // The refresh with its failure mark, and the shared fetch itself.
+    assert.equal(ctx.pending.length, 2);
     assert.equal(state.upstream.calls.length, 1);
 
     answer(feedResponse());
@@ -435,5 +436,269 @@ describe('the Worker: /api/health and the rest', () => {
     for (const res of responses.slice(0, 3)) {
       assert.equal(res.headers.get('cache-control'), 'public, max-age=60');
     }
+  });
+});
+
+// A source with two URLs, to see how a source is fetched.
+const DUO_ID = 'duo-feed';
+const DUO_URLS = ['https://duo.example/a.txt', 'https://duo.example/b.txt'];
+const duoRelease = (id, date) => ({
+  id,
+  vendor: 'duo',
+  family: 'Pair',
+  version: '1.0',
+  major: 1,
+  stage: 'release',
+  beta: null,
+  build: id,
+  title: `Pair ${id}`,
+  date,
+  url: `https://duo.example/${id}`,
+  source: DUO_ID,
+});
+const duo = {
+  id: DUO_ID,
+  vendor: 'duo',
+  urls: DUO_URLS,
+  parse: (text) => text.split('\n').filter(Boolean).map((line) => duoRelease(...line.split(' '))),
+};
+const duoWorker = createWorker([duo]);
+const duoCall = (env = fakeEnv(null), ctx = fakeCtx()) =>
+  duoWorker.fetch(new Request(`${ORIGIN}/api/releases.json`), env, ctx);
+const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+describe('the Worker: fetching a source', () => {
+  it('asks every URL of a source at once, under one deadline', async () => {
+    const realTimeout = AbortSignal.timeout;
+    let timeouts = 0;
+    AbortSignal.timeout = (ms) => {
+      timeouts += 1;
+      return realTimeout.call(AbortSignal, ms);
+    };
+    try {
+      const answers = {};
+      stubUpstream((url) => new Promise((resolve) => (answers[url] = resolve)));
+      const pending = duoCall();
+      await tick();
+      // Both are on the wire before either has answered.
+      assert.deepEqual(state.upstream.calls.map((c) => c.url), DUO_URLS);
+      assert.equal(timeouts, 1);
+      const [first, second] = state.upstream.calls;
+      assert.equal(first.init.signal, second.init.signal);
+      answers[DUO_URLS[1]](new Response('b2 2026-02-02T00:00:00Z\n'));
+      answers[DUO_URLS[0]](new Response('a1 2026-01-01T00:00:00Z\n'));
+      const body = await (await pending).json();
+      assert.deepEqual(body.releases.map((r) => r.id), ['b2', 'a1']);
+      assert.equal(body.stale, false);
+    } finally {
+      AbortSignal.timeout = realTimeout;
+    }
+  });
+
+  it('fails the source when one of its URLs fails', async () => {
+    stubUpstream((url) =>
+      url === DUO_URLS[0] ? new Response('a1 2026-01-01T00:00:00Z\n') : new Response('', { status: 503 }),
+    );
+    const res = await duoCall();
+    assert.equal(res.status, 503); // no snapshot, no cache: nothing at all
+    assert.equal(state.upstream.calls.length, 2);
+  });
+
+  it('replaces a shared fetch that has been pending past its deadline', async () => {
+    stubUpstream(() => new Promise(() => {})); // a promise that never settles
+    duoCall(); // left hanging on purpose
+    await tick();
+    assert.equal(state.upstream.calls.length, 2);
+
+    advance(5000); // still inside the deadline: joins the first fetch
+    duoCall();
+    await tick();
+    assert.equal(state.upstream.calls.length, 2);
+
+    advance(6000); // past it: the lost fetch is replaced
+    stubUpstream(() => new Response('a1 2026-01-01T00:00:00Z\n'));
+    const res = await duoCall();
+    assert.equal(res.status, 200);
+    assert.equal(state.upstream.calls.length, 2); // two new URL fetches, on the new stub
+    assert.deepEqual((await res.json()).releases.map((r) => r.id), ['a1']);
+  });
+
+  it('stops the other URLs of a source when one of them fails', async () => {
+    let second;
+    stubUpstream((url, init) =>
+      url === DUO_URLS[0]
+        ? new Response('', { status: 503 })
+        : new Promise((_resolve, reject) => {
+            second = init.signal;
+            init.signal.addEventListener('abort', () => reject(init.signal.reason));
+          }),
+    );
+    const res = await duoCall();
+    assert.equal(res.status, 503);
+    assert.equal(second.aborted, true, 'the sibling fetch was aborted, not left running');
+  });
+
+  it('answers from the snapshot at the deadline even when a fetch ignores the abort', async () => {
+    const realTimeout = AbortSignal.timeout;
+    AbortSignal.timeout = () => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException('timed out', 'TimeoutError')), 5);
+      return controller.signal;
+    };
+    try {
+      stubUpstream(() => new Promise(() => {})); // never settles, whatever the signal says
+      const res = await call('/api/releases.json', fakeEnv());
+      assert.equal(res.status, 200);
+      const body = await res.json();
+      assert.equal(body.snapshot, true);
+      assert.equal(body.stale, true);
+    } finally {
+      AbortSignal.timeout = realTimeout;
+    }
+  });
+
+  it('leaves the cache alone when a replaced fetch succeeds late', async () => {
+    const hung = [];
+    stubUpstream((url) => new Promise((resolve) => hung.push({ url, resolve })));
+    duoCall(); // the lost fetch
+    await tick();
+    assert.equal(hung.length, 2);
+
+    advance(12000); // past INFLIGHT_MAX_MS: the next request replaces it
+    stubUpstream((url) =>
+      new Response(url === DUO_URLS[0] ? 'a1 2026-01-01T00:00:00Z\n' : 'b2 2026-02-02T00:00:00Z\n'),
+    );
+    await duoCall();
+    const key = cacheUrl(DUO_ID);
+    const written = state.cache.store.get(key);
+    assert.ok(written, 'the replacement cached its result');
+
+    // The lost fetch ends now, with older data, and must not overwrite the newer copy.
+    for (const { resolve } of hung) resolve(new Response('z9 2025-01-01T00:00:00Z\n'));
+    await tick();
+    assert.equal(state.cache.store.get(key), written);
+  });
+
+  it('does not mark the source failed when a replaced fetch fails late', async () => {
+    const hung = [];
+    stubUpstream((url) => new Promise((resolve) => hung.push({ url, resolve })));
+    const lostCtx = fakeCtx();
+    const lost = duoCall(fakeEnv(null), lostCtx); // the caller of the lost fetch
+    await tick();
+
+    advance(12000);
+    stubUpstream((url) =>
+      new Response(url === DUO_URLS[0] ? 'a1 2026-01-01T00:00:00Z\n' : 'b2 2026-02-02T00:00:00Z\n'),
+    );
+    await duoCall();
+    const key = cacheUrl(DUO_ID);
+    const written = state.cache.store.get(key);
+
+    for (const { resolve } of hung) resolve(new Response('', { status: 503 }));
+    const res = await lost;
+    await lostCtx.settle();
+    assert.equal(res.status, 503, 'nothing cached, no snapshot, for this caller');
+    assert.equal(state.cache.store.get(key), written, 'no failure marker over the newer copy');
+  });
+
+  it('registers the shared fetch with the waitUntil of the request that started it', async () => {
+    let answer;
+    stubUpstream(() => new Promise((resolve) => (answer = resolve)));
+    const ctxs = [fakeCtx(), fakeCtx()];
+    const pending = Promise.all(ctxs.map((ctx) => call('/api/releases.json', fakeEnv(), ctx)));
+    await tick();
+    assert.equal(state.upstream.calls.length, 1);
+    assert.equal(ctxs[0].pending.length + ctxs[1].pending.length, 1, 'exactly one creator');
+    answer(feedResponse());
+    for (const res of await pending) assert.equal(res.status, 200);
+    await Promise.all(ctxs.map((ctx) => ctx.settle())); // and it settles without throwing
+  });
+
+  it('does not leave an unhandled rejection when the registered fetch fails', async () => {
+    stubUpstream(() => new Response('nope', { status: 503 }));
+    const ctx = fakeCtx();
+    const body = await (await call('/api/releases.json', fakeEnv(), ctx)).json();
+    assert.equal(body.snapshot, true);
+    assert.equal(ctx.pending.length, 1);
+    await ctx.settle(); // the waitUntil copy resolves even though the fetch failed
+  });
+});
+
+describe('the Worker: the bundled snapshot', () => {
+  const reads = (env) => env.calls.filter((path) => path === '/data/releases.json').length;
+  const refreshOnce = async (env) => {
+    advance(11 * 60 * 1000); // past the fresh window, so a background refresh runs
+    const ctx = fakeCtx();
+    await call('/api/releases.json', env, ctx);
+    await ctx.settle();
+  };
+
+  it('is read once per deploy version, not once per request', async () => {
+    const env = fakeEnv(SNAPSHOT, 'v-memo-1');
+    await call('/api/releases.json', env); // cold fetch
+    await refreshOnce(env);
+    await refreshOnce(env);
+    assert.equal(state.upstream.calls.length, 3);
+    assert.equal(reads(env), 1);
+  });
+
+  it('is read again after a new deploy, and serves the new data', async () => {
+    const env = fakeEnv(SNAPSHOT, 'v-memo-2');
+    await call('/api/releases.json', env);
+    const fresh = {
+      ...SNAPSHOT,
+      releases: [
+        {
+          ...SNAPSHOT.releases[0],
+          id: 'https://developer.apple.com/news/releases/?id=newdeploy',
+          date: '2025-10-01T00:00:00Z',
+        },
+      ],
+    };
+    const next = fakeEnv(fresh, 'v-memo-3');
+    await refreshOnce(next);
+    assert.equal(reads(next), 1);
+    const body = await (await call('/api/releases.json', next)).json();
+    assert.ok(body.releases.some((r) => r.id.endsWith('id=newdeploy')));
+  });
+
+  it('is read on every use when the deploy has no readable version', async () => {
+    const env = fakeEnv(); // no /version.txt
+    await call('/api/releases.json', env);
+    await refreshOnce(env);
+    assert.equal(reads(env), 2);
+  });
+
+  it('does not share a snapshot read that another request left pending', async () => {
+    const env = fakeEnv(SNAPSHOT, 'v-memo-5');
+    const assets = env.ASSETS.fetch;
+    let hung = false;
+    env.ASSETS.fetch = (input) => {
+      const path = new URL(input instanceof Request ? input.url : input).pathname;
+      if (path === '/data/releases.json' && !hung) {
+        hung = true;
+        return new Promise(() => {}); // the first read never finishes
+      }
+      return assets(input);
+    };
+    stubUpstream(() => new Response('nope', { status: 503 }));
+    call('/api/releases.json', env); // left hanging on its snapshot read, on purpose
+    await tick();
+    assert.equal(hung, true);
+    // Inside the back-off: this request reads the snapshot itself instead of waiting.
+    const res = await call('/api/releases.json', env);
+    assert.equal((await res.json()).snapshot, true);
+  });
+
+  it('does not remember a snapshot that could not be read', async () => {
+    const broken = fakeEnv(null, 'v-memo-4');
+    stubUpstream(() => new Response('nope', { status: 503 }));
+    await call('/api/releases.json', broken);
+    await tick();
+    const env = fakeEnv(SNAPSHOT, 'v-memo-4'); // same version, now readable
+    advance(6 * 60 * 1000); // past the back-off the failure left
+    const body = await (await call('/api/releases.json', env)).json();
+    assert.equal(body.snapshot, true);
+    assert.equal(body.releases.length, 1);
   });
 });
