@@ -275,15 +275,16 @@ describe('families without an adapter', () => {
     assert.equal(Object.keys(payload.releases).length, more.length);
   });
 
-  it('does not overwrite an entry kept from the previous payload', () => {
+  it('rewrites an uncovered release, keeping checkedAt only when the status is unchanged', () => {
     const before = run().payload;
     before.releases.win = {
       status: 'unavailable', notes: [], cves: [], count: null, patchLevel: null, checkedAt: NOW,
     };
     const { payload } = run({ previous: before, now: LATER });
-    assert.equal(payload.releases.win.status, 'unavailable');
-    assert.equal(payload.releases.win.checkedAt, NOW);
+    assert.equal(payload.releases.win.status, 'not-connected');
+    assert.equal(payload.releases.win.checkedAt, LATER);
     assert.equal(payload.releases.steam.status, 'not-connected');
+    assert.equal(payload.releases.steam.checkedAt, NOW);
   });
 });
 
@@ -333,7 +334,9 @@ describe('a row with no note whose source later fails', () => {
     bad.releases.ios.source = 'nope';
     assert.ok(problems(bad, only).some((line) => line.includes('ios names an unknown source')));
     const worse = structuredClone(payload);
-    worse.releases['ios-beta'].source = 'quiet';
+    worse.releases['ios-beta'] = {
+      status: 'not-applicable', notes: [], cves: [], count: null, patchLevel: null, checkedAt: NOW, source: 'quiet',
+    };
     assert.ok(problems(worse, only).some((line) => line.includes('ios-beta is not-applicable')));
     const odd = structuredClone(payload);
     odd.releases.ios.source = 3;

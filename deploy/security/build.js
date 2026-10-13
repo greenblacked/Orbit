@@ -255,7 +255,10 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
       const value = outReleases[release.id];
       if (!value) continue;
       if (value.status === 'not-applicable' || value.status === 'not-connected') {
-        delete value.source;
+        if ('source' in value) {
+          const { source: _drop, ...rest } = value;
+          outReleases[release.id] = rest;
+        }
       } else {
         outReleases[release.id] = { ...value, source: adapter.id };
       }
@@ -263,11 +266,13 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
   }
 
   // A release no source describes (RouterOS, Windows, SteamOS until their adapters land) is
-  // written as not-connected, and its pre-releases as not-applicable (ADR 0008). An entry kept
-  // from the previous payload is not touched.
+  // written as not-connected, and its pre-releases as not-applicable (ADR 0008). A family that
+  // loses its adapter drops its old rows; an unchanged row keeps its checkedAt.
   for (const release of releases) {
-    if (covered.has(release.id) || outReleases[release.id]) continue;
-    outReleases[release.id] = entry(release.stage === 'release' ? 'not-connected' : 'not-applicable', now);
+    if (covered.has(release.id)) continue;
+    const status = release.stage === 'release' ? 'not-connected' : 'not-applicable';
+    const old = outReleases[release.id];
+    outReleases[release.id] = entry(status, old?.status === status && old.checkedAt ? old.checkedAt : now);
   }
 
   // A note that no release refers to any more is dropped.
