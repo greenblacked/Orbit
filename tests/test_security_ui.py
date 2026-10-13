@@ -328,7 +328,7 @@ def test_compare_announces_the_cve_count_in_a_separate_live_region(browser, base
         page.wait_for_selector(".sec-cmp")
         assert page.get_attribute("#cmp-result", "aria-live") is None
         assert page.locator("#cmp-result [aria-live]").count() == 0
-        want = f"2 CVEs listed in iOS {ios[0]['version']}'s notes, not in iOS {ios[1]['version']}'s"
+        want = f"2 CVEs. Fixed after iOS {ios[1]['version']}, up to iOS {ios[0]['version']}"
         assert page.inner_text("#cmp-live") == want
         assert errors == []
     finally:
@@ -355,6 +355,20 @@ def three_notes(middle="listed"):
     if middle == "stale":
         rows[ios[1]["id"]]["checkedAt"] = "2026-08-01T00:00:00Z"
     return payload(notes, rows)
+
+
+def test_compare_announces_the_range_the_section_shows(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, three_notes(), "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        said = page.inner_text("#cmp-live")
+        assert "3 CVEs" in said
+        assert f"Fixed after iOS {ios[2]['version']}, up to iOS {ios[0]['version']}" in said
+        assert "listed in" not in said.lower()
+        assert errors == []
+    finally:
+        context.close()
 
 
 def test_compare_counts_the_public_releases_between_the_two_picks(browser, base_url):

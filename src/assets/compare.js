@@ -33,12 +33,13 @@
     var has = list.some(function (r) { return r.id === keep; });
     select.value = has ? keep : fallback;
   }
-  // Two picks that share a family and version are told apart by build (or date without one),
-  // the same details the pickers show, so each link and the announcement name its own release.
-  var twins = false;
+  // Releases in the shown set (both picks and everything between) that share a family and a
+  // version are told apart by build (or date without one), the same details the pickers show,
+  // so each link and the announcement name its own release.
+  var twins = Object.create(null);
   function name(r) {
     var base = r.family + " " + RO.short(r);
-    return twins ? base + " (" + (r.build || RO.day(r.t)) + ")" : base;
+    return twins[r.id] ? base + " (" + (r.build || RO.day(r.t)) + ")" : base;
   }
   // One sentence for a screen reader; the result itself is rebuilt silently.
   function announce(text) { if (live) live.textContent = text; }
@@ -78,7 +79,9 @@
     var between = name(shown.older) + " and " + name(shown.newer);
     var count = section && section.querySelector(".sec-count");
     var say = section && section.querySelector(".sec-say");
-    if (count) announce(count.textContent + " listed in " + name(shown.newer) + "'s notes, not in " + name(shown.older) + "'s");
+    var lead = section && section.querySelector(".sec-lead");
+    if (count && lead) announce(count.textContent + ". " + lead.textContent);
+    else if (count) announce(count.textContent);
     else if (say) announce("Comparing " + between + ". " + say.textContent);
     else announce("Comparing " + between);
   }
@@ -88,7 +91,7 @@
     out.textContent = "";
     shown = null;
     slot = null;
-    twins = false;
+    twins = Object.create(null);
     var i = list.map(function (r) { return r.id; }).indexOf(selFrom.value);
     var j = list.map(function (r) { return r.id; }).indexOf(selTo.value);
     if (i < 0 || j < 0) {
@@ -110,8 +113,15 @@
     }
     var newerAt = Math.min(i, j), olderAt = Math.max(i, j);
     var newer = list[newerAt], older = list[olderAt];
-    twins = newer.family === older.family && RO.short(newer) === RO.short(older);
     var between = list.slice(newerAt + 1, olderAt);
+    var seenName = Object.create(null);
+    [newer, older].concat(between).forEach(function (r) {
+      var key = r.family + " " + RO.short(r);
+      (seenName[key] = seenName[key] || []).push(r.id);
+    });
+    Object.keys(seenName).forEach(function (key) {
+      if (seenName[key].length > 1) seenName[key].forEach(function (id) { twins[id] = true; });
+    });
     var pre = between.filter(function (r) { return r.stage !== "release"; }).length;
     var span = newer.t - older.t;
 
