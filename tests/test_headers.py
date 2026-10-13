@@ -85,9 +85,9 @@ def applied(path: str) -> dict[str, str]:
     return found
 
 
-def test_assets_are_cached_for_an_hour_with_a_day_of_stale_revalidation():
+def test_assets_are_cached_for_an_hour_with_an_hour_of_stale_revalidation():
     # The file names carry no content hash, so the lifetime stays modest.
-    expected = "public, max-age=3600, stale-while-revalidate=86400"
+    expected = "public, max-age=3600, stale-while-revalidate=3600"
     for path in ("/assets/site.css", "/assets/site.js"):
         assert applied(path)["Cache-Control"] == expected
 
@@ -96,7 +96,7 @@ def test_data_is_cached_for_five_minutes():
     assert applied("/data/releases.json")["Cache-Control"] == "public, max-age=300"
 
 
-def test_html_routes_get_no_cache_rule():
+def test_pages_and_root_files_get_no_cache_rule():
     # Pages keep the platform default and revalidate, so a release shows at once.
     for path in ("/", "/about/", "/compare/", "/timeline/", "/404.html", "/og.png"):
         assert "Cache-Control" not in applied(path), path
