@@ -20,11 +20,13 @@
   // The from and to ids in the address, used once when the first data arrives. An id that is not
   // in the loaded list is ignored by fill(), which falls back to the defaults.
   var initial = { from: "", to: "" };
+  var shared = false;
 
   try {
     var params = new URLSearchParams(window.location.search);
     initial.from = params.get("from") || "";
     initial.to = params.get("to") || "";
+    shared = params.has("from") || params.has("to") || params.has("family");
     var wanted = params.get("family");
     var offered = Array.prototype.map.call(selFamily.options, function (o) { return o.value; });
     if (offered.indexOf(wanted) >= 0) selFamily.value = wanted;
@@ -194,5 +196,7 @@
       .map(function (r) { return r.id; }).join("|");
     if (next === signature && out.firstChild) return;
     pick(false);
+    // A shared address that named ids or a platform not in the list is rewritten to what is shown.
+    if (shared) { shared = false; remember(); }
   });
 })();

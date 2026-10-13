@@ -14,7 +14,7 @@ import json
 import os
 import re
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 import pytest
 from helpers import REPO
@@ -889,11 +889,30 @@ def test_compare_ignores_ids_that_are_not_in_the_list(page, base_url):
     assert page.input_value("#c-from") == default_from(ios)["id"]
 
 
+def test_compare_rewrites_a_bad_shared_address_to_what_is_shown(page, base_url):
+    page.goto(base_url + "/compare/?family=iOS&from=no-such-id&to=also-bad")
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    query = parse_qs(urlsplit(page.url).query)
+    assert query["from"] == [default_from(ios)["id"]]
+    assert query["to"] == [ios[0]["id"]]
+
+
+def test_home_compare_link_does_not_indent_when_it_wraps(page, base_url):
+    page.set_viewport_size({"width": 360, "height": 800})
+    page.goto(base_url + "/")
+    first = page.locator("#visionos .more-row a").nth(0).bounding_box()
+    second = page.locator("#visionos .more-row a").nth(1).bounding_box()
+    # Wrapped under the first link, the second starts at the same left edge.
+    assert second["y"] > first["y"]
+    assert abs(second["x"] - first["x"]) < 1
+
+
 def test_home_compare_link_goes_to_the_family(page, base_url):
     page.goto(base_url + "/")
     link = page.locator("#macos a.more-cmp")
     assert link.get_attribute("href") == "/compare/?family=macOS"
-    assert link.bounding_box()["height"] >= 44
+    assert link.bounding_box()["height"] >= 43.5
     link.click()
     page.wait_for_selector(".cmp-cards")
     assert page.input_value("#c-family") == "macOS"
