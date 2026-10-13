@@ -896,6 +896,29 @@ def test_a_saved_copy_is_named_with_the_day_it_is_from(page, base_url, path):
     assert "old" in page.get_attribute(NOTE, "class").split()
 
 
+def test_a_failed_poll_after_a_good_load_says_so_and_recovery_restores_it(page, base_url):
+    answers = {"status": 200}
+
+    def answer(route):
+        if answers["status"] == 200:
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(LIVE))
+        else:
+            route.fulfill(status=answers["status"], body="down")
+
+    page.route("**/api/releases.json", answer)
+    assert note_text(page, base_url, "/timeline/") == "Data checked 5 minutes ago."
+    answers["status"] = 503
+    page.evaluate("() => RO.refresh()")
+    page.wait_for_selector(f"{NOTE}.old")
+    expected = "Live source unavailable, showing the last data, checked 5 minutes ago."
+    assert text(page, NOTE) == expected
+    assert page.get_attribute(f"{NOTE} time", "datetime") == "2026-10-12T11:55:00.000Z"
+    answers["status"] = 200
+    page.evaluate("() => RO.refresh()")
+    page.wait_for_selector(f"{NOTE}:not(.old)")
+    assert text(page, NOTE) == "Data checked 5 minutes ago."
+
+
 def test_the_freshness_line_keeps_its_space_so_nothing_shifts(page, base_url):
     serve(page, LIVE)
     note_text(page, base_url, "/timeline/")

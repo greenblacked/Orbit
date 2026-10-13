@@ -152,6 +152,7 @@
       listeners.forEach(function (fn) { fn(data, fresh); });
     }, function () {
       state.failed = true;
+      if (state.data) note(state.data, true);
       // Nothing to say and nothing ever will: give back the space the line keeps for itself.
       var line = document.getElementById("data-note");
       if (line && !state.data) line.classList.add("none");
@@ -252,19 +253,22 @@
   }
 
   // The one freshness line (#data-note on a page): when the data was checked, or that the
-  // live source is down and this is the saved copy. Its space is reserved in CSS.
-  function note(data) {
+  // live source is down and this is the saved copy (or, after a failed poll, the last load).
+  // Its space is reserved in CSS.
+  function note(data, failed) {
     var el = document.getElementById("data-note");
     if (!el) return;
-    var old = data.stale || data.snapshot;
+    var saved = data.stale || data.snapshot;
+    var old = saved || failed;
     var t = data.fetchedAt;
     el.textContent = "";
     el.classList.remove("none");
     el.classList.toggle("old", old);
     if (old) {
-      el.appendChild(document.createTextNode("Live source unavailable, showing the saved copy" + (t ? " from " : ".")));
+      var what = saved ? "the saved copy" : "the last data";
+      el.appendChild(document.createTextNode("Live source unavailable, showing " + what + (t ? (saved ? " from " : ", checked ") : ".")));
       if (t) {
-        el.appendChild(h("time", null, day(t), { datetime: new Date(t).toISOString() }));
+        el.appendChild(saved ? h("time", null, day(t), { datetime: new Date(t).toISOString() }) : when(t));
         el.appendChild(document.createTextNode("."));
       }
     } else if (t) {
@@ -275,6 +279,8 @@
   }
   // "Now" for counting days: a stale or bundled copy is as of when it was fetched, so it does
   // not look more dormant every day.
+  // A failed poll keeps Date.now(): the data on screen is the last good live load. Only a stale or
+  // saved copy freezes time at its fetch.
   function clock() {
     var d = state.data;
     // Never earlier than the newest release it holds: one source may have fallen back to an old copy.
