@@ -602,13 +602,29 @@ def test_each_release_in_the_toast_links_to_its_timeline_row(browser, base_url):
 def test_every_toast_link_is_a_44px_target(browser, base_url):
     context, page = toast_page(browser, base_url, width=360, count=3)
     try:
-        page.set_viewport_size({"width": 360, "height": 740})
         show_toast(page)
         heights = page.eval_on_selector_all(
             "#toast .toast-link", "els => els.map(e => e.getBoundingClientRect().height)"
         )
         assert len(heights) == 3 and all(h >= 43.5 for h in heights)
-        assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth")
+        inside = page.evaluate(
+            """() => {
+                const toast = document.querySelector('#toast');
+                const box = toast.getBoundingClientRect();
+                const links = [...toast.querySelectorAll('.toast-link')];
+                return {
+                    left: box.left,
+                    right: box.right,
+                    width: window.innerWidth,
+                    scroll: toast.scrollWidth,
+                    client: toast.clientWidth,
+                    links: links.map(a => a.getBoundingClientRect().right),
+                };
+            }"""
+        )
+        assert inside["left"] >= 0 and inside["right"] <= inside["width"]
+        assert inside["scroll"] <= inside["client"]
+        assert all(r <= inside["right"] + 0.5 for r in inside["links"])
     finally:
         context.close()
 
