@@ -96,3 +96,7 @@ A read-only probe fetched both Steam sources from a GitHub runner on 2026-10-12 
 - Fixture: `tests/fixtures/valve/getnewsforapp-steamos-titles.json` holds the 19 complete titles, dates and tags exactly as recorded, in the API's JSON shape; its README says what the probe did not show. The two Steam Client fixtures are the recorded items.
 - Snapshot: two rows, the newest stable post (`SteamOS 3.8.28`, 2026-09-25) and the newest beta or preview post (`SteamOS 3.9.2 Beta`, 2026-09-25), from the same recorded data. The Worker's live answer is the 100 newest posts, which reach back to at least June 2026 in the recorded data, inside the dial's 26 weeks.
 - Terms of use for automated polling were not checked in the probe; the Worker's cache (10 minutes) and back-off (5 minutes) keep the rate low, and the owner confirms the terms before the next release.
+
+## Update: release lines (2026-10-14)
+
+RouterOS keeps stable, long-term and testing side by side and Windows services several feature updates at once, so the newest release alone hid supported versions. The release contract gains one optional field, `line`: the RouterOS channel (the NEWEST document it came from) and the Windows feature update (the version, `24H2`). Other families have no `line` key. It is optional so the other adapters and their tests stay as they are, and a copy of the data cached before this change (no `line`) still works: the pages fall back to the major version, as before. The card lists the other lines as text, and the timeline filters by line; neither adds a request or a link.
