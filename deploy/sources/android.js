@@ -12,8 +12,7 @@
 // a bare numeric build id and are security-only refreshes; the release contract has no stage
 // for them, so they are skipped. Every row is a final AOSP release: the page lists no
 // pre-release, so `stage` is always "release". No text of the page is kept apart from the
-// tag, the build id and a release's `summary`, "Security patch level <day>", which is that
-// cell when it is a plain day.
+// tag and the build id.
 //
 // Bounds on what is emitted (ADR 0007, which replaced the 180-day window of ADR 0006): every
 // release row of the page with a dated build id is emitted, newest first, which in practice
@@ -35,7 +34,7 @@
 // later parameter (`now`) is for tests: passing the url on would make it `now`.
 
 import { familyIds } from '../families.js';
-import { sortReleases, withSummary } from '../releases.js';
+import { sortReleases } from '../releases.js';
 
 export const ID = 'android-build-numbers';
 export const VENDOR = 'google';
@@ -213,7 +212,7 @@ export function parseRow(cells, columns, now = Date.now()) {
     'T00:00:00Z',
     `T00:${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}Z`,
   );
-  return withSummary({
+  return {
     id: tag,
     vendor: VENDOR,
     family: FAMILY,
@@ -226,7 +225,7 @@ export function parseRow(cells, columns, now = Date.now()) {
     date,
     url: PAGE_URL,
     source: ID,
-  }, PATCH_RE.test(patchLevel) ? `Security patch level ${patchLevel}` : '');
+  };
 }
 
 /**

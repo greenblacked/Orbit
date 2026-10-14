@@ -277,17 +277,7 @@ describe('parsePage on the recorded page', () => {
       date: '2026-06-05T00:00:01Z',
       url: 'https://source.android.com/docs/setup/reference/build-numbers',
       source: 'android-build-numbers',
-      summary: 'Security patch level 2026-06-05',
     });
-  });
-
-  it('summarises a release with its security patch level, and with nothing when it is no day', () => {
-    assert.equal(byId('android-15.0.0_r24').summary, 'Security patch level 2025-01-05');
-    for (const patch of ['', 'n/a', '2026-06', '2026-06-05 (beta)']) {
-      const [r] = at(page(row('CP2A.260605.016', 'android-17.0.0_r1', patch)));
-      assert.equal(r.date.slice(0, 10), '2026-06-05', patch);
-      assert.equal(r.summary, undefined, patch);
-    }
   });
 
   it('reads the build shapes of the page, with a suffix or without', () => {
@@ -314,8 +304,7 @@ describe('parsePage on the recorded page', () => {
 
   it('gives every release the whole contract, a Google family and the page as its link', () => {
     for (const r of releases) {
-      // `summary` is the one optional key.
-      assert.deepEqual(Object.keys(r).filter((k) => k !== 'summary').sort(), keys, r.id);
+      assert.deepEqual(Object.keys(r).sort(), keys, r.id);
       assert.equal(r.vendor, 'google');
       assert.equal(r.family, 'Android');
       assert.equal(r.source, ID);
