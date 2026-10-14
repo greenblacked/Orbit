@@ -465,6 +465,328 @@ def test_a_stage_with_no_build_after_it_draws_no_separator(page, base_url):
     assert ios.locator("[data-f=build]").inner_text().startswith("Build ")
 
 
+# --- the drawn devices step through the releases ----------------------------------------
+
+DEVICES = [*FAMILIES, "RouterOS", "Android", "Windows", "SteamOS"]
+
+
+def public(family, data=SNAPSHOT):
+    """The public releases of a family as a device steps through them: newest first, a day with
+    several releases by version (the page's own order)."""
+
+    def key(row):
+        return row["date"], [int(part) for part in re.split(r"[.H]", row["version"])]
+
+    return sorted((r for r in releases(family, data) if r["stage"] == "release"), key=key)[::-1]
+
+
+def device(page, family):
+    return page.locator(f'section.fam[data-family="{family}"]')
+
+
+def hardware(page, family, which):
+    """The Previous or Next button of a device, found by its accessible name."""
+    return device(page, family).get_by_role("button", name=f"{which} {family} release", exact=True)
+
+
+def position(page, family):
+    return device(page, family).locator("[data-f=pos]").inner_text()
+
+
+def timeline_href(page, release):
+    return page.evaluate("id => '/timeline/?id=' + encodeURIComponent(id)", release["id"])
+
+
+def press(page, family, which):
+    """Click a stepping button. Playwright will not click an aria-disabled one, and a visitor
+    can, so the click is sent by the page itself."""
+    hardware(page, family, which).evaluate("button => button.click()")
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_a_device_steps_through_the_public_releases_newest_first(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    rows = public(family)
+    count = len(rows)
+    assert count >= 2, "the snapshot gives every device something to step through"
+    section = device(page, family)
+    assert position(page, family) == f"1 / {count}"
+    assert hardware(page, family, "Previous").get_attribute("aria-disabled") == "true"
+    assert hardware(page, family, "Next").get_attribute("aria-disabled") == "false"
+    assert section.locator("[data-f=name]").first.inner_text() == f"{family} {rows[0]['version']}"
+    press(page, family, "Next")
+    assert position(page, family) == f"2 / {count}"
+    assert section.locator("[data-f=name]").first.inner_text() == f"{family} {rows[1]['version']}"
+    link = section.locator(".screen a.m-link")
+    assert link.get_attribute("href") == timeline_href(page, rows[1])
+    assert hardware(page, family, "Previous").get_attribute("aria-disabled") == "false"
+    press(page, family, "Previous")
+    assert position(page, family) == f"1 / {count}"
+    assert link.get_attribute("href") == timeline_href(page, rows[0])
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_the_screen_is_a_link_to_the_release_on_the_timeline(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    newest = public(family)[0]
+    link = device(page, family).locator(".screen a.m-link")
+    assert link.get_attribute("href") == timeline_href(page, newest)
+    label = link.get_attribute("aria-label")
+    assert label.startswith(f"Open {family} {newest['version']}")
+    assert label.endswith(f"on the timeline, 1 of {len(public(family))}")
+    box = link.bounding_box()
+    screen = device(page, family).locator(".screen").bounding_box()
+    assert box["width"] >= screen["width"] - 1 and box["height"] >= screen["height"] - 1
+
+
+def test_a_steamos_release_id_with_a_hash_is_encoded_in_the_timeline_link(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    href = device(page, "SteamOS").locator(".screen a.m-link").get_attribute("href")
+    assert href == "/timeline/?id=" + quote(public("SteamOS")[0]["id"], safe="")
+    assert "%23" in href and "#" not in href
+
+
+def test_a_device_link_opens_that_release_on_the_timeline(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    press(page, "SteamOS", "Next")
+    page.locator('section.fam[data-family="SteamOS"] .screen a.m-link').click()
+    page.wait_for_url(lambda url: "/timeline/?id=" in url)
+    assert parse_qs(urlsplit(page.url).query)["id"] == [public("SteamOS")[1]["id"]]
+
+
+@pytest.mark.parametrize("width", [1280, 360], ids=["desktop", "phone"])
+def test_every_stepping_button_is_a_real_button_of_at_least_44px(browser, base_url, width):
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        for family in DEVICES:
+            for which in ("Previous", "Next"):
+                button = hardware(page, family, which)
+                assert button.evaluate("e => e.tagName") == "BUTTON", (family, which)
+                size = button.bounding_box()
+                assert size["width"] >= 43.9 and size["height"] >= 43.9, (family, which, size)
+                assert size["x"] >= -1 and size["x"] + size["width"] <= width + 1, (family, which)
+        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_the_arrow_keys_home_and_end_step_a_focused_device(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    count = len(public(family))
+    hardware(page, family, "Next").focus()
+    page.keyboard.press("ArrowRight")
+    assert position(page, family) == f"2 / {count}"
+    page.keyboard.press("ArrowLeft")
+    assert position(page, family) == f"1 / {count}"
+    page.keyboard.press("ArrowLeft")
+    assert position(page, family) == f"1 / {count}", "the first release is an end, not a loop"
+    page.keyboard.press("End")
+    assert position(page, family) == f"{count} / {count}"
+    assert hardware(page, family, "Next").get_attribute("aria-disabled") == "true"
+    assert hardware(page, family, "Previous").get_attribute("aria-disabled") == "false"
+    page.keyboard.press("ArrowRight")
+    assert position(page, family) == f"{count} / {count}", "the last release is an end too"
+    press(page, family, "Next")
+    assert position(page, family) == f"{count} / {count}"
+    focused = page.evaluate("document.activeElement.getAttribute('aria-label')")
+    assert focused == f"Next {family} release", "the button at the end keeps the focus"
+    page.keyboard.press("Home")
+    assert position(page, family) == f"1 / {count}"
+
+
+def test_a_modifier_key_leaves_the_arrows_to_the_browser(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    hardware(page, "SteamOS", "Next").focus()
+    page.keyboard.press("Alt+ArrowRight")
+    assert position(page, "SteamOS") == f"1 / {len(public('SteamOS'))}"
+
+
+@pytest.mark.parametrize("family", ["iOS", "SteamOS", "watchOS"])
+def test_a_step_is_announced_once_with_its_position(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    rows = public(family)
+    live = device(page, family).locator("[data-f=step]")
+    assert live.get_attribute("aria-live") == "polite"
+    assert live.inner_text() == "", "nothing is announced for the first paint"
+    press(page, family, "Next")
+    assert live.inner_text() == f"{family} {rows[1]['version']}, 2 of {len(rows)}"
+    press(page, family, "Next")
+    assert live.inner_text() == f"{family} {rows[2]['version']}, 3 of {len(rows)}"
+    assert device(page, family).locator("[data-f=step][aria-live]").count() == 1
+
+
+def test_the_mac_announces_through_one_live_region_not_two(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    mac = device(page, "macOS")
+    assert mac.locator(".m-info").get_attribute("aria-live") is None
+    assert mac.locator("[aria-live]").count() == 1
+    page.click("[data-ch=beta]")
+    assert "beta channel" in mac.locator("[data-f=step]").inner_text()
+    assert position(page, "macOS") == "Beta"
+    for which in ("Previous", "Next"):
+        assert hardware(page, "macOS", which).get_attribute("aria-disabled") == "true"
+    page.keyboard.press("ArrowRight")
+    assert position(page, "macOS") == "Beta"
+    page.click("[data-ch=release]")
+    assert position(page, "macOS") == f"1 / {len(public('macOS'))}"
+
+
+def test_the_mac_channel_switch_keeps_the_release_it_was_on(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    press(page, "macOS", "Next")
+    page.click("[data-ch=beta]")
+    page.click("[data-ch=release]")
+    assert position(page, "macOS") == f"2 / {len(public('macOS'))}"
+    info = device(page, "macOS").locator(".m-info").inner_text()
+    assert public("macOS")[1]["build"] in info
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_the_caption_says_the_device_steps_and_stays_honest(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    caption = device(page, family).locator("figcaption").inner_text()
+    assert f"{family} releases from the data" in caption
+    assert "to step through them" in caption
+    assert caption.endswith("Mock screen, not a real device.")
+    assert "newest" not in caption
+
+
+def test_a_data_poll_keeps_the_device_on_the_release_it_shows(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    rows = public("SteamOS")
+    count = len(rows)
+    press(page, "SteamOS", "Next")
+    press(page, "SteamOS", "Next")
+    assert position(page, "SteamOS") == f"3 / {count}"
+    link = device(page, "SteamOS").locator(".screen a.m-link")
+    kept = link.get_attribute("href")
+    # A newer release arrives: the device stays on the same one, now a place further down.
+    fresh = copy.deepcopy(SNAPSHOT)
+    fresh["releases"].insert(
+        0,
+        {
+            **rows[0],
+            "id": rows[0]["id"] + "-newer",
+            "version": "3.8.29",
+            "title": "SteamOS 3.8.29",
+            "date": "2026-10-12T17:00:00Z",
+        },
+    )
+    serve_json(page, "**/api/releases.json", json.dumps(fresh))
+    page.evaluate("window.RO.refresh()")
+    page.wait_for_function(
+        "n => document.querySelector('#steamos [data-f=pos]').textContent === n",
+        arg=f"4 / {count + 1}",
+    )
+    assert link.get_attribute("href") == kept
+    steam = device(page, "SteamOS")
+    assert steam.locator("[data-f=name]").first.inner_text() == f"SteamOS {rows[2]['version']}"
+    assert steam.locator("[data-f=step]").inner_text().endswith(f"3 of {count}")
+    # The release it shows is withdrawn: it falls back to the newest.
+    gone = copy.deepcopy(fresh)
+    gone["releases"] = [r for r in gone["releases"] if r["id"] != rows[2]["id"]]
+    serve_json(page, "**/api/releases.json", json.dumps(gone))
+    page.evaluate("window.RO.refresh()")
+    page.wait_for_function(
+        "n => document.querySelector('#steamos [data-f=pos]').textContent === n",
+        arg=f"1 / {count}",
+    )
+    assert steam.locator("[data-f=name]").first.inner_text() == "SteamOS 3.8.29"
+
+
+def test_a_device_with_no_release_has_nothing_to_step_through(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [r for r in data["releases"] if r["family"] not in WAITING]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    for which in ("Previous", "Next"):
+        assert hardware(page, "SteamOS", which).is_disabled()
+    link = device(page, "SteamOS").locator(".screen a.m-link")
+    assert link.get_attribute("href") is None
+    assert position(page, "SteamOS") == ""
+
+
+def test_the_devices_wait_for_their_script_before_they_step(page, base_url):
+    held = []
+    page.route("**/assets/below.js", lambda route: held.append(route))
+    with page.expect_request("**/assets/below.js"):
+        page.goto(base_url + "/")
+    cards_ready(page)
+    for _ in range(200):
+        if held:
+            break
+        page.wait_for_timeout(50)
+    assert held, "below.js was never requested"
+    for family in DEVICES:
+        for which in ("Previous", "Next"):
+            assert hardware(page, family, which).is_disabled(), (family, which)
+        assert device(page, family).locator(".screen a.m-link").get_attribute("href") is None
+        assert position(page, family) == ""
+    held[0].continue_()
+    mocks_ready(page)
+    assert not hardware(page, "SteamOS", "Next").is_disabled()
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_no_mock_shows_a_separator_next_to_nothing(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    for _ in range(len(public(family))):
+        text = device(page, family).locator(".screen").inner_text()
+        assert not re.search(r"·\s*(\n|$)", text), text
+        assert not re.search(r"(^|\n)\s*·", text), text
+        press(page, family, "Next")
+
+
+@pytest.mark.parametrize("width", [360, 1280], ids=["phone", "desktop"])
+def test_no_device_scrolls_the_page_sideways_or_clips_its_buttons(browser, base_url, width):
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        for family in DEVICES:
+            for which in ("Previous", "Next"):
+                press(page, family, which)
+                box = hardware(page, family, which).bounding_box()
+                assert box["x"] >= -1 and box["x"] + box["width"] <= width + 1, (family, which)
+        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+        assert page.evaluate("document.body.scrollWidth <= window.innerWidth")
+    finally:
+        context.close()
+
+
 # --- the toast --------------------------------------------------------------------------
 
 
