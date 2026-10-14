@@ -506,7 +506,8 @@ def test_the_watch_keeps_the_year_in_the_released_mode(page, base_url):
     disc = page.locator(".m-comp").bounding_box()
     text = page.locator(".m-comp .v").bounding_box()
     assert text["x"] >= disc["x"] and text["x"] + text["width"] <= disc["x"] + disc["width"]
-    assert text["width"] <= 68, "the date must fit inside the black disc, not only the button"
+    assert text["y"] >= disc["y"] and text["y"] + text["height"] <= disc["y"] + disc["height"]
+    assert text["width"] <= 68, "the date must stay inside the black disc in any font"
     for selector in (".m-comp .k", ".m-wname .m-pos", ".m-watch .m-name"):
         size = page.eval_on_selector(selector, "e => parseFloat(getComputedStyle(e).fontSize)")
         assert size >= 11, (selector, size)
@@ -1012,7 +1013,9 @@ def test_the_ipad_says_when_a_tab_changes_nothing(page, base_url):
     group.get_by_role("button", name="Latest", exact=True).click()
     assert live.inner_text().strip() == "Latest: same as History"
     group.get_by_role("button", name="Latest", exact=True).click()
-    assert live.inner_text().strip() == "Latest: same as History", "the tab already chosen says nothing new"
+    assert live.inner_text().strip() == "Latest: same as History", (
+        "the tab already chosen says nothing new"
+    )
 
 
 def test_the_ipad_sidebar_labels_scale_with_the_screen(browser, base_url):
