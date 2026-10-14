@@ -348,15 +348,20 @@ describe('the bounds on what is emitted', () => {
   });
 
   it('emits every row of a page larger than the per-source cap (no quiet cut)', () => {
-    // Synthetic: more rows than the cap; the adapter must not drop any of them.
+    // Synthetic: more rows than the cap, one release a day stepping back from 2026-06-05, each
+    // with its own tag (the tag grammar allows at most three digits per part, so the count
+    // goes in the patch and minor parts) and its own build id. The adapter must emit them all.
     const total = MAX_RELEASES_PER_SOURCE + 100;
     const rows = [];
     for (let i = 0; i < total; i += 1) {
-      const year = 2017 + (Math.floor(i / 12) % 9);
-      const month = String((i % 12) + 1).padStart(2, '0');
-      rows.push(row(`CP2A.${String(year).slice(2)}${month}05.016`, `android-${i + 1}.0.0_r1`, `${year}-${month}-05`));
+      const day = new Date(Date.UTC(2026, 5, 5 - i)).toISOString().slice(0, 10);
+      const yymmdd = day.slice(2).replaceAll('-', '');
+      const tag = `android-14.${Math.floor(i / 900)}.${i % 900}_r1`;
+      rows.push(row(`CP2A.${yymmdd}.016`, tag, day));
     }
-    assert.equal(parsePage(page(...rows), Date.UTC(2030, 0, 1)).length, total);
+    const releases = parsePage(page(...rows), Date.UTC(2030, 0, 1));
+    assert.equal(releases.length, total);
+    assert.equal(new Set(releases.map((r) => r.id)).size, total);
   });
 
   it('does not depend on the clock for old rows', () => {
