@@ -943,6 +943,35 @@ def test_the_ipad_sidebar_chooses_what_the_ipad_steps_through(page, base_url):
     assert position(page, "iPadOS") == f"1 / {len(public('iPadOS'))}"
 
 
+@pytest.mark.parametrize("width", [320, 360, 768, 1280])
+def test_the_vision_straps_never_overlap_the_visor(browser, base_url, width):
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        visor = page.locator("#visionos .v-visor").bounding_box()
+        for which, side in (("Newer", "left"), ("Older", "right")):
+            strap = hardware(page, "visionOS", which).bounding_box()
+            assert strap["width"] >= 43.9 and strap["height"] >= 43.9, (which, strap)
+            if side == "left":
+                assert strap["x"] + strap["width"] <= visor["x"] + 0.5, (width, which)
+            else:
+                assert strap["x"] >= visor["x"] + visor["width"] - 0.5, (width, which)
+            assert strap["x"] >= 0 and strap["x"] + strap["width"] <= width, (width, which)
+        hardware(page, "visionOS", "Older").focus()
+        page.keyboard.press("Tab")
+        page.keyboard.press("Shift+Tab")
+        ring = page.evaluate(
+            "() => { const s = getComputedStyle(document.activeElement);"
+            " return [s.outlineStyle, parseFloat(s.outlineWidth)]; }"
+        )
+        assert ring[0] == "solid" and ring[1] >= 3, ring
+    finally:
+        context.close()
+
+
 def test_the_ipad_says_when_a_tab_changes_nothing(page, base_url):
     data = copy.deepcopy(SNAPSHOT)
     data["releases"] = [

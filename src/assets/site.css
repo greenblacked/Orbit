@@ -1181,18 +1181,21 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 .m-comp .v { max-width: 100%; font-size: 0.875rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
 .m-watch .m-name { font-size: 0.75rem; font-weight: 500; text-wrap: balance; }
 
-.dev-vision { max-width: 34rem; padding-inline: 7%; }
+/* The straps sit in the side padding, which is as wide as a strap: never over the visor. */
+.dev-vision { max-width: 34rem; padding-inline: 2.75rem; padding-inline: max(7%, 2.75rem); }
 .v-strap {
   position: absolute;
   top: 28%;
   bottom: 28%;
   z-index: 3;
-  width: max(9%, 2.75rem);
+  width: 2.75rem;
+  width: max(7%, 2.75rem);
   border-radius: 99px;
   background: linear-gradient(#55555e, #26262c);
 }
 .v-left { left: 0; }
 .v-right { right: 0; }
+.v-strap.hw:focus-visible { outline-width: 3px; outline-offset: 3px; box-shadow: 0 0 0 8px #111114; }
 .v-visor {
   position: relative;
   display: flex;
