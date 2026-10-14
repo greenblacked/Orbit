@@ -36,9 +36,33 @@
   function label(r) {
     return RO.short(r) + (r.build ? " · " + r.build : "") + " · " + RO.day(r.t);
   }
+  // The options sit in groups by major version, the newest line first ("iOS 26"), each group
+  // keeping the list's newest-first order. Windows is grouped by product ("Windows 11"), as its
+  // major is the update year, which no product is called. The ids are the option values, so the
+  // groups change how the picker reads and nothing else.
+  function line(r) {
+    var product = r.family === "Windows" ? /^Windows (\d+)(?=\s|$)/.exec(r.title || "") : null;
+    if (product) return { key: "p" + product[1], rank: Number(product[1]), text: "Windows " + product[1] };
+    // A Windows row with no product in its title has no rank: it sorts after the products.
+    return { key: "m" + r.major, rank: r.family === "Windows" ? NaN : r.major, text: r.family + " " + r.major };
+  }
   function fill(select, keep, fallback) {
     select.textContent = "";
-    list.forEach(function (r) { select.appendChild(RO.h("option", "", label(r), { value: r.id })); });
+    var lines = [], at = Object.create(null);
+    list.forEach(function (r) {
+      var l = line(r);
+      if (!at[l.key]) { l.items = []; at[l.key] = l; lines.push(l); }
+      at[l.key].items.push(r);
+    });
+    lines.sort(function (a, b) {
+      var x = isFinite(a.rank), y = isFinite(b.rank);
+      return x && y ? b.rank - a.rank : x ? -1 : y ? 1 : 0;
+    });
+    lines.forEach(function (l) {
+      var group = RO.h("optgroup", "", null, { label: l.text });
+      l.items.forEach(function (r) { group.appendChild(RO.h("option", "", label(r), { value: r.id })); });
+      select.appendChild(group);
+    });
     var has = list.some(function (r) { return r.id === keep; });
     select.value = has ? keep : fallback;
   }
