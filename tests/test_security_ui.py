@@ -669,7 +669,7 @@ def test_check_my_version_adds_the_cve_count_when_security_data_is_loaded(browse
         page.fill("#lk-build", ios[1]["build"])
         page.click("#lk-form button")
         page.wait_for_selector("#lk-result .lk-cve")
-        assert page.inner_text("#lk-result .lk-say").startswith("Superseded by iOS ")
+        assert page.inner_text("#lk-result .lk-say").startswith("Current for iOS ")
         lead = f"Fixed after iOS {ios[1]['version']}, up to iOS {ios[0]['version']}: 2 CVEs."
         assert page.inner_text("#lk-result .lk-cve") == lead
         assert errors == []

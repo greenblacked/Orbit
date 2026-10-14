@@ -584,38 +584,90 @@ def test_check_my_version_calls_the_newest_public_release_current(page, base_url
 
 @pytest.mark.parametrize("path", ["/", "/compare/"])
 def test_check_my_version_says_how_far_behind_an_older_release_is(page, base_url, path):
-    ios = public("iOS")
-    newest, old = ios[0], ios[2]
+    android = public("Android")
+    newest, old = android[0], android[2]
     lookup_ready(page, base_url, path)
-    lookup_ask(page, "iOS", old["build"])
+    lookup_ask(page, "Android", old["build"])
     text = answer(page)
     found = re.fullmatch(
-        r"Superseded by iOS (\S+) on ([A-Z][a-z]{2} \d{1,2}, \d{4}): "
+        r"Superseded by Android (\S+) on ([A-Z][a-z]{2} \d{1,2}, \d{4}): "
         r"(\d+) public releases? and (\d+) days? behind\.",
         text,
     )
     assert found, text
     assert found.group(1) == newest["version"]
-    between = [r for r in ios if old["t"] < r["t"] < newest["t"]]
+    between = [r for r in android if old["t"] < r["t"] < newest["t"]]
     assert int(found.group(3)) == len(between)
     assert int(found.group(4)) == newest["t"] // DAY_MS - old["t"] // DAY_MS
     link = page.locator("#lk-result a")
     assert link.get_attribute("href") == (
-        f"/compare/?family=iOS&from={quote(old['id'], safe='')}&to={quote(newest['id'], safe='')}"
+        f"/compare/?family=Android&from={quote(old['id'], safe='')}"
+        f"&to={quote(newest['id'], safe='')}"
+        f"&platform=Android&build={quote(old['build'], safe='')}"
     )
     # The link opens Compare on exactly those two releases.
     link.click()
     page.wait_for_selector("#cmp-result .cmp-card")
-    assert page.input_value("#c-family") == "iOS"
+    assert page.input_value("#c-family") == "Android"
     assert page.input_value("#c-from") == old["id"]
     assert page.input_value("#c-to") == newest["id"]
+    # Compare's own lookup comes up filled with the same question.
+    assert page.input_value("#lk-family") == "Android"
+    assert page.input_value("#lk-build") == old["build"]
+
+
+def test_check_my_version_calls_the_newest_of_an_older_line_current_for_that_line(page, base_url):
+    ios = public("iOS")
+    lookup_ready(page, base_url)
+    lookup_ask(page, "iOS", ios[2]["build"])
+    text = answer(page)
+    assert text.startswith(f"Current for iOS {ios[2]['major']}: iOS {ios[2]['version']}"), text
+    assert f"The newest public release is iOS {ios[0]['version']}." in text
+    assert "behind" not in text
+    # A bare major works when every release of it has one version.
+    lookup_ask(page, "Android", "Android 16")
+    assert answer(page).startswith("Current for Android 16: Android 16.0.0")
+
+
+def test_check_my_version_picks_the_newest_by_version_not_by_date(page, base_url):
+    ros = public("RouterOS")
+    stable = next(r for r in ros if r["version"] == "7.24.5")
+    long_term = next(r for r in ros if r["version"] == "7.23.8")
+    assert long_term["t"] > stable["t"]
+    lookup_ready(page, base_url)
+    lookup_ask(page, "RouterOS", stable["build"])
+    assert answer(page).startswith("Current for RouterOS: RouterOS 7.24.5")
+    lookup_ask(page, "RouterOS", long_term["build"])
+    text = answer(page)
+    older = "RouterOS 7.23.8 came out after RouterOS 7.24.5 but is an older version"
+    assert text.startswith(older), text
+    assert "behind" not in text and page.locator("#lk-result a").count() == 0
+    lookup_ask(page, "RouterOS", "7.25rc1")
+    assert answer(page).endswith("ahead of the newest public release, RouterOS 7.24.5.")
 
 
 def test_check_my_version_leaves_out_the_cve_count_without_security_data(page, base_url):
     ios = public("iOS")
-    lookup_ready(page, base_url, "/compare/")
-    lookup_ask(page, "iOS", ios[2]["build"])
-    assert answer(page).startswith("Superseded by")
+    empty = json.dumps(
+        {
+            "schema": 1,
+            "generatedAt": "2026-10-11T00:00:00Z",
+            "sources": {"apple": {"status": "ok"}, "android": {"status": "ok"}},
+            "notes": {},
+            "releases": {},
+        }
+    )
+    for pattern in ("**/data/security.json", "**/api/security.json"):
+        page.route(
+            pattern,
+            lambda route: route.fulfill(status=200, content_type="application/json", body=empty),
+        )
+    # Ask only once the security data has loaded (and holds nothing for this build).
+    with page.expect_response("**/api/security.json"):
+        lookup_ready(page, base_url, "/compare/")
+    page.wait_for_load_state("networkidle")
+    lookup_ask(page, "iOS", ios[1]["build"])
+    assert answer(page).startswith("Current for iOS")
     assert page.locator("#lk-result .lk-cve").count() == 0
 
 
@@ -655,6 +707,16 @@ def test_check_my_version_keeps_the_query_in_the_address_and_restores_it(page, b
     assert page.evaluate("() => location.search") == ""
 
 
+def test_check_my_version_drops_its_query_when_the_platform_changes(page, base_url):
+    ios = public("iOS")
+    lookup_ready(page, base_url)
+    lookup_ask(page, "iOS", ios[0]["build"])
+    assert "build=" in page.evaluate("() => location.search")
+    page.select_option("#lk-family", "macOS")
+    assert page.evaluate("() => location.search") == ""
+    assert page.locator("#lk-result p").count() == 0
+
+
 def test_check_my_version_and_compare_keep_each_others_query(page, base_url):
     ios = public("iOS")
     lookup_ready(page, base_url, "/compare/")
@@ -680,7 +742,9 @@ def test_check_my_version_works_from_the_keyboard(page, base_url):
     assert answer(page).startswith("Current for iOS")
     page.keyboard.press("Tab")
     assert page.evaluate("() => document.activeElement.className") == "lk-go"
-    # Space on Check asks again; Shift+Tab walks back to the platform.
+    # Space on Check asks again (the old answer is gone first, so it has to be drawn anew);
+    # Shift+Tab walks back to the platform.
+    page.evaluate("() => { document.getElementById('lk-result').textContent = ''; }")
     page.keyboard.press("Space")
     assert answer(page).startswith("Current for iOS")
     page.keyboard.press("Shift+Tab")

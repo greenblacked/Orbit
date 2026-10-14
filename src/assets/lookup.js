@@ -1,42 +1,66 @@
-/* "Check my version" on the front page and Compare: one platform and a version or a build, matched
-   against the release data the page already loaded (releases.js). The answer is either "current"
-   or how far behind the newest public release it is, counted the way Compare counts (public
-   releases strictly between, calendar days apart), with the CVE count from the security notes (window.Sec) where
-   that page has it. The query lives in the address as ?platform= and ?build=. The matching is
-   plain functions, exported for the Node tests; the page part runs only in a browser. */
+/* "Check my version" on the front page and Compare: a platform and a version or build, matched
+   against the loaded releases. The answer is "current" (the newest public release by version, as
+   the cards pick it), current for its major line, or how far behind the newest it is, counted as
+   Compare counts, with the CVE count where window.Sec is loaded. The query is kept as ?platform=
+   and ?build=. find and judge are exported for the Node tests; the rest runs in a browser. */
 (function (root) {
   "use strict";
   var DAY = 864e5;
 
-  function norm(s) { return String(s === undefined || s === null ? "" : s).trim().replace(/\s+/g, " ").toLowerCase(); }
+  function norm(s) { return String(s == null ? "" : s).trim().replace(/\s+/g, " ").toLowerCase(); }
 
-  // The release of `list` (one platform, newest first) whose version or build is `text`, else
-  // null. A version shared by a beta and the release goes to the release. "iOS 26.1" works too.
+  function lineOf(r) { return String(r.major); }
+
+  // The release whose version or build is `text` (a release wins over a beta of the same version),
+  // else null. A name may come first ("iOS 26.1", "macOS Tahoe 26.6.2"); a bare major ("Android
+  // 16") works when its releases share one version.
   function find(list, text, family) {
     var asked = norm(text);
     if (!asked) return null;
-    var tries = [asked], name = norm(family);
-    if (name && asked.indexOf(name + " ") === 0) tries.push(asked.slice(name.length + 1));
-    for (var i = 0; i < tries.length; i++) {
-      var hits = list.filter(function (r) { return norm(r.build) === tries[i] || norm(r.version) === tries[i]; });
-      if (!hits.length) continue;
+    var tries = [asked], name = norm(family) + " ", rest = asked;
+    if (asked.indexOf(name) === 0) tries.push(rest = asked.slice(name.length));
+    tries.push(rest.slice(rest.lastIndexOf(" ") + 1));
+    function pick(hits) {
       for (var n = 0; n < hits.length; n++) if (hits[n].stage === "release") return hits[n];
       return hits[0];
+    }
+    var i, hits;
+    for (i = 0; i < tries.length; i++) {
+      hits = list.filter(function (r) { return norm(r.build) === tries[i] || norm(r.version) === tries[i]; });
+      if (hits.length) return pick(hits);
+    }
+    for (i = 0; i < tries.length; i++) {
+      if (!/^\d+$/.test(tries[i])) continue;
+      hits = list.filter(function (r) { return lineOf(r) === tries[i]; });
+      if (hits.length && hits.every(function (r) { return r.version === hits[0].version; })) return pick(hits);
     }
     return null;
   }
 
-  // Where `hit` stands against the newest public release of its platform. `list` is newest first.
-  // kind: "current", "ahead" (a beta or RC newer than that release) or "superseded", with the
-  // public releases and the days between, as Compare counts them; "none" if it cannot tell.
-  function judge(list, hit) {
-    var at = list.indexOf(hit), top = -1;
-    for (var i = 0; i < list.length; i++) if (list[i].stage === "release") { top = i; break; }
+  // Where `hit` stands against the newest public release (`ctx.newest` by version, as the cards
+  // pick it; `ctx.higher(a, b)` orders versions; else the first public release and the list order,
+  // which is newest first by date). kind: current, line (newest of its major line), ahead,
+  // older (dated after the newest, lower version), superseded (public releases between by list
+  // position and days apart, as Compare counts them) or none.
+  function judge(list, hit, ctx) {
+    ctx = ctx || {};
+    var at = list.indexOf(hit), newest = ctx.newest || null;
+    if (!newest) for (var i = 0; i < list.length; i++) if (list[i].stage === "release") { newest = list[i]; break; }
+    var top = newest ? list.indexOf(newest) : -1;
     if (at < 0 || top < 0) return { kind: "none" };
-    var newest = list[top];
-    if (at === top) return { kind: "current", hit: hit, newest: newest };
-    if (at < top) return { kind: "ahead", hit: hit, newest: newest };
-    var between = list.slice(top + 1, at);
+    var higher = ctx.higher || function (a, b) { return list.indexOf(a) < list.indexOf(b); };
+    if (hit === newest) return { kind: "current", hit: hit, newest: newest };
+    var between = at > top ? list.slice(top + 1, at) : [];
+    if (hit.stage !== "release") {
+      if (higher(hit, newest)) return { kind: "ahead", hit: hit, newest: newest };
+    } else if (!list.some(function (r) {
+      return r !== hit && r.stage === "release" && lineOf(r) === lineOf(hit) && higher(r, hit);
+    })) {
+      var res = { kind: "line", hit: hit, newest: newest, line: lineOf(hit) };
+      if (at > top) res.between = between;
+      return res;
+    }
+    if (at < top) return { kind: "older", hit: hit, newest: newest };
     return {
       kind: "superseded", hit: hit, newest: newest, between: between,
       pub: between.filter(function (r) { return r.stage === "release"; }).length,
@@ -58,7 +82,6 @@
   var asked = false;
   var shown = null;
 
-  // A restored query: ?platform= (else the Compare page's ?family=) and ?build=.
   try {
     var params = new URLSearchParams(root.location.search);
     var offered = Array.prototype.map.call(selFamily.options, function (o) { return o.value; });
@@ -69,20 +92,27 @@
   } catch (e) { /* an empty form */ }
 
   function name(r) { return r.family + " " + RO.short(r); }
-  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
-  function line(cls, text) { return RO.h("p", cls, text); }
+  function plural(n, one) { return n + " " + one + (n === 1 ? "" : "s"); }
 
-  // The CVE sentence from the security section of Compare, or "" when that page has none loaded.
+  // The CVE sentence from Compare's security section, or "" without it.
   function cves(j) {
-    if (!root.Sec || j.kind !== "superseded") return "";
-    var section = null;
-    try { section = root.Sec.compare(j.newest, j.hit, j.between, name); } catch (e) { return ""; }
-    var lead = section && section.querySelector(".sec-lead");
-    var count = section && section.querySelector(".sec-count");
-    return lead && count ? lead.textContent + ": " + count.textContent + "." : "";
+    if (!root.Sec || !j.between || (j.kind !== "superseded" && j.kind !== "line")) return "";
+    try {
+      var box = root.Sec.compare(j.newest, j.hit, j.between, name);
+      return box.querySelector(".sec-lead").textContent + ": " + box.querySelector(".sec-count").textContent + ".";
+    } catch (e) { return ""; }
   }
 
-  // What to say: a list of [class, text] and, for a comparison, the link.
+  // The newest public release by version, as the cards pick it, and the version order.
+  function context(list, family) {
+    var main = RO.lead(list, family).main;
+    return {
+      newest: main && main.stage === "release" ? main : null,
+      higher: function (a, b) { return RO.compareVersions(a.version, b.version) > 0 || a.version === b.version && a.t > b.t; }
+    };
+  }
+
+  // The rows to draw as [class, text], and the Compare link when there is a range.
   function answer(family, text) {
     var list = all.filter(function (r) { return r.family === family; });
     if (!norm(text)) return { rows: [["lk-say", "Enter a version or a build number."]] };
@@ -90,34 +120,31 @@
     var hit = find(list, text, family);
     if (!hit) {
       var sample = list.filter(function (r) { return r.stage === "release"; })[0] || list[0];
-      var tip = "a version such as " + sample.version + (sample.build ? " or a build such as " + sample.build : "");
-      return { rows: [["lk-say", "Not found: no " + family + " release in the data has the version or build “" +
-        text.trim().slice(0, 64) + "”. Try " + tip + "."]] };
+      return { rows: [["lk-say", "Not found: no " + family + " release has the version or build “" + text.trim().slice(0, 64) +
+        "”. Try a version such as " + sample.version + (sample.build ? " or a build such as " + sample.build : "") + "."]] };
     }
-    var j = judge(list, hit);
+    var j = judge(list, hit, context(list, family)), k = j.kind, top = "The newest public release is " + (j.newest && name(j.newest)) + ".";
     var rows = [["lk-hit", name(hit) + (hit.build ? " · " + hit.build : "") + " · " + RO.day(hit.t)]];
-    var link = null;
-    if (j.kind === "current") {
-      rows.push(["lk-say", "Current for " + family + ": " + name(hit) + " is the newest public release."]);
-    } else if (j.kind === "ahead") {
-      rows.push(["lk-say", name(hit) + " is a pre-release, ahead of the newest public release, " + name(j.newest) + "."]);
-    } else if (j.kind === "superseded") {
-      rows.push(["lk-say", "Superseded by " + name(j.newest) + " on " + RO.day(j.newest.t) + ": " +
-        plural(j.pub, "public release", "public releases") + " and " + plural(j.days, "day", "days") + " behind."]);
-      var more = cves(j);
-      if (more) rows.push(["lk-cve", more]);
-      link = {
-        text: "Compare " + name(hit) + " with " + name(j.newest),
-        href: "/compare/?family=" + encodeURIComponent(family) + "&from=" + encodeURIComponent(hit.id) +
-          "&to=" + encodeURIComponent(j.newest.id)
-      };
-    } else {
-      rows.push(["lk-say", "Could not tell how " + name(hit) + " compares with the newest public release."]);
-    }
+    var say = k === "current" ? "Current for " + family + ": " + name(hit) + " is the newest public release."
+      : k === "ahead" ? name(hit) + " is a pre-release, ahead of the newest public release, " + name(j.newest) + "."
+      : k === "line" ? "Current for " + family + " " + j.line + ": " + name(hit) + " is the newest of its line. " + top
+      : k === "older" ? name(hit) + " came out after " + name(j.newest) + " but is an older version. " + top
+      : k === "superseded" ? "Superseded by " + name(j.newest) + " on " + RO.day(j.newest.t) + ": " +
+        plural(j.pub, "public release") + " and " + plural(j.days, "day") + " behind."
+      : "Cannot place " + name(hit) + " against the newest public release.";
+    rows.push(["lk-say", say]);
+    var more = cves(j);
+    if (more) rows.push(["lk-cve", more]);
+    var link = j.between ? {
+      text: "Compare " + name(hit) + " with " + name(j.newest),
+      href: "/compare/?family=" + encodeURIComponent(family) + "&from=" + encodeURIComponent(hit.id) + "&to=" +
+        encodeURIComponent(j.newest.id) + "&platform=" + encodeURIComponent(family) + "&build=" +
+        encodeURIComponent(hit.build || hit.version)
+    } : null;
     return { rows: rows, link: link };
   }
 
-  // Redrawn only when the words change, so a data poll does not re-announce the same answer.
+  // A data poll must not re-announce the same answer; Check clears `shown`, so it always redraws.
   function show() {
     if (!all.length) return;
     var result = answer(selFamily.value, input.value);
@@ -125,7 +152,7 @@
     if (key === shown) return;
     shown = key;
     out.textContent = "";
-    result.rows.forEach(function (row) { out.appendChild(line(row[0], row[1])); });
+    result.rows.forEach(function (row) { out.appendChild(RO.h("p", row[0], row[1])); });
     if (result.link) {
       var p = RO.h("p", "lk-link");
       p.appendChild(RO.h("a", "lk-compare", result.link.text, { href: result.link.href }));
@@ -133,35 +160,36 @@
     }
   }
 
-  // Keep ?platform= and ?build= in the address, and any other query (Compare's) as it is.
-  function remember() {
+  function remember(clear) {
     var keep = root.location.search.replace(/^\?/, "").split("&").filter(function (pair) {
       return pair && !/^(platform|build)(=|$)/.test(pair);
     });
-    var text = input.value.trim();
+    var text = clear ? "" : input.value.trim();
     if (text) keep.push("platform=" + encodeURIComponent(selFamily.value), "build=" + encodeURIComponent(text));
     try {
       root.history.replaceState(null, "", root.location.pathname + (keep.length ? "?" + keep.join("&") : "") + root.location.hash);
-    } catch (e) { /* the answer still shows without a shareable address */ }
+    } catch (e) { /* no shareable address */ }
   }
 
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     asked = true;
+    shown = null;
     show();
     remember();
   });
-  // A new platform makes the old answer stale; it is asked for again with Check.
   selFamily.addEventListener("change", function () {
     asked = false;
     shown = null;
     out.textContent = "";
+    remember(true);
   });
 
   RO.on(function (data) {
     if (!data) return;
     all = data.releases;
     form.hidden = false;
+    doc.getElementById("lk-help").hidden = false;
     if (asked) show();
   });
   if (root.Sec) root.Sec.on(function () { if (asked) show(); });

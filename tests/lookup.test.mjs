@@ -18,6 +18,7 @@ const rel = (version, build, stage, days, family = 'iOS') => ({
   version,
   build,
   stage,
+  major: parseInt(version, 10),
   t: T0 + days * DAY + 3600e3,
 });
 const LIST = [
@@ -52,6 +53,19 @@ describe('find', () => {
     assert.equal(Lookup.find(LIST, '27.0.1.1'), null);
   });
 
+  it('takes a marketing name before the version', () => {
+    assert.equal(Lookup.find(LIST, 'iOS Tahoe 27.0.1', 'iOS').build, '24A446');
+    assert.equal(Lookup.find([rel('24H2', '26100', 'release', 1, 'Windows')], 'Windows 11 24H2', 'Windows').build, '26100');
+  });
+
+  it('takes a bare major only when every release of it has one version', () => {
+    const android = [rel('16.0.0', 'BP4A', 'release', 9, 'Android'), rel('16.0.0', 'BP3A', 'release', 5, 'Android')];
+    assert.equal(Lookup.find(android, '16', 'Android').build, 'BP4A');
+    assert.equal(Lookup.find(android, 'Android 16', 'Android').build, 'BP4A');
+    assert.equal(Lookup.find(android, '15', 'Android'), null);
+    assert.equal(Lookup.find(LIST, '27'), null);
+  });
+
   it('finds nothing for an empty or unknown input', () => {
     assert.equal(Lookup.find(LIST, ''), null);
     assert.equal(Lookup.find(LIST, '   '), null);
@@ -75,13 +89,42 @@ describe('judge', () => {
   });
 
   it('counts only the public releases between, and the days from the newest', () => {
-    const j = Lookup.judge(LIST, LIST[5]);
+    const j = Lookup.judge(LIST, LIST[4]);
     assert.equal(j.kind, 'superseded');
     assert.equal(j.newest, LIST[1]);
-    // 27.0.1 and 27.0 are public, the 27.1 beta is not.
+    // 27.0.1 is public, the 27.1 beta is not.
+    assert.deepEqual(j.between, [LIST[2], LIST[3]]);
+    assert.equal(j.pub, 1);
+    assert.equal(j.days, 20);
+  });
+
+  it('calls the newest release of an older major line current for that line', () => {
+    const j = Lookup.judge(LIST, LIST[5]);
+    assert.equal(j.kind, 'line');
+    assert.equal(j.line, '26');
+    assert.equal(j.newest, LIST[1]);
     assert.deepEqual(j.between, [LIST[2], LIST[3], LIST[4]]);
-    assert.equal(j.pub, 2);
-    assert.equal(j.days, 26);
+  });
+
+  it('picks the newest by version, not by date, when it is given', () => {
+    const higher = (a, b) => {
+      const x = a.version.split('.').map(Number), y = b.version.split('.').map(Number);
+      for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+      return false;
+    };
+    // A long-term release dated after a higher stable one, and an RC above both.
+    const lts = rel('7.23.8', '7.23.8', 'release', 8, 'RouterOS');
+    const rc = rel('7.25', '7.25rc1', 'rc', 1, 'RouterOS');
+    const stable = rel('7.24.5', '7.24.5', 'release', 0, 'RouterOS');
+    const list = [lts, rc, stable];
+    const ctx = { newest: stable, higher };
+    assert.equal(Lookup.judge(list, stable, ctx).kind, 'current');
+    const older = Lookup.judge(list, lts, ctx);
+    assert.equal(older.kind, 'older');
+    assert.equal(older.newest, stable);
+    const ahead = Lookup.judge(list, rc, ctx);
+    assert.equal(ahead.kind, 'ahead');
+    assert.equal(ahead.newest, stable);
   });
 
   it('counts none between neighbours, and a beta that was superseded', () => {
@@ -96,9 +139,10 @@ describe('judge', () => {
   });
 
   it('counts calendar days, not elapsed hours', () => {
-    const late = { ...rel('2', 'b', 'release', 1), t: T0 + DAY + 23 * 3600e3 };
-    const early = { ...rel('1', 'a', 'release', 0), t: T0 + 3600e3 };
+    const late = { ...rel('2.1', 'b', 'release', 1), t: T0 + DAY + 23 * 3600e3 };
+    const early = { ...rel('2.0', 'a', 'release', 0), t: T0 + 3600e3 };
     const j = Lookup.judge([late, early], early);
+    assert.equal(j.kind, 'superseded');
     assert.equal(j.days, 1);
   });
 
