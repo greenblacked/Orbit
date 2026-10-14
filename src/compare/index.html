@@ -59,6 +59,17 @@
 </div>
 <div class="cmp-result" id="cmp-result"><p class="small">Loading releases…</p></div>
 <p class="sr-only" id="cmp-live" role="status" aria-live="polite" aria-atomic="true"></p>
+<section class="lookup" aria-labelledby="lk-h">
+<h2 id="lk-h" class="month-h">Check my version</h2>
+<p class="small">Is your build the newest? Pick a platform and type a version or build number from Settings or About.</p>
+<form class="lk-form" id="lk-form" hidden>
+<div class="field"><label for="lk-family">Platform</label><select id="lk-family" name="platform"><option value="iOS">iOS</option><option value="iPadOS">iPadOS</option><option value="macOS">macOS</option><option value="watchOS">watchOS</option><option value="tvOS">tvOS</option><option value="visionOS">visionOS</option><option value="RouterOS">RouterOS</option><option value="Android">Android</option><option value="Windows">Windows</option><option value="SteamOS">SteamOS</option></select></div>
+<div class="field"><label for="lk-build">Version or build</label><input class="lk-input" id="lk-build" name="build" type="text" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="lk-help"></div>
+<button class="lk-go" type="submit">Check</button>
+</form>
+<p class="small lk-help" id="lk-help" hidden>Type the version or build number shown in Settings, About or System information.</p>
+<div class="lk-result" id="lk-result" role="status" aria-live="polite" aria-atomic="true"></div>
+</section>
 <p class="small source">Sources: <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://mikrotik.com/download/changelogs" target="_blank" rel="noopener noreferrer">MikroTik changelogs<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://source.android.com/docs/setup/reference/build-numbers" target="_blank" rel="noopener noreferrer">AOSP build numbers<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" rel="noopener noreferrer">Windows release health<span class="sr-only"> (opens in a new tab)</span></a> and <a href="https://store.steampowered.com/news/app/1675200" target="_blank" rel="noopener noreferrer">Steam Deck news<span class="sr-only"> (opens in a new tab)</span></a></p>
 <p class="small data-note" id="data-note"></p>
 <noscript><p class="notice">The compare needs JavaScript. Read the releases at <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://mikrotik.com/download/changelogs" target="_blank" rel="noopener noreferrer">MikroTik changelogs<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://source.android.com/docs/setup/reference/build-numbers" target="_blank" rel="noopener noreferrer">AOSP build numbers<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" rel="noopener noreferrer">Windows release health<span class="sr-only"> (opens in a new tab)</span></a> or <a href="https://store.steampowered.com/news/app/1675200" target="_blank" rel="noopener noreferrer">Steam Deck news<span class="sr-only"> (opens in a new tab)</span></a> directly.</p></noscript>
@@ -80,6 +91,7 @@
 <script src="/assets/security.js" defer></script>
 <script src="/assets/sigil.js" defer></script>
 <script src="/assets/compare.js" defer></script>
+<script src="/assets/lookup.js" defer></script>
 <script src="/assets/site.js" defer></script>
 </body>
 </html>
