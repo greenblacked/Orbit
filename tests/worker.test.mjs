@@ -516,9 +516,11 @@ describe('the Worker: /api/health and the rest', () => {
       assert.ok(res.headers.get('cache-control'));
       assert.equal(res.headers.get('access-control-allow-origin'), null);
     }
-    for (const res of responses.slice(0, 3)) {
-      assert.equal(res.headers.get('cache-control'), 'public, max-age=60');
-    }
+    // Releases and an unknown path are cacheable for a minute; health is never cached.
+    const [releases, health, nope] = responses;
+    assert.equal(releases.headers.get('cache-control'), 'public, max-age=60');
+    assert.equal(health.headers.get('cache-control'), 'no-store');
+    assert.equal(nope.headers.get('cache-control'), 'public, max-age=60');
   });
 });
 
