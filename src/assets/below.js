@@ -193,7 +193,7 @@
     if (beta && (!pub || beta.t > pub.t)) line += " The newest beta is " + label(beta) + ".";
     out.textContent = line;
   }
-  function paintMac(announce) {
+  function paintMac(say) {
     var box = sec("macOS");
     var seg = box.querySelectorAll("[data-ch]");
     if (!seg.length) return;
@@ -212,7 +212,7 @@
     text(box, "version", r ? r.version : "None in the data");
     text(box, "build", r && r.build ? r.build : "None");
     text(box, "date", r ? RO.day(r.t) : "None");
-    if (announce && r) announce(box, said(s));
+    if (say && r) announce(box, said(s));
   }
   // The chosen tab, unless it has nothing to show (no beta on the day shown): the choice itself is
   // kept, so it applies again once betas return.
@@ -235,7 +235,7 @@
       tabs[i].setAttribute("aria-disabled", String(off));
     }
   }
-  function paintWatch(announce) {
+  function paintWatch(say) {
     var box = sec("watchOS");
     var v = box.querySelector('[data-f="v"]');
     if (!v) return;
@@ -245,7 +245,7 @@
     text(box, "k", MODES[mode]);
     text(box, "v", values[mode]);
     box.querySelector('[data-act="cycle"]').setAttribute("data-mode", String(mode));
-    if (announce) text(box, "said", "Showing " + MODES[mode].toLowerCase() + " " + values[mode]);
+    if (say) text(box, "said", "Showing " + MODES[mode].toLowerCase() + " " + values[mode]);
   }
   // One device after a step; the others and the iPhone's rows do not depend on it.
   function stepTo(family, by) {
