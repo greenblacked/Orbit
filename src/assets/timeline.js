@@ -1,5 +1,6 @@
 /* The timeline page: every release newest first, grouped by month, filtered by platform and stage
-   with two groups of toggle buttons. The filters live in the query string (?family=iOS&stage=beta),
+   with two groups of toggle buttons, and by line (?line=long-term) for a platform that keeps several
+   supported lines at once. The filters live in the query string (?family=iOS&stage=beta),
    so a filtered view can be linked to. Only the newest PAGE months of the filtered list are drawn;
    "Show older" adds the next PAGE, so a long history does not build thousands of rows at once. */
 (function () {
@@ -19,7 +20,9 @@
     beta: ["beta", "betas"],
     rc: ["release candidate", "release candidates"]
   };
-  var state = { family: "all", stage: "all" };
+  var state = { family: "all", stage: "all", line: "all" };
+  var lineChips = document.getElementById("chips-line");
+  var lineBox = document.getElementById("filter-line");
   var releases = [];
   var rows = [];
   var list = [];
@@ -40,12 +43,43 @@
       var q = new URLSearchParams(window.location.search);
       if (offered("chips-family").indexOf(q.get("family")) >= 0) state.family = q.get("family");
       if (offered("chips-stage").indexOf(q.get("stage")) >= 0) state.stage = q.get("stage");
+      // The line chips follow the data, so the address is checked against them once it loads.
+      if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,15}$/.test(q.get("line") || "")) state.line = q.get("line");
       target = (q.get("id") || "").slice(0, 300);
     } catch (e) { /* no query support: show everything */ }
   })();
 
   function matches(r) {
-    return (state.family === "all" || r.family === state.family) && (state.stage === "all" || r.stage === state.stage);
+    return (state.family === "all" || r.family === state.family) && (state.stage === "all" || r.stage === state.stage) &&
+      (state.line === "all" || r.line === state.line);
+  }
+
+  // The lines of the chosen platform, public ones first (the headlined line, then by version) and
+  // then any with only pre-releases (RouterOS testing). None for "All" or a platform with no lines.
+  function linesOf() {
+    if (state.family === "all") return [];
+    var names = RO.lead(releases, state.family).lines.map(function (x) { return x.line; });
+    releases.forEach(function (r) {
+      if (r.family === state.family && r.line && names.indexOf(r.line) < 0) names.push(r.line);
+    });
+    return names;
+  }
+  // Redraw the line chips for the chosen platform and drop a line it does not have.
+  var lineKey = "";
+  function syncLines() {
+    var names = linesOf();
+    if (names.indexOf(state.line) < 0) state.line = "all";
+    // A poll that changes no line must not rebuild the chips: that would drop their focus.
+    var key = names.join("|");
+    if (key === lineKey) { press("chips-line", state.line); return; }
+    lineKey = key;
+    lineBox.hidden = !names.length;
+    lineChips.textContent = "";
+    if (!names.length) return;
+    ["all"].concat(names).forEach(function (name) {
+      lineChips.appendChild(RO.h("button", "chip", name === "all" ? "All" : RO.lineLabel(name),
+        { type: "button", "aria-pressed": String(name === state.line), "data-v": name }));
+    });
   }
 
   function item(r) {
@@ -126,7 +160,7 @@
     rows = [];
     draw(0, limit);
     button();
-    var which = state.family === "all" ? "" : state.family + " ";
+    var which = state.family === "all" ? "" : state.family + " " + (state.line === "all" ? "" : state.line + " ");
     count.textContent = list.length
       ? list.length + " " + which + noun(list.length)
       : "No " + which + NOUNS[state.stage][1] + " in the data.";
@@ -155,6 +189,7 @@
     var q = [];
     if (state.family !== "all") q.push("family=" + encodeURIComponent(state.family));
     if (state.stage !== "all") q.push("stage=" + encodeURIComponent(state.stage));
+    if (state.line !== "all") q.push("line=" + encodeURIComponent(state.line));
     try {
       window.history.replaceState(null, "", window.location.pathname + (q.length ? "?" + q.join("&") : ""));
     } catch (e) { /* the filters still work without a shareable address */ }
@@ -165,6 +200,7 @@
       if (!chip) return;
       state[key] = chip.getAttribute("data-v");
       limit = PAGE;
+      if (key === "family") { state.line = "all"; syncLines(); }
       press(group, state[key]);
       remember();
       render();
@@ -172,6 +208,7 @@
   }
   document.getElementById("chips-family").addEventListener("click", choose("family", "chips-family"));
   document.getElementById("chips-stage").addEventListener("click", choose("stage", "chips-stage"));
+  lineChips.addEventListener("click", choose("line", "chips-line"));
   press("chips-family", state.family);
   press("chips-stage", state.stage);
 
@@ -183,6 +220,8 @@
     if (!matches(rel)) {
       state.family = "all";
       state.stage = "all";
+      state.line = "all";
+      syncLines();
       press("chips-family", "all");
       press("chips-stage", "all");
       limit = PAGE;
@@ -222,6 +261,7 @@
     var focusedAt = -1;
     rows.forEach(function (x, n) { if (x.li.contains(document.activeElement)) { focusedId = x.r.id; focusedAt = n; } });
     releases = data.releases;
+    syncLines();
     // Only when the visitor opened more than the default view: the default stays the newest PAGE months.
     if (edge && limit > PAGE) {
       byMonth(releases.filter(matches)).forEach(function (g, n) {
