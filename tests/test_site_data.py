@@ -332,3 +332,16 @@ def test_the_refraction_effect_needs_a_fine_hovering_pointer_like_the_glass():
     body = fx[fx.index("function refraction()") : fx.index("function aurora()")]
     assert '"(hover: hover) and (pointer: fine)"' in body
     assert body.index("(hover: hover)") < body.index("document.body.appendChild")
+
+
+def test_the_android_status_bar_is_drawn_the_android_way():
+    html = page("index.html")
+    android = html[html.index('id="android"') : html.index('id="windows"')]
+    bar = re.search(r'<p class="m-bar" aria-hidden="true">(.*?)</p>', android).group(1)
+    assert "9:41" not in bar and "m-batt" not in bar
+    assert bar.startswith("<span>") and 'class="m-icons"' in bar
+    assert all(glyph in bar for glyph in ("a-sig", "a-wifi", "a-batt"))
+    for glyph in ("a-sig", "a-wifi", "a-batt"):
+        assert re.search(rf"\.{glyph} \{{[^}}]*\}}", CSS), glyph
+    # The iPhone keeps its own bar.
+    assert "<span>9:41</span>" in html[html.index('id="ios"') : html.index('id="ipados"')]

@@ -1224,6 +1224,12 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   transform: translateX(-50%);
 }
 .m-android { display: flex; flex-direction: column; }
+/* The Android status bar: the time at the left, then signal, wifi and a battery, drawn with shapes. */
+.m-icons { display: flex; align-items: center; gap: 0.4em; }
+.m-icons i { display: block; background: currentColor; }
+.a-sig { width: 0.7em; height: 0.7em; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.a-wifi { width: 0.85em; height: 0.7em; clip-path: polygon(50% 100%, 0 25%, 50% 0, 100% 25%); }
+.a-batt { width: 0.4em; height: 0.8em; border-radius: 0.12em; }
 .dev-pc .m-win { margin: auto auto 0.6em; }
 .m-pc { justify-content: space-between; }
 .m-task {
