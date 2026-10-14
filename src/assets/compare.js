@@ -36,9 +36,28 @@
   function label(r) {
     return RO.short(r) + (r.build ? " · " + r.build : "") + " · " + RO.day(r.t);
   }
+  // The options sit in groups by major version, the newest line first ("iOS 26"), each group
+  // keeping the list's newest-first order. The ids are the option values, so the groups change
+  // how the picker reads and nothing else.
   function fill(select, keep, fallback) {
     select.textContent = "";
-    list.forEach(function (r) { select.appendChild(RO.h("option", "", label(r), { value: r.id })); });
+    var lines = [], at = Object.create(null);
+    list.forEach(function (r) {
+      var key = String(r.major);
+      if (!at[key]) { at[key] = { major: r.major, items: [] }; lines.push(at[key]); }
+      at[key].items.push(r);
+    });
+    lines.sort(function (a, b) {
+      var x = isFinite(a.major), y = isFinite(b.major);
+      return x && y ? b.major - a.major : x ? -1 : y ? 1 : 0;
+    });
+    lines.forEach(function (line) {
+      var first = line.items[0];
+      var group = RO.h("optgroup", "", null,
+        { label: first.family + (isFinite(line.major) ? " " + line.major : "") });
+      line.items.forEach(function (r) { group.appendChild(RO.h("option", "", label(r), { value: r.id })); });
+      select.appendChild(group);
+    });
     var has = list.some(function (r) { return r.id === keep; });
     select.value = has ? keep : fallback;
   }

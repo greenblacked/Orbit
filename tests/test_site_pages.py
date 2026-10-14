@@ -1192,6 +1192,49 @@ def test_compare_cards_draw_a_sigil_and_name_the_channel_without_a_build(page, b
     assert "No build number" not in words and "Stable" in words and "Beta" in words
 
 
+def test_compare_groups_the_pickers_by_major_version_newest_line_first(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    majors = sorted({r["major"] for r in ios}, reverse=True)
+    assert len(majors) >= 2
+    for picker in ("#c-from", "#c-to"):
+        labels = page.locator(f"{picker} optgroup").evaluate_all("els => els.map(e => e.label)")
+        assert labels == [f"iOS {m}" for m in majors]
+        # Every release is in the group of its own major, and none is lost or doubled.
+        grouped = page.locator(f"{picker} optgroup").evaluate_all(
+            "els => els.map(g => [g.label, [...g.children].map(o => o.value)])"
+        )
+        for label, ids in grouped:
+            major = int(label.split()[-1])
+            assert ids == [r["id"] for r in ios if r["major"] == major]
+        assert page.locator(f"{picker} > option").count() == 0
+        assert page.locator(f"{picker} option").count() == len(ios)
+    assert page.input_value("#c-to") == ios[0]["id"]
+    assert page.input_value("#c-from") == default_from(ios)["id"]
+
+
+def test_compare_keeps_its_picks_across_groups_and_restores_them_from_the_address(
+    page, base_url
+):
+    ios = releases("iOS")
+    older = next(r for r in ios if r["major"] != ios[0]["major"])
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    page.select_option("#c-from", older["id"])
+    assert page.input_value("#c-from") == older["id"]
+    group = page.eval_on_selector("#c-from", "s => s.selectedOptions[0].parentElement.label")
+    assert group == f"iOS {older['major']}"
+    assert f"from={quote(older['id'], safe='')}" in page.url
+    page.goto(base_url + f"/compare/?family=iOS&from={quote(older['id'], safe='')}")
+    page.wait_for_selector(".cmp-cards")
+    assert page.input_value("#c-from") == older["id"]
+    assert page.input_value("#c-to") == ios[0]["id"]
+    page.select_option("#c-family", "Android")
+    labels = page.locator("#c-to optgroup").evaluate_all("els => els.map(e => e.label)")
+    assert labels and all(label.startswith("Android ") for label in labels)
+
+
 def test_compare_counts_betas_in_between_and_changes_family(page, base_url):
     page.goto(base_url + "/compare/")
     page.wait_for_selector(".cmp-cards")
