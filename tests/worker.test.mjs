@@ -954,9 +954,14 @@ describe('the Worker: the owner notes', () => {
   });
 
   it('does not store a note in the source cache', async () => {
-    const env = withNotes({ notes: { [SNAPSHOT_ID]: 'A note.' } });
-    await call('/api/releases.json', env);
+    // A release the Apple feed itself produced, so it is in the cache entry being checked.
+    await call('/api/releases.json', fakeEnv());
+    const first = (await (await state.cache.match(CACHE_URL)).json()).releases[0].id;
+    const env = withNotes({ notes: { [first]: 'A note.' } });
+    const body = await (await call('/api/releases.json', env)).json();
+    assert.equal(summaryOf(body, first), 'A note.');
     const cached = await (await state.cache.match(CACHE_URL)).json();
+    assert.ok(cached.releases.some((release) => release.id === first));
     assert.ok(cached.releases.every((release) => !('summary' in release)));
   });
 });

@@ -83,7 +83,10 @@ def test_the_releases_api_is_answered_from_the_snapshot(base_url):
     status, headers, body = get(base_url, "/api/releases.json")
     assert status == 200
     assert headers["Content-Type"].startswith("application/json")
-    assert body == get(base_url, "/data/releases.json")[2]
+    snapshot = get(base_url, "/data/releases.json")[2]
+    notes = get(base_url, "/data/notes.json")[2]
+    # The owner's notes are laid over the snapshot, so compare with them applied.
+    assert body == serve.apply_notes(snapshot, notes)
     assert "default-src 'self'" in headers["Content-Security-Policy"]
 
 
@@ -135,7 +138,12 @@ def test_releases_answer_passes_an_unreadable_snapshot_through():
 
 
 RELEASE_BODY = json.dumps(
-    {"releases": [{"id": "a", "vendor": "apple"}, {"id": "b", "vendor": "mikrotik", "summary": "x"}]}
+    {
+        "releases": [
+            {"id": "a", "vendor": "apple"},
+            {"id": "b", "vendor": "mikrotik", "summary": "x"},
+        ]
+    }
 ).encode()
 
 

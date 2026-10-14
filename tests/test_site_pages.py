@@ -2205,7 +2205,9 @@ def test_a_family_with_only_pre_releases_headlines_the_newest_of_them(page, base
     assert card.locator("[data-f=pre]").is_hidden()
 
 
-SUMMARY_TEXT = "A short description. <b>Not markup</b> and long enough to need more than one line " * 3
+SUMMARY_TEXT = (
+    "A short description. <b>Not markup</b> and long enough to need more than one line "
+) * 3
 
 
 def with_summaries():
@@ -2258,7 +2260,8 @@ def test_the_owner_notes_win_over_a_summary_and_reach_the_front_page_card(browse
         cards_ready(page)
         note = page.locator("#latest-grid [data-family=iOS] [data-f=note]")
         page.wait_for_function(
-            "() => document.querySelector('#latest-grid [data-family=iOS] [data-f=note]').textContent !== ''"
+            "() => document.querySelector('#latest-grid [data-family=iOS] [data-f=note]')"
+            ".textContent !== ''"
         )
         assert note.inner_text() == "Written by the owner"
         assert note.is_visible()
