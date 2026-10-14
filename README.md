@@ -49,7 +49,7 @@ flowchart LR
 
 ### Data contract
 
-`/api/releases.json` (optionally `?vendor=apple`) answers one document, and `/api/health` reports each source.
+`/api/releases.json` (optionally `?vendor=apple`) answers one document. `/api/health` reports each source and is never cached (`Cache-Control: no-store`): `ok` means the Worker answered, `degraded` is true when any source is failed, stale or served from the bundled snapshot, and each source entry carries `stale`, `snapshot`, `lastError` (a short message) and `failedAt` (ms since the epoch), both null while the source is served live and fresh.
 
 `/api/security.json` answers the bundled security notes from `src/data/security.json` (schema 1; Apple and Android are the adapters, refreshed by `node deploy/snapshot_security.mjs`; the file stays empty until the first refresh, after the owner has checked the vendors' terms of use). The document holds `schema`, `generatedAt`, `sources`, `notes` (keyed by an `https` note URL, each with a `source` and its sorted `cves`) and `releases` (keyed by a release id from `releases.json`, each with a `status`, sorted `notes` and `cves`, and a `count`). A `status` is one of `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` or `not-connected`; only a `release` is ever `listed` or `no-cve-entries`, and every other release is `not-applicable`. `tests/security.test.mjs` is the executable contract; the reasoning is in [ADR 0008](docs/adr/0008-security-notes-are-a-separate-payload.md).
 

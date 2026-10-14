@@ -9,7 +9,7 @@
 // label and link are kept, never page text.
 
 import { familyIds } from '../families.js';
-import { isHttpsOn, mergeReleases } from '../releases.js';
+import { isHttpsOn, sortReleases } from '../releases.js';
 
 export const ID = 'microsoft-windows-release-health';
 export const VENDOR = 'microsoft';
@@ -210,7 +210,7 @@ export function parsePage(html, _url = '', now = Date.now()) {
       source: ID,
     });
   }
-  return mergeReleases([], releases);
+  return sortReleases(releases);
 }
 
 // An HTML page: ask for it as one.
