@@ -24,9 +24,20 @@
 // STORE_MS, counted from when it was fetched and not extended by failed refreshes, far
 // longer than MAX_AGE_MS, so the last good live copy outlives an outage instead of giving
 // way to the older snapshot built into the deploy.
+//
+// Only the production and stage custom domains (LIVE_HOSTS) fetch from the vendors. Any other
+// host, workers.dev above all, answers /api/* from the bundled snapshot alone (stale and
+// snapshot true, as for a failed source): the Cache API does nothing there, so every request
+// would fetch every vendor live. Such a host also never touches the cache. Production and
+// stage are both in one zone, so they share its cache: the keys name no host, and stage reads
+// and writes production's entries, negative markers included.
 
 import { mergeReleases } from './releases.js';
 import { SOURCES, isSource, vendorsOf } from './sources/index.js';
+
+// The exact hostnames (URL hostnames are lower-case) that may fetch live. Keep in step with
+// docs/architecture.md; tests/worker.test.mjs checks that it names them.
+export const LIVE_HOSTS = new Set(['orbit.szolotov.com', 'stage.orbit.szolotov.com']);
 
 const USER_AGENT = 'orbit (+https://orbit.szolotov.com)';
 const CACHE_PREFIX = 'https://orbit.internal/api/sources/';
@@ -348,7 +359,9 @@ async function fallback(source, request, env) {
 }
 
 // One source's payload to serve, or null when nothing at all is available for it.
-async function load(source, request, env, ctx) {
+async function load(source, request, env, ctx, live) {
+  // Off the custom domains: the snapshot alone, with no cache access and no vendor fetch.
+  if (!live) return fallback(source, request, env);
   let cached = await readCache(source);
   if (cached?.negative) {
     // Nothing was cached and the last attempt failed: inside the back-off, do not ask again.
@@ -381,11 +394,11 @@ async function load(source, request, env, ctx) {
 
 // load() never rejects for a source's own failure; this keeps even a bug in one adapter
 // from taking the others down with it.
-async function loadAll(sources, request, env, ctx) {
+async function loadAll(sources, request, env, ctx, live) {
   return Promise.all(
     sources.map(async (source) => {
       try {
-        return { source, payload: await load(source, request, env, ctx) };
+        return { source, payload: await load(source, request, env, ctx, live) };
       } catch {
         return { source, payload: null };
       }
@@ -421,6 +434,7 @@ function summary(results) {
 
 async function api(request, env, ctx, sources) {
   const url = new URL(request.url);
+  const live = LIVE_HOSTS.has(url.hostname);
   const head = request.method === 'HEAD';
   if (request.method !== 'GET' && !head) {
     return json({ error: 'method not allowed' }, 405, { allow: 'GET, HEAD' });
@@ -439,7 +453,7 @@ async function api(request, env, ctx, sources) {
         );
       }
     }
-    const payload = combine(await loadAll(chosen, request, env, ctx));
+    const payload = combine(await loadAll(chosen, request, env, ctx, live));
     return payload
       ? json(payload, 200, {}, head)
       : json({ error: 'no releases available' }, 503, { 'cache-control': 'no-store' }, head);
@@ -451,7 +465,7 @@ async function api(request, env, ctx, sources) {
       : json({ error: 'no security notes available' }, 503, { 'cache-control': 'no-store' }, head);
   }
   if (url.pathname === '/api/health') {
-    const results = await loadAll(sources, request, env, ctx);
+    const results = await loadAll(sources, request, env, ctx, live);
     const payload = combine(results);
     return payload
       ? json(

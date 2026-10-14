@@ -35,6 +35,7 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 | Failure | Behaviour |
 | --- | --- |
 | A feed is slow or unreachable | A cached copy is served marked `stale: true`. The source is not asked again for 5 minutes. |
+| The request is not on `orbit.szolotov.com` or `stage.orbit.szolotov.com` (`workers.dev`, any other host) | The Cache API does nothing on `workers.dev`, so such a host would fetch every vendor live on every request. `/api/*` answers from the bundled snapshot alone: no vendor fetch, no cache read or write, `stale: true` and `snapshot: true`. The hosts are `LIVE_HOSTS` in `deploy/worker.js`. Production and stage share the zone's cache, because its keys name no host. |
 | A feed fails and nothing is cached | A short negative marker holds the same 5 minute back-off, so requests do not each wait for the timeout. The bundled snapshot answers with `snapshot: true`. |
 | A feed returns unparseable data | The source counts as failed. Other sources are unaffected. |
 | A feed redirects | The redirect is not followed, because it would leave the allowlist. The source counts as failed. |
