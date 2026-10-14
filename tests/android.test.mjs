@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { isHttpsOn } from '../deploy/releases.js';
+import { isHttpsOn, MAX_RELEASES_PER_SOURCE } from '../deploy/releases.js';
 import android, {
   buildDate,
   buildTable,
@@ -345,6 +345,18 @@ describe('the bounds on what is emitted', () => {
     assert.equal(releases.at(-1).id, 'android-1.0.0_r1');
     assert.ok(releases.every((r, i) => i === 0 || Date.parse(releases[i - 1].date) > Date.parse(r.date)));
     assert.deepEqual(parsePage(page(), now), []);
+  });
+
+  it('emits every row of a page larger than the per-source cap (no quiet cut)', () => {
+    // Synthetic: more rows than the cap; the adapter must not drop any of them.
+    const total = MAX_RELEASES_PER_SOURCE + 100;
+    const rows = [];
+    for (let i = 0; i < total; i += 1) {
+      const year = 2017 + (Math.floor(i / 12) % 9);
+      const month = String((i % 12) + 1).padStart(2, '0');
+      rows.push(row(`CP2A.${String(year).slice(2)}${month}05.016`, `android-${i + 1}.0.0_r1`, `${year}-${month}-05`));
+    }
+    assert.equal(parsePage(page(...rows), Date.UTC(2030, 0, 1)).length, total);
   });
 
   it('does not depend on the clock for old rows', () => {

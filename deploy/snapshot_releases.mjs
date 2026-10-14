@@ -14,7 +14,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { mergeReleases } from './releases.js';
+import { MAX_RELEASES_PER_SOURCE, mergeReleasesChecked } from './releases.js';
 import { SOURCES } from './sources/index.js';
 
 const USER_AGENT = 'orbit (+https://orbit.szolotov.com)';
@@ -66,10 +66,20 @@ for (const source of SOURCES) {
     if (found.length === 0) {
       throw new Error('the source held no releases');
     }
-    releases = mergeReleases(
+    const merged = mergeReleasesChecked(
       releases,
       found.map((release) => ({ ...release, vendor: source.vendor, source: source.id })),
     );
+    // The cap must never drop rows quietly: keep the old file's rows for this source and fail.
+    const lost = Object.entries(merged.dropped);
+    if (lost.length > 0) {
+      const names = lost.map(([id, n]) => `${id || '(no source)'}: ${n} row(s)`).join(', ');
+      throw new Error(
+        `merging would drop ${names} over the cap of ${MAX_RELEASES_PER_SOURCE} per source; ` +
+          'raise MAX_RELEASES_PER_SOURCE in deploy/releases.js on purpose',
+      );
+    }
+    releases = merged.releases;
   } catch (error) {
     failures.push(`${source.id}: ${error.message}`);
   }

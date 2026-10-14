@@ -17,7 +17,7 @@
 // older refreshes saw. The dial filters by date on the client, so wider data does not widen it.
 
 import { familyIds } from '../families.js';
-import { field, isHttpsOn, mergeReleases, parseDate, rssItems } from '../releases.js';
+import { field, isHttpsOn, parseDate, rssItems, sortReleases } from '../releases.js';
 
 export const ID = 'valve-steam-news';
 export const VENDOR = 'valve';
@@ -100,10 +100,7 @@ export function linkOf(value) {
 
 // Refuse a post dated far ahead of the clock, newest first.
 function bounded(releases, now) {
-  return mergeReleases(
-    [],
-    releases.filter((release) => Date.parse(release.date) <= now + MAX_SKEW_MS),
-  );
+  return sortReleases(releases.filter((release) => Date.parse(release.date) <= now + MAX_SKEW_MS));
 }
 
 /**
