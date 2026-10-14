@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { describe, it } from 'node:test';
 
-const { trail, steps, index, keeps, settle, move, keyStep, newest } = createRequire(
+const { trail, steps, index, keeps, settle, move, keyStep, newest, blocked } = createRequire(
   import.meta.url,
 )('../src/assets/below.js');
 
@@ -176,5 +176,24 @@ describe('the keys', () => {
     for (const key of ['ArrowUp', 'Enter', ' ', 'a', 'toString', 'constructor', '__proto__']) {
       assert.equal(keyStep(key), null, key);
     }
+  });
+});
+
+describe('why a press cannot move', () => {
+  it('says the first release is the newest and the last the oldest', () => {
+    assert.equal(blocked(5, -1, false), 'Already the newest');
+    assert.equal(blocked(5, 'first', false), 'Already the newest');
+    assert.equal(blocked(5, 1, false), 'Already the oldest');
+    assert.equal(blocked(5, 'last', false), 'Already the oldest');
+  });
+
+  it('says steps are paused on the Mac beta channel, whatever the key', () => {
+    for (const by of [-1, 1, 'first', 'last']) {
+      assert.equal(blocked(5, by, true), 'Steps are paused on the beta channel');
+    }
+  });
+
+  it('says there is nothing to step through when there are no releases', () => {
+    assert.equal(blocked(0, 1, false), 'No releases to step through');
   });
 });

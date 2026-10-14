@@ -77,10 +77,17 @@
   function keyStep(key) {
     return Object.prototype.hasOwnProperty.call(KEYS, key) ? KEYS[key] : null;
   }
+  var PAUSED = "Steps are paused on the beta channel";
+  // Why a press cannot move (the same `by` as move): the words for the live region.
+  function blocked(n, by, beta) {
+    if (beta) return PAUSED;
+    if (n < 1) return "No releases to step through";
+    return by === "first" || by < 0 ? "Already the newest" : "Already the oldest";
+  }
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
       trail: trail, steps: steps, index: index, keeps: keeps, settle: settle, move: move,
-      keyStep: keyStep, newest: newest
+      keyStep: keyStep, newest: newest, blocked: blocked
     };
     return;
   }
@@ -181,7 +188,7 @@
     seg[0].disabled = false;
     seg[1].disabled = !beta;
     seg[1].setAttribute("aria-disabled", String(!beta));
-    text(box, "betanote", beta ? "" : "No newer beta");
+    text(box, "betanote", !beta ? "No newer beta" : s.beta ? PAUSED : "");
     text(box, "name", r ? r.family + " " + RO.short(r) : "macOS");
     text(box, "version", r ? r.version : "None in the data");
     text(box, "build", r && r.build ? r.build : "None");
@@ -224,7 +231,10 @@
   function stepTo(family, by) {
     var s = shown(family);
     var j = move(s.i, s.rows.length, by);
-    if (s.beta || !s.rows.length || j === s.i) return;
+    if (s.beta || !s.rows.length || j === s.i) {
+      text(sec(family), "step", blocked(s.rows.length, by, s.beta));
+      return;
+    }
     picked[family] = s.rows[j].id;
     paintFields(family);
     if (family === "macOS") paintMac(false);

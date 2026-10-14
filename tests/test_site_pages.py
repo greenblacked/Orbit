@@ -672,6 +672,48 @@ def test_the_mac_channel_switch_keeps_the_release_it_was_on(page, base_url):
     assert public("macOS")[1]["build"] in info
 
 
+@pytest.mark.parametrize("family", ["iOS", "SteamOS", "watchOS"])
+def test_a_press_that_cannot_move_says_why(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    count = len(public(family))
+    live = device(page, family).locator("[data-f=step]")
+    assert hardware(page, family, "Newer").get_attribute("aria-disabled") == "true"
+    press(page, family, "Newer")
+    assert live.inner_text() == "Already the newest"
+    assert position(page, family) == f"1 / {count}"
+    hardware(page, family, "Older").focus()
+    page.keyboard.press("End")
+    assert position(page, family) == f"{count} / {count}"
+    press(page, family, "Older")
+    assert live.inner_text() == "Already the oldest"
+    assert position(page, family) == f"{count} / {count}"
+    focused = page.evaluate("document.activeElement.getAttribute('aria-label')")
+    assert focused == f"Older {family} release", "a blocked key keeps the focus"
+    page.keyboard.press("Home")
+    assert live.inner_text() == f"{named(family, public(family)[0])}, 1 of {count}"
+
+
+def test_the_mac_on_the_beta_channel_says_why_its_steps_are_paused(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    paused = "Steps are paused on the beta channel"
+    note = page.locator("[data-f=betanote]")
+    assert note.inner_text() == ""
+    page.click("[data-ch=beta]")
+    assert note.inner_text() == paused
+    assert note.is_visible()
+    live = device(page, "macOS").locator("[data-f=step]")
+    hardware(page, "macOS", "Older").evaluate("button => button.click()")
+    assert live.inner_text() == paused
+    for which in ("Newer", "Older"):
+        assert hardware(page, "macOS", which).get_attribute("aria-disabled") == "true"
+    page.click("[data-ch=release]")
+    assert note.inner_text() == ""
+
+
 @pytest.mark.parametrize("family", DEVICES)
 def test_the_caption_says_the_device_steps_and_stays_honest(page, base_url, family):
     page.goto(base_url + "/")
