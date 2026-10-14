@@ -1385,6 +1385,7 @@ button.m-comp:active { filter: brightness(1.2); }
 .page .count { margin-top: 1.5rem; }
 .timeline { margin-top: 1rem; }
 .month { margin-top: 2rem; }
+.tl-more { margin-top: 2rem; }
 .month-h { position: relative; padding-left: 1.25rem; font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
 .month-h::before {
   content: "";

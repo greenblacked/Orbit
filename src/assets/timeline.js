@@ -1,12 +1,18 @@
 /* The timeline page: every release newest first, grouped by month, filtered by platform and stage
    with two groups of toggle buttons. The filters live in the query string (?family=iOS&stage=beta),
-   so a filtered view can be linked to. */
+   so a filtered view can be linked to. Only the newest PAGE months of the filtered list are drawn;
+   "Show older" adds the next PAGE, so a long history does not build thousands of rows at once. */
 (function () {
   "use strict";
   var RO = window.RO;
   var filters = document.getElementById("filters");
   var count = document.getElementById("count");
   var host = document.getElementById("timeline");
+  var moreWrap = document.getElementById("tl-more");
+  var more = document.getElementById("more");
+  // Month sections drawn per step. A month is a section that has releases, so a gap in the data
+  // never makes an empty step, and one step is a bounded amount of markup.
+  var PAGE = 12;
   var NOUNS = {
     all: ["release", "releases"],
     release: ["public release", "public releases"],
@@ -16,6 +22,10 @@
   var state = { family: "all", stage: "all" };
   var releases = [];
   var rows = [];
+  var list = [];
+  var groups = [];
+  var drawn = 0;
+  var limit = PAGE;
   var signature = "";
   var target = "";
 
@@ -77,29 +87,63 @@
   }
   if (window.Sec) window.Sec.on(function () { rows.forEach(function (row) { note(row.li, row.r); }); });
 
+  // The filtered list as month sections, newest first: { m: "October 2026", items: [release] }.
+  function byMonth(items) {
+    var out = [];
+    items.forEach(function (r) {
+      var m = RO.month(r.t);
+      if (!out.length || out[out.length - 1].m !== m) out.push({ m: m, items: [] });
+      out[out.length - 1].items.push(r);
+    });
+    return out;
+  }
+  function noun(n) { return NOUNS[state.stage][n === 1 ? 0 : 1]; }
+
+  // Draw sections [from, to) after the ones already there.
+  function draw(from, to) {
+    groups.slice(from, to).forEach(function (g) {
+      var sec = RO.h("section", "month");
+      sec.appendChild(RO.h("h2", "month-h", g.m));
+      var ul = RO.h("ul", "tl");
+      g.items.forEach(function (r) { ul.appendChild(item(r)); });
+      sec.appendChild(ul);
+      host.appendChild(sec);
+    });
+    drawn = Math.min(groups.length, to);
+  }
+  function button() {
+    var left = list.length - rows.length;
+    moreWrap.hidden = left <= 0;
+    if (left > 0) more.textContent = "Show older (" + left + " more " + noun(left) + ")";
+  }
+
+  // Redraw from the filtered list; `limit` sections stay open, so a poll that brings a release
+  // does not fold what the visitor opened, and a filter change resets it.
   function render() {
-    var list = releases.filter(matches);
+    list = releases.filter(matches);
+    groups = byMonth(list);
     host.textContent = "";
     rows = [];
-    var group = null, list_ = null;
-    list.forEach(function (r) {
-      var m = RO.month(r.t);
-      if (m !== group) {
-        group = m;
-        var sec = RO.h("section", "month");
-        sec.appendChild(RO.h("h2", "month-h", m));
-        list_ = RO.h("ul", "tl");
-        sec.appendChild(list_);
-        host.appendChild(sec);
-      }
-      list_.appendChild(item(r));
-    });
-    var noun = NOUNS[state.stage];
+    draw(0, limit);
+    button();
     var which = state.family === "all" ? "" : state.family + " ";
     count.textContent = list.length
-      ? list.length + " " + which + (list.length === 1 ? noun[0] : noun[1])
-      : "No " + which + noun[1] + " in the data.";
+      ? list.length + " " + which + noun(list.length)
+      : "No " + which + NOUNS[state.stage][1] + " in the data.";
   }
+
+  // The next step of older months, added below the open ones; the focus goes to the first new
+  // row, as the button may be gone once nothing older is left.
+  function older() {
+    var first = rows.length;
+    limit = drawn + PAGE;
+    draw(drawn, limit);
+    button();
+    var link = rows[first] && rows[first].li.querySelector("a");
+    if (link) link.focus();
+    else if (!moreWrap.hidden) more.focus();
+  }
+  more.addEventListener("click", older);
 
   function press(group, value) {
     var chips = document.querySelectorAll("#" + group + " .chip");
@@ -120,6 +164,7 @@
       var chip = event.target.closest ? event.target.closest(".chip") : null;
       if (!chip) return;
       state[key] = chip.getAttribute("data-v");
+      limit = PAGE;
       press(group, state[key]);
       remember();
       render();
@@ -130,20 +175,27 @@
   press("chips-family", state.family);
   press("chips-stage", state.stage);
 
-  // A link with ?id= (the toast's) lands on that row, whatever the filters hide.
+  // A link with ?id= (the toast's) lands on that row, whatever the filters hide and however far
+  // back it is: the months down to it are opened, in whole steps.
   function reveal() {
-    var row = rows.filter(function (x) { return x.r.id === target; })[0];
-    if (!row) {
-      var all = releases.filter(function (r) { return r.id === target; })[0];
-      if (!all) { target = ""; remember(); return; }
+    var rel = releases.filter(function (r) { return r.id === target; })[0];
+    if (!rel) { target = ""; remember(); return; }
+    if (!matches(rel)) {
       state.family = "all";
       state.stage = "all";
       press("chips-family", "all");
       press("chips-stage", "all");
+      limit = PAGE;
       remember();
       render();
-      row = rows.filter(function (x) { return x.r.id === target; })[0];
     }
+    var at = 0;
+    groups.forEach(function (g, n) { if (g.items.indexOf(rel) >= 0) at = n; });
+    if (at >= drawn) {
+      limit = Math.ceil((at + 1) / PAGE) * PAGE;
+      render();
+    }
+    var row = rows.filter(function (x) { return x.r.id === target; })[0];
     target = "";
     remember();
     var link = row && row.li.querySelector("a");

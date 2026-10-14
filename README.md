@@ -13,7 +13,7 @@ Live site: <https://orbit.szolotov.com>. The `main` branch also uploads a Previe
 
 ## What it does
 
-- Shows the newest release or beta of each platform family, a timeline of everything released with platform and stage filters, and a side-by-side comparison of two releases.
+- Shows the newest release or beta of each platform family, a timeline of everything released (the newest 12 months first, older ones on request) with platform and stage filters, and a side-by-side comparison of two releases.
 - Follows Apple's six platform families, MikroTik RouterOS, Google Android, Microsoft Windows and Valve SteamOS (the Steam Deck) live. A family with no release in the data says "No release yet" instead of a made-up one ([ADR 0006](docs/adr/0006-list-vendors-before-their-feeds.md)).
 - Draws the releases as a dial: one ring per platform, one notch per release placed by date, and a time machine that shows the site as of any day in the window.
 - Gives every build a deterministic glyph, its sigil, so a build is recognisable at a glance ([docs/sigils.md](docs/sigils.md)).
