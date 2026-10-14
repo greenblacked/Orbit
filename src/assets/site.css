@@ -881,9 +881,6 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   .toast { transition: opacity 200ms ease, transform 200ms ease, visibility 0s linear 200ms; }
   .toast.on { transition: opacity 200ms ease, transform 200ms ease; }
   .rel { transition: translate 200ms ease; }
-  @media (hover: hover) {
-    .rel:hover { translate: 0 -3px; box-shadow: 0 12px 28px -12px var(--glass-shadow); }
-  }
   @keyframes reveal-in {
     from { opacity: 0; transform: translateY(2rem); }
     to { opacity: 1; transform: none; }
@@ -902,6 +899,9 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
     opacity: 1;
     transform: none;
     transition: opacity 500ms ease, transform 500ms ease;
+  }
+  @media (hover: hover) {
+    .rel:hover { translate: 0 -3px; box-shadow: 0 12px 28px -12px var(--glass-shadow); }
   }
 }
 
@@ -1179,17 +1179,17 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 }
 .m-comp .k { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85); }
 .m-comp .v { max-width: 100%; font-size: 0.875rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.m-comp[data-mode="2"] .v { font-size: 0.8125rem; }
 .m-watch .m-name { font-size: 0.75rem; font-weight: 500; text-wrap: balance; }
 
-/* The straps sit in the side padding, which is as wide as a strap: never over the visor. */
-.dev-vision { max-width: 34rem; padding-inline: 2.75rem; padding-inline: max(7%, 2.75rem); }
+/* The straps sit in the side padding, which is as wide as a strap (both 2.75rem, no percentages): never over the visor. */
+.dev-vision { max-width: 34rem; padding-inline: 2.75rem; }
 .v-strap {
   position: absolute;
   top: 28%;
   bottom: 28%;
   z-index: 3;
   width: 2.75rem;
-  width: max(7%, 2.75rem);
   border-radius: 99px;
   background: linear-gradient(#55555e, #26262c);
 }
@@ -1236,7 +1236,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 .m-icons { display: flex; align-items: center; gap: 0.4em; }
 .m-icons i { display: block; background: currentColor; }
 .a-sig { width: 0.7em; height: 0.7em; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
-.a-wifi { width: 0.85em; height: 0.7em; clip-path: polygon(50% 100%, 0 25%, 50% 0, 100% 25%); }
+.a-wifi { width: 0.85em; height: 0.7em; border-radius: 100% 100% 0 0 / 100% 100% 0 0; clip-path: polygon(50% 100%, 0 35%, 0 0, 100% 0, 100% 35%); }
 .a-batt { width: 0.4em; height: 0.8em; border-radius: 0.12em; }
 .dev-pc .m-win { margin: auto auto 0.6em; }
 .m-pc { justify-content: space-between; }
