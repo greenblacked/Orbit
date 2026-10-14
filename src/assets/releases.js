@@ -92,6 +92,9 @@
         // A row cached before lines existed: its channel is the end of its id.
         var ch = /-(stable|long-term|testing)$/.exec(r.id);
         if (ch) entry.line = ch[1];
+      } else if (r.family === "Windows" && /^\d\dH\d$/.test(r.version)) {
+        // Likewise a Windows feature update is its own line, named by its version.
+        entry.line = r.version;
       }
       list.push(entry);
     });
