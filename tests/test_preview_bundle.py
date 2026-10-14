@@ -793,6 +793,65 @@ def test_an_in_page_anchor_scrolls_without_leaving_the_page(tab, served):
     assert tab.evaluate("() => window.scrollY") > 200
 
 
+def test_the_router_mends_links_a_script_builds_at_run_time(text):
+    router = text.rsplit("<script>", 1)[1]
+    assert "function routeOf(href)" in router
+    assert 'document.addEventListener("click", mend)' in router
+    assert 'document.addEventListener("auxclick", mend)' in router
+    assert "template[data-route=" in router  # the routes are the bundle's own templates
+    # the router that runs is the one the policy hashes
+    assert bundle.sha256_source(f"\n{bundle.ROUTER}\n") in policy_of(text)
+
+
+@pytest.mark.browser
+@pytest.mark.parametrize(
+    ("href", "hash", "title"),
+    [
+        ("/compare/?family=ios&from=17.0&to=18.0&platform=iphone&build=1", "#/compare/", "Compare"),
+        ("/timeline/?id=ios-18-0", "#/timeline/", "Timeline"),
+        ("/about", "#/about/", "About"),
+        ("/about/index.html?x=1#privacy", "#/about/#privacy", "About"),
+    ],
+)
+def test_a_link_built_at_run_time_stays_inside_the_bundle(tab, served, href, hash, title):
+    tab.goto(served + "/#/about/")
+    heading(tab, "About Release Orbit")
+    tab.evaluate(
+        "(href) => { const a = document.createElement('a'); a.id = 'rt'; a.href = href;"
+        " a.textContent = 'runtime'; document.querySelector('main').appendChild(a); }",
+        href,
+    )
+    tab.locator("#rt").click()
+    tab.wait_for_function(f"() => location.hash === {hash!r}")
+    assert tab.url.startswith(served + "/#/")  # still the one file
+    assert title in tab.title()
+    assert tab.requested == []
+    assert tab.errors == []
+
+
+@pytest.mark.browser
+def test_external_and_unknown_links_are_left_as_they_are(tab, served):
+    tab.goto(served + "/#/about/")
+    heading(tab, "About Release Orbit")
+    hrefs = ["https://example.com/compare/", "//example.com/compare/", "/nowhere/", "mailto:a@b.c"]
+    kept = tab.evaluate(
+        """(hrefs) => hrefs.map((href) => {
+            const a = document.createElement('a');
+            a.setAttribute('href', href);
+            document.querySelector('main').appendChild(a);
+            const stop = (e) => e.preventDefault();
+            window.addEventListener('click', stop);
+            // bubbles to the router's listener on document, then window cancels the navigation
+            a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            window.removeEventListener('click', stop);
+            return a.getAttribute('href');
+        })""",
+        hrefs,
+    )
+    assert kept == hrefs
+    assert tab.evaluate("() => location.hash") == "#/about/"
+
+
 @pytest.mark.browser
 def test_the_page_script_works_and_is_not_doubled_by_navigating(tab, served):
     tab.goto(served + "/")
