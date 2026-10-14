@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { describe, it } from 'node:test';
 
-const { trail, steps, index, keeps, move, keyStep, newest } = createRequire(import.meta.url)(
+const { trail, steps, index, keeps, settle, move, keyStep, newest } = createRequire(import.meta.url)(
   '../src/assets/below.js',
 );
 
@@ -131,12 +131,9 @@ describe('forgetting a pick that drops out', () => {
   });
 
   it('clears the pick on an empty list so a later full list starts at the newest', () => {
-    // The rule of shown() in below.js, applied as the time machine moves back and forth.
+    // settle() is what shown() in below.js calls as the time machine moves back and forth.
     const picked = { SteamOS: 'd' };
-    const view = (rows) => {
-      if (!keeps(rows, picked.SteamOS)) delete picked.SteamOS;
-      return index(rows, picked.SteamOS);
-    };
+    const view = (rows) => settle(rows, picked, 'SteamOS');
     assert.equal(view(full), 1);
     assert.equal(view([]), 0);
     assert.equal(picked.SteamOS, undefined);

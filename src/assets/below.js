@@ -63,6 +63,12 @@
     for (var i = 0; i < rows.length; i++) if (rows[i].id === id) return true;
     return false;
   }
+  // The step a family shows, forgetting a pick that is no longer listed (see keeps).
+  function settle(rows, picked, family) {
+    var i = index(rows, picked[family]);
+    if (!keeps(rows, picked[family])) delete picked[family];
+    return i;
+  }
   // From step i of n: -1 or 1 for one step, "first" or "last"; never past either end.
   function move(i, n, by) {
     if (n < 1) return 0;
@@ -73,8 +79,8 @@
   }
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
-      trail: trail, steps: steps, index: index, keeps: keeps, move: move, keyStep: keyStep,
-      newest: newest
+      trail: trail, steps: steps, index: index, keeps: keeps, settle: settle, move: move,
+      keyStep: keyStep, newest: newest
     };
     return;
   }
@@ -105,8 +111,7 @@
   // What a device shows: the release it is on (rows[i]), or on the Mac's beta channel the beta.
   function shown(family) {
     var rows = steps(releases, family, family === "iPadOS" ? ipadScope() : "pub");
-    var i = index(rows, picked[family]);
-    if (!keeps(rows, picked[family])) delete picked[family];
+    var i = settle(rows, picked, family);
     var beta = family === "macOS" && channel === "beta" ? RO.lead(releases, family).pre : null;
     return { rows: rows, i: i, r: beta || rows[i] || null, beta: !!beta };
   }
