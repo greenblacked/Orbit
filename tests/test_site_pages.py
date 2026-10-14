@@ -680,6 +680,7 @@ def test_the_caption_says_the_device_steps_and_stays_honest(page, base_url, fami
     assert "to step through them" in caption
     assert caption.endswith("Mock screen, not a real device.")
     assert "newest" not in caption
+    assert ("sidebar" in caption) == (family == "iPadOS")
 
 
 def test_a_data_poll_keeps_the_device_on_the_release_it_shows(page, base_url):

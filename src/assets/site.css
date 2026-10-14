@@ -991,7 +991,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 .dev-phone {
   display: flex;
   max-width: 17rem;
-  max-width: min(17rem, calc(100vw - 2 * var(--hw, 2.75rem)));
+  max-width: min(17rem, calc(100vw - 2 * var(--hw, 2.75rem) - 1rem));
   aspect-ratio: 9 / 19;
   padding: 3.4%;
   border-radius: 15% / 7%;

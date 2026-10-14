@@ -95,7 +95,7 @@
   }
   // What a device shows: the release it is on (rows[i]), or on the Mac's beta channel the beta.
   function shown(family) {
-    var rows = steps(releases, family, family === "iPadOS" ? scope : "pub");
+    var rows = steps(releases, family, family === "iPadOS" ? ipadScope() : "pub");
     var i = index(rows, picked[family]);
     if (rows[i] && rows[i].id !== picked[family]) delete picked[family];
     var beta = family === "macOS" && channel === "beta" ? RO.lead(releases, family).pre : null;
@@ -174,17 +174,23 @@
     text(box, "date", r ? RO.day(r.t) : "None");
     if (announce && r) text(box, "step", said(s));
   }
+  // The chosen tab, unless it has nothing to show (no beta on the day shown): the choice itself is
+  // kept, so it applies again once betas return.
+  function ipadScope() {
+    var hasPre = steps(releases, "iPadOS", "pre").some(function (r) { return r.stage !== "release"; });
+    return scope === "pre" && !hasPre ? "pub" : scope;
+  }
   function paintIpad() {
     var box = sec("iPadOS");
     var tabs = box.querySelectorAll("[data-scope]");
     if (!tabs.length) return;
     var hasPre = steps(releases, "iPadOS", "pre").some(function (r) { return r.stage !== "release"; });
-    if (scope === "pre" && !hasPre) scope = "pub";
+    var now = ipadScope();
     for (var i = 0; i < tabs.length; i++) {
       var mine = tabs[i].getAttribute("data-scope");
       var off = mine === "pre" && !hasPre;
       tabs[i].disabled = off;
-      tabs[i].setAttribute("aria-pressed", String(mine === scope));
+      tabs[i].setAttribute("aria-pressed", String(mine === now));
       tabs[i].setAttribute("aria-disabled", String(off));
     }
   }
@@ -247,7 +253,9 @@
     });
     var tabs = sec("iPadOS").querySelectorAll("[data-scope]");
     for (var t = 0; t < tabs.length; t++) tabs[t].addEventListener("click", function (e) {
-      scope = e.currentTarget.getAttribute("data-scope");
+      var pick = e.currentTarget.getAttribute("data-scope");
+      if (pick === ipadScope()) return;
+      scope = pick;
       paintIpad();
       paintFields("iPadOS");
       text(sec("iPadOS"), "step", said(shown("iPadOS")));
