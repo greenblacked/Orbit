@@ -257,7 +257,8 @@ ROUTER = r"""
     return null;
   }
   // Point such a link at its hash route before the browser acts on it, so a plain click,
-  // a modifier click, a middle click and the context menu's "open in new tab" all stay inside the file.
+  // a modifier click, a middle click and the context menu's "open in new tab" all stay inside
+  // the file.
   function mend(event) {
     if (event.defaultPrevented) return;
     var link = event.target.closest ? event.target.closest("a[href]") : null;
