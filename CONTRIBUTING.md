@@ -29,7 +29,7 @@ Exempt, because they are not working branches: the long-lived branches `main` an
 python scripts/build_site.py --version local
 python scripts/check_site.py dist/site             # internal links and the size budget
 python -m pytest -m "not browser"                  # build, pipeline and bundle tests
-node --test 'tests/*.test.mjs'                     # parser, registry, Worker and sigil tests (Node 22)
+node --test 'tests/*.test.mjs'                     # parser, registry, Worker, sigil and device tests (Node 22)
 bash scripts/preview.sh                            # build, serve, smoke, screenshots, bundle
 ruff check . && ruff format --check .              # when ruff is installed
 ```
