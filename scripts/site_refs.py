@@ -79,6 +79,16 @@ def classify(url: str) -> str:
     return "local"
 
 
+# The Worker answers every path under this prefix (wrangler's run_worker_first), so a link to
+# one names no file of the build and is not looked up there: <link rel="alternate"> feeds and
+# the Subscribe link. Only navigation is exempt; a page can never load a file from it.
+WORKER_PREFIX = "/api/"
+
+
+def is_worker_path(url: str) -> bool:
+    return url.strip().startswith(WORKER_PREFIX)
+
+
 def resolve_local(root: Path, base: str, ref: str, *, index: bool = False) -> Resolved:
     """The one place a URL found in a page or a stylesheet becomes a file of the build.
 
@@ -764,7 +774,7 @@ def inspect_page(root: Path, page: Path) -> PageInfo:
                 continue
         if value.startswith("#") and ref.navigates:
             info.targets.append((ref, page.resolve()))  # a fragment on this very page
-        if kind != "local":
+        if kind != "local" or (ref.navigates and is_worker_path(value)):
             continue
         result = resolve_local(root, url, value, index=ref.navigates)
         category = "link" if ref.navigates else "asset"

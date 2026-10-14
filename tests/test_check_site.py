@@ -290,3 +290,27 @@ def test_a_get_or_dialog_form_is_accepted(tmp_path, form):
     )
     assert check.check_policy(root) == []
     assert check.check_links(root) == []
+
+
+def test_a_feed_link_under_the_workers_prefix_is_not_looked_up_in_the_build(tmp_path):
+    page = (
+        '<link rel="alternate" type="application/atom+xml" href="/api/feed.atom">'
+        '<a href="/api/feed.json?family=iOS">json</a><a href="/api/feed.atom#x">atom</a>'
+    )
+    root = make_site(tmp_path, {"index.html": page})
+    assert check.check_links(root) == []
+    assert check.main([str(root)]) == 0
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        '<link rel="stylesheet" href="/api/x.css">',
+        '<img src="/api/x.png" alt="">',
+        '<a href="/apix/feed.atom">x</a>',
+        '<a href="api/feed.atom">x</a>',
+    ],
+)
+def test_only_navigation_is_exempt_under_the_workers_prefix(tmp_path, page):
+    root = make_site(tmp_path, {"index.html": page})
+    assert check.check_links(root)
