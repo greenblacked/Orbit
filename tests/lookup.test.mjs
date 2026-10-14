@@ -151,3 +151,44 @@ describe('judge', () => {
     assert.equal(Lookup.judge(LIST, rel('1', 'x', 'release', 0)).kind, 'none');
   });
 });
+
+describe('judge by line', () => {
+  it('treats each Windows feature update as its own line', () => {
+    const list = [rel('26H2', '26300.1', 'release', 5, 'Windows'), rel('25H2', '26200.1', 'release', 4, 'Windows')];
+    const j = Lookup.judge(list, list[1]);
+    assert.equal(j.kind, 'line');
+    assert.equal(j.line, '25H2');
+  });
+
+  it('names the newest of its own line for a release that is superseded', () => {
+    const list = [rel('27.1', 'a', 'release', 30), rel('26.7.1', 'b', 'release', 20), rel('26.7', 'c', 'release', 10)];
+    const j = Lookup.judge(list, list[2]);
+    assert.equal(j.kind, 'superseded');
+    assert.equal(j.lineNewest, list[1]);
+    assert.equal(Lookup.judge(LIST, LIST[3]).lineNewest, null);
+  });
+});
+
+describe('behind', () => {
+  it('places a version that is not in the data against the newest of its line', () => {
+    const b = Lookup.behind(LIST, 'iOS 26.5', 'iOS');
+    assert.equal(b.kind, 'line');
+    assert.equal(b.line, '26');
+    assert.equal(b.ref, LIST[5]);
+    assert.equal(Lookup.behind(LIST, '27.0.0', 'iOS').ref, LIST[1]);
+  });
+
+  it('places a Windows build against the newest build of its version', () => {
+    const list = [rel('24H2', '26100.9550', 'release', 1, 'Windows')];
+    const b = Lookup.behind(list, 'Windows 26100.6584', 'Windows');
+    assert.equal(b.kind, 'build');
+    assert.equal(b.ref, list[0]);
+  });
+
+  it('says nothing for a version that is not older, a bare number or text', () => {
+    assert.equal(Lookup.behind(LIST, '26.9', 'iOS'), null);
+    assert.equal(Lookup.behind(LIST, '28.1', 'iOS'), null);
+    assert.equal(Lookup.behind(LIST, '27', 'iOS'), null);
+    assert.equal(Lookup.behind(LIST, 'nope', 'iOS'), null);
+  });
+});

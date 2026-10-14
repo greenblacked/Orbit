@@ -124,7 +124,9 @@ DEFERRED_ON_PAGE = {"compare/index.html": {"lookup.js"}}
 FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
-AFTER_PAINT_BUDGET = 16_000
+# Raw bytes. below.js, cadence.js, lookup.js and sigil-generic.js were 22,768 together when this was
+# set (lookup.js is 9,505 of it); the limit leaves room for each to grow a little.
+AFTER_PAINT_BUDGET = 28_000
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])

@@ -9,7 +9,40 @@
 
   function norm(s) { return String(s == null ? "" : s).trim().replace(/\s+/g, " ").toLowerCase(); }
 
-  function lineOf(r) { return String(r.major); }
+  // A line is the major version; Windows has no such thing (22-26 are years), so each feature
+  // update (25H2, 26H1) is its own line.
+  function lineOf(r) { return r.family === "Windows" ? String(r.version) : String(r.major); }
+
+  function cmp(a, b) {
+    var x = String(a).split("."), y = String(b).split(".");
+    for (var i = 0; i < Math.max(x.length, y.length); i++) {
+      var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0);
+      if (d) return d;
+    }
+    return 0;
+  }
+
+  // For a dotted number that names no release (iOS "26.5", a Windows "26100.6584"): the release it
+  // is older than, as { kind: "build" | "line", ref, line }, else null. A build is compared with
+  // the newest build that starts with the same number; a version with the newest of its major line.
+  function behind(list, text, family) {
+    var asked = norm(text), prefix = norm(family) + " ";
+    var rest = asked.indexOf(prefix) === 0 ? asked.slice(prefix.length) : asked;
+    var t = rest.slice(rest.lastIndexOf(" ") + 1);
+    if (!/^\d+(\.\d+)+$/.test(t)) return null;
+    var seg = t.split(".")[0], best = null, pubs = list.filter(function (r) { return r.stage === "release"; });
+    pubs.forEach(function (r) {
+      if (r.build && r.build !== r.version && /^\d+(\.\d+)+$/.test(r.build) && r.build.split(".")[0] === seg &&
+        (!best || cmp(r.build, best.build) > 0)) best = r;
+    });
+    if (best && cmp(t, best.build) < 0) return { kind: "build", ref: best };
+    best = null;
+    pubs.forEach(function (r) {
+      if (lineOf(r) === seg && (!best || cmp(r.version, best.version) > 0)) best = r;
+    });
+    if (best && cmp(t, best.version) < 0) return { kind: "line", ref: best, line: seg };
+    return null;
+  }
 
   // The release whose version or build is `text` (a release wins over a beta of the same version),
   // else null. A name may come first ("iOS 26.1", "macOS Tahoe 26.6.2"); a bare major ("Android
@@ -61,14 +94,19 @@
       return res;
     }
     if (at < top) return { kind: "older", hit: hit, newest: newest };
+    var lineTop = null;
+    list.forEach(function (r) {
+      if (r !== hit && r.stage === "release" && lineOf(r) === lineOf(hit) && higher(r, lineTop || hit)) lineTop = r;
+    });
     return {
       kind: "superseded", hit: hit, newest: newest, between: between,
+      lineNewest: lineTop && lineTop !== newest ? lineTop : null,
       pub: between.filter(function (r) { return r.stage === "release"; }).length,
       days: Math.round(Math.abs(Math.floor(newest.t / DAY) - Math.floor(hit.t / DAY)))
     };
   }
 
-  var api = { find: find, judge: judge };
+  var api = { find: find, judge: judge, behind: behind };
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
   root.Lookup = api;
 
@@ -99,7 +137,10 @@
     if (!root.Sec || !j.between || (j.kind !== "superseded" && j.kind !== "line")) return "";
     try {
       var box = root.Sec.compare(j.newest, j.hit, j.between, name);
-      return box.querySelector(".sec-lead").textContent + ": " + box.querySelector(".sec-count").textContent + ".";
+      var lead = box.querySelector(".sec-lead");
+      if (lead) return lead.textContent + ": " + box.querySelector(".sec-count").textContent + ".";
+      var say = box.querySelector(".sec-say");
+      return say ? say.textContent : "";
     } catch (e) { return ""; }
   }
 
@@ -119,18 +160,32 @@
     if (!list.length) return { rows: [["lk-say", "No " + family + " releases in the data."]] };
     var hit = find(list, text, family);
     if (!hit) {
+      var low = behind(list, text, family), ctx0 = context(list, family);
+      if (low) {
+        var again = ctx0.newest && low.ref !== ctx0.newest ? " The newest public release is " + name(ctx0.newest) + "." : "";
+        return { rows: [["lk-say", "Not in the data, but older than " + (low.kind === "build"
+          ? "the latest " + name(low.ref) + " build, " + low.ref.build + "."
+          : name(low.ref) + ", the newest of " + family + " " + low.line + ".") + again]] };
+      }
       var sample = list.filter(function (r) { return r.stage === "release"; })[0] || list[0];
       return { rows: [["lk-say", "Not found: no " + family + " release has the version or build “" + text.trim().slice(0, 64) +
         "”. Try a version such as " + sample.version + (sample.build ? " or a build such as " + sample.build : "") + "."]] };
     }
-    var j = judge(list, hit, context(list, family)), k = j.kind, top = "The newest public release is " + (j.newest && name(j.newest)) + ".";
+    var ctx = context(list, family);
+    var j = judge(list, hit, ctx), k = j.kind, top = "The newest public release is " + (j.newest && name(j.newest)) + ".";
     var rows = [["lk-hit", name(hit) + (hit.build ? " · " + hit.build : "") + " · " + RO.day(hit.t)]];
     var say = k === "current" ? "Current for " + family + ": " + name(hit) + " is the newest public release."
       : k === "ahead" ? name(hit) + " is a pre-release, ahead of the newest public release, " + name(j.newest) + "."
+      : k === "line" && family === "Windows" ? "Current for " + name(hit) + " servicing: " +
+        (hit.build ? "build " + hit.build : name(hit)) + " is the latest of its version. " + top
       : k === "line" ? "Current for " + family + " " + j.line + ": " + name(hit) + " is the newest of its line. " + top
-      : k === "older" ? name(hit) + " came out after " + name(j.newest) + " but is an older version. " + top
+      : k === "older" ? name(hit) + " came out after " + name(j.newest) + " but is an older version. " + top +
+        (/long-term/i.test(hit.title || "") && !list.some(function (r) {
+          return r !== hit && r.stage === "release" && /long-term/i.test(r.title || "") && ctx.higher(r, hit);
+        }) ? " It is the newest long-term release." : "")
       : k === "superseded" ? "Superseded by " + name(j.newest) + " on " + RO.day(j.newest.t) + ": " +
-        plural(j.pub, "public release") + " and " + plural(j.days, "day") + " behind."
+        plural(j.pub, "public release") + " and " + plural(j.days, "day") + " behind." +
+        (j.lineNewest ? " The newest of its line is " + name(j.lineNewest) + "." : "")
       : "Cannot place " + name(hit) + " against the newest public release.";
     rows.push(["lk-say", say]);
     var more = cves(j);

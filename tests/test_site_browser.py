@@ -557,6 +557,7 @@ def lookup_ready(page, base_url: str, path: str = "/", query: str = ""):
 
 
 def lookup_ask(page, family: str, text: str) -> None:
+    page.evaluate("() => { document.getElementById('lk-result').textContent = '' }")
     page.select_option("#lk-family", family)
     page.fill("#lk-build", text)
     page.click("#lk-form button")
@@ -574,12 +575,13 @@ def test_check_my_version_calls_the_newest_public_release_current(page, base_url
     assert page.get_attribute("#lk-result", "role") == "status"
     assert page.get_attribute("#lk-result", "aria-live") == "polite"
     lookup_ask(page, "iOS", ios[0]["build"])
-    assert answer(page).startswith("Current for iOS: iOS ")
-    assert ios[0]["version"] in answer(page)
+    first = answer(page)
+    assert first.startswith("Current for iOS: iOS ")
+    assert ios[0]["version"] in first
     assert page.locator("#lk-result a").count() == 0
     # A version works as well as a build, and so does the platform name before it.
     lookup_ask(page, "iOS", "iOS " + ios[0]["version"])
-    assert answer(page).startswith("Current for iOS")
+    assert answer(page) == first
 
 
 @pytest.mark.parametrize("path", ["/", "/compare/"])
@@ -591,7 +593,8 @@ def test_check_my_version_says_how_far_behind_an_older_release_is(page, base_url
     text = answer(page)
     found = re.fullmatch(
         r"Superseded by Android (\S+) on ([A-Z][a-z]{2} \d{1,2}, \d{4}): "
-        r"(\d+) public releases? and (\d+) days? behind\.",
+        r"(\d+) public releases? and (\d+) days? behind\."
+        r"( The newest of its line is Android \S+\.)?",
         text,
     )
     assert found, text
@@ -641,6 +644,7 @@ def test_check_my_version_picks_the_newest_by_version_not_by_date(page, base_url
     text = answer(page)
     older = "RouterOS 7.23.8 came out after RouterOS 7.24.5 but is an older version"
     assert text.startswith(older), text
+    assert text.endswith(" It is the newest long-term release."), text
     assert "behind" not in text and page.locator("#lk-result a").count() == 0
     lookup_ask(page, "RouterOS", "7.25rc1")
     assert answer(page).endswith("ahead of the newest public release, RouterOS 7.24.5.")
