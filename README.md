@@ -14,6 +14,7 @@ Live site: <https://orbit.szolotov.com>. The `main` branch also uploads a Previe
 ## What it does
 
 - Shows the newest release or beta of each platform family, a timeline of everything released with platform and stage filters, and a side-by-side comparison of two releases.
+- Checks a version: pick a platform and type a version or build on the front page or Compare to see whether it is the newest public release (by version, as the cards pick it), the newest of its line (major version; a Windows feature update), a pre-release or a version not in the data placed against its line, or how many public releases and days behind it is, with a link to the comparison and, on Compare, the CVE count. The query stays in the address as `?platform=&build=`.
 - Follows Apple's six platform families, MikroTik RouterOS, Google Android, Microsoft Windows and Valve SteamOS (the Steam Deck) live. A family with no release in the data says "No release yet" instead of a made-up one ([ADR 0006](docs/adr/0006-list-vendors-before-their-feeds.md)).
 - Draws the releases as a dial: one ring per platform, one notch per release placed by date, and a time machine that shows the site as of any day in the window.
 - Gives every build a deterministic glyph, its sigil, so a build is recognisable at a glance ([docs/sigils.md](docs/sigils.md)).
@@ -152,7 +153,7 @@ The preferred rollback is a new patch release with the change reverted. The one-
 │   ├── assets/            site.css, theme.js, site.js, releases.js, home.js,
 │   │                      timeline.js, compare.js, sigil.js, orbit.js,
 │   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js,
-│   │                      security.js
+│   │                      security.js, lookup.js
 │   └── data/              releases.json (snapshot), security.json, families.json, features.json
 ├── deploy/                the Worker (worker.js, releases.js, families.js,
 │   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs,

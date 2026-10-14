@@ -106,7 +106,17 @@ LAZY = ("fx.js", "aurora.js")
 # cadence row, which home.js loads once the page has painted, and the generic sigil rule
 # (sigil.js loads it when a build that is not an Apple build appears). The script that loads
 # each one is the only file that names it.
-AFTER_PAINT = {"below.js": "home.js", "cadence.js": "home.js", "sigil-generic.js": "sigil.js"}
+AFTER_PAINT = {
+    "below.js": "home.js",
+    "cadence.js": "home.js",
+    "lookup.js": "home.js",
+    "sigil-generic.js": "sigil.js",
+}
+# Check my version is off the first paint on the front page (its budget is nearly spent) but
+# stays a deferred <script src> on Compare, whose budget has room and where compare.js and
+# security.js already load from the page; there is one script tag to keep in step, not a second
+# loader.
+DEFERRED_ON_PAGE = {"compare/index.html": {"lookup.js"}}
 # The first paint is budgeted on what crosses the wire: the sum of each script gzipped alone at
 # level 9 (the scripts are separate responses, so a per-file sum is what a visitor downloads;
 # a concatenation would flatter it). When set, the front page was 20,767 bytes and the limit
@@ -114,10 +124,10 @@ AFTER_PAINT = {"below.js": "home.js", "cadence.js": "home.js", "sigil-generic.js
 FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
-# Raw, like the lazy effects. below.js grew when every drawn device became a set of stepping
-# controls (13,263 to 21,890 bytes for the three scripts, 7,853 gzipped); the limit leaves
-# about 20% room. None of it is first paint.
-AFTER_PAINT_BUDGET = 25_500
+# Raw bytes. below.js (the drawn devices that step through releases), cadence.js, lookup.js and
+# sigil-generic.js are 34,598 together (15,582 + 4,788 + 12,708 + 1,520); the limit leaves about
+# 15% room for each to grow a little.
+AFTER_PAINT_BUDGET = 39_800
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])
@@ -125,7 +135,8 @@ def test_the_scripts_a_page_loads_stay_under_the_first_paint_budgets(name):
     loaded = re.findall(r'<script src="/assets/([a-z.-]+\.js)"', page(name))
     assert loaded, name
     assert not set(LAZY) & set(loaded), "the effects load after first paint, not from the page"
-    assert not set(AFTER_PAINT) & set(loaded), "these load after first paint, not from the page"
+    late = set(AFTER_PAINT) - DEFERRED_ON_PAGE.get(name, set())
+    assert not late & set(loaded), "these load after first paint, not from the page"
     raw = sum((ASSETS / script).stat().st_size for script in loaded)
     assert raw < FIRST_PAINT_RAW_BUDGET, (name, raw)
     packed = sum(len(gzip.compress((ASSETS / script).read_bytes(), 9)) for script in loaded)

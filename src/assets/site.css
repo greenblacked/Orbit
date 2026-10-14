@@ -1552,6 +1552,38 @@ select {
 html[data-theme="reactor"] select { border-radius: 0; }
 /* Below 900px each select takes the full width, so a long option label is not cut off. */
 @media (min-width: 56.25rem) { .cmp-form { grid-template-columns: 12rem repeat(2, minmax(0, 1fr)); } }
+/* Check my version (front page and Compare). */
+.lookup { padding-top: 2rem; padding-bottom: 2rem; }
+.page .lookup { margin-top: 3rem; padding: 0; }
+.lookup .small { margin-top: 0.75rem; }
+.lk-form { display: grid; gap: 1rem; margin-top: 1.25rem; }
+@media (min-width: 40rem) { .lk-form { grid-template-columns: 12rem minmax(0, 1fr) auto; align-items: end; } }
+.lk-input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  background-color: var(--card);
+  color: var(--ink);
+  font-size: 0.9375rem;
+}
+.lk-go {
+  min-height: 2.75rem;
+  padding: 0 1.5rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.875rem;
+  text-align: center;
+}
+.lk-go:hover { opacity: 0.8; }
+.lk-result { margin-top: 1.25rem; }
+.lk-result p + p { margin-top: 0.5rem; }
+.lk-say { font-weight: 500; overflow-wrap: anywhere; }
+.lk-hit, .lk-cve { color: var(--muted); font-size: 0.875rem; overflow-wrap: anywhere; }
+.lk-link a { display: inline-flex; min-height: 2.75rem; align-items: center; text-decoration: underline; text-underline-offset: 4px; }
+html[data-theme="reactor"] .lk-input, html[data-theme="reactor"] .lk-go { border-radius: 0; }
 .cmp-result { margin-top: 2rem; }
 .cmp-cards { display: grid; gap: 1rem; }
 @media (min-width: 40rem) { .cmp-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
