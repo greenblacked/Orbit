@@ -17,9 +17,12 @@ pass by not running.
 
 from __future__ import annotations
 
+import json
 import os
 import re
+from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote
 
 import pytest
 
@@ -530,3 +533,178 @@ def test_a_half_year_version_orders_h2_above_h1_on_the_same_day(page, base_url):
         }"""
     )
     assert order == ["26H2", "26H1"]
+
+
+# --- Check my version ----------------------------------------------------------------------
+
+SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
+DAY_MS = 86_400_000
+
+
+def public(family: str) -> list[dict]:
+    """The family's public releases, newest first, with the time in milliseconds."""
+    rows = [r for r in SNAPSHOT["releases"] if r["family"] == family and r["stage"] == "release"]
+    stamped = [
+        {**r, "t": int(datetime.fromisoformat(r["date"].replace("Z", "+00:00")).timestamp() * 1000)}
+        for r in rows
+    ]
+    return sorted(stamped, key=lambda r: -r["t"])
+
+
+def lookup_ready(page, base_url: str, path: str = "/", query: str = ""):
+    page.goto(base_url + path + query)
+    page.wait_for_selector("#lk-form:not([hidden])")
+
+
+def lookup_ask(page, family: str, text: str) -> None:
+    page.select_option("#lk-family", family)
+    page.fill("#lk-build", text)
+    page.click("#lk-form button")
+
+
+def answer(page) -> str:
+    page.wait_for_selector("#lk-result .lk-say")
+    return page.inner_text("#lk-result .lk-say")
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_check_my_version_calls_the_newest_public_release_current(page, base_url, path):
+    ios = public("iOS")
+    lookup_ready(page, base_url, path)
+    assert page.get_attribute("#lk-result", "role") == "status"
+    assert page.get_attribute("#lk-result", "aria-live") == "polite"
+    lookup_ask(page, "iOS", ios[0]["build"])
+    assert answer(page).startswith("Current for iOS: iOS ")
+    assert ios[0]["version"] in answer(page)
+    assert page.locator("#lk-result a").count() == 0
+    # A version works as well as a build, and so does the platform name before it.
+    lookup_ask(page, "iOS", "iOS " + ios[0]["version"])
+    assert answer(page).startswith("Current for iOS")
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_check_my_version_says_how_far_behind_an_older_release_is(page, base_url, path):
+    ios = public("iOS")
+    newest, old = ios[0], ios[2]
+    lookup_ready(page, base_url, path)
+    lookup_ask(page, "iOS", old["build"])
+    text = answer(page)
+    found = re.fullmatch(
+        r"Superseded by iOS (\S+) on ([A-Z][a-z]{2} \d{1,2}, \d{4}): "
+        r"(\d+) public releases? and (\d+) days? behind\.",
+        text,
+    )
+    assert found, text
+    assert found.group(1) == newest["version"]
+    between = [r for r in ios if old["t"] < r["t"] < newest["t"]]
+    assert int(found.group(3)) == len(between)
+    assert int(found.group(4)) == newest["t"] // DAY_MS - old["t"] // DAY_MS
+    link = page.locator("#lk-result a")
+    assert link.get_attribute("href") == (
+        f"/compare/?family=iOS&from={quote(old['id'], safe='')}&to={quote(newest['id'], safe='')}"
+    )
+    # The link opens Compare on exactly those two releases.
+    link.click()
+    page.wait_for_selector("#cmp-result .cmp-card")
+    assert page.input_value("#c-family") == "iOS"
+    assert page.input_value("#c-from") == old["id"]
+    assert page.input_value("#c-to") == newest["id"]
+
+
+def test_check_my_version_leaves_out_the_cve_count_without_security_data(page, base_url):
+    ios = public("iOS")
+    lookup_ready(page, base_url, "/compare/")
+    lookup_ask(page, "iOS", ios[2]["build"])
+    assert answer(page).startswith("Superseded by")
+    assert page.locator("#lk-result .lk-cve").count() == 0
+
+
+def test_check_my_version_says_so_when_nothing_matches(page, base_url):
+    lookup_ready(page, base_url)
+    lookup_ask(page, "macOS", "not-a-build-9")
+    text = answer(page)
+    assert text.startswith("Not found:") and "not-a-build-9" in text
+    assert page.locator("#lk-result a").count() == 0
+    # A version of another platform is not a match either.
+    ios = public("iOS")
+    lookup_ask(page, "tvOS", ios[0]["build"])
+    assert answer(page).startswith("Not found:")
+    page.fill("#lk-build", "  ")
+    page.click("#lk-form button")
+    assert answer(page) == "Enter a version or a build number."
+
+
+def test_check_my_version_keeps_the_query_in_the_address_and_restores_it(page, base_url):
+    mac = public("macOS")
+    lookup_ready(page, base_url)
+    lookup_ask(page, "macOS", mac[0]["version"])
+    expected = answer(page)
+    query = page.evaluate("() => location.search")
+    assert f"platform=macOS&build={quote(mac[0]['version'], safe='')}" in query
+    page.reload()
+    page.wait_for_selector("#lk-form:not([hidden])")
+    assert page.input_value("#lk-family") == "macOS"
+    assert page.input_value("#lk-build") == mac[0]["version"]
+    assert answer(page) == expected
+    # Straight from a shared address, nothing pressed.
+    lookup_ready(page, base_url, "/", f"?platform=iOS&build={public('iOS')[1]['build']}")
+    assert answer(page).startswith("Superseded by") or answer(page).startswith("Current")
+    # An empty query leaves the address bare.
+    page.fill("#lk-build", "")
+    page.click("#lk-form button")
+    assert page.evaluate("() => location.search") == ""
+
+
+def test_check_my_version_and_compare_keep_each_others_query(page, base_url):
+    ios = public("iOS")
+    lookup_ready(page, base_url, "/compare/")
+    lookup_ask(page, "iOS", ios[1]["build"])
+    page.select_option("#c-family", "macOS")
+    query = page.evaluate("() => location.search")
+    assert "family=macOS" in query and "from=" in query and "to=" in query
+    assert "platform=iOS" in query and quote(ios[1]["build"]) in query
+    lookup_ask(page, "iOS", ios[2]["build"])
+    query = page.evaluate("() => location.search")
+    assert "family=macOS" in query and quote(ios[2]["build"]) in query
+    assert query.count("build=") == 1
+
+
+def test_check_my_version_works_from_the_keyboard(page, base_url):
+    ios = public("iOS")
+    lookup_ready(page, base_url)
+    page.focus("#lk-family")
+    page.keyboard.press("Tab")
+    assert page.evaluate("() => document.activeElement.id") == "lk-build"
+    page.keyboard.type(ios[0]["build"])
+    page.keyboard.press("Enter")
+    assert answer(page).startswith("Current for iOS")
+    page.keyboard.press("Tab")
+    assert page.evaluate("() => document.activeElement.className") == "lk-go"
+    # Space on Check asks again; Shift+Tab walks back to the platform.
+    page.keyboard.press("Space")
+    assert answer(page).startswith("Current for iOS")
+    page.keyboard.press("Shift+Tab")
+    page.keyboard.press("Shift+Tab")
+    assert page.evaluate("() => document.activeElement.id") == "lk-family"
+    for selector in ("#lk-family", "#lk-build", ".lk-go"):
+        assert box(page, selector)["height"] >= TARGET, selector
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_check_my_version_does_not_scroll_sideways_at_360px(browser, base_url, path):
+    ios = public("iOS")
+    context = new_context(browser, base_url, 360)
+    try:
+        page = context.new_page()
+        lookup_ready(page, base_url, path)
+        for text in (ios[2]["build"], "x" * 64):
+            lookup_ask(page, "iOS", text)
+            answer(page)
+            settle(page)
+            assert page.evaluate("() => document.documentElement.scrollWidth") <= 360
+            for selector in ("#lk-family", "#lk-build", ".lk-go", "#lk-result a"):
+                if page.locator(selector).count():
+                    size = box(page, selector)
+                    assert size["right"] <= 360 and size["left"] >= 0, (selector, size)
+    finally:
+        context.close()

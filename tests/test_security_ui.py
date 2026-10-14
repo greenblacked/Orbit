@@ -655,3 +655,23 @@ def test_security_notes_name_two_releases_of_one_version_apart(browser, base_url
         assert errors == []
     finally:
         context.close()
+
+
+def test_check_my_version_adds_the_cve_count_when_security_data_is_loaded(browser, base_url):
+    ios = releases("iOS")
+    context = make_context(browser, base_url)
+    page = context.new_page()
+    errors = watch(page)
+    serve_security(page, apple_payload())
+    try:
+        page.goto(base_url + "/compare/")
+        page.wait_for_selector("#lk-form:not([hidden])")
+        page.fill("#lk-build", ios[1]["build"])
+        page.click("#lk-form button")
+        page.wait_for_selector("#lk-result .lk-cve")
+        assert page.inner_text("#lk-result .lk-say").startswith("Superseded by iOS ")
+        lead = f"Fixed after iOS {ios[1]['version']}, up to iOS {ios[0]['version']}: 2 CVEs."
+        assert page.inner_text("#lk-result .lk-cve") == lead
+        assert errors == []
+    finally:
+        context.close()
