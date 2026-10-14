@@ -198,7 +198,10 @@ def test_the_timeline_shows_one_line_per_row_with_an_entry_and_nothing_for_the_r
         first = page.locator(f'.tl-item[data-id="{ios[0]["id"]}"] .sec-link')
         assert first.get_attribute("href") == APPLE + "100001"
         assert page.locator(".sec").count() == len(expected)
-        page.click("#more")
+        for _ in range(50):
+            if not page.is_visible("#tl-more"):
+                break
+            page.click("#more")
         assert page.locator(".tl-item").count() == len(SNAPSHOT["releases"])
         # A pre-release row, and every row without an entry, stay quiet.
         beta = page.locator(f'.tl-item[data-id="{releases("iOS", "beta")[0]["id"]}"]')

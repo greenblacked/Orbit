@@ -215,8 +215,20 @@
     var next = data.releases.map(function (r) { return r.id; }).join("|");
     if (next === signature) return;
     signature = next;
+    // Keep the oldest month the visitor opened open, wherever it sits after the new data.
+    var edge = drawn > 0 ? groups[drawn - 1].m : "";
+    var held = document.activeElement === more;
     releases = data.releases;
+    if (edge) {
+      byMonth(releases.filter(matches)).forEach(function (g, n) {
+        if (g.m === edge && n + 1 > limit) limit = n + 1;
+      });
+    }
     render();
+    if (held && moreWrap.hidden && rows.length) {
+      var last = rows[rows.length - 1].li.querySelector("a");
+      if (last) last.focus();
+    }
     if (target) reveal();
   });
 })();

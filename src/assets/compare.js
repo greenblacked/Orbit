@@ -37,25 +37,30 @@
     return RO.short(r) + (r.build ? " · " + r.build : "") + " · " + RO.day(r.t);
   }
   // The options sit in groups by major version, the newest line first ("iOS 26"), each group
-  // keeping the list's newest-first order. The ids are the option values, so the groups change
-  // how the picker reads and nothing else.
+  // keeping the list's newest-first order. Windows is grouped by product ("Windows 11"), as its
+  // major is the update year, which no product is called. The ids are the option values, so the
+  // groups change how the picker reads and nothing else.
+  function line(r) {
+    var product = r.family === "Windows" ? /^Windows (\d+)/.exec(r.title || "") : null;
+    if (product) return { key: "p" + product[1], rank: Number(product[1]), text: "Windows " + product[1] };
+    var known = isFinite(r.major);
+    return { key: "m" + r.major, rank: known ? r.major : NaN, text: r.family + (known ? " " + r.major : "") };
+  }
   function fill(select, keep, fallback) {
     select.textContent = "";
     var lines = [], at = Object.create(null);
     list.forEach(function (r) {
-      var key = String(r.major);
-      if (!at[key]) { at[key] = { major: r.major, items: [] }; lines.push(at[key]); }
-      at[key].items.push(r);
+      var l = line(r);
+      if (!at[l.key]) { l.items = []; at[l.key] = l; lines.push(l); }
+      at[l.key].items.push(r);
     });
     lines.sort(function (a, b) {
-      var x = isFinite(a.major), y = isFinite(b.major);
-      return x && y ? b.major - a.major : x ? -1 : y ? 1 : 0;
+      var x = isFinite(a.rank), y = isFinite(b.rank);
+      return x && y ? b.rank - a.rank : x ? -1 : y ? 1 : 0;
     });
-    lines.forEach(function (line) {
-      var first = line.items[0];
-      var group = RO.h("optgroup", "", null,
-        { label: first.family + (isFinite(line.major) ? " " + line.major : "") });
-      line.items.forEach(function (r) { group.appendChild(RO.h("option", "", label(r), { value: r.id })); });
+    lines.forEach(function (l) {
+      var group = RO.h("optgroup", "", null, { label: l.text });
+      l.items.forEach(function (r) { group.appendChild(RO.h("option", "", label(r), { value: r.id })); });
       select.appendChild(group);
     });
     var has = list.some(function (r) { return r.id === keep; });

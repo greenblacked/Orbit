@@ -986,7 +986,10 @@ def test_an_id_hidden_by_the_filters_and_the_window_clears_the_filters_and_opens
 def test_the_timeline_lists_everything_once_all_months_are_open(page, base_url):
     page.goto(base_url + "/timeline/")
     page.wait_for_selector(".tl-item")
-    page.click("#more")
+    for _ in range(50):
+        if not page.is_visible("#tl-more"):
+            break
+        page.click("#more")
     assert page.locator(".tl-item").count() == len(SNAPSHOT["releases"])
     months = page.locator(".month-h").all_inner_texts()
     assert months[0] == "October 2026" and months[-1] == "September 2024"
@@ -1038,6 +1041,50 @@ def test_a_poll_with_nothing_new_leaves_the_timeline_and_its_focus_alone(page, b
     page.evaluate("RO.refresh()")
     assert page.evaluate("document.activeElement.dataset.mark") == "kept"
     assert page.evaluate("document.querySelector('.tl-item a').dataset.mark") == "kept"
+
+
+def test_a_poll_that_adds_a_month_keeps_the_opened_months_and_the_button_focus(page, base_url):
+    first = monthly_data(30)
+    serve_json(page, "**/api/releases.json", json.dumps(first))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.click("#more")
+    assert page.locator(".month").count() == 24
+    second = copy.deepcopy(first)
+    second["releases"].insert(0, {**second["releases"][0], "id": "new", "date": "2026-11-10T00:00:00Z"})
+    page.unroute("**/api/releases.json")
+    serve_json(page, "**/api/releases.json", json.dumps(second))
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector('.tl-item[data-id="new"]')
+    assert page.locator(".month").count() == 25
+    assert page.locator('.tl-item[data-id="m23"]').count() == 1
+    page.click("#more")
+    page.click("#more")
+    assert page.locator(".month").count() == 31
+    page.focus("#more") if page.is_visible("#more") else None
+
+
+def test_a_poll_that_adds_a_month_keeps_the_opened_months(page, base_url):
+    first = monthly_data(30)
+    serve_json(page, "**/api/releases.json", json.dumps(first))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.click("#more")
+    assert page.locator(".month").count() == 24
+    newest = {
+        **first["releases"][0],
+        "id": "new",
+        "date": "2026-11-10T00:00:00Z",
+    }
+    second = {**first, "releases": [newest, *first["releases"]]}
+    serve_json(page, "**/api/releases.json", json.dumps(second))
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector('.tl-item[data-id="new"]')
+    assert page.locator(".month").count() == 25
+    assert page.locator('.tl-item[data-id="m23"]').count() == 1
+    page.click("#more")
+    assert page.locator(".month").count() == 31
+    assert not page.is_visible("#tl-more")
 
 
 # --- compare ----------------------------------------------------------------------------
@@ -1214,9 +1261,7 @@ def test_compare_groups_the_pickers_by_major_version_newest_line_first(page, bas
     assert page.input_value("#c-from") == default_from(ios)["id"]
 
 
-def test_compare_keeps_its_picks_across_groups_and_restores_them_from_the_address(
-    page, base_url
-):
+def test_compare_keeps_its_picks_across_groups_and_restores_them_from_the_address(page, base_url):
     ios = releases("iOS")
     older = next(r for r in ios if r["major"] != ios[0]["major"])
     page.goto(base_url + "/compare/")
@@ -1233,6 +1278,19 @@ def test_compare_keeps_its_picks_across_groups_and_restores_them_from_the_addres
     page.select_option("#c-family", "Android")
     labels = page.locator("#c-to optgroup").evaluate_all("els => els.map(e => e.label)")
     assert labels and all(label.startswith("Android ") for label in labels)
+
+
+def test_compare_groups_windows_by_product_not_by_update_year(page, base_url):
+    win = releases("Windows")
+    page.goto(base_url + "/compare/?family=Windows")
+    page.wait_for_selector(".cmp-cards")
+    grouped = page.locator("#c-to optgroup").evaluate_all(
+        "els => els.map(g => [g.label, [...g.children].map(o => o.value)])"
+    )
+    products = sorted({r["title"].split()[1] for r in win}, reverse=True)
+    assert [label for label, _ in grouped] == [f"Windows {p}" for p in products]
+    for label, ids in grouped:
+        assert ids == [r["id"] for r in win if r["title"].startswith(label + " ")]
 
 
 def test_compare_counts_betas_in_between_and_changes_family(page, base_url):
