@@ -200,6 +200,11 @@
     // No onerror: the mock screens start out neutral and inert, and stay so if this fails.
     load("/assets/below.js", "", function () { if (signature && window.Below) window.Below.paint(current); });
   }
+  function loadLookup() {
+    // No onerror: the form stays hidden, as it is without JavaScript. lookup.js asks RO.on, which
+    // replays the data already loaded, and reads ?platform=&build= itself, so a late load is fine.
+    load("/assets/lookup.js", "", null);
+  }
   function loadLater() {
     load("/assets/cadence.js", "", function () { if (window.Cadence) window.Cadence.at(asOf); });
     if (!RO.reduced()) load("/assets/fx.js", "module");
@@ -207,6 +212,7 @@
   function afterPaint() {
     if (document.querySelector("script[data-seed]")) return;
     loadBelow();
+    loadLookup();
     if ("requestIdleCallback" in window) window.requestIdleCallback(loadLater, { timeout: 1500 });
     else window.setTimeout(loadLater, 1000);
   }

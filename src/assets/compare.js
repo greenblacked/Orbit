@@ -57,6 +57,10 @@
     var q = "family=" + encodeURIComponent(selFamily.value);
     if (selFrom.value) q += "&from=" + encodeURIComponent(selFrom.value);
     if (selTo.value) q += "&to=" + encodeURIComponent(selTo.value);
+    // "Check my version" keeps its own query (lookup.js) in the same address.
+    window.location.search.replace(/^\?/, "").split("&").forEach(function (pair) {
+      if (/^(platform|build)=/.test(pair)) q += "&" + pair;
+    });
     try {
       window.history.replaceState(null, "", window.location.pathname + "?" + q);
     } catch (e) { /* the comparison still works without a shareable address */ }
