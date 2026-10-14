@@ -1,8 +1,10 @@
 /* "Check my version" on the front page and Compare: a platform and a version or build, matched
    against the loaded releases. The answer is "current" (the newest public release by version, as
-   the cards pick it), current for its major line, or how far behind the newest it is, counted as
-   Compare counts, with the CVE count where window.Sec is loaded. The query is kept as ?platform=
-   and ?build=. find and judge are exported for the Node tests; the rest runs in a browser. */
+   the cards pick it), the newest of its line (major version; a Windows feature update), a
+   pre-release, a version not in the data placed against its line, or how far behind the newest it
+   is, counted as Compare counts, with the CVE count where window.Sec is loaded. The query is kept
+   as ?platform= and ?build=. find and judge are exported for the Node tests; the rest runs in a
+   browser. */
 (function (root) {
   "use strict";
   var DAY = 864e5;
@@ -140,7 +142,7 @@
       var lead = box.querySelector(".sec-lead");
       if (lead) return lead.textContent + ": " + box.querySelector(".sec-count").textContent + ".";
       var say = box.querySelector(".sec-say");
-      return say ? say.textContent : "";
+      return say ? say.textContent + "." : "";
     } catch (e) { return ""; }
   }
 
