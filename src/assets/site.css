@@ -979,7 +979,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   font-size: 0.8125rem;
   line-height: 1.35;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(160deg, #08080c, color-mix(in srgb, var(--fam-a) 38%, #08080c));
+  background: linear-gradient(160deg, #08080c, #15151c);
 }
 .screen p { overflow-wrap: anywhere; }
 .m-title { font-size: 1.15em; font-weight: 600; }
@@ -997,7 +997,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   border-radius: 15% / 7%;
   background: #17171b;
   box-shadow: inset 0 0 0 2px #3b3b42, 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 32px 60px -24px color-mix(in srgb, var(--fam-a) 70%, transparent);
+    0 32px 60px -24px var(--glow, transparent);
 }
 .dev-phone .screen {
   padding: 3.4em 1.1em 1.4em;
@@ -1028,7 +1028,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   border-radius: 5% / 6.6%;
   background: #17171b;
   box-shadow: inset 0 0 0 2px #3b3b42, 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 32px 60px -24px color-mix(in srgb, var(--fam-a) 70%, transparent);
+    0 32px 60px -24px var(--glow, transparent);
 }
 .ipad-cam { position: absolute; top: 1.3%; left: 50%; width: 1.1%; aspect-ratio: 1; border-radius: 50%; background: #000; }
 .dev-ipad .screen {
@@ -1062,7 +1062,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   display: flex;
   flex-direction: column;
   border-radius: 1.2% / 2%;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--fam-b) 55%, #08080c), color-mix(in srgb, var(--fam-a) 40%, #08080c) 55%, #08080c);
+  background: linear-gradient(135deg, #14141a, #08080c);
   font-size: 0.6875rem;
   font-size: max(0.6875rem, 2.2cqw);
 }
@@ -1095,7 +1095,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   border-radius: 0 0 0.5rem 0.5rem;
   border-radius: 0 0 1.6cqw 1.6cqw;
   background: linear-gradient(#d4d5da, #8a8b92);
-  box-shadow: 0 18px 30px -12px color-mix(in srgb, var(--fam-a) 60%, transparent);
+  box-shadow: 0 18px 30px -12px var(--glow, transparent);
 }
 
 .dev-tv { max-width: 34rem; }
@@ -1107,7 +1107,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   border-radius: 1.6cqw;
   background: #0d0d10;
   box-shadow: inset 0 0 0 2px #3b3b42, 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 32px 60px -24px color-mix(in srgb, var(--fam-a) 70%, transparent);
+    0 32px 60px -24px var(--glow, transparent);
 }
 .dev-tv .screen {
   padding: 5% 6%;
@@ -1134,7 +1134,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   width: 62%;
   aspect-ratio: 1 / 0.6;
   margin: 0 auto;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--fam-a) 55%, #101014), color-mix(in srgb, var(--fam-b) 55%, #101014));
+  background: linear-gradient(90deg, #26262e, #1c1c22);
 }
 .w-top { border-radius: 40% 40% 0 0 / 60% 60% 0 0; margin-bottom: -2%; }
 .w-bottom { border-radius: 0 0 40% 40% / 0 0 60% 60%; margin-top: -2%; }
@@ -1194,13 +1194,13 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   border-radius: 46% / 60%;
   background: linear-gradient(160deg, #34343c, #08080a 60%);
   box-shadow: inset 0 0 0 2px #4a4a52, 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 32px 60px -24px color-mix(in srgb, var(--fam-a) 70%, transparent);
+    0 32px 60px -24px var(--glow, transparent);
 }
 .dev-vision .screen {
   align-self: center;
   padding: 1em 1.4em;
   border-radius: 1.6em;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--fam-a) 40%, #08080c), color-mix(in srgb, var(--fam-b) 35%, #08080c));
+  background: linear-gradient(135deg, #1a1a24, #12121a);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
   font-size: 0.75rem;
   font-size: max(0.75rem, 2.4cqw);
@@ -1243,7 +1243,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   border-radius: 14% / 36%;
   background: #17171b;
   box-shadow: inset 0 0 0 2px #3b3b42, 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 32px 60px -24px color-mix(in srgb, var(--fam-a) 70%, transparent);
+    0 32px 60px -24px var(--glow, transparent);
 }
 /* A stick is a button at least 44px wide whatever is drawn: the knob is its ::before, and the
    extra width is taken back from the margin so the screen keeps its size. */
@@ -1286,7 +1286,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   border-radius: 2.4cqw;
   background: linear-gradient(#2a2a30, #121216);
   box-shadow: inset 0 0 0 2px #3b3b42, 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 32px 60px -24px color-mix(in srgb, var(--fam-a) 70%, transparent);
+    0 32px 60px -24px var(--glow, transparent);
 }
 .dev-router .screen {
   padding: 5% 6%;
@@ -1316,6 +1316,26 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   background: var(--fam-a);
 }
 .rt-ports li:nth-child(3n)::after { opacity: 0.35; }
+
+/* The mocks above are drawn in plain colours. Where the browser knows color-mix() the screens,
+   the strap and the glow take the family accent. The declarations that name --fam-a or --fam-b
+   cannot fall back one by one (a var() makes them valid at parse time, so an engine without
+   color-mix() would drop the whole property), hence the @supports gate. */
+@supports (color: color-mix(in srgb, red, blue)) {
+  .dev { --glow: color-mix(in srgb, var(--fam-a) 70%, transparent); }
+  .screen { background: linear-gradient(160deg, #08080c, color-mix(in srgb, var(--fam-a) 38%, #08080c)); }
+  .dev-mac .screen {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--fam-b) 55%, #08080c), color-mix(in srgb, var(--fam-a) 40%, #08080c) 55%, #08080c);
+  }
+  .w-strap { background: linear-gradient(90deg, color-mix(in srgb, var(--fam-a) 55%, #101014), color-mix(in srgb, var(--fam-b) 55%, #101014)); }
+  .dev-vision .screen {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--fam-a) 40%, #08080c), color-mix(in srgb, var(--fam-b) 35%, #08080c));
+  }
+}
+/* --fam-b is a color-mix() of the accent; without it the far end of a gradient is the accent. */
+@supports not (color: color-mix(in srgb, red, blue)) {
+  .dev { --fam-b: var(--fam-a); }
+}
 
 
 /* The interactive mocks: a data check, a release channel switch and a

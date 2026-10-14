@@ -297,3 +297,24 @@ def test_every_container_query_unit_has_a_plain_declaration_before_it_in_its_rul
             before = [v for n, v in decls[:at] if n == name and not CQ_UNIT.search(v)]
             assert before, f"{selector}: {name}: {value} has no plain {name} before it"
     assert found > 20
+
+
+def test_the_device_mocks_use_color_mix_only_behind_a_support_check():
+    # A declaration that names a custom property is valid at parse time, so an engine without
+    # color-mix() would drop the whole property: the drawings are plain, the accent is a gated
+    # enhancement.
+    start = CSS.index(".dev { position: relative")
+    end = CSS.index("/* Developer highlights")
+    section = re.sub(r"/\*.*?\*/", "", CSS[start:end], flags=re.DOTALL)
+    for gate in ("@supports (color: color-mix(", "@supports not (color: color-mix("):
+        assert gate in section, gate
+        while gate in section:
+            first = section.index(gate)
+            depth = 0
+            for at in range(section.index("{", first), len(section)):
+                depth += {"{": 1, "}": -1}.get(section[at], 0)
+                if depth == 0:
+                    break
+            section = section[:first] + section[at + 1 :]
+    assert "color-mix(" not in section
+    assert "var(--glow, transparent)" in section
