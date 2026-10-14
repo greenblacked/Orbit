@@ -218,6 +218,8 @@
     // Keep the oldest month the visitor opened open, wherever it sits after the new data.
     var edge = drawn > 0 ? groups[drawn - 1].m : "";
     var held = document.activeElement === more;
+    var focusedId = "";
+    rows.forEach(function (x) { if (x.li.contains(document.activeElement)) focusedId = x.r.id; });
     releases = data.releases;
     // Only when the visitor opened more than the default view: the default stays the newest PAGE months.
     if (edge && limit > PAGE) {
@@ -229,6 +231,11 @@
     if (held && moreWrap.hidden && rows.length) {
       var last = rows[rows.length - 1].li.querySelector("a");
       if (last) last.focus();
+    }
+    if (focusedId) {
+      var kept = rows.filter(function (x) { return x.r.id === focusedId; })[0];
+      var keptLink = kept && kept.li.querySelector("a");
+      if (keptLink) keptLink.focus();
     }
     if (target) reveal();
   });
