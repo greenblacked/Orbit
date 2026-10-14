@@ -264,10 +264,11 @@
     for (var k = 0; k < boxes.length; k++) wireDevice(boxes[k]);
     var ios = sec("iOS").querySelector('[data-act="check"]');
     if (ios) ios.addEventListener("click", function () {
+      if (ios.getAttribute("aria-busy") === "true") return;
       var out = sec("iOS").querySelector('[data-f="result"]');
       ios.setAttribute("aria-busy", "true");
       ios.textContent = "Checking…";
-      out.textContent = "Checking the data…";
+      out.textContent = "Checking the loaded releases…";
       window.setTimeout(function () { iosChecked = true; paintIos(); }, RO.reduced() ? 0 : 900);
     });
     var seg = sec("macOS").querySelectorAll("[data-ch]");

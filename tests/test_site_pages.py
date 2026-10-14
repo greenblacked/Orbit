@@ -305,6 +305,37 @@ def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     assert page.inner_text("[data-act=check]") == "Check again"
 
 
+def test_a_second_click_on_the_iphone_check_while_it_runs_does_nothing(browser, base_url):
+    counter = """
+        window.__checks = 0;
+        const real = window.setTimeout;
+        window.setTimeout = function (fn, ms, ...rest) {
+            if (ms === 900) window.__checks += 1;
+            return real.call(window, fn, ms, ...rest);
+        };
+    """
+    context = make_context(browser, base_url, motion="no-preference")
+    try:
+        context.add_init_script(counter)
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        button = page.locator("[data-act=check]")
+        result = page.locator("[data-f=result]")
+        button.evaluate("e => { e.click(); e.click(); e.click(); }")
+        assert button.get_attribute("aria-busy") == "true"
+        assert result.inner_text() == "Checking the loaded releases…"
+        page.wait_for_function(
+            "() => document.querySelector('[data-f=result]').textContent.includes('latest release')"
+        )
+        assert page.evaluate("window.__checks") == 1, "one check ran for three clicks"
+        assert button.get_attribute("aria-busy") is None
+        assert button.inner_text() == "Check again"
+    finally:
+        context.close()
+
+
 def test_the_mock_screens_and_highlights_wait_for_their_script_and_then_paint(page, base_url):
     held = []
     page.route("**/assets/below.js", lambda route: held.append(route))
@@ -339,7 +370,7 @@ def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
     cards_ready(page)
     mocks_ready(page)
     rows = page.locator(".m-ios .m-rows")
-    assert rows.get_attribute("aria-hidden") == "true"
+    assert rows.get_attribute("aria-hidden") is None, "the rows hold data shown nowhere else"
     ios = releases("iOS")
     public = next(r for r in ios if r["stage"] == "release")
     assert rows.locator("[data-f=pubrow]").inner_text() == public["version"]
