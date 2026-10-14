@@ -87,8 +87,10 @@
         title: typeof r.title === "string" ? r.title : r.family + " " + r.version,
         date: new Date(t).toISOString(), t: t, url: r.url
       };
-      if (typeof r.line === "string" && LINE.test(r.line)) entry.line = r.line;
-      else if (r.family === "RouterOS") {
+      // A line that is present but not a plain token is dropped, never replaced.
+      if (r.line !== undefined && r.line !== null) {
+        if (typeof r.line === "string" && LINE.test(r.line)) entry.line = r.line;
+      } else if (r.family === "RouterOS") {
         // A row cached before lines existed: its channel is the end of its id.
         var ch = /-(stable|long-term|testing)$/.exec(r.id);
         if (ch) entry.line = ch[1];
