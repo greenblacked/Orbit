@@ -102,7 +102,7 @@ def test_the_front_page_has_one_card_per_family_in_the_order_of_the_config():
 
 # The effects are separate modules that load after the first paint; no page names them.
 LAZY = ("fx.js", "aurora.js")
-# Also off the first paint: below.js (the mock screens and the developer highlights) and the
+# Also off the first paint: below.js (the drawn devices that step through releases) and the
 # cadence row, which home.js loads once the page has painted, and the generic sigil rule
 # (sigil.js loads it when a build that is not an Apple build appears). The script that loads
 # each one is the only file that names it.

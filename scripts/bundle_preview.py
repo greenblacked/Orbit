@@ -617,8 +617,9 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
     front = pages[0]
     site_name = front["site_name"] or front["title"]
 
-    # home.js loads below.js (the mock screens) and lookup.js (Check my version) after the page
-    # has painted, which a bundle cannot do; the bundle runs them right after home.js instead.
+    # home.js loads below.js (the drawn devices that step through releases) and lookup.js
+    # (Check my version) after the page has painted, which a bundle cannot do; the bundle runs
+    # them right after home.js instead.
     for page in pages:
         if HOME_SCRIPT in page["body_scripts"]:
             at = page["body_scripts"].index(HOME_SCRIPT) + 1
