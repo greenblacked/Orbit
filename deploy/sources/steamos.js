@@ -17,7 +17,7 @@
 // older refreshes saw. The dial filters by date on the client, so wider data does not widen it.
 
 import { familyIds } from '../families.js';
-import { field, isHttpsOn, parseDate, rssItems, sortReleases } from '../releases.js';
+import { cleanSummary, field, isHttpsOn, parseDate, rssItems, sortReleases } from '../releases.js';
 
 export const ID = 'valve-steam-news';
 export const VENDOR = 'valve';
@@ -81,6 +81,34 @@ export function parseTitle(title, tags = []) {
   };
 }
 
+/**
+ * The headline words of a post title that follow the release name: "SteamOS 3.7.13 Stable:
+ * Deck update" gives "Deck update". The version, the channel words (Stable, Beta, Preview),
+ * a build in brackets and the punctuation between them are not a summary, so a title that
+ * is only those gives ''. The text is the title Valve wrote, cleaned like any summary.
+ */
+export function summaryOfTitle(title) {
+  const m = TITLE_RE.exec(String(title ?? '').trim());
+  if (!m) return '';
+  let rest = String(title).trim().slice(m[0].length);
+  // Peel the channel words, builds in brackets and separators off the front, in any order.
+  for (;;) {
+    const next = rest
+      .replace(/^[\s:,;\-\u2013\u2014]+/, '')
+      .replace(/^\([^)]*\)/, '')
+      .replace(/^(?:stable|beta|preview)\b/i, '');
+    if (next === rest) break;
+    rest = next;
+  }
+  return cleanSummary(rest);
+}
+
+/** The release with the post's headline as its summary, when the title has one. */
+function summarised(release) {
+  const summary = summaryOfTitle(release.title);
+  return summary ? { ...release, summary } : release;
+}
+
 /** A release's id: the news page plus the title as a slug, the same for the same post whichever
  * document it came from (the snapshot rows are made from titles alone, without a gid). */
 function idOf(title) {
@@ -127,14 +155,16 @@ export function parseNews(jsonText, now = Date.now()) {
     if (!Number.isSafeInteger(seconds) || seconds <= 0) continue;
     const time = new Date(seconds * 1000);
     if (!Number.isFinite(time.getTime())) continue;
-    releases.push({
-      id: idOf(title),
-      ...parsed,
-      title,
-      date: time.toISOString().replace('.000Z', 'Z'),
-      url: linkOf(item.url),
-      source: ID,
-    });
+    releases.push(
+      summarised({
+        id: idOf(title),
+        ...parsed,
+        title,
+        date: time.toISOString().replace('.000Z', 'Z'),
+        url: linkOf(item.url),
+        source: ID,
+      }),
+    );
   }
   return bounded(releases, now);
 }
@@ -148,7 +178,9 @@ export function parseFeed(xmlText, now = Date.now()) {
     const link = field(item, 'link');
     const date = parseDate(field(item, 'pubDate'));
     if (!parsed || !date) continue;
-    releases.push({ id: idOf(title), ...parsed, title, date, url: linkOf(link), source: ID });
+    releases.push(
+      summarised({ id: idOf(title), ...parsed, title, date, url: linkOf(link), source: ID }),
+    );
   }
   return bounded(releases, now);
 }

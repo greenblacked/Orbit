@@ -17,6 +17,7 @@ import mikrotik, {
   makeRelease,
   parse,
   parseNewest,
+  summaryOfChannel,
   unixToIso,
 } from '../deploy/sources/mikrotik.js';
 import { createWorker } from '../deploy/worker.js';
@@ -70,6 +71,7 @@ describe('the NEWEST documents', () => {
         date: '2026-09-29T14:21:27Z',
         url: 'https://mikrotik.com/download?v=7.24.5',
         source: ID,
+        summary: 'Stable channel release',
       },
     ]);
   });
@@ -92,9 +94,15 @@ describe('the NEWEST documents', () => {
     assert.equal(release.title, 'RouterOS 7.25rc1');
     assert.equal(release.date, '2026-10-01T14:18:48Z');
     assert.equal(release.url, 'https://mikrotik.com/download?v=7.25rc1');
-    assert.deepEqual(Object.keys(release).sort(), KEYS);
+    assert.deepEqual(Object.keys(release).filter((k) => k !== 'summary').sort(), KEYS);
     const beta = parseNewest('7.25.1beta2 1790864328\n', 'testing')[0];
     assert.deepEqual([beta.stage, beta.beta, beta.version, beta.build], ['beta', 2, '7.25.1', '7.25.1beta2']);
+  });
+
+  it('summarises a release by its channel, from the file it came from', () => {
+    assert.equal(parseNewest(LONG_TERM, 'long-term')[0].summary, 'Long-term channel release');
+    assert.equal(parseNewest(TESTING, 'testing')[0].summary, 'Testing channel pre-release');
+    assert.equal(summaryOfChannel('nightly', false), '');
   });
 
   it('keeps a pre-release out of the stable channels and a plain version out of testing', () => {

@@ -10,7 +10,7 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { FAMILIES } from '../deploy/families.js';
-import { MAX_RELEASES_PER_SOURCE } from '../deploy/releases.js';
+import { MAX_RELEASES_PER_SOURCE, SUMMARY_MAX, cleanSummary } from '../deploy/releases.js';
 import { SOURCES } from '../deploy/sources/index.js';
 
 const script = fileURLToPath(new URL('../deploy/snapshot_releases.mjs', import.meta.url));
@@ -77,7 +77,14 @@ describe('src/data/releases.json', () => {
   it('gives every release the whole contract, from a registered source and a known family', () => {
     const ids = new Set(SOURCES.map((s) => s.id));
     for (const r of payload.releases) {
-      assert.deepEqual(Object.keys(r).sort(), keys, r.id);
+      // `summary` is the one optional key: a short plain line from the adapter (ADR 0008 keeps
+      // security notes out of this file; a summary is not one).
+      assert.deepEqual(Object.keys(r).filter((k) => k !== 'summary').sort(), keys, r.id);
+      if ('summary' in r) {
+        assert.equal(typeof r.summary, 'string', r.id);
+        assert.equal(r.summary, cleanSummary(r.summary), r.id);
+        assert.ok(r.summary.length > 0 && r.summary.length <= SUMMARY_MAX, r.id);
+      }
       assert.ok(ids.has(r.source), `${r.id}: unknown source ${r.source}`);
       const source = SOURCES.find((s) => s.id === r.source);
       assert.equal(r.vendor, source.vendor, r.id);
