@@ -115,8 +115,7 @@
       "title": "RouterOS 7.25rc1",
       "date": "2026-10-01T14:18:48Z",
       "url": "https://mikrotik.com/download?v=7.25rc1",
-      "source": "mikrotik-routeros",
-      "summary": "Testing channel pre-release"
+      "source": "mikrotik-routeros"
     },
     {
       "id": "routeros-7.24.5-stable",
@@ -130,8 +129,7 @@
       "title": "RouterOS 7.24.5 stable",
       "date": "2026-09-29T14:21:27Z",
       "url": "https://mikrotik.com/download?v=7.24.5",
-      "source": "mikrotik-routeros",
-      "summary": "Stable channel release"
+      "source": "mikrotik-routeros"
     },
     {
       "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h2-26300.9550",

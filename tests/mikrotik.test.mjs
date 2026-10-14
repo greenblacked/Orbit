@@ -71,7 +71,6 @@ describe('the NEWEST documents', () => {
         date: '2026-09-29T14:21:27Z',
         url: 'https://mikrotik.com/download?v=7.24.5',
         source: ID,
-        summary: 'Stable channel release',
       },
     ]);
   });
@@ -99,10 +98,12 @@ describe('the NEWEST documents', () => {
     assert.deepEqual([beta.stage, beta.beta, beta.version, beta.build], ['beta', 2, '7.25.1', '7.25.1beta2']);
   });
 
-  it('summarises a release by its channel, from the file it came from', () => {
+  it('summarises only a long-term release, which the row alone does not say', () => {
     assert.equal(parseNewest(LONG_TERM, 'long-term')[0].summary, 'Long-term channel release');
-    assert.equal(parseNewest(TESTING, 'testing')[0].summary, 'Testing channel pre-release');
-    assert.equal(summaryOfChannel('nightly', false), '');
+    assert.equal(parseNewest(TESTING, 'testing')[0].summary, undefined);
+    assert.equal(summaryOfChannel('stable'), '');
+    assert.equal(summaryOfChannel('testing'), '');
+    assert.equal(summaryOfChannel('nightly'), '');
   });
 
   it('keeps a pre-release out of the stable channels and a plain version out of testing', () => {

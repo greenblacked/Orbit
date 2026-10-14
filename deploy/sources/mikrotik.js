@@ -47,16 +47,14 @@ export function unixToIso(seconds) {
   return new Date(n * 1000).toISOString().replace('.000Z', 'Z');
 }
 
-const CHANNEL_NAMES = { stable: 'Stable', 'long-term': 'Long-term', testing: 'Testing' };
-
 /**
- * What the channel of a RouterOS release says, from the NEWEST file it came from: "Long-term
- * channel release", or "Testing channel pre-release" for a release candidate or beta. No
- * changelog text is read (the changelog page is not on the allowlist).
+ * What the channel of a RouterOS release says, from the NEWEST file it came from: only the
+ * long-term channel says something the row does not ("Long-term channel release"). The stable
+ * and testing channels are already in the title and the stage badge, so they get no summary.
+ * No changelog text is read (the changelog page is not on the allowlist).
  */
-export function summaryOfChannel(channel, preRelease) {
-  const name = CHANNEL_NAMES[channel];
-  return name ? `${name} channel ${preRelease ? 'pre-release' : 'release'}` : '';
+export function summaryOfChannel(channel) {
+  return channel === 'long-term' ? 'Long-term channel release' : '';
 }
 
 /**
@@ -85,7 +83,7 @@ export function makeRelease({ version, channel, date, now = Date.now() }) {
     date,
     url: downloadUrl(version),
     source: ID,
-  }, summaryOfChannel(channel, preRelease));
+  }, summaryOfChannel(channel));
 }
 
 /** The release in one NEWEST document ("<version> <unix-seconds>") of a channel; [] if malformed. */
