@@ -1043,27 +1043,6 @@ def test_a_poll_with_nothing_new_leaves_the_timeline_and_its_focus_alone(page, b
     assert page.evaluate("document.querySelector('.tl-item a').dataset.mark") == "kept"
 
 
-def test_a_poll_that_adds_a_month_keeps_the_opened_months_and_the_button_focus(page, base_url):
-    first = monthly_data(30)
-    serve_json(page, "**/api/releases.json", json.dumps(first))
-    page.goto(base_url + "/timeline/")
-    page.wait_for_selector(".tl-item")
-    page.click("#more")
-    assert page.locator(".month").count() == 24
-    second = copy.deepcopy(first)
-    second["releases"].insert(0, {**second["releases"][0], "id": "new", "date": "2026-11-10T00:00:00Z"})
-    page.unroute("**/api/releases.json")
-    serve_json(page, "**/api/releases.json", json.dumps(second))
-    page.evaluate("RO.refresh()")
-    page.wait_for_selector('.tl-item[data-id="new"]')
-    assert page.locator(".month").count() == 25
-    assert page.locator('.tl-item[data-id="m23"]').count() == 1
-    page.click("#more")
-    page.click("#more")
-    assert page.locator(".month").count() == 31
-    page.focus("#more") if page.is_visible("#more") else None
-
-
 def test_a_poll_that_adds_a_month_keeps_the_opened_months(page, base_url):
     first = monthly_data(30)
     serve_json(page, "**/api/releases.json", json.dumps(first))
