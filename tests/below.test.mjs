@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { describe, it } from 'node:test';
 
-const { trail, steps, index, keeps, settle, move, keyStep, newest, blocked } = createRequire(
+const { trail, steps, index, keeps, settle, move, keyStep, newest, blocked, brief } = createRequire(
   import.meta.url,
 )('../src/assets/below.js');
 
@@ -195,5 +195,17 @@ describe('why a press cannot move', () => {
 
   it('says there is nothing to step through when there are no releases', () => {
     assert.equal(blocked(0, 1, false), 'No releases to step through');
+  });
+});
+
+describe('the date on the watch', () => {
+  it('keeps the year as an apostrophe and two digits', () => {
+    assert.equal(brief('Oct 8, 2026'), "Oct 8 '26");
+    assert.equal(brief('Dec 25, 2027'), "Dec 25 '27");
+  });
+
+  it('leaves text that is not a medium US date alone', () => {
+    assert.equal(brief('2026-10-08'), '2026-10-08');
+    assert.equal(brief('None'), 'None');
   });
 });

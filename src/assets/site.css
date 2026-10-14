@@ -1172,9 +1172,9 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   color: #fff;
   text-align: center;
 }
-.m-comp .k { font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85); }
-.m-comp .v { font-size: 0.9375rem; font-weight: 600; line-height: 1.2; }
-.m-watch .m-name { font-size: 0.6875rem; font-weight: 500; text-wrap: balance; }
+.m-comp .k { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85); }
+.m-comp .v { max-width: 100%; font-size: 0.875rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.m-watch .m-name { font-size: 0.75rem; font-weight: 500; text-wrap: balance; }
 
 .dev-vision { max-width: 34rem; padding-inline: 7%; }
 .v-strap {
@@ -1423,7 +1423,7 @@ button.m-comp:active { filter: brightness(1.2); }
 .m-menu .m-pos { margin-left: auto; }
 .m-sub .m-pos:empty, .m-wname .m-pos:empty { display: none; }
 .m-wname { text-align: center; }
-.m-wname .m-pos { display: inline-block; margin-top: 0.15em; font-size: 0.5625rem; }
+.m-wname .m-pos { display: inline-block; margin-top: 0.15em; font-size: 0.6875rem; overflow-wrap: anywhere; }
 .m-link { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
 .m-link[href] { cursor: pointer; }
 .m-link[href]:hover { background: rgba(255, 255, 255, 0.07); }
@@ -1911,6 +1911,7 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   }
   .hw:focus-visible, .m-link:focus-visible { outline-color: Highlight; box-shadow: none; }
   .hw-e::before { background: ButtonText; }
+  button.m-comp { border: 2px solid ButtonText; }
   .v-strap.hw, .deck-stick.hw { border: 2px solid ButtonText; }
   .notch:focus-visible .nl, .hand:focus-visible .hl { stroke: Highlight; }
   .notch:focus-visible .hit { stroke: Highlight; stroke-width: 2px; stroke-dasharray: 3 2; }

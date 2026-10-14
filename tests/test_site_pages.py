@@ -472,6 +472,26 @@ def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
     assert page.text_content(".m-comp .k") == "Version"
 
 
+def test_the_watch_keeps_the_year_in_the_released_mode(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    newest = next(r for r in releases("watchOS") if r["stage"] == "release")
+    when = datetime.datetime.fromisoformat(newest["date"].replace("Z", "+00:00"))
+    page.click(".m-comp")
+    page.click(".m-comp")
+    assert page.text_content(".m-comp .k") == "Released"
+    shown = page.text_content(".m-comp .v")
+    assert shown == f"{when:%b} {when.day} '{when:%y}"
+    assert page.inner_text("[data-f=said]") == f"Showing released {shown}"
+    disc = page.locator(".m-comp").bounding_box()
+    text = page.locator(".m-comp .v").bounding_box()
+    assert text["x"] >= disc["x"] and text["x"] + text["width"] <= disc["x"] + disc["width"]
+    for selector in (".m-comp .k", ".m-wname .m-pos", ".m-watch .m-name"):
+        size = page.eval_on_selector(selector, "e => parseFloat(getComputedStyle(e).fontSize)")
+        assert size >= 11, (selector, size)
+
+
 def test_mock_controls_are_real_buttons_and_big_enough(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)

@@ -77,6 +77,8 @@
   function keyStep(key) {
     return Object.prototype.hasOwnProperty.call(KEYS, key) ? KEYS[key] : null;
   }
+  // "Oct 8, 2026" as "Oct 8 '26": short enough for the watch, with the year kept.
+  function brief(day) { return day.replace(/, \d\d(\d\d)$/, " '$1"); }
   var PAUSED = "Steps are paused on the beta channel";
   // Why a press cannot move (the same `by` as move): the words for the live region.
   function blocked(n, by, beta) {
@@ -87,7 +89,7 @@
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
       trail: trail, steps: steps, index: index, keeps: keeps, settle: settle, move: move,
-      keyStep: keyStep, newest: newest, blocked: blocked
+      keyStep: keyStep, newest: newest, blocked: blocked, brief: brief
     };
     return;
   }
@@ -222,7 +224,7 @@
     if (!v) return;
     box.querySelector('[data-act="cycle"]').disabled = false;
     var r = shown("watchOS").r;
-    var values = r ? [r.version, r.build || "None", RO.day(r.t).replace(/, \d{4}$/, "")] : ["None", "None", "None"];
+    var values = r ? [r.version, r.build || "None", brief(RO.day(r.t))] : ["None", "None", "None"];
     text(box, "k", MODES[mode]);
     text(box, "v", values[mode]);
     if (announce) text(box, "said", "Showing " + MODES[mode].toLowerCase() + " " + values[mode]);
