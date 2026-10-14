@@ -125,6 +125,7 @@ def preview_csp(scripts: list[str], styles: list[str], style_attrs: list[str]) -
 
 HOME_SCRIPT = "/assets/home.js"
 BELOW_SCRIPT = "/assets/below.js"
+LOOKUP_SCRIPT = "/assets/lookup.js"
 # The live site loads the generic sigil rule on demand; a bundle cannot fetch it, so it runs
 # right after sigil.js on every page that loads sigil.js, before any script that draws.
 SIGIL_SCRIPT = "/assets/sigil.js"
@@ -573,12 +574,13 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
     front = pages[0]
     site_name = front["site_name"] or front["title"]
 
-    # home.js loads below.js (the mock screens) after the page has painted, which a bundle
-    # cannot do; the bundle runs it right after home.js instead, so the mocks are painted.
+    # home.js loads below.js (the mock screens) and lookup.js (Check my version) after the page
+    # has painted, which a bundle cannot do; the bundle runs them right after home.js instead.
     for page in pages:
         if HOME_SCRIPT in page["body_scripts"]:
             at = page["body_scripts"].index(HOME_SCRIPT) + 1
             page["body_scripts"].insert(at, BELOW_SCRIPT)
+            page["body_scripts"].insert(at + 1, LOOKUP_SCRIPT)
         if (dist / "assets" / "sigil-generic.js").is_file():
             for key in ("head_scripts", "body_scripts"):
                 if SIGIL_SCRIPT in page[key]:
