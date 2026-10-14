@@ -125,7 +125,7 @@ FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
 # Raw bytes. below.js (the drawn devices that step through releases), cadence.js, lookup.js and
-# sigil-generic.js are 34,598 together (15,582 + 4,788 + 12,708 + 1,520); the limit leaves about
+# sigil-generic.js are 35,879 together (16,863 + 4,788 + 12,708 + 1,520); the limit leaves about
 # 15% room for each to grow a little.
 AFTER_PAINT_BUDGET = 39_800
 
@@ -296,6 +296,9 @@ def test_every_container_query_unit_has_a_plain_declaration_before_it_in_its_rul
             found += 1
             before = [v for n, v in decls[:at] if n == name and not CQ_UNIT.search(v)]
             assert before, f"{selector}: {name}: {value} has no plain {name} before it"
+            # var() is accepted at parse time and only fails when computed, so the cq line would
+            # win in an old engine and leave the property unset.
+            assert "var(" not in value, f"{selector}: {name}: a cq value must not use var()"
     assert found > 20
 
 
