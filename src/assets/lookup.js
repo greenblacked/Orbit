@@ -1,6 +1,7 @@
 /* "Check my version" on the front page and Compare: a platform and a version or build, matched
    against the loaded releases. The answer is "current" (the newest public release by version, as
-   the cards pick it), the newest of its line (major version; a Windows feature update), a
+   the cards pick it), the newest of its line (the release's `line`: a RouterOS channel or a Windows
+   feature update; else the major version), a
    pre-release, a version not in the data placed against its line, or how far behind the newest it
    is, counted as Compare counts, with the CVE count where window.Sec is loaded. The query is kept
    as ?platform= and ?build=. find and judge are exported for the Node tests; the rest runs in a
@@ -11,9 +12,12 @@
 
   function norm(s) { return String(s == null ? "" : s).trim().replace(/\s+/g, " ").toLowerCase(); }
 
-  // A line is the major version; Windows has no such thing (22-26 are years), so each feature
-  // update (25H2, 26H1) is its own line.
-  function lineOf(r) { return r.family === "Windows" ? String(r.version) : String(r.major); }
+  // The series a dotted number belongs to: the major version; Windows has no such thing (22-26 are
+  // years), so each feature update (25H2, 26H1) is its own.
+  function seriesOf(r) { return r.family === "Windows" ? String(r.version) : String(r.major); }
+  // A line is what the data says (`line`: a RouterOS channel, a Windows feature update), else the
+  // series, which is what an older copy of the data without lines still gets.
+  function lineOf(r) { return r.line ? String(r.line) : seriesOf(r); }
 
   function cmp(a, b) {
     var x = String(a).split("."), y = String(b).split(".");
@@ -40,7 +44,7 @@
     if (best && cmp(t, best.build) < 0) return { kind: "build", ref: best };
     best = null;
     pubs.forEach(function (r) {
-      if (lineOf(r) === seg && (!best || cmp(r.version, best.version) > 0)) best = r;
+      if (seriesOf(r) === seg && (!best || cmp(r.version, best.version) > 0)) best = r;
     });
     if (best && cmp(t, best.version) < 0) return { kind: "line", ref: best, line: seg };
     return null;
@@ -66,7 +70,7 @@
     }
     for (i = 0; i < tries.length; i++) {
       if (!/^\d+$/.test(tries[i])) continue;
-      hits = list.filter(function (r) { return lineOf(r) === tries[i]; });
+      hits = list.filter(function (r) { return seriesOf(r) === tries[i]; });
       if (hits.length && hits.every(function (r) { return r.version === hits[0].version; })) return pick(hits);
     }
     return null;
@@ -181,10 +185,7 @@
       : k === "line" && family === "Windows" ? "Current for " + name(hit) + " servicing: " +
         (hit.build ? "build " + hit.build : name(hit)) + " is the latest of its version. " + top
       : k === "line" ? "Current for " + family + " " + j.line + ": " + name(hit) + " is the newest of its line. " + top
-      : k === "older" ? name(hit) + " came out after " + name(j.newest) + " but is an older version. " + top +
-        (/long-term/i.test(hit.title || "") && !list.some(function (r) {
-          return r !== hit && r.stage === "release" && /long-term/i.test(r.title || "") && ctx.higher(r, hit);
-        }) ? " It is the newest long-term release." : "")
+      : k === "older" ? name(hit) + " came out after " + name(j.newest) + " but is an older version. " + top
       : k === "superseded" ? "Superseded by " + name(j.newest) + " on " + RO.day(j.newest.t) + ": " +
         plural(j.pub, "public release") + " and " + plural(j.days, "day") + " behind." +
         (j.lineNewest ? " The newest of its line is " + name(j.lineNewest) + "." : "")

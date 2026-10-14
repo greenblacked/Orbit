@@ -11,6 +11,8 @@
   var STAGES = ["release", "beta", "rc"];
   // Only a released build may carry a verdict (docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
+  // A release's optional line (RouterOS channel, Windows feature update): a short token.
+  var LINE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,15}$/;
   // Used when the families config cannot be read.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
 
@@ -76,7 +78,7 @@
       if (typeof r.version !== "string" || typeof r.url !== "string") return;
       if (!allowed(r.vendor, r.url)) return;
       seen[r.id] = true;
-      list.push({
+      var entry = {
         id: r.id, vendor: r.vendor, family: r.family, version: r.version,
         major: Number(r.major) || parts(r.version)[0],
         stage: r.stage, beta: typeof r.beta === "number" ? r.beta : null,
@@ -84,7 +86,9 @@
         status: r.stage === "release" && VERDICTS.indexOf(r.status) >= 0 ? r.status : "untested",
         title: typeof r.title === "string" ? r.title : r.family + " " + r.version,
         date: new Date(t).toISOString(), t: t, url: r.url
-      });
+      };
+      if (typeof r.line === "string" && LINE.test(r.line)) entry.line = r.line;
+      list.push(entry);
     });
     if (!list.length) return null;
     list.sort(newer);
@@ -240,8 +244,26 @@
     var pre = any && any.stage !== "release" && main.stage === "release" &&
       (NUM.test(any.version) && NUM.test(main.version) ?
         compareVersions(any.version, main.version) > 0 : any.t > main.t) ? any : null;
-    return { main: main, pre: pre };
+    return { main: main, pre: pre, lines: lines(list, family, main) };
   }
+  // The newest public release of each line the family has (RouterOS channels, Windows feature
+  // updates), as [{ line, release }], the headlined release's line first and then by version.
+  // A family whose headline has no line, or whose headline is not a public release, has none.
+  function lines(list, family, main) {
+    if (!main || main.stage !== "release" || !main.line) return [];
+    var best = Object.create(null), order = [];
+    list.forEach(function (r) {
+      if (r.family !== family || r.stage !== "release" || !r.line) return;
+      if (!best[r.line]) order.push(r.line);
+      if (!best[r.line] || better(r, best[r.line])) best[r.line] = r;
+    });
+    order.sort(function (a, b) {
+      return a === main.line ? -1 : b === main.line ? 1 : better(best[a], best[b]) ? -1 : 1;
+    });
+    return order.map(function (name) { return { line: name, release: best[name] }; });
+  }
+  // A line named for people: "long-term" is "Long-term", "24H2" stays.
+  function lineLabel(name) { return name.charAt(0).toUpperCase() + name.slice(1); }
   function when(t) {
     var el = h("time", "when", ago(t), { datetime: new Date(t).toISOString() });
     el.setAttribute("data-rel", String(t));
@@ -381,7 +403,7 @@
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
     channel: channel, sigilKey: sigilKey, clock: clock,
-    latest: latest, lead: lead, newer: newer, compareVersions: compareVersions,
+    latest: latest, lead: lead, lineLabel: lineLabel, newer: newer, compareVersions: compareVersions,
     reduced: function () {
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }

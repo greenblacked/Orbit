@@ -9,10 +9,17 @@ import { describe, it } from 'node:test';
 const Lookup = createRequire(import.meta.url)('../src/assets/lookup.js');
 
 const DAY = 864e5;
+// Dotted-number order, for tests that give `judge` a version order.
+const versionOrder = (a, b) => {
+  const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0);
+  return 0;
+};
 const T0 = Date.UTC(2026, 0, 1);
 let n = 0;
 // Newest first, as releases.js hands them over.
-const rel = (version, build, stage, days, family = 'iOS') => ({
+const rel = (version, build, stage, days, family = 'iOS', line) => ({
+  ...(line ? { line } : {}),
   id: `${family}-${version}-${build}-${stage}-${n++}`,
   family,
   version,
@@ -119,6 +126,7 @@ describe('judge', () => {
     const list = [lts, rc, stable];
     const ctx = { newest: stable, higher };
     assert.equal(Lookup.judge(list, stable, ctx).kind, 'current');
+    // Without lines (an older copy of the data) the major version is the line.
     const older = Lookup.judge(list, lts, ctx);
     assert.equal(older.kind, 'older');
     assert.equal(older.newest, stable);
@@ -153,6 +161,32 @@ describe('judge', () => {
 });
 
 describe('judge by line', () => {
+  it('uses the line the data gives: a RouterOS channel is its own line', () => {
+    const lts = rel('7.23.8', '7.23.8', 'release', 8, 'RouterOS', 'long-term');
+    const rc = rel('7.25', '7.25rc1', 'rc', 1, 'RouterOS', 'testing');
+    const stable = rel('7.24.5', '7.24.5', 'release', 0, 'RouterOS', 'stable');
+    const older = rel('7.23.7', '7.23.7', 'release', 20, 'RouterOS', 'long-term');
+    const list = [lts, rc, stable, older];
+    const higher = (a, b) => versionOrder(a.version, b.version) > 0;
+    const ctx = { newest: stable, higher };
+    const j = Lookup.judge(list, lts, ctx);
+    assert.equal(j.kind, 'line');
+    assert.equal(j.line, 'long-term');
+    assert.equal(j.newest, stable);
+    // The older long-term release is superseded within its own line.
+    const s = Lookup.judge(list, older, ctx);
+    assert.equal(s.kind, 'superseded');
+    assert.equal(s.lineNewest, lts);
+    assert.equal(Lookup.judge(list, rc, ctx).kind, 'ahead');
+  });
+
+  it('keeps the Windows feature update as its line when the data has none', () => {
+    const list = [rel('26H2', '26300.1', 'release', 5, 'Windows'), rel('25H2', '26200.1', 'release', 4, 'Windows')];
+    assert.equal(Lookup.judge(list, list[1]).line, '25H2');
+    const withLine = list.map((r) => ({ ...r, line: r.version }));
+    assert.equal(Lookup.judge(withLine, withLine[1]).line, '25H2');
+  });
+
   it('treats each Windows feature update as its own line', () => {
     const list = [rel('26H2', '26300.1', 'release', 5, 'Windows'), rel('25H2', '26200.1', 'release', 4, 'Windows')];
     const j = Lookup.judge(list, list[1]);

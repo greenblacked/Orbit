@@ -53,10 +53,25 @@
     line.appendChild(a);
   }
 
-  function paintCard(card, r, pre) {
+  // The other supported lines of a family under its headline ("Long-term: 7.23.8", "24H2:
+  // 26100.9550"), as plain text. A line named like its version shows the build instead.
+  var MAX_LINES = 3;
+  function paintLines(card, lines) {
+    var ul = card.querySelector('[data-f="lines"]');
+    var rest = (lines || []).slice(1, 1 + MAX_LINES);
+    ul.textContent = "";
+    ul.hidden = !rest.length;
+    rest.forEach(function (x) {
+      var r = x.release;
+      ul.appendChild(RO.h("li", "", RO.lineLabel(x.line) + ": " + (r.version === x.line && r.build ? r.build : r.version)));
+    });
+  }
+
+  function paintCard(card, r, pre, lines) {
     var set = function (name, text) { card.querySelector('[data-f="' + name + '"]').textContent = text; };
     paintSigil(card, r);
     paintPre(card, pre);
+    paintLines(card, r ? lines : []);
     if (!r) {
       set("ver", "No release yet");
       ["stage", "build", "when"].forEach(function (name) { set(name, ""); });
@@ -165,7 +180,7 @@
     signature = next;
     for (var i = 0; i < cards.length; i++) {
       var lead = RO.lead(list, cards[i].getAttribute("data-family"));
-      paintCard(cards[i], lead.main, lead.pre);
+      paintCard(cards[i], lead.main, lead.pre, lead.lines);
     }
     current = list;
     for (var j = 0; j < sections.length; j++) paintSection(sections[j], list);
