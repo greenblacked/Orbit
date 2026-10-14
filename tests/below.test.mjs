@@ -6,11 +6,18 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { describe, it } from 'node:test';
 
-const { trail, steps, index, move, keyStep } = createRequire(import.meta.url)(
+const { trail, steps, index, move, keyStep, newest } = createRequire(import.meta.url)(
   '../src/assets/below.js',
 );
 
-const row = (family, id, stage = 'release') => ({ family, id, stage });
+const row = (family, id, stage = 'release', version = '1', t = 0, beta = 0) => ({
+  family,
+  id,
+  stage,
+  version,
+  t,
+  beta,
+});
 
 describe('the separator after the stage', () => {
   it('follows the stage only when a build comes after it', () => {
@@ -29,14 +36,14 @@ describe('the separator after the stage', () => {
 
 describe('the releases a device steps through', () => {
   const list = [
-    row('SteamOS', 'a', 'beta'),
+    row('SteamOS', 'a', 'beta', '3.9', 5),
     row('Android', 'x'),
-    row('SteamOS', 'b'),
-    row('SteamOS', 'c', 'rc'),
-    row('SteamOS', 'd'),
+    row('SteamOS', 'b', 'release', '3.8', 4),
+    row('SteamOS', 'c', 'rc', '3.8', 3),
+    row('SteamOS', 'd', 'release', '3.7', 2),
   ];
 
-  it('are the public releases of its family, in the order given (newest first)', () => {
+  it('are the public releases of its family, newest first', () => {
     assert.deepEqual(
       steps(list, 'SteamOS').map((r) => r.id),
       ['b', 'd'],
@@ -44,12 +51,52 @@ describe('the releases a device steps through', () => {
   });
 
   it('are all of the family when none is public, and none when the family is absent', () => {
-    const pre = [row('tvOS', 'p', 'beta'), row('tvOS', 'q', 'rc')];
+    const pre = [row('tvOS', 'p', 'beta', '27', 2), row('tvOS', 'q', 'rc', '27', 1)];
     assert.deepEqual(
       steps(pre, 'tvOS').map((r) => r.id),
-      ['p', 'q'],
+      ['q', 'p'],
     );
     assert.deepEqual(steps(list, 'visionOS'), []);
+  });
+
+  it('can be only the pre-releases or everything, and fall back to the public ones', () => {
+    assert.deepEqual(
+      steps(list, 'SteamOS', 'pre').map((r) => r.id),
+      ['a', 'c'],
+    );
+    assert.deepEqual(
+      steps(list, 'SteamOS', 'all').map((r) => r.id),
+      ['a', 'b', 'c', 'd'],
+    );
+    const none = [row('SteamOS', 'b', 'release', '3.8', 4)];
+    assert.deepEqual(
+      steps(none, 'SteamOS', 'pre').map((r) => r.id),
+      ['b'],
+    );
+  });
+
+  it('put the highest version first, not the latest date', () => {
+    const ros = [
+      row('RouterOS', 'low', 'release', '7.23.8', 9),
+      row('RouterOS', 'high', 'release', '7.24.5', 1),
+    ];
+    assert.deepEqual(
+      steps(ros, 'RouterOS').map((r) => r.id),
+      ['high', 'low'],
+    );
+    assert.ok(newest(ros[1], ros[0]) < 0);
+  });
+
+  it('order Windows half-year versions and fall back to the date for a tie', () => {
+    const win = [
+      row('Windows', 'a', 'release', '25H2', 1),
+      row('Windows', 'b', 'release', '26H1', 2),
+      row('Windows', 'c', 'release', '25H2', 3),
+    ];
+    assert.deepEqual(
+      steps(win, 'Windows').map((r) => r.id),
+      ['b', 'c', 'a'],
+    );
   });
 
   it('keep a position by release id and fall back to the newest', () => {
@@ -63,7 +110,7 @@ describe('the releases a device steps through', () => {
   it('keep the same release when a newer one is added in front', () => {
     const before = steps(list, 'SteamOS');
     const id = before[1].id;
-    const after = steps([row('SteamOS', 'new'), ...list], 'SteamOS');
+    const after = steps([row('SteamOS', 'new', 'release', '4.0', 9), ...list], 'SteamOS');
     assert.equal(index(before, id), 1);
     assert.equal(index(after, id), 2);
     assert.equal(after[index(after, id)].id, id);

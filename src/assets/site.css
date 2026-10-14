@@ -991,6 +991,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 .dev-phone {
   display: flex;
   max-width: 17rem;
+  max-width: min(17rem, calc(100vw - 2 * var(--hw, 2.75rem)));
   aspect-ratio: 9 / 19;
   padding: 3.4%;
   border-radius: 15% / 7%;
@@ -1037,9 +1038,14 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   font-size: 0.75rem;
   font-size: max(0.75rem, 2.5cqw);
 }
-.m-side { padding: 1.2em 0.8em; background: rgba(255, 255, 255, 0.07); }
-.m-side li { margin-bottom: 0.4em; padding: 0.4em 0.6em; border-radius: 0.6em; }
-.m-side .on { background: rgba(255, 255, 255, 0.18); }
+.m-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.2em 0.4em;
+  background: rgba(255, 255, 255, 0.07);
+}
+.m-side .m-segb { flex: none; padding: 0 0.3rem; }
 .m-main { padding: 1.2em 1.4em; }
 .m-main .m-card { margin-top: 0.8em; }
 
@@ -1383,10 +1389,11 @@ button.m-comp:active { filter: brightness(1.2); }
 .m-link[href] { cursor: pointer; }
 .m-link[href]:hover { background: rgba(255, 255, 255, 0.07); }
 .m-link:focus-visible { outline: 3px solid #fff; outline-offset: -6px; }
-.m-btn, .m-seg, .m-comp { position: relative; z-index: 2; }
+.m-btn, .m-seg, .m-side, .m-comp { position: relative; z-index: 2; }
 
 /* The drawn hardware is the stepping control: two real buttons per device, each a 44px hit box
-   with the drawn part inside it. Previous is the newer release, Next the older one. An end
+   with the drawn part inside it. The first button (Newer) goes to the newer release, the second
+   (Older) to the older one. An end
    that cannot go on is aria-disabled and does nothing. */
 .dev { --hw: 2.75rem; }
 .hw {
@@ -1409,6 +1416,7 @@ button.m-comp:active { filter: brightness(1.2); }
 .dev-phone .hw-prev { top: 17%; }
 .dev-phone .hw-next { top: calc(17% + 3.25rem); }
 /* The iPad and the router: two buttons on the top edge. */
+.dev-ipad, .dev-router { margin-top: 0.5rem; }
 .dev-ipad .hw-e, .dev-router .hw-e { top: calc(-1 * var(--hw)); place-items: end center; }
 .dev-ipad .hw-e::before, .dev-router .hw-e::before { width: 1.75rem; height: 5px; }
 .dev-ipad .hw-prev, .dev-router .hw-prev { right: calc(12% + 3.25rem); }
@@ -1429,7 +1437,7 @@ button.m-comp:active { filter: brightness(1.2); }
 .dev-watch .hw-prev { top: calc(30% - var(--hw) / 2); }
 .dev-watch .hw-next { top: calc(30% + var(--hw) / 2 + 4px); }
 @media (prefers-reduced-motion: no-preference) {
-  .hw::before, .v-strap.hw { transition: color 160ms ease, filter 160ms ease, transform 120ms ease; }
+  .hw::before, .v-strap.hw { transition: filter 160ms ease, transform 120ms ease; }
   .hw:not([aria-disabled="true"], :disabled):active::before { transform: scale(0.85); }
   .v-strap.hw:not([aria-disabled="true"], :disabled):active { transform: scale(0.94); }
   .m-link { transition: background-color 160ms ease; }

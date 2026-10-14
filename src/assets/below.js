@@ -3,13 +3,18 @@
    releases on show (Below.paint), again whenever the time machine or a data poll changes them.
    Until then the mocks are blank and their controls disabled.
 
-   Every drawn device steps through its family's public releases, newest first: its hardware
-   (side buttons, keys, sticks, a crown, straps) is a pair of real buttons, the arrow keys and
-   Home and End do the same from anywhere inside the device, and the screen is a link to that
-   release on the timeline. The ends are not wrapped: the button that cannot go on is
+   Every drawn device steps through its family's public releases, newest first (the page's own
+   rule for the newest: the higher version, then the stage, the iteration and the date). Its
+   hardware (side buttons, keys, sticks, a crown, straps) is a pair of real buttons, "Newer" and
+   "Older"; ArrowLeft and ArrowRight do the same from anywhere inside the device (Home and End
+   go to the ends), and the screen is a link to that release on the timeline. The ends are not
+   wrapped: the button that cannot go on is
    aria-disabled and does nothing. The position is kept by release id, so a data poll or the
    time machine keeps the visitor on the same release when it is still listed. The iPhone also
-   checks the data, the Mac switches its release channel and the watch cycles a complication.
+   checks the data, the Mac switches its release channel, the iPad's sidebar picks what it steps
+   through (public releases, betas or all) and the watch cycles a complication. A pick that
+   drops out of the list (a data poll, the time machine) is forgotten, so the device returns to
+   the newest and does not jump back later.
    The pure helpers come first; Node requires this file for tests/below.test.mjs. */
 (function (global) {
   "use strict";
@@ -17,12 +22,33 @@
 
   // "Release ·" with a build after it; just "Release" when there is no build to follow.
   function trail(label, next) { return label && next ? label + " ·" : label; }
-  // What a device steps through: the family's public releases, else all its releases. The
-  // list is newest first already, so are the steps.
-  function steps(list, family) {
+  var NUM = /^\d+([.H]\d+)*$/;
+  var RANK = { beta: 0, rc: 1, release: 2 };
+  function nums(v) {
+    return String(v).split(/[.H]/i).map(function (n) { return parseInt(n, 10) || 0; });
+  }
+  function byVersion(a, b) {
+    var x = nums(a), y = nums(b);
+    for (var i = 0; i < Math.max(x.length, y.length); i++) {
+      var d = (x[i] || 0) - (y[i] || 0);
+      if (d) return d;
+    }
+    return 0;
+  }
+  // Newest first, as the page picks "the newest": the higher version (the date when either is
+  // not numeric), then release over RC over beta, the iteration, the date.
+  function newest(a, b) {
+    var d = NUM.test(a.version) && NUM.test(b.version) ? byVersion(b.version, a.version) : b.t - a.t;
+    return d || (RANK[b.stage] - RANK[a.stage]) || ((b.beta || 0) - (a.beta || 0)) || (b.t - a.t) || 0;
+  }
+  // What a device steps through, newest first: the family's public releases ("pub", else all
+  // its releases), only its pre-releases ("pre", when it has any) or every release ("all").
+  function steps(list, family, scope) {
     var mine = list.filter(function (r) { return r.family === family; });
+    var pre = mine.filter(function (r) { return r.stage !== "release"; });
     var pub = mine.filter(function (r) { return r.stage === "release"; });
-    return pub.length ? pub : mine;
+    var rows = scope === "all" ? mine : scope === "pre" && pre.length ? pre : pub.length ? pub : mine;
+    return rows.slice().sort(newest);
   }
   // Where a release id sits in the steps: the newest (0) when it is not there.
   function index(rows, id) {
@@ -38,7 +64,9 @@
     return Object.prototype.hasOwnProperty.call(KEYS, key) ? KEYS[key] : null;
   }
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { trail: trail, steps: steps, index: index, move: move, keyStep: keyStep };
+    module.exports = {
+      trail: trail, steps: steps, index: index, move: move, keyStep: keyStep, newest: newest
+    };
     return;
   }
 
@@ -48,6 +76,7 @@
   var picked = {};
   var iosChecked = false;
   var channel = "release";
+  var scope = "pub";
   var mode = 0;
   var MODES = ["Version", "Build", "Released"];
 
@@ -66,8 +95,9 @@
   }
   // What a device shows: the release it is on (rows[i]), or on the Mac's beta channel the beta.
   function shown(family) {
-    var rows = steps(releases, family);
+    var rows = steps(releases, family, family === "iPadOS" ? scope : "pub");
     var i = index(rows, picked[family]);
+    if (rows[i] && rows[i].id !== picked[family]) delete picked[family];
     var beta = family === "macOS" && channel === "beta" ? RO.lead(releases, family).pre : null;
     return { rows: rows, i: i, r: beta || rows[i] || null, beta: !!beta };
   }
@@ -103,7 +133,7 @@
       }
     }
   }
-  function said(s) { return s.r.family + " " + RO.short(s.r) + ", " + where(s); }
+  function said(s) { return label(s.r) + ", " + where(s); }
   function paintIos() {
     var box = sec("iOS");
     var out = box.querySelector('[data-f="result"]');
@@ -143,6 +173,20 @@
     text(box, "build", r && r.build ? r.build : "None");
     text(box, "date", r ? RO.day(r.t) : "None");
     if (announce && r) text(box, "step", said(s));
+  }
+  function paintIpad() {
+    var box = sec("iPadOS");
+    var tabs = box.querySelectorAll("[data-scope]");
+    if (!tabs.length) return;
+    var hasPre = steps(releases, "iPadOS", "pre").some(function (r) { return r.stage !== "release"; });
+    if (scope === "pre" && !hasPre) scope = "pub";
+    for (var i = 0; i < tabs.length; i++) {
+      var mine = tabs[i].getAttribute("data-scope");
+      var off = mine === "pre" && !hasPre;
+      tabs[i].disabled = off;
+      tabs[i].setAttribute("aria-pressed", String(mine === scope));
+      tabs[i].setAttribute("aria-disabled", String(off));
+    }
   }
   function paintWatch(announce) {
     var box = sec("watchOS");
@@ -201,6 +245,13 @@
       paintFields("macOS");
       paintMac(true);
     });
+    var tabs = sec("iPadOS").querySelectorAll("[data-scope]");
+    for (var t = 0; t < tabs.length; t++) tabs[t].addEventListener("click", function (e) {
+      scope = e.currentTarget.getAttribute("data-scope");
+      paintIpad();
+      paintFields("iPadOS");
+      text(sec("iPadOS"), "step", said(shown("iPadOS")));
+    });
     var comp = sec("watchOS").querySelector('[data-act="cycle"]');
     if (comp) comp.addEventListener("click", function () {
       mode = (mode + 1) % MODES.length;
@@ -246,6 +297,9 @@
   window.Below = {
     paint: function (list) {
       releases = list;
+      // A poll or the time machine changes what is listed: the last step's words are stale.
+      text(document, "step", "");
+      paintIpad();
       paintFields();
       paintIos();
       paintMac(false);
