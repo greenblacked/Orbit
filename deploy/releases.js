@@ -30,8 +30,8 @@ export const SUMMARY_MAX = 200;
 /**
  * A summary as plain text, or '' when there is none: not a string, or nothing left once
  * control and invisible formatting characters (zero-width, bidi, BOM) are removed and runs
- * of whitespace collapse to one space. Longer than SUMMARY_MAX it is cut at a word with an ellipsis (a hard cut when the text has no space
- * past its first half). It is never HTML; every page writes it with textContent.
+ * of whitespace collapse to one space. Longer than SUMMARY_MAX it is cut at a word with an
+ * ellipsis (a hard cut when the text has no space past its first half). It is never HTML; every page writes it with textContent.
  */
 export function cleanSummary(value) {
   if (typeof value !== 'string') return '';
