@@ -164,6 +164,7 @@ describe('parsePage on the recorded Windows 10 table', () => {
         vendor: 'microsoft',
         family: 'Windows',
         version: '22H2',
+        line: '22H2',
         major: 22,
         stage: 'release',
         beta: null,
