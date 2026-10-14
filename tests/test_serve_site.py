@@ -275,5 +275,5 @@ def test_an_unreadable_snapshot_is_a_503_for_the_feeds():
 
 
 def test_xml_escape_matches_the_worker():
-    assert serve.xml_escape("<a b=\"c\">&'\x01") == "&lt;a b=&quot;c&quot;&gt;&amp;&apos;"
+    assert serve.xml_escape('<a b="c">&\'\x01') == "&lt;a b=&quot;c&quot;&gt;&amp;&apos;"
     assert serve.xml_escape(None) == ""
