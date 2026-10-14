@@ -8,7 +8,8 @@ hides the files Cloudflare does not publish, and applies the ``_headers`` file, 
 Content-Security-Policy a browser enforces here is the one it will enforce in production.
 It does not run the Worker, but it answers the API paths the pages call from the files the
 Worker falls back on: ``/api/releases.json`` is ``data/releases.json`` (with ``?vendor=``
-applied), ``/api/security.json`` is ``data/security.json`` and ``/api/health`` is
+applied, and ``data/notes.json`` laid over each release's ``summary`` as the Worker does),
+``/api/security.json`` is ``data/security.json`` and ``/api/health`` is
 ``{"ok": true}``, so a local page loads its data the way a live one does.
 
     python scripts/serve_site.py --dir dist/site --port 8000
@@ -35,12 +36,67 @@ HIDDEN = frozenset({".site-build", ".assetsignore", "_headers"})
 LOOPBACK = {"127.0.0.1", "localhost"}
 
 
-def releases_answer(body: bytes, query: str) -> tuple[int, bytes]:
+SUMMARY_MAX = 200
+
+
+def clean_summary(value: object) -> str:
+    """A summary as plain text: the same rules as ``cleanSummary`` in deploy/releases.js.
+
+    Control characters are removed, whitespace collapses to single spaces, and text over
+    ``SUMMARY_MAX`` characters is cut at a word with an ellipsis. ``""`` when nothing is left.
+    """
+    if not isinstance(value, str):
+        return ""
+    text = re.sub(r"[\t\n\r\u2028\u2029]+", " ", value)
+    text = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= SUMMARY_MAX:
+        return text
+    room = text[: SUMMARY_MAX - 1]
+    space = room.rfind(" ")
+    cut = room[:space] if space >= SUMMARY_MAX / 2 else room
+    return re.sub(r"[\s.,;:!?-]+$", "", cut) + "\u2026"
+
+
+def apply_notes(body: bytes, notes: bytes | None) -> bytes:
+    """The snapshot's bytes with the owner's notes laid over each release's ``summary``.
+
+    The Worker does the same on ``/api/releases.json``. Anything unreadable, or notes that
+    change nothing, returns the bytes untouched.
+    """
+    if not notes:
+        return body
+    try:
+        payload = json.loads(body)
+        found = json.loads(notes)["notes"]
+        releases = payload["releases"]
+    except (ValueError, KeyError, TypeError):
+        return body
+    if not isinstance(found, dict) or not found or not isinstance(releases, list):
+        return body
+    changed = False
+    for release in releases:
+        if not isinstance(release, dict) or not isinstance(release.get("id"), str):
+            continue
+        if release["id"] not in found:
+            continue
+        summary = clean_summary(found[release["id"]])
+        if summary:
+            release["summary"] = summary
+            changed = True
+    if not changed:
+        return body
+    return json.dumps(payload, separators=(",", ":")).encode("utf-8")
+
+
+def releases_answer(body: bytes, query: str, notes: bytes | None = None) -> tuple[int, bytes]:
     """The status and body of ``/api/releases.json?<query>`` from the snapshot's bytes.
 
-    Like the Worker: ``vendor=X`` keeps only that vendor's releases, and a vendor the
-    snapshot does not hold (or an empty one) is a 400 that lists the known ones.
+    Like the Worker: ``notes`` (the bytes of data/notes.json) are laid over the releases,
+    ``vendor=X`` keeps only that vendor's releases, and a vendor the snapshot does not hold
+    (or an empty one) is a 400 that lists the known ones.
     """
+    body = apply_notes(body, notes)
     asked = parse_qs(query, keep_blank_values=True).get("vendor")
     if asked is None:
         return 200, body
@@ -138,7 +194,12 @@ def make_handler(root: Path):
             if path == "/api/releases.json":
                 snapshot = self._locate("/data/releases.json")
                 if snapshot is not None:
-                    status, body = releases_answer(snapshot.read_bytes(), parts.query)
+                    notes = self._locate("/data/notes.json")
+                    status, body = releases_answer(
+                        snapshot.read_bytes(),
+                        parts.query,
+                        notes.read_bytes() if notes is not None else None,
+                    )
                     self._send(status, body, "application/json; charset=utf-8", path, head)
                     return
             if path == "/api/security.json":

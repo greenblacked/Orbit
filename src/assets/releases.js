@@ -7,6 +7,8 @@
   var API = "/api/releases.json";
   var SNAPSHOT = "/data/releases.json";
   var CONFIG = "/data/families.json";
+  var NOTES = "/data/notes.json";
+  var SUMMARY_MAX = 200;
   var POLL = 5 * 60 * 1000;
   var STAGES = ["release", "beta", "rc"];
   // Only a released build may carry a verdict (docs/adr/0005).
@@ -64,6 +66,14 @@
     return !!f && f.vendor === r.vendor;
   }
 
+  // A summary is one line of plain text (deploy/releases.js cleanSummary): written with
+  // textContent only, never as markup. Anything that is not a string is dropped.
+  function summary(v) {
+    if (typeof v !== "string") return "";
+    var t = v.replace(/[\t\n\r\u2028\u2029]+/g, " ").replace(/[\u0000-\u001f\u007f-\u009f]/g, "").replace(/\s+/g, " ").trim();
+    return t.length > SUMMARY_MAX ? t.slice(0, SUMMARY_MAX - 1) + "\u2026" : t;
+  }
+
   // Keep only entries safe to show; null if none.
   function normalise(json) {
     if (!json || !Array.isArray(json.releases)) return null;
@@ -83,6 +93,7 @@
         build: typeof r.build === "string" ? r.build : "",
         status: r.stage === "release" && VERDICTS.indexOf(r.status) >= 0 ? r.status : "untested",
         title: typeof r.title === "string" ? r.title : r.family + " " + r.version,
+        summary: summary(r.summary),
         date: new Date(t).toISOString(), t: t, url: r.url
       });
     });
@@ -127,6 +138,27 @@
     }
     return ready;
   }
+  // The owner's descriptions (/data/notes.json), laid over the releases as the Worker does, so
+  // the bundled snapshot shows them too. Optional: a failed read just leaves the summaries as
+  // they came. A note wins over a summary from the source.
+  var notes = null;
+  var notesReady = null;
+  function loadNotes() {
+    if (!notesReady) {
+      notesReady = loadJson(NOTES).then(function (json) {
+        if (json && json.notes && typeof json.notes === "object" && !Array.isArray(json.notes)) notes = json.notes;
+      }, function () { /* no notes file: nothing to add */ });
+    }
+    return notesReady;
+  }
+  function joinNotes(data) {
+    return loadNotes().then(function () {
+      if (notes) data.releases.forEach(function (r) {
+        if (Object.prototype.hasOwnProperty.call(notes, r.id) && summary(notes[r.id])) r.summary = summary(notes[r.id]);
+      });
+      return data;
+    });
+  }
   function refresh() {
     if (state.busy) return Promise.resolve();
     state.busy = true;
@@ -134,10 +166,11 @@
     // Asked for at once with the config; only reading it waits.
     var early = loadJson(API);
     early.catch(function () {});
+    loadNotes();
     return loadConfig().then(function () { return getJson(API, early); }).catch(function (err) {
       if (state.data) throw err;
       return getJson(SNAPSHOT);
-    }).then(function (data) {
+    }).then(joinNotes).then(function (data) {
       var fresh = [];
       if (state.known) {
         fresh = data.releases.filter(function (r) { return !state.known[r.id]; });
