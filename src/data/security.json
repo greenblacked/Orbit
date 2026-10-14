@@ -16,7 +16,7 @@
   "notes": {
     "https://source.android.com/docs/security/bulletin/2025-01-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin-January 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin-January 2025",
       "published": "2025-01-06",
       "cves": [
         {
@@ -160,7 +160,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2025-02-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin-February 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin-February 2025",
       "published": "2025-02-03",
       "cves": [
         {
@@ -352,7 +352,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2025-03-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—March 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—March 2025",
       "published": "2025-03-03",
       "cves": [
         {
@@ -524,7 +524,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2025-04-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—April 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—April 2025",
       "published": "2025-04-07",
       "cves": [
         {
@@ -752,7 +752,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2025-05-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—May 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—May 2025",
       "published": "2025-05-05",
       "cves": [
         {
@@ -944,7 +944,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2025-06-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—June 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—June 2025",
       "published": "2025-06-02",
       "cves": [
         {
@@ -1088,7 +1088,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2025-08-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—August 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—August 2025",
       "published": "2025-08-04",
       "cves": [
         {
@@ -1120,7 +1120,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2025-09-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—September 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—September 2025",
       "published": "2025-09-02",
       "cves": [
         {
@@ -1560,7 +1560,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2025-11-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—November 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—November 2025",
       "published": "2025-11-03",
       "cves": [
         {
@@ -1572,7 +1572,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2025-12-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—December 2025 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—December 2025",
       "published": "2025-12-01",
       "cves": [
         {
@@ -1976,7 +1976,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2026/2026-01-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—January 2026 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—January 2026",
       "published": "2026-01-05",
       "cves": [
         {
@@ -1988,14 +1988,14 @@
     },
     "https://source.android.com/docs/security/bulletin/2026/2026-02-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—February 2026 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—February 2026",
       "published": "2026-02-02",
       "cves": [],
       "noCveEntries": true
     },
     "https://source.android.com/docs/security/bulletin/2026/2026-03-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—March 2026 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—March 2026",
       "published": "2026-03-02",
       "cves": [
         {
@@ -2435,7 +2435,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2026/2026-04-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—April 2026 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—April 2026",
       "published": "2026-04-06",
       "cves": [
         {
@@ -2451,7 +2451,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2026/2026-05-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—May 2026 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—May 2026",
       "published": "2026-05-04",
       "cves": [
         {
@@ -2463,7 +2463,7 @@
     },
     "https://source.android.com/docs/security/bulletin/2026/2026-06-01": {
       "source": "android-security-bulletin",
-      "title": "Android Security Bulletin—June 2026 &nbsp;|&nbsp; Android Open Source Project",
+      "title": "Android Security Bulletin—June 2026",
       "published": "2026-06-01",
       "cves": [
         {

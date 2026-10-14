@@ -50,6 +50,24 @@ const page = (level, body = '') =>
   `<em>Published  October 5, 2026</em><p>Security patch levels of\n  ${level} or higher ` +
   `address all of these issues.</p>${body}`;
 
+describe('parseBulletin: the title', () => {
+  it('drops the site suffix when the live page encodes the separator', () => {
+    for (const sep of ['&nbsp;|&nbsp;', ' &nbsp;|&nbsp; ', ' | ', '&#160;|&#xA0;', '\u00a0|\u00a0']) {
+      const html =
+        `<title>Android Security Bulletin—Test 2026${sep}` +
+        'Android Open Source Project</title>';
+      assert.equal(parseBulletin(html).title, 'Android Security Bulletin—Test 2026', sep);
+    }
+  });
+
+  it('decodes character references in the title', () => {
+    const html =
+      '<title>Pixel &amp; Nexus&nbsp;Bulletin &#8212; Test &#x2014; 1 &nbsp;|&nbsp; ' +
+      'Android Open Source Project</title>';
+    assert.equal(parseBulletin(html).title, 'Pixel & Nexus Bulletin — Test — 1');
+  });
+});
+
 describe('parseBulletin: the AOSP bulletin of October 2026', () => {
   const bulletin = parseBulletin(AOSP);
 
