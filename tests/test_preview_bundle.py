@@ -1857,3 +1857,11 @@ def test_every_data_file_is_embedded_as_a_seed_a_page_reads_instead_of_fetching(
         assert "<" not in body, "a '<' could close the block early"
         # The < escape is plain JSON, so the seed parses back to the file's own data.
         assert json.loads(body) == json.loads(path.read_text(encoding="utf-8"))
+
+
+def test_the_feed_link_stays_a_plain_link_and_the_head_alternate_is_not_carried(text):
+    # The head is rebuilt from the front page's icons alone, so a <link rel=alternate> never
+    # reaches the file; the timeline's Subscribe link is a body link and is left as written.
+    assert not re.search(r"<link[^>]*rel=\"alternate\"", text)
+    assert text.count('class="chip-link" href="/api/feed.atom"') == 1
+    assert bundle.external_requests(text) == []

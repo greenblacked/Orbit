@@ -266,3 +266,22 @@ def test_the_compare_page_offers_each_family_in_the_order_of_the_config():
     html = page("compare/index.html")
     block = re.search(r'<select id="c-family">(.*?)</select>', html, re.DOTALL).group(1)
     assert re.findall(r'<option value="([A-Za-z]+)">\1</option>', block) == ALL
+
+
+@pytest.mark.parametrize("name", pages())
+def test_every_page_advertises_the_atom_feed(name):
+    tag = (
+        '<link rel="alternate" type="application/atom+xml" title="Release Orbit releases" '
+        'href="/api/feed.atom">'
+    )
+    html = page(name)
+    assert html.count(tag) == 1
+    assert html.index(tag) < html.index("</head>")
+
+
+def test_the_timeline_offers_a_subscribe_link_near_its_filters():
+    html = page("timeline/index.html")
+    link = re.search(r'<a class="chip-link" href="/api/feed\.atom"[^>]*>Subscribe', html)
+    assert link
+    assert html.index('id="filters"') < link.start() < html.index('id="count"')
+    assert html.count("/api/feed.atom") == 2  # the head link and this one
