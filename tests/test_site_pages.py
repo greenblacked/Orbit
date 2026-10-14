@@ -2272,12 +2272,19 @@ def test_the_owner_notes_win_over_a_summary_and_reach_the_front_page_card(browse
 
 
 def test_a_missing_notes_file_changes_nothing(browser, base_url):
+    data = with_summaries()
+    with_id = next(r["id"] for r in data["releases"] if r["family"] == "iOS")
+    bare_id = next(r["id"] for r in data["releases"] if "summary" not in r)
     context = make_context(browser, base_url)
     try:
         page = context.new_page()
+        serve_json(page, "**/api/releases.json", json.dumps(data))
         serve_json(page, "**/data/notes.json", "no", status=404, kind="text/plain")
         page.goto(base_url + "/timeline/")
         page.wait_for_selector(".tl-item")
-        assert page.locator(".tl-note").count() == 0
+        note = page.locator(f'.tl-item[data-id="{with_id}"] .tl-note')
+        assert note.count() == 1
+        assert note.inner_text().strip() == SUMMARY_TEXT[:150].strip()
+        assert page.locator(f'.tl-item[data-id="{bare_id}"] .tl-note').count() == 0
     finally:
         context.close()
