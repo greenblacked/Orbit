@@ -51,6 +51,8 @@ flowchart LR
 
 `/api/releases.json` (optionally `?vendor=apple`) answers one document. `/api/health` reports each source and is never cached (`Cache-Control: no-store`): `ok` means the Worker answered, `degraded` is true when any source is failed, stale or served from the bundled snapshot, and each source entry carries `stale`, `snapshot`, `lastError` (a short message) and `failedAt` (ms since the epoch), both null while the source is served live and fresh.
 
+`/api/feed.atom` (Atom, RFC 4287) and `/api/feed.json` (JSON Feed 1.1) list the newest 100 releases, built from the same data as `releases.json`, so a host off the live zone serves the snapshot. `?vendor=`, `?family=` (a family id such as `iOS`) and `?stage=` (`release`, `beta`, `rc`) narrow them, and an unknown value is a 400 JSON like `?vendor=`. An entry links to the vendor's page only when its host is one the site allows for that vendor, and otherwise to the release's row on `/timeline/`. The feeds send their own `Content-Type` (`application/atom+xml` and `application/feed+json`, both `utf-8`), the same security headers as the other API responses and `Cache-Control: public, max-age=300`. Every page advertises the Atom feed with `<link rel="alternate">` and the timeline has a Subscribe link; `scripts/serve_site.py` answers both feeds from the snapshot for the local preview.
+
 `/api/security.json` answers the bundled security notes from `src/data/security.json` (schema 1; Apple and Android are the adapters, refreshed by `node deploy/snapshot_security.mjs`; the first refresh is committed, the owner having accepted the vendors' terms on 2026-10-14; refresh it by dispatching the Security snapshot workflow and committing its printed payload by pull request). The document holds `schema`, `generatedAt`, `sources`, `notes` (keyed by an `https` note URL, each with a `source` and its sorted `cves`) and `releases` (keyed by a release id from `releases.json`, each with a `status`, sorted `notes` and `cves`, and a `count`). A `status` is one of `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` or `not-connected`; only a `release` is ever `listed` or `no-cve-entries`, and every other release is `not-applicable`. `tests/security.test.mjs` is the executable contract; the reasoning is in [ADR 0008](docs/adr/0008-security-notes-are-a-separate-payload.md).
 
 ```json
@@ -155,7 +157,7 @@ The preferred rollback is a new patch release with the change reverted. The one-
 │   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js,
 │   │                      security.js, lookup.js
 │   └── data/              releases.json (snapshot), security.json, families.json, features.json
-├── deploy/                the Worker (worker.js, releases.js, families.js,
+├── deploy/                the Worker (worker.js, feeds.js, releases.js, families.js,
 │   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs,
 │   │                      snapshot_security.mjs
 │   └── security/          security-notes adapters (snapshot step only: Apple, Android)
