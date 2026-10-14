@@ -742,6 +742,25 @@ def test_a_device_with_no_release_has_nothing_to_step_through(page, base_url):
     assert position(page, "SteamOS") == ""
 
 
+def test_the_ipad_sidebar_has_nothing_to_choose_when_the_data_has_no_ipad_release(
+    page, base_url
+):
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [r for r in data["releases"] if r["family"] != "iPadOS"]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    group = device(page, "iPadOS").get_by_role("group", name="iPadOS releases to show")
+    for name in TABS:
+        button = group.get_by_role("button", name=name, exact=True)
+        assert button.is_disabled(), name
+        button.click(force=True)
+    assert errors == []
+
+
 def test_the_devices_wait_for_their_script_before_they_step(page, base_url):
     held = []
     page.route("**/assets/below.js", lambda route: held.append(route))

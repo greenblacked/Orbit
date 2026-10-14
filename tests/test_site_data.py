@@ -115,9 +115,9 @@ FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
 # Raw, like the lazy effects. below.js grew when every drawn device became a set of stepping
-# controls (13,263 to 18,057 bytes for the three scripts, 6,806 gzipped); the limit leaves
+# controls (13,263 to 21,375 bytes for the three scripts, 7,853 gzipped); the limit leaves
 # about 20% room. None of it is first paint.
-AFTER_PAINT_BUDGET = 22_000
+AFTER_PAINT_BUDGET = 25_500
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])

@@ -24,6 +24,8 @@
   function trail(label, next) { return label && next ? label + " ·" : label; }
   var NUM = /^\d+([.H]\d+)*$/;
   var RANK = { beta: 0, rc: 1, release: 2 };
+  // nums, byVersion and newest mirror parts, compareVersions and better in releases.js (RO.better):
+  // change them together. They are copied so this file's helpers run in Node without RO.
   function nums(v) {
     return String(v).split(/[.H]/i).map(function (n) { return parseInt(n, 10) || 0; });
   }
@@ -185,10 +187,11 @@
     var tabs = box.querySelectorAll("[data-scope]");
     if (!tabs.length) return;
     var hasPre = steps(releases, "iPadOS", "pre").some(function (r) { return r.stage !== "release"; });
+    var none = !steps(releases, "iPadOS", "all").length;
     var now = ipadScope();
     for (var i = 0; i < tabs.length; i++) {
       var mine = tabs[i].getAttribute("data-scope");
-      var off = mine === "pre" && !hasPre;
+      var off = none || (mine === "pre" && !hasPre);
       tabs[i].disabled = off;
       tabs[i].setAttribute("aria-pressed", String(mine === now));
       tabs[i].setAttribute("aria-disabled", String(off));
@@ -254,11 +257,12 @@
     var tabs = sec("iPadOS").querySelectorAll("[data-scope]");
     for (var t = 0; t < tabs.length; t++) tabs[t].addEventListener("click", function (e) {
       var pick = e.currentTarget.getAttribute("data-scope");
-      if (pick === ipadScope()) return;
+      var before = ipadScope();
       scope = pick;
       paintIpad();
       paintFields("iPadOS");
-      text(sec("iPadOS"), "step", said(shown("iPadOS")));
+      var now = shown("iPadOS");
+      if (now.r && ipadScope() !== before) text(sec("iPadOS"), "step", said(now));
     });
     var comp = sec("watchOS").querySelector('[data-act="cycle"]');
     if (comp) comp.addEventListener("click", function () {
