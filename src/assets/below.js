@@ -118,6 +118,13 @@
     for (var i = 0; i < els.length; i++) els[i].textContent = value;
   }
 
+  // Writes a live-region message. The same words twice would not be announced again, so every
+  // other identical message carries a trailing no-break space (tests compare stripped text).
+  function announce(root, msg) {
+    var el = root.querySelector('[data-f="step"]');
+    if (el) el.textContent = msg + (el.textContent === msg ? "\u00a0" : "");
+  }
+
   function sec(family) { return document.querySelector('section.fam[data-family="' + family + '"]'); }
   function label(r) { return r.family + " " + RO.short(r) + (r.build ? " (" + r.build + ")" : ""); }
   function newestBeta(family) {
@@ -205,7 +212,7 @@
     text(box, "version", r ? r.version : "None in the data");
     text(box, "build", r && r.build ? r.build : "None");
     text(box, "date", r ? RO.day(r.t) : "None");
-    if (announce && r) text(box, "step", said(s));
+    if (announce && r) announce(box, said(s));
   }
   // The chosen tab, unless it has nothing to show (no beta on the day shown): the choice itself is
   // kept, so it applies again once betas return.
@@ -237,6 +244,7 @@
     var values = r ? [r.version, r.build || "None", brief(RO.day(r.t))] : ["None", "None", "None"];
     text(box, "k", MODES[mode]);
     text(box, "v", values[mode]);
+    box.querySelector('[data-act="cycle"]').setAttribute("data-mode", String(mode));
     if (announce) text(box, "said", "Showing " + MODES[mode].toLowerCase() + " " + values[mode]);
   }
   // One device after a step; the others and the iPhone's rows do not depend on it.
@@ -244,15 +252,14 @@
     var s = shown(family);
     var j = move(s.i, s.rows.length, by);
     if (s.beta || !s.rows.length || j === s.i) {
-      text(sec(family), "step", "");
-      text(sec(family), "step", blocked(s.rows.length, by, s.beta));
+      announce(sec(family), blocked(s.rows.length, by, s.beta));
       return;
     }
     picked[family] = s.rows[j].id;
     paintFields(family);
     if (family === "macOS") paintMac(false);
     if (family === "watchOS") paintWatch(false);
-    text(sec(family), "step", said(shown(family)));
+    announce(sec(family), said(shown(family)));
   }
   function wireDevice(box) {
     var family = box.getAttribute("data-family");
@@ -301,7 +308,7 @@
       paintFields("iPadOS");
       var now = shown("iPadOS");
       if (!now.r || pick === before) return;
-      text(sec("iPadOS"), "step", sameRows(was, now.rows) ? TABS[pick] + ": same as " + TABS[before] : said(now));
+      announce(sec("iPadOS"), sameRows(was, now.rows) ? TABS[pick] + ": same as " + TABS[before] : said(now));
     });
     var comp = sec("watchOS").querySelector('[data-act="cycle"]');
     if (comp) comp.addEventListener("click", function () {

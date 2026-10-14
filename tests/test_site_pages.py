@@ -506,7 +506,7 @@ def test_the_watch_keeps_the_year_in_the_released_mode(page, base_url):
     disc = page.locator(".m-comp").bounding_box()
     text = page.locator(".m-comp .v").bounding_box()
     assert text["x"] >= disc["x"] and text["x"] + text["width"] <= disc["x"] + disc["width"]
-    assert text["width"] <= 77, "the date must fit inside the black disc, not only the button"
+    assert text["width"] <= 68, "the date must fit inside the black disc, not only the button"
     for selector in (".m-comp .k", ".m-wname .m-pos", ".m-watch .m-name"):
         size = page.eval_on_selector(selector, "e => parseFloat(getComputedStyle(e).fontSize)")
         assert size >= 11, (selector, size)
@@ -705,11 +705,11 @@ def test_a_step_is_announced_once_with_its_position(page, base_url, family):
     rows = public(family)
     live = device(page, family).locator("[data-f=step]")
     assert live.get_attribute("aria-live") == "polite"
-    assert live.inner_text() == "", "nothing is announced for the first paint"
+    assert live.inner_text().strip() == "", "nothing is announced for the first paint"
     press(page, family, "Older")
-    assert live.inner_text() == f"{named(family, rows[1])}, 2 of {len(rows)}"
+    assert live.inner_text().strip() == f"{named(family, rows[1])}, 2 of {len(rows)}"
     press(page, family, "Older")
-    assert live.inner_text() == f"{named(family, rows[2])}, 3 of {len(rows)}"
+    assert live.inner_text().strip() == f"{named(family, rows[2])}, 3 of {len(rows)}"
     assert device(page, family).locator("[data-f=step][aria-live]").count() == 1
 
 
@@ -752,18 +752,18 @@ def test_a_press_that_cannot_move_says_why(page, base_url, family):
     live = device(page, family).locator("[data-f=step]")
     assert hardware(page, family, "Newer").get_attribute("aria-disabled") == "true"
     press(page, family, "Newer")
-    assert live.inner_text() == "Already the newest"
+    assert live.inner_text().strip() == "Already the newest"
     assert position(page, family) == f"1 / {count}"
     hardware(page, family, "Older").focus()
     page.keyboard.press("End")
     assert position(page, family) == f"{count} / {count}"
     press(page, family, "Older")
-    assert live.inner_text() == "Already the oldest"
+    assert live.inner_text().strip() == "Already the oldest"
     assert position(page, family) == f"{count} / {count}"
     focused = page.evaluate("document.activeElement.getAttribute('aria-label')")
     assert focused == f"Older {family} release", "a blocked key keeps the focus"
     page.keyboard.press("Home")
-    assert live.inner_text() == f"{named(family, public(family)[0])}, 1 of {count}"
+    assert live.inner_text().strip() == f"{named(family, public(family)[0])}, 1 of {count}"
 
 
 def test_the_mac_on_the_beta_channel_says_why_its_steps_are_paused(page, base_url):
@@ -778,7 +778,7 @@ def test_the_mac_on_the_beta_channel_says_why_its_steps_are_paused(page, base_ur
     assert note.is_visible()
     live = device(page, "macOS").locator("[data-f=step]")
     hardware(page, "macOS", "Older").evaluate("button => button.click()")
-    assert live.inner_text() == paused
+    assert live.inner_text().strip() == paused
     for which in ("Newer", "Older"):
         assert hardware(page, "macOS", which).get_attribute("aria-disabled") == "true"
     page.click("[data-ch=release]")
@@ -953,7 +953,7 @@ def test_the_ipad_sidebar_chooses_what_the_ipad_steps_through(page, base_url):
     assert tabs["History"].get_attribute("aria-pressed") == "true"
     assert tabs["Latest"].get_attribute("aria-pressed") == "false"
     assert position(page, "iPadOS") == f"1 / {len(everything)}"
-    assert ipad.locator("[data-f=step]").inner_text().endswith(f"1 of {len(everything)}")
+    assert ipad.locator("[data-f=step]").inner_text().strip().endswith(f"1 of {len(everything)}")
     if pre:
         tabs["Betas"].click()
         assert position(page, "iPadOS") == f"1 / {len(pre)}"
@@ -1007,12 +1007,12 @@ def test_the_ipad_says_when_a_tab_changes_nothing(page, base_url):
     count = len(public("iPadOS", data))
     assert len(releases("iPadOS", data)) == count, "the data has no iPadOS beta"
     group.get_by_role("button", name="History", exact=True).click()
-    assert live.inner_text() == "History: same as Latest"
+    assert live.inner_text().strip() == "History: same as Latest"
     assert position(page, "iPadOS") == f"1 / {count}"
     group.get_by_role("button", name="Latest", exact=True).click()
-    assert live.inner_text() == "Latest: same as History"
+    assert live.inner_text().strip() == "Latest: same as History"
     group.get_by_role("button", name="Latest", exact=True).click()
-    assert live.inner_text() == "Latest: same as History", "the tab already chosen says nothing new"
+    assert live.inner_text().strip() == "Latest: same as History", "the tab already chosen says nothing new"
 
 
 def test_the_ipad_sidebar_labels_scale_with_the_screen(browser, base_url):
