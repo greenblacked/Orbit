@@ -126,6 +126,8 @@ describe('summaryOfTitle', () => {
     assert.equal(summaryOfTitle('SteamOS 3.7.13: Beta, Docking fixes'), 'Docking fixes');
     assert.equal(summaryOfTitle('SteamOS 3.7.13 Docking fixes'), 'Docking fixes');
     assert.equal(summaryOfTitle('SteamOS 3.8.1 Preview 20250522.1 - Fan fixes'), 'Fan fixes');
+    assert.equal(summaryOfTitle('SteamOS 3.8 Stable: Preview of new UI'), 'Preview of new UI');
+    assert.equal(summaryOfTitle('SteamOS 3.8 Stable (20250101.1): Beta fixes'), 'Beta fixes');
   });
 
   it('gives nothing for a title that is only the name, version, channel and build', () => {

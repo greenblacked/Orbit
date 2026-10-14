@@ -91,16 +91,21 @@ export function summaryOfTitle(title) {
   const m = TITLE_RE.exec(String(title ?? '').trim());
   if (!m) return '';
   let rest = String(title).trim().slice(m[0].length);
-  // Peel the channel words, builds in brackets and separators off the front, in any order.
-  for (;;) {
-    const next = rest
-      .replace(/^[\s:,;\-\u2013\u2014]+/, '')
-      .replace(/^\([^)]*\)/, '')
-      .replace(/^\d{8}\.\d{1,3}\b/, '')
-      .replace(/^(?:stable|beta|preview)\b/i, '');
-    if (next === rest) break;
-    rest = next;
-  }
+  // Peel separators and builds (bracketed or bare) off the front.
+  const peel = (text) => {
+    for (;;) {
+      const next = text
+        .replace(/^[\s:,;\-\u2013\u2014]+/, '')
+        .replace(/^\([^)]*\)/, '')
+        .replace(/^\d{8}\.\d{1,3}\b/, '');
+      if (next === text) return text;
+      text = next;
+    }
+  };
+  // One channel word at most, and only straight after the version or its build, so a later
+  // "Preview" in the summary itself stays.
+  rest = peel(rest).replace(/^(?:stable|beta|preview)\b/i, '');
+  rest = peel(rest);
   return cleanSummary(rest);
 }
 
