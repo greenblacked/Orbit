@@ -220,6 +220,13 @@ def test_the_worker_serves_a_404_page_and_keeps_workers_dev():
     assert route["previews_enabled"] is True
 
 
+def test_the_worker_keeps_its_logs():
+    config = json.loads((REPO / "deploy" / "wrangler.json").read_text(encoding="utf-8"))
+    # Workers Logs keeps the structured console.error lines for failed sources.
+    assert config["observability"]["enabled"] is True
+    assert config["observability"]["head_sampling_rate"] == 1
+
+
 def test_a_custom_domain_only_preview_log_reports_the_stage_host_and_no_workers_dev_url():
     reader = load_script("read_wrangler_deploy")
     log = '{"type": "preview", "preview_urls": ["https://stage.orbit.szolotov.com"]}\n'
