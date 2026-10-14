@@ -37,4 +37,4 @@ scanner reads the tables and the text separately.
 What the probe did not record: the rest of either page, any bulletin before October 2026, and the
 pre-2026 URL form `https://source.android.com/docs/security/bulletin/YYYY-MM-01`, which is read
 from the links of the October 2026 page (2025-03 to 2025-12). Vendor text in these files is data
-only. The terms of use for reading these pages automatically were not checked.
+only. The terms of use for reading these pages automatically were not checked (the owner accepted them on 2026-10-14; see ADR 0008).

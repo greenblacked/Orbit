@@ -451,6 +451,405 @@ def test_mock_controls_are_real_buttons_and_big_enough(page, base_url):
         assert page.locator(selector).evaluate("e => e.tagName") == "BUTTON"
 
 
+def test_a_stage_with_no_build_after_it_draws_no_separator(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    steam = page.locator('section.fam[data-family="SteamOS"] .screen')
+    assert next(r for r in releases("SteamOS") if r["stage"] == "release")["build"] == ""
+    assert steam.locator("[data-f=stage]").inner_text() == "Release"
+    assert steam.locator("[data-f=build]").inner_text() == ""
+    assert "·" not in steam.inner_text()
+    ios = page.locator('section.fam[data-family="iOS"] .screen')
+    assert ios.locator("[data-f=stage]").inner_text() == "Release ·"
+    assert ios.locator("[data-f=build]").inner_text().startswith("Build ")
+
+
+# --- the drawn devices step through the releases ----------------------------------------
+
+DEVICES = [*FAMILIES, "RouterOS", "Android", "Windows", "SteamOS"]
+TABS = ("Latest", "Betas", "History")
+
+
+def public(family, data=SNAPSHOT):
+    """The public releases of a family as a device steps through them: the highest version
+    first, a tie by date (the page's own rule for the newest, not the latest date)."""
+
+    def key(row):
+        return [int(part) for part in re.split(r"[.H]", row["version"])], row["date"]
+
+    return sorted((r for r in releases(family, data) if r["stage"] == "release"), key=key)[::-1]
+
+
+def device(page, family):
+    return page.locator(f'section.fam[data-family="{family}"]')
+
+
+def hardware(page, family, which):
+    """The Newer or Older button of a device, found by its accessible name."""
+    return device(page, family).get_by_role("button", name=f"{which} {family} release", exact=True)
+
+
+def position(page, family):
+    return device(page, family).locator("[data-f=pos]").inner_text()
+
+
+def named(family, row):
+    """How a step is announced and labelled: the family, the version and the build if any."""
+    return f"{family} {row['version']}" + (f" ({row['build']})" if row.get("build") else "")
+
+
+def timeline_href(page, release):
+    return page.evaluate("id => '/timeline/?id=' + encodeURIComponent(id)", release["id"])
+
+
+def press(page, family, which):
+    """Click a stepping button. Playwright will not click an aria-disabled one, and a visitor
+    can, so the click is sent by the page itself."""
+    hardware(page, family, which).evaluate("button => button.click()")
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_a_device_steps_through_the_public_releases_newest_first(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    rows = public(family)
+    count = len(rows)
+    assert count >= 2, "the snapshot gives every device something to step through"
+    section = device(page, family)
+    assert position(page, family) == f"1 / {count}"
+    assert hardware(page, family, "Newer").get_attribute("aria-disabled") == "true"
+    assert hardware(page, family, "Older").get_attribute("aria-disabled") == "false"
+    assert section.locator("[data-f=name]").first.inner_text() == f"{family} {rows[0]['version']}"
+    press(page, family, "Older")
+    assert position(page, family) == f"2 / {count}"
+    assert section.locator("[data-f=name]").first.inner_text() == f"{family} {rows[1]['version']}"
+    link = section.locator(".screen a.m-link")
+    assert link.get_attribute("href") == timeline_href(page, rows[1])
+    assert hardware(page, family, "Newer").get_attribute("aria-disabled") == "false"
+    press(page, family, "Newer")
+    assert position(page, family) == f"1 / {count}"
+    assert link.get_attribute("href") == timeline_href(page, rows[0])
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_the_screen_is_a_link_to_the_release_on_the_timeline(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    newest = public(family)[0]
+    link = device(page, family).locator(".screen a.m-link")
+    assert link.get_attribute("href") == timeline_href(page, newest)
+    label = link.get_attribute("aria-label")
+    assert label.startswith(f"Open {family} {newest['version']}")
+    assert label.endswith(f"on the timeline, 1 of {len(public(family))}")
+    box = link.bounding_box()
+    screen = device(page, family).locator(".screen").bounding_box()
+    assert box["width"] >= screen["width"] - 1 and box["height"] >= screen["height"] - 1
+
+
+def test_a_steamos_release_id_with_a_hash_is_encoded_in_the_timeline_link(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    href = device(page, "SteamOS").locator(".screen a.m-link").get_attribute("href")
+    assert href == "/timeline/?id=" + quote(public("SteamOS")[0]["id"], safe="")
+    assert "%23" in href and "#" not in href
+
+
+def test_a_device_link_opens_that_release_on_the_timeline(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    press(page, "SteamOS", "Older")
+    page.locator('section.fam[data-family="SteamOS"] .screen a.m-link').click()
+    page.wait_for_url(lambda url: "/timeline/" in url)
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    opened = page.evaluate("document.activeElement.closest('.tl-item').dataset.id")
+    assert opened == public("SteamOS")[1]["id"]
+
+
+@pytest.mark.parametrize("width", [1280, 360, 320], ids=["desktop", "phone", "narrow"])
+def test_every_stepping_button_is_a_real_button_of_at_least_44px(browser, base_url, width):
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        for family in DEVICES:
+            for which in ("Newer", "Older"):
+                button = hardware(page, family, which)
+                assert button.evaluate("e => e.tagName") == "BUTTON", (family, which)
+                size = button.bounding_box()
+                assert size["width"] >= 43.9 and size["height"] >= 43.9, (family, which, size)
+                assert size["x"] >= -1 and size["x"] + size["width"] <= width + 1, (family, which)
+        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_the_arrow_keys_home_and_end_step_a_focused_device(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    count = len(public(family))
+    hardware(page, family, "Older").focus()
+    page.keyboard.press("ArrowRight")
+    assert position(page, family) == f"2 / {count}"
+    page.keyboard.press("ArrowLeft")
+    assert position(page, family) == f"1 / {count}"
+    page.keyboard.press("ArrowLeft")
+    assert position(page, family) == f"1 / {count}", "the first release is an end, not a loop"
+    page.keyboard.press("End")
+    assert position(page, family) == f"{count} / {count}"
+    assert hardware(page, family, "Older").get_attribute("aria-disabled") == "true"
+    assert hardware(page, family, "Newer").get_attribute("aria-disabled") == "false"
+    page.keyboard.press("ArrowRight")
+    assert position(page, family) == f"{count} / {count}", "the last release is an end too"
+    press(page, family, "Older")
+    assert position(page, family) == f"{count} / {count}"
+    focused = page.evaluate("document.activeElement.getAttribute('aria-label')")
+    assert focused == f"Older {family} release", "the button at the end keeps the focus"
+    page.keyboard.press("Home")
+    assert position(page, family) == f"1 / {count}"
+
+
+def test_a_modifier_key_leaves_the_arrows_to_the_browser(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    hardware(page, "SteamOS", "Older").focus()
+    page.keyboard.press("Alt+ArrowRight")
+    assert position(page, "SteamOS") == f"1 / {len(public('SteamOS'))}"
+
+
+@pytest.mark.parametrize("family", ["iOS", "SteamOS", "watchOS"])
+def test_a_step_is_announced_once_with_its_position(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    rows = public(family)
+    live = device(page, family).locator("[data-f=step]")
+    assert live.get_attribute("aria-live") == "polite"
+    assert live.inner_text() == "", "nothing is announced for the first paint"
+    press(page, family, "Older")
+    assert live.inner_text() == f"{named(family, rows[1])}, 2 of {len(rows)}"
+    press(page, family, "Older")
+    assert live.inner_text() == f"{named(family, rows[2])}, 3 of {len(rows)}"
+    assert device(page, family).locator("[data-f=step][aria-live]").count() == 1
+
+
+def test_the_mac_announces_through_one_live_region_not_two(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    mac = device(page, "macOS")
+    assert mac.locator(".m-info").get_attribute("aria-live") is None
+    assert mac.locator("[aria-live]").count() == 1
+    page.click("[data-ch=beta]")
+    assert "beta channel" in mac.locator("[data-f=step]").inner_text()
+    assert position(page, "macOS") == "Beta"
+    for which in ("Newer", "Older"):
+        assert hardware(page, "macOS", which).get_attribute("aria-disabled") == "true"
+    page.keyboard.press("ArrowRight")
+    assert position(page, "macOS") == "Beta"
+    page.click("[data-ch=release]")
+    assert position(page, "macOS") == f"1 / {len(public('macOS'))}"
+
+
+def test_the_mac_channel_switch_keeps_the_release_it_was_on(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    press(page, "macOS", "Older")
+    page.click("[data-ch=beta]")
+    page.click("[data-ch=release]")
+    assert position(page, "macOS") == f"2 / {len(public('macOS'))}"
+    info = device(page, "macOS").locator(".m-info").inner_text()
+    assert public("macOS")[1]["build"] in info
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_the_caption_says_the_device_steps_and_stays_honest(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    caption = device(page, family).locator("figcaption").inner_text()
+    assert f"{family} releases from the data" in caption
+    assert "to step through them" in caption
+    assert caption.endswith("Mock screen, not a real device.")
+    assert "newest" not in caption
+    assert ("sidebar" in caption) == (family == "iPadOS")
+
+
+def test_a_data_poll_keeps_the_device_on_the_release_it_shows(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    rows = public("SteamOS")
+    count = len(rows)
+    press(page, "SteamOS", "Older")
+    press(page, "SteamOS", "Older")
+    assert position(page, "SteamOS") == f"3 / {count}"
+    link = device(page, "SteamOS").locator(".screen a.m-link")
+    kept = link.get_attribute("href")
+    # A newer release arrives: the device stays on the same one, now a place further down.
+    fresh = copy.deepcopy(SNAPSHOT)
+    fresh["releases"].insert(
+        0,
+        {
+            **rows[0],
+            "id": rows[0]["id"] + "-newer",
+            "version": "3.8.29",
+            "title": "SteamOS 3.8.29",
+            "date": "2026-10-12T17:00:00Z",
+        },
+    )
+    serve_json(page, "**/api/releases.json", json.dumps(fresh))
+    page.evaluate("window.RO.refresh()")
+    page.wait_for_function(
+        "n => document.querySelector('#steamos [data-f=pos]').textContent === n",
+        arg=f"4 / {count + 1}",
+    )
+    assert link.get_attribute("href") == kept
+    steam = device(page, "SteamOS")
+    assert steam.locator("[data-f=name]").first.inner_text() == f"SteamOS {rows[2]['version']}"
+    assert steam.locator("[data-f=step]").inner_text() == "", "a poll empties the stale words"
+    # The release it shows is withdrawn: it falls back to the newest.
+    gone = copy.deepcopy(fresh)
+    gone["releases"] = [r for r in gone["releases"] if r["id"] != rows[2]["id"]]
+    serve_json(page, "**/api/releases.json", json.dumps(gone))
+    page.evaluate("window.RO.refresh()")
+    page.wait_for_function(
+        "n => document.querySelector('#steamos [data-f=pos]').textContent === n",
+        arg=f"1 / {count}",
+    )
+    assert steam.locator("[data-f=name]").first.inner_text() == "SteamOS 3.8.29"
+
+
+def test_a_device_with_no_release_has_nothing_to_step_through(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [r for r in data["releases"] if r["family"] not in WAITING]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    for which in ("Newer", "Older"):
+        assert hardware(page, "SteamOS", which).is_disabled()
+    link = device(page, "SteamOS").locator(".screen a.m-link")
+    assert link.get_attribute("href") is None
+    assert position(page, "SteamOS") == ""
+
+
+def test_the_ipad_sidebar_has_nothing_to_choose_when_the_data_has_no_ipad_release(page, base_url):
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [r for r in data["releases"] if r["family"] != "iPadOS"]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    group = device(page, "iPadOS").get_by_role("group", name="iPadOS releases to show")
+    for name in TABS:
+        button = group.get_by_role("button", name=name, exact=True)
+        assert button.is_disabled(), name
+        button.click(force=True)
+    assert errors == []
+
+
+def test_the_devices_wait_for_their_script_before_they_step(page, base_url):
+    held = []
+    page.route("**/assets/below.js", lambda route: held.append(route))
+    with page.expect_request("**/assets/below.js"):
+        page.goto(base_url + "/")
+    cards_ready(page)
+    for _ in range(200):
+        if held:
+            break
+        page.wait_for_timeout(50)
+    assert held, "below.js was never requested"
+    for family in DEVICES:
+        for which in ("Newer", "Older"):
+            assert hardware(page, family, which).is_disabled(), (family, which)
+        assert device(page, family).locator(".screen a.m-link").get_attribute("href") is None
+        assert position(page, family) == ""
+    held[0].continue_()
+    mocks_ready(page)
+    assert not hardware(page, "SteamOS", "Older").is_disabled()
+
+
+@pytest.mark.parametrize("family", DEVICES)
+def test_no_mock_shows_a_separator_next_to_nothing(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    for _ in range(len(public(family))):
+        text = device(page, family).locator(".screen").inner_text()
+        assert not re.search(r"·\s*(\n|$)", text), text
+        assert not re.search(r"(^|\n)\s*·", text), text
+        press(page, family, "Older")
+
+
+@pytest.mark.parametrize("width", [320, 360, 1280], ids=["narrow", "phone", "desktop"])
+def test_no_device_scrolls_the_page_sideways_or_clips_its_buttons(browser, base_url, width):
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        for family in DEVICES:
+            for which in ("Newer", "Older"):
+                press(page, family, which)
+                box = hardware(page, family, which).bounding_box()
+                assert box["x"] >= -1 and box["x"] + box["width"] <= width + 1, (family, which)
+        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+        assert page.evaluate("document.body.scrollWidth <= window.innerWidth")
+    finally:
+        context.close()
+
+
+def test_routeros_starts_on_the_highest_version_not_the_latest_date(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    rows = public("RouterOS")
+    name = device(page, "RouterOS").locator("[data-f=name]").first.inner_text()
+    assert name == f"RouterOS {rows[0]['version']}"
+    assert page.locator("#routeros [data-f=pos]").inner_text() == f"1 / {len(rows)}"
+
+
+def test_the_ipad_sidebar_chooses_what_the_ipad_steps_through(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    ipad = device(page, "iPadOS")
+    group = ipad.get_by_role("group", name="iPadOS releases to show")
+    tabs = {name: group.get_by_role("button", name=name, exact=True) for name in TABS}
+    for name, button in tabs.items():
+        assert button.evaluate("e => e.tagName") == "BUTTON", name
+        assert button.bounding_box()["height"] >= 43.9, name
+    assert tabs["Latest"].get_attribute("aria-pressed") == "true"
+    everything = releases("iPadOS")
+    pre = [r for r in everything if r["stage"] != "release"]
+    tabs["History"].click()
+    assert tabs["History"].get_attribute("aria-pressed") == "true"
+    assert tabs["Latest"].get_attribute("aria-pressed") == "false"
+    assert position(page, "iPadOS") == f"1 / {len(everything)}"
+    assert ipad.locator("[data-f=step]").inner_text().endswith(f"1 of {len(everything)}")
+    if pre:
+        tabs["Betas"].click()
+        assert position(page, "iPadOS") == f"1 / {len(pre)}"
+    else:
+        assert tabs["Betas"].is_disabled()
+    tabs["Latest"].click()
+    assert position(page, "iPadOS") == f"1 / {len(public('iPadOS'))}"
+
+
 # --- the toast --------------------------------------------------------------------------
 
 
@@ -813,22 +1212,189 @@ def test_the_highlights_section_shows_with_sources_and_hides_when_empty(page, ba
 # --- the timeline -----------------------------------------------------------------------
 
 
-def test_the_timeline_lists_everything_newest_first_grouped_by_month(page, base_url):
+PAGE_MONTHS = 12
+
+
+def newest_months(entries, n=PAGE_MONTHS):
+    """The releases of the n newest months that have any, newest first (the timeline's window)."""
+    ordered = sorted(entries, key=lambda r: r["date"], reverse=True)
+    months = []
+    for r in ordered:
+        if r["date"][:7] not in months:
+            months.append(r["date"][:7])
+    return [r for r in ordered if r["date"][:7] in months[:n]]
+
+
+def monthly_data(n, family="iOS"):
+    """n months of iOS history, one release a month, the newest in October 2026."""
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = []
+    for k in range(n):
+        month = 10 - k
+        year = 2026 + (month - 1) // 12
+        month = (month - 1) % 12 + 1
+        data["releases"].append(
+            {
+                **APPLE_FIRST,
+                "id": f"m{k}",
+                "family": family,
+                "version": f"26.{n - k}",
+                "major": 26,
+                "stage": "release",
+                "beta": None,
+                "build": f"B{k}",
+                "title": f"iOS 26.{n - k}",
+                "date": f"{year}-{month:02d}-10T00:00:00Z",
+            }
+        )
+    return data
+
+
+def active_id(page):
+    return page.evaluate("document.activeElement.closest('.tl-item')?.dataset.id ?? null")
+
+
+def test_the_timeline_draws_the_newest_twelve_months_grouped_newest_first(page, base_url):
     page.goto(base_url + "/timeline/")
     page.wait_for_selector(".tl-item")
+    shown = newest_months(SNAPSHOT["releases"])
+    older = len(SNAPSHOT["releases"]) - len(shown)
+    assert older > 0, "the snapshot must be longer than the window for this test to mean anything"
+    assert page.locator(".tl-item").count() == len(shown)
+    months = page.locator(".month-h").all_inner_texts()
+    assert len(months) == PAGE_MONTHS
+    assert months[0] == "October 2026" and "September 2024" not in months
+    assert len(months) == len(set(months))
+    # The count is of the filtered list, not of what is drawn.
+    assert page.inner_text("#count") == f"{len(SNAPSHOT['releases'])} releases"
+    hrefs = page.locator(".tl-link").evaluate_all("els => els.map(a => a.href)")
+    assert sorted(hrefs) == sorted(r["url"] for r in shown)
+    # Releases of one source can share a link, so take the dates of a link newest first.
+    by_url = {}
+    for r in sorted(shown, key=lambda r: r["date"], reverse=True):
+        by_url.setdefault(r["url"], []).append(r["date"])
+    dates = [by_url[href].pop(0) for href in hrefs]
+    assert dates == sorted(dates, reverse=True)
+    button = page.locator("#more")
+    assert button.is_visible() and button.evaluate("e => e.tagName") == "BUTTON"
+    assert button.get_attribute("type") == "button"
+    noun = "release" if older == 1 else "releases"
+    assert button.inner_text() == f"Show older ({older} more {noun})"
+    assert button.bounding_box()["height"] >= 43.5
+
+
+def test_show_older_adds_the_next_months_and_moves_focus_to_the_first_new_row(page, base_url):
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    shown_ids = {r["id"] for r in newest_months(SNAPSHOT["releases"])}
+    older = sorted(
+        (r for r in SNAPSHOT["releases"] if r["id"] not in shown_ids),
+        key=lambda r: r["date"],
+        reverse=True,
+    )
+    before = page.locator(".tl-item").evaluate_all("els => els.map(e => e.dataset.id)")
+    page.click("#more")
+    after = page.locator(".tl-item").evaluate_all("els => els.map(e => e.dataset.id)")
+    assert after[: len(before)] == before, "the rows already drawn are kept, in place"
+    assert after[len(before) :] == [r["id"] for r in older]
+    assert active_id(page) == older[0]["id"]
+    assert page.locator(".month-h").all_inner_texts()[-1] == "September 2024"
+    assert page.locator("#tl-more").is_hidden()
+    assert page.inner_text("#count") == f"{len(SNAPSHOT['releases'])} releases"
+
+
+def test_show_older_steps_through_a_long_history_twelve_months_at_a_time(page, base_url):
+    serve_json(page, "**/api/releases.json", json.dumps(monthly_data(30)))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    assert page.locator(".month").count() == 12
+    assert page.inner_text("#count") == "30 releases"
+    assert page.inner_text("#more") == "Show older (18 more releases)"
+    page.click("#more")
+    assert page.locator(".month").count() == 24
+    assert active_id(page) == "m12"
+    assert page.inner_text("#more") == "Show older (6 more releases)"
+    assert page.inner_text("#count") == "30 releases"
+    page.click("#more")
+    assert page.locator(".month").count() == 30
+    assert active_id(page) == "m24"
+    assert page.locator("#tl-more").is_hidden()
+    months = page.locator(".month-h").all_inner_texts()
+    assert months[0] == "October 2026" and months[-1] == "May 2024" and len(set(months)) == 30
+    # A poll that changes nothing keeps what was opened.
+    page.evaluate("RO.refresh()")
+    assert page.locator(".month").count() == 30
+
+
+def test_a_filter_is_paged_after_filtering_and_a_short_result_has_no_button(page, base_url):
+    data = monthly_data(30)
+    for k, r in enumerate(data["releases"]):
+        if k % 2:
+            r.update(family="macOS", major=26, title="macOS " + r["version"])
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.click("#more")
+    assert page.locator(".month").count() == 24
+    # A filter starts again from the newest months and counts the filtered list.
+    page.click("#chips-family [data-v=iOS]")
+    assert page.inner_text("#count") == "15 iOS releases"
+    assert page.locator(".month").count() == 12
+    assert page.inner_text("#more") == "Show older (3 more releases)"
+    page.click("#more")
+    assert page.locator(".tl-item").count() == 15
+    assert page.locator("#tl-more").is_hidden()
+    page.click("#chips-stage [data-v=beta]")
+    assert page.locator(".tl-item").count() == 0
+    assert page.locator("#tl-more").is_hidden()
+    page.click("#chips-stage [data-v=all]")
+    page.click("#chips-family [data-v=all]")
+    assert page.locator(".month").count() == 12
+    assert page.locator("#tl-more").is_visible()
+
+
+def test_a_filtered_address_with_few_months_shows_everything_and_no_button(page, base_url):
+    page.goto(base_url + "/timeline/?family=iOS")
+    page.wait_for_selector(".tl-item")
+    assert page.locator(".tl-item").count() == len(releases("iOS"))
+    assert page.locator("#tl-more").is_hidden()
+
+
+def test_an_id_older_than_the_window_opens_the_months_down_to_it(page, base_url):
+    serve_json(page, "**/api/releases.json", json.dumps(monthly_data(40)))
+    page.goto(base_url + "/timeline/?id=m20")
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert active_id(page) == "m20"
+    # Opened in whole steps: 21 months are needed, so two steps of twelve.
+    assert page.locator(".month").count() == 24
+    assert page.inner_text("#more") == "Show older (16 more releases)"
+    assert "id=" not in page.evaluate("() => window.location.search")
+
+
+def test_an_id_hidden_by_the_filters_and_the_window_clears_the_filters_and_opens(page, base_url):
+    data = monthly_data(30)
+    data["releases"][25].update(stage="beta", beta=1)
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/timeline/?stage=release&id=m25")
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert active_id(page) == "m25"
+    assert page.get_attribute("#chips-stage [data-v=all]", "aria-pressed") == "true"
+    assert page.locator(".month").count() == 30
+
+
+def test_the_timeline_lists_everything_once_all_months_are_open(page, base_url):
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    for _ in range(50):
+        if not page.is_visible("#tl-more"):
+            break
+        page.click("#more")
     assert page.locator(".tl-item").count() == len(SNAPSHOT["releases"])
     months = page.locator(".month-h").all_inner_texts()
     assert months[0] == "October 2026" and months[-1] == "September 2024"
     assert len(months) == len(set(months))
-    assert page.inner_text("#count") == f"{len(SNAPSHOT['releases'])} releases"
     hrefs = page.locator(".tl-link").evaluate_all("els => els.map(a => a.href)")
     assert sorted(hrefs) == sorted(r["url"] for r in SNAPSHOT["releases"])
-    # Releases of one source can share a link, so take the dates of a link newest first.
-    by_url = {}
-    for r in sorted(SNAPSHOT["releases"], key=lambda r: r["date"], reverse=True):
-        by_url.setdefault(r["url"], []).append(r["date"])
-    dates = [by_url[href].pop(0) for href in hrefs]
-    assert dates == sorted(dates, reverse=True)
 
 
 def test_the_filter_chips_narrow_by_os_and_by_stage(page, base_url):
@@ -855,7 +1421,7 @@ def test_the_filter_chips_narrow_by_os_and_by_stage(page, base_url):
     assert page.inner_text("#count") == "No iOS release candidates in the data."
     page.click("#chips-family [data-v=all]")
     page.click("#chips-stage [data-v=all]")
-    assert page.locator(".tl-item").count() == len(SNAPSHOT["releases"])
+    assert page.locator(".tl-item").count() == len(newest_months(SNAPSHOT["releases"]))
 
 
 def test_a_filtered_address_opens_filtered(page, base_url):
@@ -874,6 +1440,73 @@ def test_a_poll_with_nothing_new_leaves_the_timeline_and_its_focus_alone(page, b
     page.evaluate("RO.refresh()")
     assert page.evaluate("document.activeElement.dataset.mark") == "kept"
     assert page.evaluate("document.querySelector('.tl-item a').dataset.mark") == "kept"
+
+
+def test_a_poll_that_adds_a_month_keeps_the_opened_months(page, base_url):
+    first = monthly_data(30)
+    serve_json(page, "**/api/releases.json", json.dumps(first))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.click("#more")
+    assert page.locator(".month").count() == 24
+    newest = {
+        **first["releases"][0],
+        "id": "new",
+        "date": "2026-11-10T00:00:00Z",
+    }
+    second = {**first, "releases": [newest, *first["releases"]]}
+    serve_json(page, "**/api/releases.json", json.dumps(second))
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector('.tl-item[data-id="new"]')
+    assert page.locator(".month").count() == 25
+    assert page.locator('.tl-item[data-id="m23"]').count() == 1
+    page.click("#more")
+    assert page.locator(".month").count() == 31
+    assert not page.is_visible("#tl-more")
+
+
+def test_a_poll_that_hides_the_button_moves_its_focus_to_the_last_row(page, base_url):
+    first = monthly_data(13)
+    serve_json(page, "**/api/releases.json", json.dumps(first))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.focus("#more")
+    second = {**first, "releases": first["releases"][:-1]}
+    serve_json(page, "**/api/releases.json", json.dumps(second))
+    page.evaluate("RO.refresh()")
+    page.wait_for_function("document.querySelector('#tl-more').hidden")
+    last = page.locator(".tl-item").last.get_attribute("data-id")
+    assert active_id(page) == last
+
+
+def test_a_poll_that_adds_a_month_keeps_the_default_view_at_twelve_months(page, base_url):
+    first = monthly_data(30)
+    serve_json(page, "**/api/releases.json", json.dumps(first))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    newest = {**first["releases"][0], "id": "new", "date": "2026-11-10T00:00:00Z"}
+    second = {**first, "releases": [newest, *first["releases"]]}
+    serve_json(page, "**/api/releases.json", json.dumps(second))
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector('.tl-item[data-id="new"]')
+    assert page.locator(".month").count() == 12
+
+
+def test_a_poll_that_pushes_the_focused_row_out_moves_the_focus_to_a_neighbour(page, base_url):
+    first = monthly_data(30)
+    serve_json(page, "**/api/releases.json", json.dumps(first))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.focus('.tl-item[data-id="m11"] a')
+    newest = {**first["releases"][0], "id": "new", "date": "2026-11-10T00:00:00Z"}
+    second = {**first, "releases": [newest, *first["releases"]]}
+    serve_json(page, "**/api/releases.json", json.dumps(second))
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector('.tl-item[data-id="new"]')
+    assert page.locator('.tl-item[data-id="m11"]').count() == 0
+    assert page.evaluate(
+        "document.activeElement.id === 'more' || !!document.activeElement.closest('.tl-item')"
+    )
 
 
 # --- compare ----------------------------------------------------------------------------
@@ -1026,6 +1659,80 @@ def test_compare_cards_draw_a_sigil_and_name_the_channel_without_a_build(page, b
     assert page.locator(".cmp-card .sigil svg").count() == 2
     words = " ".join(cards.all_inner_texts())
     assert "No build number" not in words and "Stable" in words and "Beta" in words
+
+
+def test_compare_groups_the_pickers_by_major_version_newest_line_first(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    majors = sorted({r["major"] for r in ios}, reverse=True)
+    assert len(majors) >= 2
+    for picker in ("#c-from", "#c-to"):
+        labels = page.locator(f"{picker} optgroup").evaluate_all("els => els.map(e => e.label)")
+        assert labels == [f"iOS {m}" for m in majors]
+        # Every release is in the group of its own major, and none is lost or doubled.
+        grouped = page.locator(f"{picker} optgroup").evaluate_all(
+            "els => els.map(g => [g.label, [...g.children].map(o => o.value)])"
+        )
+        for label, ids in grouped:
+            major = int(label.split()[-1])
+            assert ids == [r["id"] for r in ios if r["major"] == major]
+        assert page.locator(f"{picker} > option").count() == 0
+        assert page.locator(f"{picker} option").count() == len(ios)
+    assert page.input_value("#c-to") == ios[0]["id"]
+    assert page.input_value("#c-from") == default_from(ios)["id"]
+
+
+def test_compare_keeps_its_picks_across_groups_and_restores_them_from_the_address(page, base_url):
+    ios = releases("iOS")
+    older = next(r for r in ios if r["major"] != ios[0]["major"])
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    page.select_option("#c-from", older["id"])
+    assert page.input_value("#c-from") == older["id"]
+    group = page.eval_on_selector("#c-from", "s => s.selectedOptions[0].parentElement.label")
+    assert group == f"iOS {older['major']}"
+    assert f"from={quote(older['id'], safe='')}" in page.url
+    page.goto(base_url + f"/compare/?family=iOS&from={quote(older['id'], safe='')}")
+    page.wait_for_selector(".cmp-cards")
+    assert page.input_value("#c-from") == older["id"]
+    assert page.input_value("#c-to") == ios[0]["id"]
+    page.select_option("#c-family", "Android")
+    labels = page.locator("#c-to optgroup").evaluate_all("els => els.map(e => e.label)")
+    assert labels and all(label.startswith("Android ") for label in labels)
+
+
+def test_compare_groups_windows_by_product_not_by_update_year(page, base_url):
+    win = releases("Windows")
+    page.goto(base_url + "/compare/?family=Windows")
+    page.wait_for_selector(".cmp-cards")
+    grouped = page.locator("#c-to optgroup").evaluate_all(
+        "els => els.map(g => [g.label, [...g.children].map(o => o.value)])"
+    )
+    products = sorted({r["title"].split()[1] for r in win}, reverse=True)
+    assert [label for label, _ in grouped] == [f"Windows {p}" for p in products]
+    flat = page.locator("#c-to option").evaluate_all("els => els.map(o => o.value)")
+    titles = {r["id"]: r["title"] for r in win}
+    for label, ids in grouped:
+        assert ids == [i for i in flat if titles[i].startswith(label + " ")]
+
+
+def test_compare_ranks_a_windows_row_without_a_title_after_the_products(page, base_url):
+    win = releases("Windows")
+    data = copy.deepcopy(SNAPSHOT)
+    bare = {**win[0], "id": "bare", "version": "26H2", "major": 26}
+    bare.pop("title", None)
+    data["releases"] = [*data["releases"], bare]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/compare/?family=Windows")
+    page.wait_for_selector(".cmp-cards")
+    grouped = page.locator("#c-to optgroup").evaluate_all(
+        "els => els.map(g => [g.label, [...g.children].map(o => o.value)])"
+    )
+    assert grouped[-1][0] == "Windows 26"
+    assert grouped[-1][1] == ["bare"]
+    assert all(ids != ["bare"] for _, ids in grouped[:-1])
+    assert grouped[0][0] != "Windows 26"
 
 
 def test_compare_counts_betas_in_between_and_changes_family(page, base_url):

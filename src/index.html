@@ -205,6 +205,17 @@
 </ul>
 <noscript><p class="notice">The release cards need JavaScript. Read the releases at <a href="https://developer.apple.com/news/releases/" target="_blank" rel="noopener noreferrer">Apple Developer Releases<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://mikrotik.com/download/changelogs" target="_blank" rel="noopener noreferrer">MikroTik changelogs<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://source.android.com/docs/setup/reference/build-numbers" target="_blank" rel="noopener noreferrer">AOSP build numbers<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" rel="noopener noreferrer">Windows release health<span class="sr-only"> (opens in a new tab)</span></a> or <a href="https://store.steampowered.com/news/app/1675200" target="_blank" rel="noopener noreferrer">Steam Deck news<span class="sr-only"> (opens in a new tab)</span></a> directly.</p></noscript>
 </section>
+<section class="wrap lookup" aria-labelledby="lk-h">
+<h2 id="lk-h" class="title">Check my version</h2>
+<p class="small">Is your build the newest? Pick a platform and type a version or build number from Settings or About.</p>
+<form class="lk-form" id="lk-form" hidden>
+<div class="field"><label for="lk-family">Platform</label><select id="lk-family" name="platform"><option value="iOS">iOS</option><option value="iPadOS">iPadOS</option><option value="macOS">macOS</option><option value="watchOS">watchOS</option><option value="tvOS">tvOS</option><option value="visionOS">visionOS</option><option value="RouterOS">RouterOS</option><option value="Android">Android</option><option value="Windows">Windows</option><option value="SteamOS">SteamOS</option></select></div>
+<div class="field"><label for="lk-build">Version or build</label><input class="lk-input" id="lk-build" name="build" type="text" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="lk-help"></div>
+<button class="lk-go" type="submit">Check</button>
+</form>
+<p class="small lk-help" id="lk-help" hidden>Type the version or build number shown in Settings, About or System information.</p>
+<div class="lk-result" id="lk-result" role="status" aria-live="polite" aria-atomic="true"></div>
+</section>
 <section id="ios" class="fam fam-ios" data-family="iOS" aria-labelledby="ios-h">
 <div class="wrap fam-grid">
 <div class="fam-copy reveal">
@@ -223,8 +234,9 @@
 <div class="dev dev-phone">
 <span class="phone-island" aria-hidden="true"></span>
 <div class="screen m-ios">
+<a class="m-link"></a>
 <p class="m-bar" aria-hidden="true"><span>9:41</span><span class="m-batt"></span></p>
-<p class="m-title">Latest build</p>
+<p class="m-title"><span>Release info</span><span class="m-pos" data-f="pos"></span></p>
 <div class="m-card">
 <p class="m-name" data-f="name">iOS</p>
 <p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
@@ -238,8 +250,11 @@
 <li><span>Latest release</span><span data-f="pubrow"></span></li>
 </ul>
 </div>
+<button type="button" class="hw hw-e hw-prev" data-step="-1" aria-label="Newer iOS release" disabled></button>
+<button type="button" class="hw hw-e hw-next" data-step="1" aria-label="Older iOS release" disabled></button>
 </div>
-<figcaption class="small">A drawn iPhone showing the newest iOS release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn iPhone showing iOS releases from the data; use its side buttons, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>
@@ -261,9 +276,10 @@
 <div class="dev dev-ipad">
 <span class="ipad-cam" aria-hidden="true"></span>
 <div class="screen m-ipad">
-<ul class="m-side" aria-hidden="true"><li class="on">Latest</li><li>Betas</li><li>History</li></ul>
+<a class="m-link"></a>
+<div class="m-side" role="group" aria-label="iPadOS releases to show"><button type="button" class="m-segb" data-scope="pub" aria-pressed="true" disabled>Latest</button><button type="button" class="m-segb" data-scope="pre" aria-pressed="false" disabled>Betas</button><button type="button" class="m-segb" data-scope="all" aria-pressed="false" disabled>History</button></div>
 <div class="m-main">
-<p class="m-title">Release info</p>
+<p class="m-title"><span>Release info</span><span class="m-pos" data-f="pos"></span></p>
 <div class="m-card">
 <p class="m-name" data-f="name">iPadOS</p>
 <p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
@@ -271,8 +287,11 @@
 </div>
 </div>
 </div>
+<button type="button" class="hw hw-e hw-prev" data-step="-1" aria-label="Newer iPadOS release" disabled></button>
+<button type="button" class="hw hw-e hw-next" data-step="1" aria-label="Older iPadOS release" disabled></button>
 </div>
-<figcaption class="small">A drawn iPad showing the newest iPadOS release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn iPad showing iPadOS releases from the data; use its sidebar to choose which, and its top buttons, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>
@@ -294,11 +313,12 @@
 <div class="dev dev-mac">
 <div class="mac-lid">
 <div class="screen m-mac">
-<p class="m-menu" aria-hidden="true"><b>Release info</b></p>
+<a class="m-link"></a>
+<p class="m-menu" aria-hidden="true"><b>Release info</b><span class="m-pos" data-f="pos"></span></p>
 <div class="m-win">
 <span class="m-orb" aria-hidden="true"></span>
 <p class="m-name" data-f="name">macOS</p>
-<div class="m-info" aria-live="polite">
+<div class="m-info">
 <p><span class="k">Version</span><span data-f="version"></span></p>
 <p><span class="k">Build</span><span data-f="build"></span></p>
 <p><span class="k">Released</span><span data-f="date"></span></p>
@@ -312,8 +332,11 @@
 </div>
 </div>
 <span class="mac-base" aria-hidden="true"></span>
+<button type="button" class="hw hw-e hw-prev" data-step="-1" aria-label="Newer macOS release" disabled></button>
+<button type="button" class="hw hw-e hw-next" data-step="1" aria-label="Older macOS release" disabled></button>
 </div>
-<figcaption class="small">A drawn Mac showing the newest macOS release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn Mac showing macOS releases from the data; use its keys, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>
@@ -335,17 +358,23 @@
 <div class="dev dev-watch">
 <span class="w-strap w-top" aria-hidden="true"></span>
 <div class="w-case">
-<span class="w-crown" aria-hidden="true"></span>
 <div class="screen m-watch">
+<a class="m-link"></a>
 <p class="m-time" aria-hidden="true">10:09</p>
 <button type="button" class="m-comp" data-act="cycle" disabled><span class="k" data-f="k">Version</span><span class="v" data-f="v"></span></button>
 <p class="sr-only" data-f="said" aria-live="polite"></p>
+<div class="m-wname">
 <p class="m-name" data-f="name">watchOS</p>
+<p class="m-pos" data-f="pos"></p>
 </div>
+</div>
+<button type="button" class="hw hw-e hw-prev" data-step="-1" aria-label="Newer watchOS release" disabled></button>
+<button type="button" class="hw hw-e hw-next" data-step="1" aria-label="Older watchOS release" disabled></button>
 </div>
 <span class="w-strap w-bottom" aria-hidden="true"></span>
 </div>
-<figcaption class="small">A drawn Apple Watch showing the newest watchOS release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn Apple Watch showing watchOS releases from the data; use its crown and side button, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>
@@ -367,7 +396,8 @@
 <div class="dev dev-tv">
 <div class="tv-panel">
 <div class="screen m-tv">
-<p class="m-title">Release info</p>
+<a class="m-link"></a>
+<p class="m-title"><span>Release info</span><span class="m-pos" data-f="pos"></span></p>
 <div class="m-card">
 <p class="m-name" data-f="name">tvOS</p>
 <p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
@@ -376,8 +406,11 @@
 </div>
 </div>
 <span class="tv-stand" aria-hidden="true"></span>
+<button type="button" class="hw hw-e hw-prev" data-step="-1" aria-label="Newer tvOS release" disabled></button>
+<button type="button" class="hw hw-e hw-next" data-step="1" aria-label="Older tvOS release" disabled></button>
 </div>
-<figcaption class="small">A drawn Apple TV screen showing the newest tvOS release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn Apple TV screen showing tvOS releases from the data; use the buttons beside its stand, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>
@@ -397,11 +430,12 @@
 </div>
 <figure class="stage reveal">
 <div class="dev dev-vision">
-<span class="v-strap v-left" aria-hidden="true"></span>
-<span class="v-strap v-right" aria-hidden="true"></span>
+<button type="button" class="hw v-strap v-left hw-prev" data-step="-1" aria-label="Newer visionOS release" disabled></button>
+<button type="button" class="hw v-strap v-right hw-next" data-step="1" aria-label="Older visionOS release" disabled></button>
 <div class="v-visor">
 <div class="screen m-vision">
-<p class="m-title">Release info</p>
+<a class="m-link"></a>
+<p class="m-title"><span>Release info</span><span class="m-pos" data-f="pos"></span></p>
 <div class="m-card">
 <p class="m-name" data-f="name">visionOS</p>
 <p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
@@ -410,7 +444,8 @@
 </div>
 </div>
 </div>
-<figcaption class="small">A drawn Vision Pro headset showing the newest visionOS release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn Vision Pro headset showing visionOS releases from the data; use its straps, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>
@@ -432,7 +467,8 @@
 <div class="dev dev-router">
 <div class="rt-box">
 <div class="screen m-router">
-<p class="m-title">Release info</p>
+<a class="m-link"></a>
+<p class="m-title"><span>Release info</span><span class="m-pos" data-f="pos"></span></p>
 <div class="m-card">
 <p class="m-name" data-f="name">RouterOS</p>
 <p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
@@ -441,8 +477,11 @@
 </div>
 <ul class="rt-ports" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li></ul>
 </div>
+<button type="button" class="hw hw-e hw-prev" data-step="-1" aria-label="Newer RouterOS release" disabled></button>
+<button type="button" class="hw hw-e hw-next" data-step="1" aria-label="Older RouterOS release" disabled></button>
 </div>
-<figcaption class="small">A drawn MikroTik-style router showing the newest RouterOS release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn MikroTik-style router showing RouterOS releases from the data; use its top buttons, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>
@@ -464,16 +503,20 @@
 <div class="dev dev-phone">
 <span class="phone-hole" aria-hidden="true"></span>
 <div class="screen m-android">
+<a class="m-link"></a>
 <p class="m-bar" aria-hidden="true"><span>9:41</span><span class="m-batt"></span></p>
-<p class="m-title">Latest build</p>
+<p class="m-title"><span>Release info</span><span class="m-pos" data-f="pos"></span></p>
 <div class="m-card">
 <p class="m-name" data-f="name">Android</p>
 <p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
 <p class="m-sub" data-f="date"></p>
 </div>
 </div>
+<button type="button" class="hw hw-e hw-prev" data-step="-1" aria-label="Newer Android release" disabled></button>
+<button type="button" class="hw hw-e hw-next" data-step="1" aria-label="Older Android release" disabled></button>
 </div>
-<figcaption class="small">A drawn Android phone showing the newest Android release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn Android phone showing Android releases from the data; use its side buttons, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>
@@ -495,17 +538,22 @@
 <div class="dev dev-mac dev-pc">
 <div class="mac-lid">
 <div class="screen m-pc">
+<a class="m-link"></a>
 <div class="m-win">
 <p class="m-name" data-f="name">Windows</p>
 <p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
 <p class="m-sub" data-f="date"></p>
+<p class="m-sub"><span class="m-pos" data-f="pos"></span></p>
 </div>
 <p class="m-task" aria-hidden="true"><span></span><span></span><span></span><span></span></p>
 </div>
 </div>
 <span class="mac-base" aria-hidden="true"></span>
+<button type="button" class="hw hw-e hw-prev" data-step="-1" aria-label="Newer Windows release" disabled></button>
+<button type="button" class="hw hw-e hw-next" data-step="1" aria-label="Older Windows release" disabled></button>
 </div>
-<figcaption class="small">A drawn Windows laptop showing the newest Windows release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn Windows laptop showing Windows releases from the data; use its keys, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>
@@ -526,19 +574,21 @@
 <figure class="stage reveal">
 <div class="dev dev-deck">
 <div class="deck-body">
-<span class="deck-stick" aria-hidden="true"></span>
+<button type="button" class="hw deck-stick hw-prev" data-step="-1" aria-label="Newer SteamOS release" disabled></button>
 <div class="screen m-deck">
-<p class="m-title">Release info</p>
+<a class="m-link"></a>
+<p class="m-title"><span>Release info</span><span class="m-pos" data-f="pos"></span></p>
 <div class="m-card">
 <p class="m-name" data-f="name">SteamOS</p>
 <p class="m-sub"><span data-f="stage"></span> <span data-f="build"></span></p>
 <p class="m-sub" data-f="date"></p>
 </div>
 </div>
-<span class="deck-stick" aria-hidden="true"></span>
+<button type="button" class="hw deck-stick hw-next" data-step="1" aria-label="Older SteamOS release" disabled></button>
 </div>
 </div>
-<figcaption class="small">A drawn Steam Deck handheld showing the newest SteamOS release from the data. Mock screen, not a real device.</figcaption>
+<p class="sr-only" data-f="step" aria-live="polite"></p>
+<figcaption class="small">A drawn Steam Deck handheld showing SteamOS releases from the data; use its sticks, or the arrow keys, to step through them. Mock screen, not a real device.</figcaption>
 </figure>
 </div>
 </section>

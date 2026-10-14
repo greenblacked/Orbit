@@ -1,8 +1,8 @@
 """The security notes on the timeline and Compare, driven in Chromium with a mocked payload.
 
-The real src/data/security.json is empty, so each test serves its own schema-1 payload for the
-release ids of the bundled snapshot. The clock is fixed so the 14-day and 30-day rules are
-the same on every run.
+The real src/data/security.json changes with each refresh, so each test serves
+its own schema-1 payload for the release ids of the bundled snapshot. The clock is fixed so
+the 14-day and 30-day rules are the same on every run.
 """
 
 from __future__ import annotations
@@ -198,6 +198,10 @@ def test_the_timeline_shows_one_line_per_row_with_an_entry_and_nothing_for_the_r
         first = page.locator(f'.tl-item[data-id="{ios[0]["id"]}"] .sec-link')
         assert first.get_attribute("href") == APPLE + "100001"
         assert page.locator(".sec").count() == len(expected)
+        for _ in range(50):
+            if not page.is_visible("#tl-more"):
+                break
+            page.click("#more")
         assert page.locator(".tl-item").count() == len(SNAPSHOT["releases"])
         # A pre-release row, and every row without an entry, stay quiet.
         beta = page.locator(f'.tl-item[data-id="{releases("iOS", "beta")[0]["id"]}"]')
@@ -289,6 +293,7 @@ def test_with_the_empty_payload_the_pages_show_no_security_line_and_no_error(
     try:
         page = context.new_page()
         errors = watch(page)
+        serve_security(page, payload({}, {}))
         page.goto(base_url + path)
         page.wait_for_selector(".tl-item, .cmp-cards")
         page.wait_for_load_state("networkidle")
@@ -652,6 +657,26 @@ def test_security_notes_name_two_releases_of_one_version_apart(browser, base_url
         assert len(names) == 2 and len(set(names)) == 2, names
         assert any(newer["build"] in n for n in names)
         assert any(older["build"] in n for n in names)
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_check_my_version_adds_the_cve_count_when_security_data_is_loaded(browser, base_url):
+    ios = releases("iOS")
+    context = make_context(browser, base_url)
+    page = context.new_page()
+    errors = watch(page)
+    serve_security(page, apple_payload())
+    try:
+        page.goto(base_url + "/compare/")
+        page.wait_for_selector("#lk-form:not([hidden])")
+        page.fill("#lk-build", ios[1]["build"])
+        page.click("#lk-form button")
+        page.wait_for_selector("#lk-result .lk-cve")
+        assert page.inner_text("#lk-result .lk-say").startswith("Current for iOS ")
+        lead = f"Fixed after iOS {ios[1]['version']}, up to iOS {ios[0]['version']}: 2 CVEs."
+        assert page.inner_text("#lk-result .lk-cve") == lead
         assert errors == []
     finally:
         context.close()

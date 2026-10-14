@@ -32,6 +32,12 @@ URI or a ``#`` reference, local or remote: a frame onto a built page, a styleshe
 body, a missing file. Plain ``<a href>`` links to other sites
 stay; they only navigate.
 
+A link a script builds at run time (``/compare/?family=iOS&from=17``, ``/timeline/?id=x``) is
+not in the static HTML, so the router mends it when it is clicked: an absolute same-site path
+that names a page of the bundle (``/about``, ``/about/index.html`` included) is pointed at
+that page's hash route, the query dropped and a ``#fragment`` kept, also for a modifier or
+middle click. An external URL and a path that is no page are left alone.
+
 Forms: the policy's ``form-action 'none'`` blocks every submit, so a GET form whose action
 is a page of the build (or has none, meaning its own page) gets that page's hash route as its
 action and the router navigates there on submit; the query the form would add is dropped, as
@@ -125,6 +131,7 @@ def preview_csp(scripts: list[str], styles: list[str], style_attrs: list[str]) -
 
 HOME_SCRIPT = "/assets/home.js"
 BELOW_SCRIPT = "/assets/below.js"
+LOOKUP_SCRIPT = "/assets/lookup.js"
 # The live site loads the generic sigil rule on demand; a bundle cannot fetch it, so it runs
 # right after sigil.js on every page that loads sigil.js, before any script that draws.
 SIGIL_SCRIPT = "/assets/sigil.js"
@@ -224,6 +231,43 @@ ROUTER = r"""
     });
     jump(r.frag);
   }
+  // The hash route of a same-site path a script built at run time ("/compare/?from=1#top"),
+  // or null when the href is not one or names no page of the bundle. Only the static HTML is
+  // rewritten at build time, so these would otherwise leave the file. The query is dropped, as
+  // for a static link; the fragment is kept.
+  function routeOf(href) {
+    if (href.charAt(0) !== "/" || href.charAt(1) === "/") return null;
+    var frag = "";
+    var cut = href.indexOf("#");
+    if (cut >= 0) {
+      frag = href.slice(cut);
+      href = href.slice(0, cut);
+    }
+    var q = href.indexOf("?");
+    var path = q >= 0 ? href.slice(0, q) : href;
+    var tries = [path, path.replace(/index\.html$/, "")];
+    if (path.slice(-1) !== "/") tries.push(path + "/");
+    var routes = {};
+    document.querySelectorAll("template[data-route]").forEach(function (t) {
+      routes[t.getAttribute("data-route")] = true;
+    });
+    for (var i = 0; i < tries.length; i++) {
+      if (Object.prototype.hasOwnProperty.call(routes, tries[i])) return "#" + tries[i] + frag;
+    }
+    return null;
+  }
+  // Point such a link at its hash route before the browser acts on it, so a plain click,
+  // a modifier click, a middle click and the context menu's "open in new tab" all stay inside
+  // the file.
+  function mend(event) {
+    if (event.defaultPrevented) return;
+    var link = event.target.closest ? event.target.closest("a[href]") : null;
+    var route = link ? routeOf(link.getAttribute("href")) : null;
+    if (route) link.setAttribute("href", route);
+  }
+  document.addEventListener("click", mend);
+  document.addEventListener("auxclick", mend);
+  document.addEventListener("contextmenu", mend);
   document.addEventListener("click", function (event) {
     if (event.defaultPrevented || event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -573,12 +617,14 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
     front = pages[0]
     site_name = front["site_name"] or front["title"]
 
-    # home.js loads below.js (the mock screens) after the page has painted, which a bundle
-    # cannot do; the bundle runs it right after home.js instead, so the mocks are painted.
+    # home.js loads below.js (the drawn devices that step through releases) and lookup.js
+    # (Check my version) after the page has painted, which a bundle cannot do; the bundle runs
+    # them right after home.js instead.
     for page in pages:
         if HOME_SCRIPT in page["body_scripts"]:
             at = page["body_scripts"].index(HOME_SCRIPT) + 1
             page["body_scripts"].insert(at, BELOW_SCRIPT)
+            page["body_scripts"].insert(at + 1, LOOKUP_SCRIPT)
         if (dist / "assets" / "sigil-generic.js").is_file():
             for key in ("head_scripts", "body_scripts"):
                 if SIGIL_SCRIPT in page[key]:

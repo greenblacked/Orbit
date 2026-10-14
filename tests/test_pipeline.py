@@ -220,6 +220,13 @@ def test_the_worker_serves_a_404_page_and_keeps_workers_dev():
     assert route["previews_enabled"] is True
 
 
+def test_the_worker_keeps_its_logs():
+    config = json.loads((REPO / "deploy" / "wrangler.json").read_text(encoding="utf-8"))
+    # Workers Logs keeps every Worker invocation and any console output it writes.
+    assert config["observability"]["enabled"] is True
+    assert config["observability"]["head_sampling_rate"] == 1
+
+
 def test_a_custom_domain_only_preview_log_reports_the_stage_host_and_no_workers_dev_url():
     reader = load_script("read_wrangler_deploy")
     log = '{"type": "preview", "preview_urls": ["https://stage.orbit.szolotov.com"]}\n'
@@ -277,6 +284,27 @@ def test_cut_release_runs_on_main_only_and_dispatches_release_on_the_tag():
     assert 'gh workflow run release.yml --ref "v$VERSION"' in cut
     assert "^" + CANONICAL in cut
     assert "VERSION: ${{ inputs.version }}" in cut
+
+
+def test_cut_release_requires_green_ci_and_security_on_the_tagged_sha():
+    cut = workflow("cut-release.yml")
+    block = job_block(cut, "cut")
+    assert "      checks: read\n" in block
+    gate = block.index("Require green ci and security")
+    assert gate < block.index("Create the annotated tag object")
+    step = block[gate : block.index("Create the annotated tag object")]
+    assert "commits/$GITHUB_SHA/check-runs" in step
+    assert "for required in ci security" in step
+    assert '"$conclusion" != "success"' in step
+    assert '"$status" != "completed"' in step
+    assert '"$found" -eq 0' in step
+    assert "exit 1" in step
+    assert 'select(.app.slug == "github-actions")' in step
+    assert "max_by(.id)" in step
+    assert "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in step
+    run = step.split("run: |", 1)[1]
+    assert "${{" not in run, "values reach the shell through env: only"
+    assert "uses:" not in step
 
 
 def test_dependabot_follows_dev_then_main():

@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { isHttpsOn } from '../deploy/releases.js';
+import { isHttpsOn, MAX_RELEASES_PER_SOURCE } from '../deploy/releases.js';
 import android, {
   buildDate,
   buildTable,
@@ -345,6 +345,23 @@ describe('the bounds on what is emitted', () => {
     assert.equal(releases.at(-1).id, 'android-1.0.0_r1');
     assert.ok(releases.every((r, i) => i === 0 || Date.parse(releases[i - 1].date) > Date.parse(r.date)));
     assert.deepEqual(parsePage(page(), now), []);
+  });
+
+  it('emits every row of a page larger than the per-source cap (no quiet cut)', () => {
+    // Synthetic: more rows than the cap, one release a day stepping back from 2026-06-05, each
+    // with its own tag (the tag grammar allows at most three digits per part, so the count
+    // goes in the patch and minor parts) and its own build id. The adapter must emit them all.
+    const total = MAX_RELEASES_PER_SOURCE + 100;
+    const rows = [];
+    for (let i = 0; i < total; i += 1) {
+      const day = new Date(Date.UTC(2026, 5, 5 - i)).toISOString().slice(0, 10);
+      const yymmdd = day.slice(2).replaceAll('-', '');
+      const tag = `android-14.${Math.floor(i / 900)}.${i % 900}_r1`;
+      rows.push(row(`CP2A.${yymmdd}.016`, tag, day));
+    }
+    const releases = parsePage(page(...rows), Date.UTC(2030, 0, 1));
+    assert.equal(releases.length, total);
+    assert.equal(new Set(releases.map((r) => r.id)).size, total);
   });
 
   it('does not depend on the clock for old rows', () => {

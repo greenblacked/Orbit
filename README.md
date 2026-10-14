@@ -13,7 +13,8 @@ Live site: <https://orbit.szolotov.com>. The `main` branch also uploads a Previe
 
 ## What it does
 
-- Shows the newest release or beta of each platform family, a timeline of everything released with platform and stage filters, and a side-by-side comparison of two releases.
+- Shows the newest release or beta of each platform family, a timeline of everything released (the 12 newest months with releases first, older ones on request) with platform and stage filters, and a side-by-side comparison of two releases.
+- Checks a version: pick a platform and type a version or build on the front page or Compare to see whether it is the newest public release (by version, as the cards pick it), the newest of its line (major version; a Windows feature update), a pre-release or a version not in the data placed against its line, or how many public releases and days behind it is, with a link to the comparison and, on Compare, the CVE count. The query stays in the address as `?platform=&build=`.
 - Follows Apple's six platform families, MikroTik RouterOS, Google Android, Microsoft Windows and Valve SteamOS (the Steam Deck) live. A family with no release in the data says "No release yet" instead of a made-up one ([ADR 0006](docs/adr/0006-list-vendors-before-their-feeds.md)).
 - Draws the releases as a dial: one ring per platform, one notch per release placed by date, and a time machine that shows the site as of any day in the window.
 - Gives every build a deterministic glyph, its sigil, so a build is recognisable at a glance ([docs/sigils.md](docs/sigils.md)).
@@ -48,9 +49,9 @@ flowchart LR
 
 ### Data contract
 
-`/api/releases.json` (optionally `?vendor=apple`) answers one document, and `/api/health` reports each source.
+`/api/releases.json` (optionally `?vendor=apple`) answers one document. `/api/health` reports each source and is never cached (`Cache-Control: no-store`): `ok` means the Worker answered, `degraded` is true when any source is failed, stale or served from the bundled snapshot, and each source entry carries `stale`, `snapshot`, `lastError` (a short message) and `failedAt` (ms since the epoch), both null while the source is served live and fresh.
 
-`/api/security.json` answers the bundled security notes from `src/data/security.json` (schema 1; Apple and Android are the adapters, refreshed by `node deploy/snapshot_security.mjs`; the file stays empty until the first refresh, after the owner has checked the vendors' terms of use). The document holds `schema`, `generatedAt`, `sources`, `notes` (keyed by an `https` note URL, each with a `source` and its sorted `cves`) and `releases` (keyed by a release id from `releases.json`, each with a `status`, sorted `notes` and `cves`, and a `count`). A `status` is one of `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` or `not-connected`; only a `release` is ever `listed` or `no-cve-entries`, and every other release is `not-applicable`. `tests/security.test.mjs` is the executable contract; the reasoning is in [ADR 0008](docs/adr/0008-security-notes-are-a-separate-payload.md).
+`/api/security.json` answers the bundled security notes from `src/data/security.json` (schema 1; Apple and Android are the adapters, refreshed by `node deploy/snapshot_security.mjs`; the first refresh is committed, the owner having accepted the vendors' terms on 2026-10-14; refresh it by dispatching the Security snapshot workflow and committing its printed payload by pull request). The document holds `schema`, `generatedAt`, `sources`, `notes` (keyed by an `https` note URL, each with a `source` and its sorted `cves`) and `releases` (keyed by a release id from `releases.json`, each with a `status`, sorted `notes` and `cves`, and a `count`). A `status` is one of `listed`, `no-cve-entries`, `not-found`, `not-applicable`, `unavailable` or `not-connected`; only a `release` is ever `listed` or `no-cve-entries`, and every other release is `not-applicable`. `tests/security.test.mjs` is the executable contract; the reasoning is in [ADR 0008](docs/adr/0008-security-notes-are-a-separate-payload.md).
 
 ```json
 {
@@ -95,7 +96,7 @@ A sigil is a glyph derived from a build string alone: the lead number sets the r
 python scripts/build_site.py --version local     # build dist/site
 python scripts/check_site.py dist/site           # local links, fragments and the size budget
 python -m pytest -m "not browser"                # build, pipeline, header and bundle tests
-node --test 'tests/*.test.mjs'                  # parser, registry and Worker tests (Node 22)
+node --test 'tests/*.test.mjs'                  # parser, registry, Worker, device and lookup tests (Node 22)
 python scripts/check_results.py                  # the validation results under results/
 bash scripts/preview.sh                          # build, serve, smoke, screenshots, bundle
 ruff check . && ruff format --check .            # when ruff is installed
@@ -152,7 +153,7 @@ The preferred rollback is a new patch release with the change reverted. The one-
 │   ├── assets/            site.css, theme.js, site.js, releases.js, home.js,
 │   │                      timeline.js, compare.js, sigil.js, orbit.js,
 │   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js,
-│   │                      security.js
+│   │                      security.js, lookup.js
 │   └── data/              releases.json (snapshot), security.json, families.json, features.json
 ├── deploy/                the Worker (worker.js, releases.js, families.js,
 │   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs,
