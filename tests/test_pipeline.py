@@ -222,7 +222,7 @@ def test_the_worker_serves_a_404_page_and_keeps_workers_dev():
 
 def test_the_worker_keeps_its_logs():
     config = json.loads((REPO / "deploy" / "wrangler.json").read_text(encoding="utf-8"))
-    # Workers Logs keeps the structured console.error lines for failed sources.
+    # Workers Logs keeps every Worker invocation and any console output it writes.
     assert config["observability"]["enabled"] is True
     assert config["observability"]["head_sampling_rate"] == 1
 
