@@ -114,7 +114,7 @@ function summaryOf(release) {
 }
 
 // XML 1.0 cannot carry most control characters at all, even escaped: drop them, then escape.
-const XML_FORBIDDEN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f￾￿]/g;
+const XML_FORBIDDEN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g;
 const XML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
 
 /** Text for an XML text node or attribute value. */

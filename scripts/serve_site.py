@@ -86,9 +86,12 @@ def _component(value: str) -> str:
 
 def _when(text: object) -> datetime | None:
     try:
-        return datetime.fromisoformat(str(text).replace("Z", "+00:00")).astimezone(timezone.utc)
+        moment = datetime.fromisoformat(str(text).replace("Z", "+00:00"))
     except ValueError:
         return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(timezone.utc)
 
 
 def _stamp(moment: datetime) -> str:
@@ -127,14 +130,17 @@ def feed_answer(
     """
     json_type = "application/json; charset=utf-8"
     try:
-        releases = json.loads(snapshot)["releases"]
+        document = json.loads(snapshot)
+        releases = document["releases"]
+        fetched = _when(document.get("fetchedAt"))
+        fetched = _stamp(fetched) if fetched else _stamp(datetime.now(timezone.utc))
         known = json.loads(config) if config else {}
         families = [f["id"] for f in known.get("families", [])] or sorted(
             {r["family"] for r in releases}
         )
         hosts = {v["id"]: v["source"]["hosts"] for v in known.get("vendors", [])}
         vendors = sorted({r["vendor"] for r in releases})
-    except (ValueError, KeyError, TypeError):
+    except (ValueError, KeyError, TypeError, AttributeError):
         return 503, b'{"error":"no releases available"}', json_type
     options = {"vendor": vendors, "family": families, "stage": STAGES}
     asked = parse_qs(query, keep_blank_values=True)
@@ -187,7 +193,7 @@ def feed_answer(
         }
         return 200, json.dumps(feed, separators=(",", ":")).encode("utf-8"), JSON_FEED_TYPE
     own = f"{SITE}/api/feed.atom{suffix}"
-    updated = _stamp(chosen[0][0]) if chosen else _stamp(datetime.now(timezone.utc))
+    updated = _stamp(chosen[0][0]) if chosen else fetched
     lines = [
         '<?xml version="1.0" encoding="utf-8"?>',
         '<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">',
@@ -217,7 +223,7 @@ def feed_answer(
             "</entry>",
         ]
     lines += ["</feed>", ""]
-    return 200, "\n".join(lines).encode("utf-8"), ATOM_TYPE
+    return 200, "\n".join(lines).encode("utf-8", errors="replace"), ATOM_TYPE
 
 
 def parse_headers(text: str) -> list[tuple[re.Pattern[str], list[tuple[str, str]]]]:
