@@ -102,7 +102,7 @@ def test_the_front_page_has_one_card_per_family_in_the_order_of_the_config():
 
 # The effects are separate modules that load after the first paint; no page names them.
 LAZY = ("fx.js", "aurora.js")
-# Also off the first paint: below.js (the mock screens and the developer highlights) and the
+# Also off the first paint: below.js (the drawn devices that step through releases) and the
 # cadence row, which home.js loads once the page has painted, and the generic sigil rule
 # (sigil.js loads it when a build that is not an Apple build appears). The script that loads
 # each one is the only file that names it.
@@ -124,9 +124,10 @@ DEFERRED_ON_PAGE = {"compare/index.html": {"lookup.js"}}
 FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
-# Raw bytes. below.js, cadence.js, lookup.js and sigil-generic.js were 25,855 together when this was
-# set (lookup.js is 12,592 of it); the limit leaves room for each to grow a little.
-AFTER_PAINT_BUDGET = 28_000
+# Raw bytes. below.js (the drawn devices that step through releases), cadence.js, lookup.js and
+# sigil-generic.js are 34,598 together (15,582 + 4,788 + 12,708 + 1,520); the limit leaves about
+# 15% room for each to grow a little.
+AFTER_PAINT_BUDGET = 39_800
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])

@@ -1,5 +1,5 @@
 /* Front page: per platform family, its latest release and section.
-   The mock screens and the developer highlights are below.js, loaded once the page has painted. */
+   The drawn devices that step through releases are below.js, loaded once the page has painted. */
 (function () {
   "use strict";
   var RO = window.RO;
@@ -143,7 +143,7 @@
       a.appendChild(RO.h("span", "r-date", RO.day(x.t)));
       external(a);
     });
-    // The mock screens' fields are below.js's to paint.
+    // The drawn devices' fields are below.js's to paint.
     text(sec, "latest", r
       ? "Newest: " + r.title + ", " + RO.day(r.t) +
         (lead.pre ? ". Next: " + RO.short(lead.pre) + ", " + RO.day(lead.pre.t) : "")
@@ -197,7 +197,7 @@
     document.head.appendChild(s);
   }
   function loadBelow() {
-    // No onerror: the mock screens start out neutral and inert, and stay so if this fails.
+    // No onerror: the drawn devices start out neutral and inert, and stay so if this fails.
     load("/assets/below.js", "", function () { if (signature && window.Below) window.Below.paint(current); });
   }
   function loadLookup() {

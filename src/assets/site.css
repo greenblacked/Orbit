@@ -991,6 +991,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 .dev-phone {
   display: flex;
   max-width: 17rem;
+  max-width: min(17rem, calc(100vw - 2 * var(--hw, 2.75rem) - 1rem));
   aspect-ratio: 9 / 19;
   padding: 3.4%;
   border-radius: 15% / 7%;
@@ -1037,9 +1038,14 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   font-size: 0.75rem;
   font-size: max(0.75rem, 2.5cqw);
 }
-.m-side { padding: 1.2em 0.8em; background: rgba(255, 255, 255, 0.07); }
-.m-side li { margin-bottom: 0.4em; padding: 0.4em 0.6em; border-radius: 0.6em; }
-.m-side .on { background: rgba(255, 255, 255, 0.18); }
+.m-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.2em 0.4em;
+  background: rgba(255, 255, 255, 0.07);
+}
+.m-side .m-segb { flex: none; padding: 0 0.3rem; }
 .m-main { padding: 1.2em 1.4em; }
 .m-main .m-card { margin-top: 0.8em; }
 
@@ -1139,7 +1145,6 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   background: #17171b;
   box-shadow: inset 0 0 0 2px #4a4a52, 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
-.w-crown { position: absolute; right: -3.4%; top: 26%; width: 4%; height: 15%; border-radius: 3px; background: #5a5a62; }
 .dev-watch .screen {
   display: flex;
   flex-direction: column;
@@ -1171,7 +1176,8 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   position: absolute;
   top: 28%;
   bottom: 28%;
-  width: 9%;
+  z-index: 3;
+  width: max(9%, 2.75rem);
   border-radius: 99px;
   background: linear-gradient(#55555e, #26262c);
 }
@@ -1236,9 +1242,22 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   box-shadow: inset 0 0 0 2px #3b3b42, 0 0 0 1px rgba(255, 255, 255, 0.1),
     0 32px 60px -24px color-mix(in srgb, var(--fam-a) 70%, transparent);
 }
+/* A stick is a button at least 44px wide whatever is drawn: the knob is its ::before, and the
+   extra width is taken back from the margin so the screen keeps its size. */
 .deck-stick {
+  position: relative;
+  z-index: 3;
   flex: none;
-  width: 9%;
+  display: grid;
+  place-items: center;
+  width: max(9cqw, 2.75rem);
+  height: max(9cqw, 2.75rem);
+  margin-inline: min(0px, calc((9cqw - 2.75rem) / 2));
+  border-radius: 50%;
+}
+.deck-stick::before {
+  content: "";
+  width: 9cqw;
   aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle, #4a4a52 0 40%, #0b0b0d 42%);
@@ -1346,6 +1365,82 @@ button.m-comp:active { filter: brightness(1.2); }
   @keyframes spin { to { transform: rotate(360deg); } }
   .m-btn, .m-segb, .m-comp { transition: transform 120ms ease; }
   .m-btn:active, .m-segb:active, .m-comp:active { transform: scale(0.96); }
+}
+/* The release position and the link a mock screen is: the screen is a link to the release on the
+   timeline, stretched over it under the screen's own buttons. */
+.m-title { display: flex; align-items: center; justify-content: space-between; gap: 0.6em; }
+.m-pos {
+  flex: none;
+  padding: 0.1em 0.6em;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 0.7em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.m-title .m-pos { font-size: 0.65em; }
+.m-menu .m-pos { margin-left: auto; }
+.m-sub .m-pos:empty, .m-wname .m-pos:empty { display: none; }
+.m-wname { text-align: center; }
+.m-wname .m-pos { display: inline-block; margin-top: 0.15em; font-size: 0.5625rem; }
+.m-link { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.m-link[href] { cursor: pointer; }
+.m-link[href]:hover { background: rgba(255, 255, 255, 0.07); }
+.m-link:focus-visible { outline: 3px solid #fff; outline-offset: -6px; }
+.m-btn, .m-seg, .m-side, .m-comp { position: relative; z-index: 2; }
+
+/* The drawn hardware is the stepping control: two real buttons per device, each a 44px hit box
+   with the drawn part inside it. The first button (Newer) goes to the newer release, the second
+   (Older) to the older one. An end
+   that cannot go on is aria-disabled and does nothing. */
+.dev { --hw: 2.75rem; }
+.hw {
+  padding: 0;
+  border: 0;
+  color: #6e6e78;
+}
+.hw[aria-disabled="true"], .hw:disabled { opacity: 0.45; cursor: default; }
+.hw[aria-disabled="true"]:focus-visible { opacity: 0.8; }
+.hw:focus-visible { outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 6px #111114; }
+.hw:not([aria-disabled="true"], :disabled):hover { color: var(--fam-a); }
+.v-strap.hw:not([aria-disabled="true"], :disabled):hover,
+.deck-stick.hw:not([aria-disabled="true"], :disabled):hover::before { filter: brightness(1.4); }
+.hw-e { position: absolute; z-index: 3; display: grid; width: var(--hw); height: var(--hw); }
+.hw-e::before { content: ""; border-radius: 3px; background: currentColor; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2); }
+/* Phones: the two volume buttons on the long side (the left, the Android's right). */
+.dev-phone .hw-e { left: calc(-1 * var(--hw)); place-items: center end; }
+.fam-android .dev-phone .hw-e { left: auto; right: calc(-1 * var(--hw)); place-items: center start; }
+.dev-phone .hw-e::before { width: 5px; height: 1.75rem; }
+.dev-phone .hw-prev { top: 17%; }
+.dev-phone .hw-next { top: calc(17% + 3.25rem); }
+/* The iPad and the router: two buttons on the top edge. */
+.dev-ipad, .dev-router { margin-top: 0.5rem; }
+.dev-ipad .hw-e, .dev-router .hw-e { top: calc(-1 * var(--hw)); place-items: end center; }
+.dev-ipad .hw-e::before, .dev-router .hw-e::before { width: 1.75rem; height: 5px; }
+.dev-ipad .hw-prev, .dev-router .hw-prev { right: calc(12% + 3.25rem); }
+.dev-ipad .hw-next, .dev-router .hw-next { right: 12%; }
+/* The laptops: two keys on the base, centred on it. */
+.dev-mac .hw-e { bottom: calc(max(0.5rem, 2.2cqw) / 2 - var(--hw) / 2); place-items: center; color: #3b3b42; }
+.dev-mac .hw-e::before { width: 1.75rem; height: max(0.3rem, 1cqw); }
+.dev-mac .hw-prev { left: calc(50% - var(--hw) - 2px); }
+.dev-mac .hw-next { left: calc(50% + 2px); }
+/* The TV: two buttons either side of the stand. */
+.dev-tv .hw-e { bottom: calc(max(0.5rem, 3cqw) / 2 - var(--hw) / 2); place-items: center; }
+.dev-tv .hw-e::before { width: 1.75rem; height: 6px; }
+.dev-tv .hw-prev { left: calc(50% - 9cqw - 0.25rem - var(--hw)); }
+.dev-tv .hw-next { left: calc(50% + 9cqw + 0.25rem); }
+/* The watch: the crown, and the side button under it. */
+.dev-watch .hw-e { right: calc(3px - var(--hw)); place-items: center start; }
+.dev-watch .hw-e::before { width: 7px; height: 2rem; }
+.dev-watch .hw-prev { top: calc(30% - var(--hw) / 2); }
+.dev-watch .hw-next { top: calc(30% + var(--hw) / 2 + 4px); }
+@media (prefers-reduced-motion: no-preference) {
+  .hw::before, .v-strap.hw { transition: filter 160ms ease, transform 120ms ease; }
+  .hw:not([aria-disabled="true"], :disabled):active::before { transform: scale(0.85); }
+  .v-strap.hw:not([aria-disabled="true"], :disabled):active { transform: scale(0.94); }
+  .m-link { transition: background-color 160ms ease; }
 }
 @container (max-width: 30rem) {
   .mac-lid { aspect-ratio: 4 / 3; }
@@ -1775,6 +1870,9 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
     color: HighlightText;
     border-color: Highlight;
   }
+  .hw:focus-visible, .m-link:focus-visible { outline-color: Highlight; box-shadow: none; }
+  .hw-e::before { background: ButtonText; }
+  .v-strap.hw, .deck-stick.hw { border: 2px solid ButtonText; }
   .notch:focus-visible .nl, .hand:focus-visible .hl { stroke: Highlight; }
   .notch:focus-visible .hit { stroke: Highlight; stroke-width: 2px; stroke-dasharray: 3 2; }
   .hand:focus-visible .hit { stroke: Highlight; }
