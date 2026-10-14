@@ -107,6 +107,7 @@
   var releases = [];
   var picked = {};
   var iosChecked = false;
+  var checking = false;
   var channel = "release";
   var scope = "pub";
   var mode = 0;
@@ -175,6 +176,7 @@
     var latestBeta = newestBeta("iOS");
     text(box, "pubrow", latestPub ? latestPub.version : "None");
     text(box, "betarow", latestBeta && (!latestPub || latestBeta.t > latestPub.t) ? RO.short(latestBeta) : "None");
+    if (checking) return;
     btn.removeAttribute("aria-busy");
     btn.textContent = iosChecked ? "Check again" : "Check the data";
     if (!iosChecked) { out.textContent = ""; return; }
@@ -242,6 +244,7 @@
     var s = shown(family);
     var j = move(s.i, s.rows.length, by);
     if (s.beta || !s.rows.length || j === s.i) {
+      text(sec(family), "step", "");
       text(sec(family), "step", blocked(s.rows.length, by, s.beta));
       return;
     }
@@ -274,12 +277,13 @@
     for (var k = 0; k < boxes.length; k++) wireDevice(boxes[k]);
     var ios = sec("iOS").querySelector('[data-act="check"]');
     if (ios) ios.addEventListener("click", function () {
-      if (ios.getAttribute("aria-busy") === "true") return;
+      if (checking) return;
+      checking = true;
       var out = sec("iOS").querySelector('[data-f="result"]');
       ios.setAttribute("aria-busy", "true");
       ios.textContent = "Checking…";
       out.textContent = "Checking the loaded releases…";
-      window.setTimeout(function () { iosChecked = true; paintIos(); }, RO.reduced() ? 0 : 900);
+      window.setTimeout(function () { checking = false; iosChecked = true; paintIos(); }, RO.reduced() ? 0 : 900);
     });
     var seg = sec("macOS").querySelectorAll("[data-ch]");
     for (var i = 0; i < seg.length; i++) seg[i].addEventListener("click", function (e) {
