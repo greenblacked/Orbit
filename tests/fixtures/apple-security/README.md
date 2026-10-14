@@ -47,5 +47,5 @@ and never an impact or description text.
   "CVE-ID: credit" form.
 - No row of the index other than the 57 complete ones was seen, and no page for macOS, watchOS,
   tvOS or visionOS.
-- Apple's terms of use for automated reads of these pages were not checked. The snapshot script
+- Apple's terms of use for automated reads of these pages were not checked (the owner accepted them on 2026-10-14; see ADR 0008). The snapshot script
   asks for each page once per run, one request a second, with the site's User-Agent.
