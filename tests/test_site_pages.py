@@ -564,8 +564,10 @@ def test_a_device_link_opens_that_release_on_the_timeline(page, base_url):
     mocks_ready(page)
     press(page, "SteamOS", "Older")
     page.locator('section.fam[data-family="SteamOS"] .screen a.m-link').click()
-    page.wait_for_url(lambda url: "/timeline/?id=" in url)
-    assert parse_qs(urlsplit(page.url).query)["id"] == [public("SteamOS")[1]["id"]]
+    page.wait_for_url(lambda url: "/timeline/" in url)
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    opened = page.evaluate("document.activeElement.closest('.tl-item').dataset.id")
+    assert opened == public("SteamOS")[1]["id"]
 
 
 @pytest.mark.parametrize("width", [1280, 360, 320], ids=["desktop", "phone", "narrow"])
