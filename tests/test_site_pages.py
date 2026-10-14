@@ -742,9 +742,7 @@ def test_a_device_with_no_release_has_nothing_to_step_through(page, base_url):
     assert position(page, "SteamOS") == ""
 
 
-def test_the_ipad_sidebar_has_nothing_to_choose_when_the_data_has_no_ipad_release(
-    page, base_url
-):
+def test_the_ipad_sidebar_has_nothing_to_choose_when_the_data_has_no_ipad_release(page, base_url):
     errors: list[str] = []
     page.on("pageerror", lambda e: errors.append(str(e)))
     data = copy.deepcopy(SNAPSHOT)
