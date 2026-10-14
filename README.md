@@ -113,6 +113,8 @@ bash scripts/preview.sh --channel chrome         # or --executable PATH, or PLAY
 
 To refresh the bundled snapshot, run `node deploy/snapshot_releases.mjs` and commit the result.
 
+To describe a release, add its id to `src/data/notes.json`: `{"schema": 1, "notes": {"routeros-7.23.8-long-term": "The long-term build for production routers."}}`. The id is the `id` of the release in `src/data/releases.json` (or in `/api/releases.json` for a live-only release, which the file test does not allow until a snapshot refresh has it). Write plain text of at most 200 characters on one line, with no markup and no personal data. The note shows on the timeline row and the front-page card, and replaces any summary the source gave. `tests/test_notes.py` checks the file.
+
 To refresh the security notes, run `node deploy/snapshot_releases.mjs` first and then `node deploy/snapshot_security.mjs`, and commit the result. The second reads each vendor's security index and the note page of every released build in `releases.json` that matches a row (one request a second, each page once), and writes only CVE ids, titles, dates and URLs to `src/data/security.json`. A vendor whose index cannot be read keeps its old data, is marked `failed` and makes the script exit non-zero. Apple and Android are driven so far (Android reads the AOSP build-numbers page for patch levels and one bulletin per month; the build-numbers page and up to 200 bulletins); the adapters are in `deploy/security/`. Where the vendors cannot be reached from your machine, run the **Security snapshot** workflow by hand (Actions, Run workflow) on a branch whose `src/data/releases.json` is current (refresh and merge that first; the workflow does not run `snapshot_releases.mjs`): it prints the file base64-encoded between two marker lines, with its size and SHA-256, in the job log. Download the raw log (`job.log`) and run `sed -n '/^[^ ]* -----BEGIN SECURITY JSON BASE64-----$/,/^[^ ]* -----END SECURITY JSON BASE64-----$/p' job.log | sed '1d;$d' | cut -d' ' -f2- | base64 -d > src/data/security.json && sha256sum src/data/security.json`, compare the digest with the logged `sha256:` and open a pull request. It commits nothing and holds no secret.
 
 ## Engineering standards
@@ -154,7 +156,7 @@ The preferred rollback is a new patch release with the change reverted. The one-
 │   │                      timeline.js, compare.js, sigil.js, orbit.js,
 │   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js,
 │   │                      security.js, lookup.js
-│   └── data/              releases.json (snapshot), security.json, families.json, features.json
+│   └── data/              releases.json (snapshot), notes.json, security.json, families.json, features.json
 ├── deploy/                the Worker (worker.js, releases.js, families.js,
 │   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs,
 │   │                      snapshot_security.mjs
