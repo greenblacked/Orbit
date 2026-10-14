@@ -34,7 +34,7 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 
 | Failure | Behaviour |
 | --- | --- |
-| A feed is slow or unreachable | A cached copy is served marked `stale: true`. The source is not asked again for 5 minutes. |
+| A feed is slow or unreachable | A cached copy is served marked `stale: true`. The source is not asked again for 5 minutes. The Worker logs one structured `console.error` per failed fetch or parse (`event`, source `id`, a short `error` message, URL `host` only: no full URL, body or header), keeps `lastError` and `failedAt` on the failure marker, and `/api/health` shows them per source with a top-level `degraded` boolean (any source failed, stale or on the snapshot). `ok` still only means the Worker answered. Health is sent `no-store`. |
 | A feed fails and nothing is cached | A short negative marker holds the same 5 minute back-off, so requests do not each wait for the timeout. The bundled snapshot answers with `snapshot: true`. |
 | A feed returns unparseable data | The source counts as failed. Other sources are unaffected. |
 | A feed redirects | The redirect is not followed, because it would leave the allowlist. The source counts as failed. |

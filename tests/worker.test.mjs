@@ -2,7 +2,7 @@
 // node --test 'tests/*.test.mjs'    (node:test and node:assert only; nothing to install)
 
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, it, mock } from 'node:test';
 
 import apple from '../deploy/sources/apple.js';
 import { createWorker } from '../deploy/worker.js';
@@ -365,11 +365,94 @@ describe('the Worker: /api/health and the rest', () => {
     const fetchedAt = (await (await call('/api/releases.json', fakeEnv())).json()).fetchedAt;
     assert.deepEqual(await res.json(), {
       ok: true,
+      degraded: false,
       fetchedAt,
       stale: false,
       count: 29,
-      sources: [{ id: APPLE_ID, vendor: 'apple', ok: true, stale: false, fetchedAt, count: 29 }],
+      sources: [
+        {
+          id: APPLE_ID,
+          vendor: 'apple',
+          ok: true,
+          stale: false,
+          snapshot: false,
+          fetchedAt,
+          count: 29,
+          lastError: null,
+          failedAt: null,
+        },
+      ],
     });
+  });
+
+  it('logs nothing and is not degraded when every source is live', async () => {
+    const errors = mock.method(console, 'error', () => {});
+    try {
+      const res = await call('/api/health', fakeEnv());
+      const body = await res.json();
+      assert.equal(res.headers.get('cache-control'), 'no-store');
+      assert.equal(body.ok, true);
+      assert.equal(body.degraded, false);
+      assert.equal(errors.mock.callCount(), 0);
+    } finally {
+      errors.mock.restore();
+    }
+  });
+
+  it('logs one structured error for a failed source and reports it degraded', async () => {
+    const errors = mock.method(console, 'error', () => {});
+    try {
+      stubUpstream(() => new Response('secret body', { status: 503 }));
+      const before = Date.now();
+      const res = await call('/api/health', fakeEnv());
+      const body = await res.json();
+      assert.equal(errors.mock.callCount(), 1);
+      const [entry] = errors.mock.calls[0].arguments;
+      assert.deepEqual(JSON.parse(JSON.stringify(entry)), entry);
+      assert.equal(entry.event, 'source_fetch_failed');
+      assert.equal(entry.source, APPLE_ID);
+      assert.equal(entry.host, new URL(FEED_URL).host);
+      assert.match(entry.error, /503/);
+      assert.equal(JSON.stringify(entry).includes('secret body'), false);
+
+      assert.equal(res.headers.get('cache-control'), 'no-store');
+      assert.equal(body.ok, true, 'ok still means the Worker answered');
+      assert.equal(body.degraded, true);
+      const [apple] = body.sources;
+      assert.equal(apple.stale, true);
+      assert.equal(apple.snapshot, true);
+      assert.match(apple.lastError, /503/);
+      assert.ok(apple.failedAt >= before && apple.failedAt <= Date.now());
+
+      // Inside the back-off the marker still tells the story, and nothing more is logged.
+      const again = (await (await call('/api/health', fakeEnv())).json()).sources[0];
+      assert.equal(again.lastError, apple.lastError);
+      assert.equal(again.failedAt, apple.failedAt);
+      assert.equal(errors.mock.callCount(), 1);
+    } finally {
+      errors.mock.restore();
+    }
+  });
+
+  it('keeps the failure on a stale copy and cuts a URL in the message to its host', async () => {
+    const errors = mock.method(console, 'error', () => {});
+    try {
+      await seed(ago(48 * 3600 * 1000));
+      stubUpstream(() => {
+        throw new TypeError(`connect failed for ${FEED_URL}?token=abc`);
+      });
+      const body = await (await call('/api/health', fakeEnv())).json();
+      assert.equal(body.degraded, true);
+      const [apple] = body.sources;
+      assert.equal(apple.snapshot, false);
+      assert.equal(apple.stale, true);
+      assert.equal(apple.lastError.includes('token'), false);
+      assert.ok(apple.lastError.includes(new URL(FEED_URL).host));
+      assert.equal(errors.mock.callCount(), 1);
+      assert.equal(JSON.stringify(errors.mock.calls[0].arguments[0]).includes('token'), false);
+    } finally {
+      errors.mock.restore();
+    }
   });
 
   it('reports a stale snapshot as ok but stale', async () => {
