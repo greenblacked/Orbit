@@ -451,6 +451,20 @@ def test_mock_controls_are_real_buttons_and_big_enough(page, base_url):
         assert page.locator(selector).evaluate("e => e.tagName") == "BUTTON"
 
 
+def test_a_stage_with_no_build_after_it_draws_no_separator(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    steam = page.locator('section.fam[data-family="SteamOS"] .screen')
+    assert next(r for r in releases("SteamOS") if r["stage"] == "release")["build"] == ""
+    assert steam.locator("[data-f=stage]").inner_text() == "Release"
+    assert steam.locator("[data-f=build]").inner_text() == ""
+    assert "·" not in steam.inner_text()
+    ios = page.locator('section.fam[data-family="iOS"] .screen')
+    assert ios.locator("[data-f=stage]").inner_text() == "Release ·"
+    assert ios.locator("[data-f=build]").inner_text().startswith("Build ")
+
+
 # --- the toast --------------------------------------------------------------------------
 
 

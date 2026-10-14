@@ -33,7 +33,7 @@
       var family = all[i].getAttribute("data-family");
       var r = RO.lead(releases, family).main;
       text(all[i], "name", r ? r.family + " " + RO.short(r) : family);
-      text(all[i], "stage", r ? RO.stageLabel(r) + " ·" : "");
+      text(all[i], "stage", r ? RO.stageLabel(r) + (r.build ? " ·" : "") : "");
       text(all[i], "build", r && r.build ? "Build " + r.build : "");
       text(all[i], "date", r ? "Published " + RO.day(r.t) : "");
     }
