@@ -39,6 +39,11 @@ LOOPBACK = {"127.0.0.1", "localhost"}
 SUMMARY_MAX = 200
 
 
+def _units(text: str) -> int:
+    """The length of ``text`` in UTF-16 units, which is what JavaScript's ``length`` counts."""
+    return len(text.encode("utf-16-le", "surrogatepass")) // 2
+
+
 def clean_summary(value: object) -> str:
     """A summary as plain text: the same rules as ``cleanSummary`` in deploy/releases.js.
 
@@ -48,13 +53,15 @@ def clean_summary(value: object) -> str:
     if not isinstance(value, str):
         return ""
     text = re.sub(r"[\t\n\r\u2028\u2029]+", " ", value)
-    text = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", text)
+    text = re.sub(r"[\x00-\x1f\x7f-\x9f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]", "", text)
     text = re.sub(r"\s+", " ", text).strip()
-    if len(text) <= SUMMARY_MAX:
+    if _units(text) <= SUMMARY_MAX:
         return text
-    room = text[: SUMMARY_MAX - 1]
+    # Lengths are UTF-16 units, like the Worker and the page. A pair cut in half is dropped.
+    raw = text.encode("utf-16-le", "surrogatepass")[: 2 * (SUMMARY_MAX - 1)]
+    room = raw.decode("utf-16-le", "ignore")
     space = room.rfind(" ")
-    cut = room[:space] if space >= SUMMARY_MAX / 2 else room
+    cut = room[:space] if space >= 0 and _units(room[:space]) >= SUMMARY_MAX / 2 else room
     return re.sub(r"[\s.,;:!?-]+$", "", cut) + "\u2026"
 
 

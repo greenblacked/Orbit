@@ -29,8 +29,8 @@ export const SUMMARY_MAX = 200;
 
 /**
  * A summary as plain text, or '' when there is none: not a string, or nothing left once
- * control characters are removed and runs of whitespace collapse to one space. Longer than
- * SUMMARY_MAX it is cut at a word with an ellipsis (a hard cut when the text has no space
+ * control and invisible formatting characters (zero-width, bidi, BOM) are removed and runs
+ * of whitespace collapse to one space. Longer than SUMMARY_MAX it is cut at a word with an ellipsis (a hard cut when the text has no space
  * past its first half). It is never HTML; every page writes it with textContent.
  */
 export function cleanSummary(value) {
@@ -38,11 +38,14 @@ export function cleanSummary(value) {
   // Line breaks and tabs are whitespace; every other control character is dropped.
   const text = value
     .replace(/[\t\n\r\u2028\u2029]+/g, ' ')
-    .replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
+    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   if (text.length <= SUMMARY_MAX) return text;
-  const room = text.slice(0, SUMMARY_MAX - 1);
+  let room = text.slice(0, SUMMARY_MAX - 1);
+  // Never end on the first half of a surrogate pair (an emoji cut in two).
+  const last = room.charCodeAt(room.length - 1);
+  if (last >= 0xd800 && last <= 0xdbff) room = room.slice(0, -1);
   const space = room.lastIndexOf(' ');
   const cut = space >= SUMMARY_MAX / 2 ? room.slice(0, space) : room;
   return `${cut.replace(/[\s.,;:!?-]+$/, '')}\u2026`;

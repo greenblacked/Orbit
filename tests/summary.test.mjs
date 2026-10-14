@@ -21,6 +21,17 @@ describe('cleanSummary', () => {
     assert.equal(cleanSummary('a\u0000b\u0007c\u007fd\u009fe'), 'abcde');
   });
 
+  it('removes zero-width, bidi and byte-order-mark characters', () => {
+    assert.equal(cleanSummary('a\u200bb\u202ec\u2066d\u2069e\ufefff\u200fg'), 'abcdefg');
+    assert.equal(cleanSummary('\ufeff\u202e'), '');
+  });
+
+  it('never ends a hard cut on half of a surrogate pair', () => {
+    const out = cleanSummary('x'.repeat(198) + '\u{1F600}'.repeat(5));
+    assert.ok(out.length <= SUMMARY_MAX);
+    assert.equal(out, 'x'.repeat(198) + '\u2026');
+  });
+
   it('leaves nothing for a string of only whitespace and controls', () => {
     assert.equal(cleanSummary(' \n\u0000\t '), '');
   });

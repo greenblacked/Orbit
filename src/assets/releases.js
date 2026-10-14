@@ -70,8 +70,13 @@
   // textContent only, never as markup. Anything that is not a string is dropped.
   function summary(v) {
     if (typeof v !== "string") return "";
-    var t = v.replace(/[\t\n\r\u2028\u2029]+/g, " ").replace(/[\u0000-\u001f\u007f-\u009f]/g, "").replace(/\s+/g, " ").trim();
-    return t.length > SUMMARY_MAX ? t.slice(0, SUMMARY_MAX - 1) + "\u2026" : t;
+    var t = v.replace(/[\t\n\r\u2028\u2029]+/g, " ").replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, "").replace(/\s+/g, " ").trim();
+    if (t.length <= SUMMARY_MAX) return t;
+    var room = t.slice(0, SUMMARY_MAX - 1);
+    var last = room.charCodeAt(room.length - 1);
+    if (last >= 0xd800 && last <= 0xdbff) room = room.slice(0, -1);
+    var space = room.lastIndexOf(" ");
+    return (space >= SUMMARY_MAX / 2 ? room.slice(0, space) : room).replace(/[\s.,;:!?-]+$/, "") + "\u2026";
   }
 
   // Keep only entries safe to show; null if none.

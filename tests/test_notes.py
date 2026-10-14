@@ -28,8 +28,15 @@ def test_every_note_is_a_clean_line_within_the_limit():
         assert text, release_id
         # Already what the Worker and the page would make of it, so what is written is what shows.
         assert serve.clean_summary(text) == text, release_id
-        assert len(text) <= serve.SUMMARY_MAX, release_id
+        assert len(text.encode("utf-16-le")) // 2 <= serve.SUMMARY_MAX, release_id
         assert "<" not in text and ">" not in text, release_id
+
+
+def test_the_cleaner_matches_the_worker_on_invisible_and_paired_characters():
+    assert serve.clean_summary("a\u200bb\u202ec\ufeffd") == "abcd"
+    out = serve.clean_summary("x" * 198 + "\U0001f600" * 5)
+    assert out == "x" * 198 + "\u2026"
+    assert len(out.encode("utf-16-le")) // 2 <= serve.SUMMARY_MAX
 
 
 def test_every_summary_of_the_snapshot_is_clean():
