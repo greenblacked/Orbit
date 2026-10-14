@@ -266,3 +266,34 @@ def test_the_compare_page_offers_each_family_in_the_order_of_the_config():
     html = page("compare/index.html")
     block = re.search(r'<select id="c-family">(.*?)</select>', html, re.DOTALL).group(1)
     assert re.findall(r'<option value="([A-Za-z]+)">\1</option>', block) == ALL
+
+
+CQ_UNIT = re.compile(r"[\d.]\s*cq(?:w|h|i|b|min|max)\b")
+
+
+def css_rules() -> list[tuple[str, list[tuple[str, str]]]]:
+    """Every innermost rule of the stylesheet as (selector, [(property, value), ...])."""
+    bare = re.sub(r"/\*.*?\*/", "", CSS, flags=re.DOTALL)
+    rules = []
+    for match in re.finditer(r"([^{}]*)\{([^{}]*)\}", bare):
+        decls = []
+        for part in match.group(2).split(";"):
+            name, sep, value = part.partition(":")
+            if sep:
+                decls.append((name.strip(), value.strip()))
+        rules.append((match.group(1).strip(), decls))
+    return rules
+
+
+def test_every_container_query_unit_has_a_plain_declaration_before_it_in_its_rule():
+    # A browser without container query units drops the declaration that uses one, so the same
+    # property needs an earlier declaration without them, in the same rule.
+    found = 0
+    for selector, decls in css_rules():
+        for at, (name, value) in enumerate(decls):
+            if not CQ_UNIT.search(value):
+                continue
+            found += 1
+            before = [v for n, v in decls[:at] if n == name and not CQ_UNIT.search(v)]
+            assert before, f"{selector}: {name}: {value} has no plain {name} before it"
+    assert found > 20

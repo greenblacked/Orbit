@@ -1092,6 +1092,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   height: 0.5rem;
   height: max(0.5rem, 2.2cqw);
   margin: 0 -2%;
+  border-radius: 0 0 0.5rem 0.5rem;
   border-radius: 0 0 1.6cqw 1.6cqw;
   background: linear-gradient(#d4d5da, #8a8b92);
   box-shadow: 0 18px 30px -12px color-mix(in srgb, var(--fam-a) 60%, transparent);
@@ -1102,6 +1103,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   display: flex;
   aspect-ratio: 16 / 9;
   padding: 1.2%;
+  border-radius: 0.5rem;
   border-radius: 1.6cqw;
   background: #0d0d10;
   box-shadow: inset 0 0 0 2px #3b3b42, 0 0 0 1px rgba(255, 255, 255, 0.1),
@@ -1109,6 +1111,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 }
 .dev-tv .screen {
   padding: 5% 6%;
+  border-radius: 0.35rem;
   border-radius: 1cqw;
   font-size: 0.75rem;
   font-size: max(0.75rem, 2.8cqw);
@@ -1250,13 +1253,17 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   flex: none;
   display: grid;
   place-items: center;
+  width: 2.75rem;
   width: max(9cqw, 2.75rem);
+  height: 2.75rem;
   height: max(9cqw, 2.75rem);
+  margin-inline: 0;
   margin-inline: min(0px, calc((9cqw - 2.75rem) / 2));
   border-radius: 50%;
 }
 .deck-stick::before {
   content: "";
+  width: 2.5rem;
   width: 9cqw;
   aspect-ratio: 1;
   border-radius: 50%;
@@ -1266,6 +1273,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 .dev-deck .screen {
   aspect-ratio: 16 / 10;
   padding: 5% 6%;
+  border-radius: 0.4rem;
   border-radius: 1.2cqw;
   font-size: 0.75rem;
   font-size: max(0.75rem, 2.5cqw);
@@ -1274,6 +1282,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 .dev-router { max-width: 34rem; }
 .rt-box {
   padding: 4% 4% 3%;
+  border-radius: 0.75rem;
   border-radius: 2.4cqw;
   background: linear-gradient(#2a2a30, #121216);
   box-shadow: inset 0 0 0 2px #3b3b42, 0 0 0 1px rgba(255, 255, 255, 0.1),
@@ -1281,6 +1290,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 }
 .dev-router .screen {
   padding: 5% 6%;
+  border-radius: 0.35rem;
   border-radius: 1cqw;
   font-size: 0.75rem;
   font-size: max(0.75rem, 2.6cqw);
@@ -1290,6 +1300,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   position: relative;
   flex: 1;
   aspect-ratio: 1.15;
+  border-radius: 3px;
   border-radius: 0.5cqw;
   background: #050507;
   box-shadow: inset 0 0 0 2px #3b3b42;
@@ -1422,15 +1433,15 @@ button.m-comp:active { filter: brightness(1.2); }
 .dev-ipad .hw-prev, .dev-router .hw-prev { right: calc(12% + 3.25rem); }
 .dev-ipad .hw-next, .dev-router .hw-next { right: 12%; }
 /* The laptops: two keys on the base, centred on it. */
-.dev-mac .hw-e { bottom: calc(max(0.5rem, 2.2cqw) / 2 - var(--hw) / 2); place-items: center; color: #3b3b42; }
-.dev-mac .hw-e::before { width: 1.75rem; height: max(0.3rem, 1cqw); }
+.dev-mac .hw-e { bottom: calc(0.25rem - var(--hw) / 2); bottom: calc(max(0.5rem, 2.2cqw) / 2 - var(--hw) / 2); place-items: center; color: #3b3b42; }
+.dev-mac .hw-e::before { width: 1.75rem; height: 0.3rem; height: max(0.3rem, 1cqw); }
 .dev-mac .hw-prev { left: calc(50% - var(--hw) - 2px); }
 .dev-mac .hw-next { left: calc(50% + 2px); }
 /* The TV: two buttons either side of the stand. */
-.dev-tv .hw-e { bottom: calc(max(0.5rem, 3cqw) / 2 - var(--hw) / 2); place-items: center; }
+.dev-tv .hw-e { bottom: calc(0.25rem - var(--hw) / 2); bottom: calc(max(0.5rem, 3cqw) / 2 - var(--hw) / 2); place-items: center; }
 .dev-tv .hw-e::before { width: 1.75rem; height: 6px; }
-.dev-tv .hw-prev { left: calc(50% - 9cqw - 0.25rem - var(--hw)); }
-.dev-tv .hw-next { left: calc(50% + 9cqw + 0.25rem); }
+.dev-tv .hw-prev { left: calc(50% - 3rem - 0.25rem - var(--hw)); left: calc(50% - 9cqw - 0.25rem - var(--hw)); }
+.dev-tv .hw-next { left: calc(50% + 3rem + 0.25rem); left: calc(50% + 9cqw + 0.25rem); }
 /* The watch: the crown, and the side button under it. */
 .dev-watch .hw-e { right: calc(3px - var(--hw)); place-items: center start; }
 .dev-watch .hw-e::before { width: 7px; height: 2rem; }
