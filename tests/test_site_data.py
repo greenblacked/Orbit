@@ -318,3 +318,17 @@ def test_the_device_mocks_use_color_mix_only_behind_a_support_check():
             section = section[:first] + section[at + 1 :]
     assert "color-mix(" not in section
     assert "var(--glow, transparent)" in section
+
+
+def test_the_card_lift_needs_a_hover_pointer_and_motion_allowed():
+    block = motion_block()
+    gated = re.search(r"@media \(hover: hover\) \{\s*\.rel:hover \{[^}]*translate", block)
+    assert gated, "the .rel:hover lift is not behind (hover: hover) inside the motion block"
+    assert block.count(".rel:hover {") == 1
+
+
+def test_the_refraction_effect_needs_a_fine_hovering_pointer_like_the_glass():
+    fx = (ASSETS / "fx.js").read_text(encoding="utf-8")
+    body = fx[fx.index("function refraction()") : fx.index("function aurora()")]
+    assert '"(hover: hover) and (pointer: fine)"' in body
+    assert body.index("(hover: hover)") < body.index("document.body.appendChild")

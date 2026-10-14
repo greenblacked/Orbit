@@ -881,7 +881,9 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   .toast { transition: opacity 200ms ease, transform 200ms ease, visibility 0s linear 200ms; }
   .toast.on { transition: opacity 200ms ease, transform 200ms ease; }
   .rel { transition: translate 200ms ease; }
-  .rel:hover { translate: 0 -3px; box-shadow: 0 12px 28px -12px var(--glass-shadow); }
+  @media (hover: hover) {
+    .rel:hover { translate: 0 -3px; box-shadow: 0 12px 28px -12px var(--glass-shadow); }
+  }
   @keyframes reveal-in {
     from { opacity: 0; transform: translateY(2rem); }
     to { opacity: 1; transform: none; }
