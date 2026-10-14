@@ -12,7 +12,8 @@ const here = (path) => fileURLToPath(new URL(path, import.meta.url));
 
 export const FEED = readFileSync(here('../fixtures/releases.rss'), 'utf8');
 export const HEADERS_FILE = readFileSync(here('../../src/_headers'), 'utf8');
-export const ORIGIN = 'https://orbit.example';
+// A host the Worker fetches live on (LIVE_HOSTS); other hosts answer from the snapshot alone.
+export const ORIGIN = 'https://orbit.szolotov.com';
 export const APPLE_ID = 'apple-developer-releases';
 export { FEED_URL };
 

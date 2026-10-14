@@ -5,7 +5,7 @@
 // contract in ../releases.js, newest first. It does no I/O.
 
 import { familyIds } from '../families.js';
-import { field, isHttpsOn, mergeReleases, parseDate, rssItems } from '../releases.js';
+import { field, isHttpsOn, parseDate, rssItems, sortReleases } from '../releases.js';
 
 export const ID = 'apple-developer-releases';
 export const VENDOR = 'apple';
@@ -49,7 +49,7 @@ export function parseFeed(xmlText) {
     if (!id || !date || !isHttpsOn(link, 'developer.apple.com')) continue;
     releases.push({ id, ...parsed, title, date, url: link, source: ID });
   }
-  return mergeReleases([], releases);
+  return sortReleases(releases);
 }
 
 export default {

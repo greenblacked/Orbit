@@ -11,7 +11,15 @@
 // bare "beta" or "RC" and a final release are null). `date` is ISO-8601 UTC without
 // milliseconds. Only the title, build, date and link are kept, never release-notes text.
 
-export const MAX_RELEASES = 2000;
+// Each source keeps its newest MAX_RELEASES_PER_SOURCE releases, so a large source cannot
+// push another's rows out. The largest live source is the AOSP tag page (about 300 release
+// tags back to 2009, and growing), so 1000 leaves about 3 times that; the whole list is
+// bounded at 1000 rows per source. The cap applies only where lists are merged (the Worker
+// and the snapshot script); adapters sort without capping, so nothing is dropped quietly
+// inside a parser. A source near the cap is a signal to raise it on purpose:
+// tests/snapshot.test.mjs fails at 80% of it, and the snapshot script refuses a merge that
+// would drop rows.
+export const MAX_RELEASES_PER_SOURCE = 1000;
 
 const ZONES = {
   Z: 0,
@@ -107,8 +115,7 @@ function byNewest(a, b) {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
-/** Union of two release lists by id (entries in `b` win), newest first, capped. */
-export function mergeReleases(a, b) {
+function union(a, b) {
   const byId = new Map();
   for (const list of [a, b]) {
     for (const release of Array.isArray(list) ? list : []) {
@@ -117,5 +124,37 @@ export function mergeReleases(a, b) {
       }
     }
   }
-  return [...byId.values()].sort(byNewest).slice(0, MAX_RELEASES);
+  return [...byId.values()].sort(byNewest);
+}
+
+/** Union of releases by id (later entries win), newest first, with no cap. For adapters. */
+export function sortReleases(list) {
+  return union(list, []);
+}
+
+/**
+ * Union of two release lists by id (entries in `b` win), newest first, each source capped at
+ * its newest MAX_RELEASES_PER_SOURCE. Returns { releases, dropped }: `dropped` maps a source
+ * id to the number of its rows the cap removed (empty when none).
+ */
+export function mergeReleasesChecked(a, b) {
+  const kept = new Map();
+  const dropped = {};
+  const releases = [];
+  for (const release of union(a, b)) {
+    const key = typeof release.source === 'string' ? release.source : '';
+    const count = kept.get(key) ?? 0;
+    if (count < MAX_RELEASES_PER_SOURCE) {
+      kept.set(key, count + 1);
+      releases.push(release);
+    } else {
+      dropped[key] = (dropped[key] ?? 0) + 1;
+    }
+  }
+  return { releases, dropped };
+}
+
+/** mergeReleasesChecked without the report: the merged list alone. */
+export function mergeReleases(a, b) {
+  return mergeReleasesChecked(a, b).releases;
 }
