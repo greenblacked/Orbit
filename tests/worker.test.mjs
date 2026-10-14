@@ -470,6 +470,31 @@ describe('the Worker: /api/health and the rest', () => {
     assert.equal((await res.json()).ok, false);
   });
 
+  it('keeps the failure in a 503 health when there is no snapshot to carry it', async () => {
+    const errors = mock.method(console, 'error', () => {});
+    try {
+      stubUpstream(() => new Response('', { status: 503 }));
+      const before = Date.now();
+      const res = await call('/api/health', fakeEnv(null));
+      assert.equal(res.status, 503);
+      const [first] = (await res.json()).sources;
+      assert.equal(first.ok, false);
+      assert.match(first.lastError, /503/);
+      assert.equal(typeof first.failedAt, 'number');
+      assert.ok(first.failedAt >= before && first.failedAt <= Date.now());
+
+      // Inside the back-off the failure comes from the stored marker.
+      const again = await call('/api/health', fakeEnv(null));
+      assert.equal(again.status, 503);
+      const [second] = (await again.json()).sources;
+      assert.equal(second.lastError, first.lastError);
+      assert.equal(second.failedAt, first.failedAt);
+      assert.equal(errors.mock.callCount(), 1);
+    } finally {
+      errors.mock.restore();
+    }
+  });
+
   it('answers JSON 404 for any other /api path', async () => {
     for (const path of ['/api/', '/api/nope', '/api/releases']) {
       const res = await call(path, fakeEnv());

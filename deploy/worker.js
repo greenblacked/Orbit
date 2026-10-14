@@ -417,12 +417,14 @@ async function fallback(source, request, env, failure = null) {
 }
 
 // One source's payload to serve, or null when nothing at all is available for it.
-async function load(source, request, env, ctx) {
+// `seen.failure` receives the failure of this request even when there is no payload to carry it.
+async function load(source, request, env, ctx, seen = {}) {
   let cached = await readCache(source);
   if (cached?.negative) {
     // Nothing was cached and the last attempt failed: inside the back-off, do not ask again.
     if (Date.now() - failedMs(cached) < RETRY_MS) {
-      return fallback(source, request, env, failureIn(cached));
+      seen.failure = failureIn(cached);
+      return fallback(source, request, env, seen.failure);
     }
     cached = null;
   }
@@ -442,6 +444,7 @@ async function load(source, request, env, ctx) {
   } catch (error) {
     const replaced = error instanceof Replaced;
     const failure = replaced ? null : failureOf(error);
+    seen.failure = failure;
     if (cached) {
       if (!replaced) await markFailed(source, cached, failure);
       return serve(cached, true, failure ?? failureIn(cached));
@@ -456,10 +459,12 @@ async function load(source, request, env, ctx) {
 async function loadAll(sources, request, env, ctx) {
   return Promise.all(
     sources.map(async (source) => {
+      const seen = { failure: null };
       try {
-        return { source, payload: await load(source, request, env, ctx) };
+        const payload = await load(source, request, env, ctx, seen);
+        return { source, payload, failure: payload?.failure ?? seen.failure };
       } catch {
-        return { source, payload: null };
+        return { source, payload: null, failure: seen.failure };
       }
     }),
   );
@@ -481,7 +486,7 @@ function combine(results) {
 }
 
 function summary(results) {
-  return results.map(({ source, payload }) => ({
+  return results.map(({ source, payload, failure }) => ({
     id: source.id,
     vendor: source.vendor,
     ok: Boolean(payload),
@@ -489,8 +494,8 @@ function summary(results) {
     snapshot: payload ? Boolean(payload.snapshot) : false,
     fetchedAt: payload ? payload.fetchedAt : null,
     count: payload ? payload.releases.length : 0,
-    lastError: payload?.failure?.lastError ?? null,
-    failedAt: payload?.failure?.failedAt ?? null,
+    lastError: failure?.lastError ?? null,
+    failedAt: failure?.failedAt ?? null,
   }));
 }
 
