@@ -2203,3 +2203,78 @@ def test_a_family_with_only_pre_releases_headlines_the_newest_of_them(page, base
     card = page.locator('#latest-grid [data-family="SteamOS"]')
     assert card.locator("[data-f=ver]").inner_text() == "SteamOS 3.9.2"
     assert card.locator("[data-f=pre]").is_hidden()
+
+
+SUMMARY_TEXT = "A short description. <b>Not markup</b> and long enough to need more than one line " * 3
+
+
+def with_summaries():
+    """The snapshot with a summary on its first iOS and first RouterOS release."""
+    data = copy.deepcopy(SNAPSHOT)
+    first = {}
+    for release in data["releases"]:
+        first.setdefault(release["family"], release)
+    first["iOS"]["summary"] = SUMMARY_TEXT[:150]
+    first["RouterOS"]["summary"] = "Owner line"
+    return data
+
+
+def test_a_summary_shows_under_the_timeline_row_as_plain_text_clamped_to_two_lines(
+    browser, base_url
+):
+    data = with_summaries()
+    ios_id = next(r["id"] for r in data["releases"] if r["family"] == "iOS")
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        serve_json(page, "**/api/releases.json", json.dumps(data))
+        page.goto(base_url + "/timeline/")
+        page.wait_for_selector(".tl-item")
+        row = page.locator(f'.tl-item[data-id="{ios_id}"]')
+        assert row.locator(".tl-note").count() == 1
+        # Text, never markup: the angle brackets are on the page as characters.
+        assert row.locator(".tl-note b").count() == 0
+        assert "<b>" in row.locator(".tl-note").inner_text()
+        assert "has-note" in row.get_attribute("class").split()
+        clamp = row.locator(".tl-note-t").evaluate("e => getComputedStyle(e).webkitLineClamp")
+        assert clamp == "2"
+        # A release without a summary has no note line.
+        bare = next(r["id"] for r in data["releases"] if "summary" not in r)
+        assert page.locator(f'.tl-item[data-id="{bare}"] .tl-note').count() == 0
+    finally:
+        context.close()
+
+
+def test_the_owner_notes_win_over_a_summary_and_reach_the_front_page_card(browser, base_url):
+    data = with_summaries()
+    ios = public("iOS", data)[0]  # the release the card headlines
+    notes = {"schema": 1, "notes": {ios["id"]: "  Written\n by the owner  "}}
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        serve_json(page, "**/api/releases.json", json.dumps(data))
+        serve_json(page, "**/data/notes.json", json.dumps(notes))
+        page.goto(base_url + "/")
+        cards_ready(page)
+        note = page.locator("#latest-grid [data-family=iOS] [data-f=note]")
+        page.wait_for_function(
+            "() => document.querySelector('#latest-grid [data-family=iOS] [data-f=note]').textContent !== ''"
+        )
+        assert note.inner_text() == "Written by the owner"
+        assert note.is_visible()
+        # A family with no summary keeps its note slot hidden.
+        assert page.locator("#latest-grid [data-family=macOS] [data-f=note]").is_hidden()
+    finally:
+        context.close()
+
+
+def test_a_missing_notes_file_changes_nothing(browser, base_url):
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        serve_json(page, "**/data/notes.json", "no", status=404, kind="text/plain")
+        page.goto(base_url + "/timeline/")
+        page.wait_for_selector(".tl-item")
+        assert page.locator(".tl-note").count() == 0
+    finally:
+        context.close()

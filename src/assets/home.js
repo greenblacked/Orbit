@@ -53,6 +53,15 @@
     line.appendChild(a);
   }
 
+  // The release's description, a muted line clamped to two lines by CSS; hidden when it has none.
+  function paintNote(card, r) {
+    var line = card.querySelector('[data-f="note"]');
+    if (!line) return;
+    var text = r && r.summary ? r.summary : "";
+    if (line.textContent !== text) line.textContent = text;
+    line.hidden = !text;
+  }
+
   function paintCard(card, r, pre) {
     var set = function (name, text) { card.querySelector('[data-f="' + name + '"]').textContent = text; };
     paintSigil(card, r);
@@ -64,6 +73,7 @@
       card.removeAttribute("data-stage");
       card.querySelector('[data-f="badge"]').hidden = true;
       card.querySelector('[data-f="link"]').hidden = true;
+      paintNote(card, null);
       return;
     }
     set("ver", r.family + " " + r.version);
@@ -83,6 +93,7 @@
     var hint = link.querySelector(".sr-only");
     if (hint) hint.textContent = " " + r.family + " " + r.version + " (opens in a new tab)";
     card.querySelector('[data-f="badge"]').hidden = false;
+    paintNote(card, r);
   }
 
   // The newest release of each platform under the intro, on a phone only (CSS).

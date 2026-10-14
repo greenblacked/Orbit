@@ -49,7 +49,7 @@
   }
 
   function item(r) {
-    var li = RO.h("li", "tl-item fam-" + r.family.toLowerCase(), null, { "data-id": r.id });
+    var li = RO.h("li", "tl-item fam-" + r.family.toLowerCase() + (r.summary ? " has-note" : ""), null, { "data-id": r.id });
     rows.push({ li: li, r: r });
     var a = RO.h("a", "tl-link", null, { href: r.url, target: "_blank", rel: "noopener noreferrer" });
     a.appendChild(RO.h("span", "tl-day", RO.day(r.t)));
@@ -62,6 +62,12 @@
     if (r.build) a.appendChild(RO.h("span", "build", r.build));
     a.appendChild(RO.h("span", "sr-only", " (opens the release page in a new tab)"));
     li.appendChild(a);
+    // The description, under the version line; clamped to two lines by CSS (.tl-note-t).
+    if (r.summary) {
+      var d = RO.h("p", "tl-note");
+      d.appendChild(RO.h("span", "tl-note-t", r.summary));
+      li.appendChild(d);
+    }
     note(li, r);
     return li;
   }

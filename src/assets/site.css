@@ -461,6 +461,7 @@ html[data-theme="reactor"] #dark-switch .sun,
 .back + .title { margin-top: 1.5rem; }
 .title + .lede { margin-top: 1rem; }
 .page .small.count { margin-top: 1rem; }
+.page .small.sec-scope { margin-top: 1rem; }
 
 /* Rendered Markdown. */
 .prose-lab {
@@ -773,6 +774,8 @@ html[data-theme="reactor"] { --aurora: 0.3; }
 .badge[data-kind="rc"], [data-stage="rc"] .badge { border-style: dotted; border-width: 2px; }
 .build { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--muted); }
 .rel-when { margin-top: 0.25rem; }
+/* The description (summary): muted, at most two lines; textContent only. */
+.rel-note { margin-top: 0.25rem; color: var(--muted); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .rel-apple {
   display: inline-flex;
   min-height: 2.75rem;
@@ -1507,6 +1510,13 @@ button.m-comp:active { filter: brightness(1.2); }
 .tl-fam { min-width: 4.5rem; color: var(--fam-text); font-size: 0.875rem; font-weight: 500; }
 .tl-ver { font-weight: 500; }
 @media (max-width: 36rem) { .tl-day { width: 100%; } }
+/* The description of a release (summary) under a timeline row: muted, at most two lines. The
+   clamp sits on the inner span so the row's padding is never clipped, and the row's rule moves
+   to the last line under the link, as it does for the security note. */
+.tl-item.has-note .tl-link { border-bottom: 0; padding-bottom: 0.25rem; }
+.tl-note { margin: 0; padding: 0 0 0.5rem 1.25rem; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.875rem; line-height: 1.4286; }
+.tl-note-t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.tl-item.has-sec .tl-note { border-bottom: 0; padding-bottom: 0.25rem; }
 /* Security notes (security.js): one line under a timeline row. Only a link is a control, and it
    keeps the 44px floor; a state with nothing to open is plain text. */
 .tl-item.has-sec .tl-link { border-bottom: 0; padding-bottom: 0.25rem; }
