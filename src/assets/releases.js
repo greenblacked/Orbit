@@ -88,6 +88,11 @@
         date: new Date(t).toISOString(), t: t, url: r.url
       };
       if (typeof r.line === "string" && LINE.test(r.line)) entry.line = r.line;
+      else if (r.family === "RouterOS") {
+        // A row cached before lines existed: its channel is the end of its id.
+        var ch = /-(stable|long-term|testing)$/.exec(r.id);
+        if (ch) entry.line = ch[1];
+      }
       list.push(entry);
     });
     if (!list.length) return null;

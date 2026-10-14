@@ -632,7 +632,7 @@ def test_check_my_version_calls_the_newest_of_an_older_line_current_for_that_lin
     assert answer(page).startswith("Current for Android 16: Android 16.0.0")
 
 
-def test_check_my_version_picks_the_newest_by_version_not_by_date(page, base_url):
+def test_check_my_version_names_the_newest_of_a_routeros_line(page, base_url):
     ros = public("RouterOS")
     stable = next(r for r in ros if r["version"] == "7.24.5")
     long_term = next(r for r in ros if r["version"] == "7.23.8")
@@ -642,9 +642,9 @@ def test_check_my_version_picks_the_newest_by_version_not_by_date(page, base_url
     assert answer(page).startswith("Current for RouterOS: RouterOS 7.24.5")
     lookup_ask(page, "RouterOS", long_term["build"])
     text = answer(page)
-    older = "RouterOS 7.23.8 came out after RouterOS 7.24.5 but is an older version"
-    assert text.startswith(older), text
-    assert text.endswith(" It is the newest long-term release."), text
+    head = "Current for RouterOS Long-term: RouterOS 7.23.8 is the newest of its line."
+    assert text.startswith(head), text
+    assert "The newest public release is RouterOS 7.24.5." in text, text
     assert "behind" not in text and page.locator("#lk-result a").count() == 0
     lookup_ask(page, "RouterOS", "7.25rc1")
     assert answer(page).endswith("ahead of the newest public release, RouterOS 7.24.5.")

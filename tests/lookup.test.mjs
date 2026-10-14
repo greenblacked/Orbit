@@ -165,7 +165,7 @@ describe('judge by line', () => {
     const lts = rel('7.23.8', '7.23.8', 'release', 8, 'RouterOS', 'long-term');
     const rc = rel('7.25', '7.25rc1', 'rc', 1, 'RouterOS', 'testing');
     const stable = rel('7.24.5', '7.24.5', 'release', 0, 'RouterOS', 'stable');
-    const older = rel('7.23.7', '7.23.7', 'release', 20, 'RouterOS', 'long-term');
+    const older = rel('7.23.7', '7.23.7', 'release', -20, 'RouterOS', 'long-term');
     const list = [lts, rc, stable, older];
     const higher = (a, b) => versionOrder(a.version, b.version) > 0;
     const ctx = { newest: stable, higher };

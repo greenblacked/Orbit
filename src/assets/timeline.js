@@ -68,7 +68,11 @@
   var lineKey = "";
   function syncLines() {
     var names = linesOf();
-    if (names.indexOf(state.line) < 0) state.line = "all";
+    if (names.indexOf(state.line) < 0) {
+      var dropped = state.line !== "all";
+      state.line = "all";
+      if (dropped && !target) remember();
+    }
     // A poll that changes no line must not rebuild the chips: that would drop their focus.
     var key = names.join("|");
     if (key === lineKey) { press("chips-line", state.line); return; }

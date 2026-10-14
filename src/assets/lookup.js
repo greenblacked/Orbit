@@ -30,7 +30,7 @@
 
   // For a dotted number that names no release (iOS "26.5", a Windows "26100.6584"): the release it
   // is older than, as { kind: "build" | "line", ref, line }, else null. A build is compared with
-  // the newest build that starts with the same number; a version with the newest of its major line.
+  // the newest build that starts with the same number; a version with the newest of its major version.
   function behind(list, text, family) {
     var asked = norm(text), prefix = norm(family) + " ";
     var rest = asked.indexOf(prefix) === 0 ? asked.slice(prefix.length) : asked;
@@ -78,7 +78,7 @@
 
   // Where `hit` stands against the newest public release (`ctx.newest` by version, as the cards
   // pick it; `ctx.higher(a, b)` orders versions; else the first public release and the list order,
-  // which is newest first by date). kind: current, line (newest of its major line), ahead,
+  // which is newest first by date). kind: current, line (newest of its line), ahead,
   // older (dated after the newest, lower version), superseded (public releases between by list
   // position and days apart, as Compare counts them) or none.
   function judge(list, hit, ctx) {
@@ -184,7 +184,7 @@
       : k === "ahead" ? name(hit) + " is a pre-release, ahead of the newest public release, " + name(j.newest) + "."
       : k === "line" && family === "Windows" ? "Current for " + name(hit) + " servicing: " +
         (hit.build ? "build " + hit.build : name(hit)) + " is the latest of its version. " + top
-      : k === "line" ? "Current for " + family + " " + j.line + ": " + name(hit) + " is the newest of its line. " + top
+      : k === "line" ? "Current for " + family + " " + RO.lineLabel(j.line) + ": " + name(hit) + " is the newest of its line. " + top
       : k === "older" ? name(hit) + " came out after " + name(j.newest) + " but is an older version. " + top
       : k === "superseded" ? "Superseded by " + name(j.newest) + " on " + RO.day(j.newest.t) + ": " +
         plural(j.pub, "public release") + " and " + plural(j.days, "day") + " behind." +
