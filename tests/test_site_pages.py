@@ -448,6 +448,25 @@ def test_the_about_this_mac_mock_turns_the_beta_off_when_no_beta_is_newer(browse
         context.close()
 
 
+def test_the_mac_paused_note_fits_the_screen_at_phone_width(browser, base_url):
+    context = make_context(browser, base_url, width=360)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        page.click("[data-ch=beta]")
+        mac = page.locator(".m-mac").bounding_box()
+        note = page.locator("[data-f=betanote]")
+        assert note.inner_text() == "Steps are paused on the beta channel"
+        box = note.bounding_box()
+        assert box["x"] >= mac["x"] and box["y"] >= mac["y"]
+        assert box["x"] + box["width"] <= mac["x"] + mac["width"]
+        assert box["y"] + box["height"] <= mac["y"] + mac["height"]
+    finally:
+        context.close()
+
+
 def test_the_empty_mac_note_takes_no_space(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
@@ -476,7 +495,7 @@ def test_the_watch_keeps_the_year_in_the_released_mode(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
     mocks_ready(page)
-    newest = next(r for r in releases("watchOS") if r["stage"] == "release")
+    newest = public("watchOS")[0]
     when = datetime.datetime.fromisoformat(newest["date"].replace("Z", "+00:00"))
     page.click(".m-comp")
     page.click(".m-comp")
@@ -487,6 +506,7 @@ def test_the_watch_keeps_the_year_in_the_released_mode(page, base_url):
     disc = page.locator(".m-comp").bounding_box()
     text = page.locator(".m-comp .v").bounding_box()
     assert text["x"] >= disc["x"] and text["x"] + text["width"] <= disc["x"] + disc["width"]
+    assert text["width"] <= 77, "the date must fit inside the black disc, not only the button"
     for selector in (".m-comp .k", ".m-wname .m-pos", ".m-watch .m-name"):
         size = page.eval_on_selector(selector, "e => parseFloat(getComputedStyle(e).fontSize)")
         assert size >= 11, (selector, size)
@@ -1009,7 +1029,7 @@ def test_the_ipad_sidebar_labels_scale_with_the_screen(browser, base_url):
             )
         finally:
             context.close()
-    assert 11 <= sizes[360] <= sizes[1280] <= 14, sizes
+    assert 12 <= sizes[360] <= sizes[1280] <= 14, sizes
 
 
 # --- the toast --------------------------------------------------------------------------

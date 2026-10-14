@@ -6,9 +6,8 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { describe, it } from 'node:test';
 
-const { trail, steps, index, keeps, settle, move, keyStep, newest, blocked, brief, sameRows } = createRequire(
-  import.meta.url,
-)('../src/assets/below.js');
+const { trail, steps, index, keeps, settle, move, keyStep, newest, blocked, brief, sameRows } =
+  createRequire(import.meta.url)('../src/assets/below.js');
 
 const row = (family, id, stage = 'release', version = '1', t = 0, beta = 0) => ({
   family,
