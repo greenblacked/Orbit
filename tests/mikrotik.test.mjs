@@ -36,7 +36,7 @@ const DOCUMENTS = {
 };
 
 const KEYS = [
-  'beta', 'build', 'date', 'family', 'id', 'major', 'source', 'stage', 'title', 'url',
+  'beta', 'build', 'date', 'family', 'id', 'line', 'major', 'source', 'stage', 'title', 'url',
   'vendor', 'version',
 ];
 
@@ -70,8 +70,20 @@ describe('the NEWEST documents', () => {
         date: '2026-09-29T14:21:27Z',
         url: 'https://mikrotik.com/download?v=7.24.5',
         source: ID,
+        line: 'stable',
       },
     ]);
+  });
+
+  it('gives every release the channel it came from as its line', () => {
+    assert.equal(parseNewest(STABLE, 'stable')[0].line, 'stable');
+    assert.equal(parseNewest(LONG_TERM, 'long-term')[0].line, 'long-term');
+    assert.equal(parseNewest(TESTING, 'testing')[0].line, 'testing');
+    for (const name of Object.keys(NEWEST_URLS)) {
+      const [release] = mikrotik.parse(DOCUMENTS[NEWEST_URLS[name]], NEWEST_URLS[name]);
+      assert.equal(release.line, name);
+      assert.ok(release.id.endsWith(`-${name}`), release.id);
+    }
   });
 
   it('keeps the channel in the title of a long-term release', () => {
