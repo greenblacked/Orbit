@@ -4,7 +4,7 @@
 //   GET /api/releases.json            the releases of every vendor
 //   GET /api/releases.json?vendor=X   only the releases of vendor X (400 for an unknown one)
 //   GET /api/security.json            the bundled security notes (/data/security.json), unchanged in content
-//   GET /api/health                   {ok, fetchedAt, stale, count, sources}
+//   GET /api/health                   {ok, degraded, fetchedAt, stale, count, sources}, never cached
 //
 // The Worker iterates the registry of source adapters (sources/index.js). Each source has
 // its own edge-cache entry, its own refresh and its own fallback, so a source that fails
@@ -266,30 +266,94 @@ async function fetchLive(source, env, request, cached) {
   };
 }
 
-// A cached copy as the API serves it: without the retry mark, with `stale` set.
-function serve(cached, stale) {
-  const { failedAt: _failedAt, ...payload } = cached;
-  return { ...payload, stale };
+// The hosts of a source's URLs, and nothing else of them: no path, query or credentials.
+function hostsOf(source) {
+  const hosts = [];
+  for (const url of source.urls) {
+    try {
+      const { host } = new URL(url);
+      if (!hosts.includes(host)) hosts.push(host);
+    } catch {
+      // An adapter's URL that does not parse has no host to name.
+    }
+  }
+  return hosts.join(',');
+}
+
+// A short message for a failure: a URL inside it is cut down to its host, so no query or path
+// reaches a log, a marker or /api/health.
+function shortMessage(error) {
+  const raw = error instanceof Error ? error.message : String(error);
+  const text = raw
+    .replace(/https?:\/\/[^\s/?#]*\S*/gi, (url) => {
+      try {
+        return new URL(url).host;
+      } catch {
+        return '[url]';
+      }
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+  return (text || 'unknown error').slice(0, 200);
+}
+
+// What a failed fetch or parse leaves on the marker: a short message and when it happened (ms).
+function failureOf(error) {
+  return { lastError: shortMessage(error), failedAt: Date.now() };
+}
+
+// A marker's failedAt as milliseconds: a number, or the ISO string older markers carry.
+function failedMs(marker) {
+  const at = typeof marker.failedAt === 'number' ? marker.failedAt : Date.parse(marker.failedAt);
+  return at;
+}
+
+// The failure a marker records, for the summary; null when it holds none.
+function failureIn(marker) {
+  const at = failedMs(marker);
+  if (!Number.isFinite(at)) return null;
+  return { lastError: typeof marker.lastError === 'string' ? marker.lastError : null, failedAt: at };
+}
+
+// One structured line per failed fetch or parse of a source: the event, the source, a short
+// message and the host. No full URL, no response body, no header.
+function logFailure(source, error) {
+  try {
+    console.error({
+      event: 'source_fetch_failed',
+      source: source.id,
+      error: shortMessage(error),
+      host: hostsOf(source),
+    });
+  } catch {
+    // Logging must never turn a source's failure into a bigger one.
+  }
+}
+
+// A cached copy as the API serves it: without the retry mark, with `stale` set. The failure it
+// records (or the one just seen) rides along as `failure`, for the summary only.
+function serve(cached, stale, failure = failureIn(cached)) {
+  const { failedAt: _failedAt, lastError: _lastError, ...payload } = cached;
+  return failure && stale ? { ...payload, stale, failure } : { ...payload, stale };
 }
 
 // Remember that a source could not be reached, so later requests do not ask again at once.
 // The copy keeps the lifetime it had: STORE_MS counts from when it was fetched, so a long
 // outage cannot keep re-extending it.
-async function markFailed(source, cached) {
+async function markFailed(source, cached, failure) {
   const left = STORE_MS - (Date.now() - Date.parse(cached.fetchedAt));
   if (left <= 0) {
     await dropCache(source);
     return;
   }
-  await writeCache(source, { ...cached, failedAt: now() }, left);
+  await writeCache(source, { ...cached, ...failure }, left);
 }
 
 // With nothing cached, remember the failure alone: no releases, just when it happened.
-async function markUnavailable(source) {
-  const stamp = now();
+async function markUnavailable(source, failure) {
   await writeCache(
     source,
-    { source: source.id, fetchedAt: stamp, failedAt: stamp, negative: true, releases: [] },
+    { source: source.id, fetchedAt: now(), ...failure, negative: true, releases: [] },
     RETRY_MS,
   );
 }
@@ -318,7 +382,10 @@ function fetchAndStore(source, env, request, ctx, cached) {
       try {
         live = await fetchLive(source, env, request, cached);
       } catch (error) {
-        throw entry.replaced ? new Replaced('replaced') : error;
+        if (entry.replaced) throw new Replaced('replaced');
+        // Once per real fetch: callers sharing it do not log again.
+        logFailure(source, error);
+        throw error;
       }
       if (!entry.replaced) await writeCache(source, live);
       return live;
@@ -337,27 +404,33 @@ function fetchAndStore(source, env, request, ctx, cached) {
 function refresh(source, env, request, ctx, cached) {
   return fetchAndStore(source, env, request, ctx, cached).then(
     () => undefined,
-    (error) => (error instanceof Replaced ? undefined : markFailed(source, cached)),
+    (error) =>
+      error instanceof Replaced ? undefined : markFailed(source, cached, failureOf(error)),
   );
 }
 
 // The snapshot built into the deploy, as the answer when a source cannot be reached.
-async function fallback(source, request, env) {
+async function fallback(source, request, env, failure = null) {
   const snapshot = await readSnapshot(source, env, request);
-  return snapshot ? { ...snapshot, stale: true, snapshot: true } : null;
+  if (!snapshot) return null;
+  return { ...snapshot, stale: true, snapshot: true, ...(failure && { failure }) };
 }
 
 // One source's payload to serve, or null when nothing at all is available for it.
-async function load(source, request, env, ctx) {
+// `seen.failure` receives the failure of this request even when there is no payload to carry it.
+async function load(source, request, env, ctx, seen = {}) {
   let cached = await readCache(source);
   if (cached?.negative) {
     // Nothing was cached and the last attempt failed: inside the back-off, do not ask again.
-    if (Date.now() - Date.parse(cached.failedAt) < RETRY_MS) return fallback(source, request, env);
+    if (Date.now() - failedMs(cached) < RETRY_MS) {
+      seen.failure = failureIn(cached);
+      return fallback(source, request, env, seen.failure);
+    }
     cached = null;
   }
   if (cached) {
     const age = Date.now() - Date.parse(cached.fetchedAt);
-    const failedAt = Date.parse(cached.failedAt);
+    const failedAt = failedMs(cached);
     const failed = Number.isFinite(failedAt);
     if (failed && Date.now() - failedAt < RETRY_MS) return serve(cached, true);
     if (age <= FRESH_MS && !failed) return serve(cached, Boolean(cached.stale));
@@ -370,12 +443,14 @@ async function load(source, request, env, ctx) {
     return await fetchAndStore(source, env, request, ctx, cached);
   } catch (error) {
     const replaced = error instanceof Replaced;
+    const failure = replaced ? null : failureOf(error);
+    seen.failure = failure;
     if (cached) {
-      if (!replaced) await markFailed(source, cached);
-      return serve(cached, true);
+      if (!replaced) await markFailed(source, cached, failure);
+      return serve(cached, true, failure ?? failureIn(cached));
     }
-    if (!replaced) await markUnavailable(source);
-    return fallback(source, request, env);
+    if (!replaced) await markUnavailable(source, failure);
+    return fallback(source, request, env, failure);
   }
 }
 
@@ -384,10 +459,12 @@ async function load(source, request, env, ctx) {
 async function loadAll(sources, request, env, ctx) {
   return Promise.all(
     sources.map(async (source) => {
+      const seen = { failure: null };
       try {
-        return { source, payload: await load(source, request, env, ctx) };
+        const payload = await load(source, request, env, ctx, seen);
+        return { source, payload, failure: payload?.failure ?? seen.failure };
       } catch {
-        return { source, payload: null };
+        return { source, payload: null, failure: seen.failure };
       }
     }),
   );
@@ -409,15 +486,21 @@ function combine(results) {
 }
 
 function summary(results) {
-  return results.map(({ source, payload }) => ({
+  return results.map(({ source, payload, failure }) => ({
     id: source.id,
     vendor: source.vendor,
     ok: Boolean(payload),
     stale: payload ? Boolean(payload.stale) : true,
+    snapshot: payload ? Boolean(payload.snapshot) : false,
     fetchedAt: payload ? payload.fetchedAt : null,
     count: payload ? payload.releases.length : 0,
+    lastError: failure?.lastError ?? null,
+    failedAt: failure?.failedAt ?? null,
   }));
 }
+
+// True when any source is missing, stale or answered from the bundled snapshot.
+const degraded = (entries) => entries.some((entry) => !entry.ok || entry.stale || entry.snapshot);
 
 async function api(request, env, ctx, sources) {
   const url = new URL(request.url);
@@ -453,23 +536,35 @@ async function api(request, env, ctx, sources) {
   if (url.pathname === '/api/health') {
     const results = await loadAll(sources, request, env, ctx);
     const payload = combine(results);
+    const sourcesOut = summary(results);
+    // `ok` says the Worker answered; `degraded` says some source is not live and fresh.
+    // Health is never cached, so a probe sees the state now.
+    const noStore = { 'cache-control': 'no-store' };
     return payload
       ? json(
           {
             ok: true,
+            degraded: degraded(sourcesOut),
             fetchedAt: payload.fetchedAt,
             stale: payload.stale,
             count: payload.releases.length,
-            sources: summary(results),
+            sources: sourcesOut,
           },
           200,
-          {},
+          noStore,
           head,
         )
       : json(
-          { ok: false, fetchedAt: null, stale: true, count: 0, sources: summary(results) },
+          {
+            ok: false,
+            degraded: true,
+            fetchedAt: null,
+            stale: true,
+            count: 0,
+            sources: sourcesOut,
+          },
           503,
-          { 'cache-control': 'no-store' },
+          noStore,
           head,
         );
   }
