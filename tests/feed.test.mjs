@@ -98,10 +98,12 @@ describe('/api/feed.atom', () => {
     assert.ok(body.includes('&lt;script&gt;alert(&quot;a&quot; &amp; &apos;b&apos;)&lt;/script&gt;'));
     assert.ok(!/[\u0000-\u0008]/.test(body));
     assert.ok(body.includes('?a=1&amp;b='));
-    // Well formed at the character level: every & starts an entity, and no tag-like text remains
-    // once the tags are removed.
+    // Well formed at the character level: every & starts an entity, and every < and > belongs to
+    // a tag.
     assert.ok(!/&(?!(amp|lt|gt|quot|apos);)/.test(body));
-    assert.ok(!/[<>]/.test(body.replace(/<[^<>]*>/g, '')));
+    const tags = body.match(/<[^<>]*>/g) ?? [];
+    assert.equal(body.split('<').length - 1, tags.length);
+    assert.equal(body.split('>').length - 1, tags.length);
   });
 
   it('links to the vendor only on an allowed host, otherwise to the timeline row', async () => {
