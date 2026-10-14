@@ -461,7 +461,7 @@ html[data-theme="reactor"] #dark-switch .sun,
 .back + .title { margin-top: 1.5rem; }
 .title + .lede { margin-top: 1rem; }
 .page .small.count { margin-top: 1rem; }
-.page .small.sec-scope { margin-top: 1rem; }
+.page .filters .sec-scope { grid-column: 1 / -1; margin: 0; }
 
 /* Rendered Markdown. */
 .prose-lab {
