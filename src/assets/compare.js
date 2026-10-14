@@ -43,8 +43,7 @@
   function line(r) {
     var product = r.family === "Windows" ? /^Windows (\d+)/.exec(r.title || "") : null;
     if (product) return { key: "p" + product[1], rank: Number(product[1]), text: "Windows " + product[1] };
-    var known = isFinite(r.major);
-    return { key: "m" + r.major, rank: known ? r.major : NaN, text: r.family + (known ? " " + r.major : "") };
+    return { key: "m" + r.major, rank: r.major, text: r.family + " " + r.major };
   }
   function fill(select, keep, fallback) {
     select.textContent = "";

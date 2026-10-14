@@ -1066,6 +1066,33 @@ def test_a_poll_that_adds_a_month_keeps_the_opened_months(page, base_url):
     assert not page.is_visible("#tl-more")
 
 
+def test_a_poll_that_hides_the_button_moves_its_focus_to_the_last_row(page, base_url):
+    first = monthly_data(13)
+    serve_json(page, "**/api/releases.json", json.dumps(first))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.focus("#more")
+    second = {**first, "releases": first["releases"][:-1]}
+    serve_json(page, "**/api/releases.json", json.dumps(second))
+    page.evaluate("RO.refresh()")
+    page.wait_for_function("document.querySelector('#tl-more').hidden")
+    last = page.locator(".tl-item").last.get_attribute("data-id")
+    assert active_id(page) == last
+
+
+def test_a_poll_that_adds_a_month_keeps_the_default_view_at_twelve_months(page, base_url):
+    first = monthly_data(30)
+    serve_json(page, "**/api/releases.json", json.dumps(first))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    newest = {**first["releases"][0], "id": "new", "date": "2026-11-10T00:00:00Z"}
+    second = {**first, "releases": [newest, *first["releases"]]}
+    serve_json(page, "**/api/releases.json", json.dumps(second))
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector('.tl-item[data-id="new"]')
+    assert page.locator(".month").count() == 12
+
+
 # --- compare ----------------------------------------------------------------------------
 
 
@@ -1268,8 +1295,10 @@ def test_compare_groups_windows_by_product_not_by_update_year(page, base_url):
     )
     products = sorted({r["title"].split()[1] for r in win}, reverse=True)
     assert [label for label, _ in grouped] == [f"Windows {p}" for p in products]
+    flat = page.locator("#c-to option").evaluate_all("els => els.map(o => o.value)")
+    titles = {r["id"]: r["title"] for r in win}
     for label, ids in grouped:
-        assert ids == [r["id"] for r in win if r["title"].startswith(label + " ")]
+        assert ids == [i for i in flat if titles[i].startswith(label + " ")]
 
 
 def test_compare_counts_betas_in_between_and_changes_family(page, base_url):

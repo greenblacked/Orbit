@@ -219,7 +219,8 @@
     var edge = drawn > 0 ? groups[drawn - 1].m : "";
     var held = document.activeElement === more;
     releases = data.releases;
-    if (edge) {
+    // Only when the visitor opened more than the default view: the default stays the newest PAGE months.
+    if (edge && limit > PAGE) {
       byMonth(releases.filter(matches)).forEach(function (g, n) {
         if (g.m === edge && n + 1 > limit) limit = n + 1;
       });
