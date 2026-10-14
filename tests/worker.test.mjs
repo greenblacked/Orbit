@@ -2,10 +2,11 @@
 // node --test 'tests/*.test.mjs'    (node:test and node:assert only; nothing to install)
 
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { describe, it, mock } from 'node:test';
 
 import apple from '../deploy/sources/apple.js';
-import { createWorker } from '../deploy/worker.js';
+import { createWorker, LIVE_HOSTS } from '../deploy/worker.js';
 import {
   advance,
   ago,
@@ -365,11 +366,94 @@ describe('the Worker: /api/health and the rest', () => {
     const fetchedAt = (await (await call('/api/releases.json', fakeEnv())).json()).fetchedAt;
     assert.deepEqual(await res.json(), {
       ok: true,
+      degraded: false,
       fetchedAt,
       stale: false,
       count: 29,
-      sources: [{ id: APPLE_ID, vendor: 'apple', ok: true, stale: false, fetchedAt, count: 29 }],
+      sources: [
+        {
+          id: APPLE_ID,
+          vendor: 'apple',
+          ok: true,
+          stale: false,
+          snapshot: false,
+          fetchedAt,
+          count: 29,
+          lastError: null,
+          failedAt: null,
+        },
+      ],
     });
+  });
+
+  it('logs nothing and is not degraded when every source is live', async () => {
+    const errors = mock.method(console, 'error', () => {});
+    try {
+      const res = await call('/api/health', fakeEnv());
+      const body = await res.json();
+      assert.equal(res.headers.get('cache-control'), 'no-store');
+      assert.equal(body.ok, true);
+      assert.equal(body.degraded, false);
+      assert.equal(errors.mock.callCount(), 0);
+    } finally {
+      errors.mock.restore();
+    }
+  });
+
+  it('logs one structured error for a failed source and reports it degraded', async () => {
+    const errors = mock.method(console, 'error', () => {});
+    try {
+      stubUpstream(() => new Response('secret body', { status: 503 }));
+      const before = Date.now();
+      const res = await call('/api/health', fakeEnv());
+      const body = await res.json();
+      assert.equal(errors.mock.callCount(), 1);
+      const [entry] = errors.mock.calls[0].arguments;
+      assert.deepEqual(JSON.parse(JSON.stringify(entry)), entry);
+      assert.equal(entry.event, 'source_fetch_failed');
+      assert.equal(entry.source, APPLE_ID);
+      assert.equal(entry.host, new URL(FEED_URL).host);
+      assert.match(entry.error, /503/);
+      assert.equal(JSON.stringify(entry).includes('secret body'), false);
+
+      assert.equal(res.headers.get('cache-control'), 'no-store');
+      assert.equal(body.ok, true, 'ok still means the Worker answered');
+      assert.equal(body.degraded, true);
+      const [apple] = body.sources;
+      assert.equal(apple.stale, true);
+      assert.equal(apple.snapshot, true);
+      assert.match(apple.lastError, /503/);
+      assert.ok(apple.failedAt >= before && apple.failedAt <= Date.now());
+
+      // Inside the back-off the marker still tells the story, and nothing more is logged.
+      const again = (await (await call('/api/health', fakeEnv())).json()).sources[0];
+      assert.equal(again.lastError, apple.lastError);
+      assert.equal(again.failedAt, apple.failedAt);
+      assert.equal(errors.mock.callCount(), 1);
+    } finally {
+      errors.mock.restore();
+    }
+  });
+
+  it('keeps the failure on a stale copy and cuts a URL in the message to its host', async () => {
+    const errors = mock.method(console, 'error', () => {});
+    try {
+      await seed(ago(48 * 3600 * 1000));
+      stubUpstream(() => {
+        throw new TypeError(`connect failed for ${FEED_URL}?token=abc`);
+      });
+      const body = await (await call('/api/health', fakeEnv())).json();
+      assert.equal(body.degraded, true);
+      const [apple] = body.sources;
+      assert.equal(apple.snapshot, false);
+      assert.equal(apple.stale, true);
+      assert.equal(apple.lastError.includes('token'), false);
+      assert.ok(apple.lastError.includes(new URL(FEED_URL).host));
+      assert.equal(errors.mock.callCount(), 1);
+      assert.equal(JSON.stringify(errors.mock.calls[0].arguments[0]).includes('token'), false);
+    } finally {
+      errors.mock.restore();
+    }
   });
 
   it('reports a stale snapshot as ok but stale', async () => {
@@ -385,6 +469,31 @@ describe('the Worker: /api/health and the rest', () => {
     const res = await call('/api/health', fakeEnv(null));
     assert.equal(res.status, 503);
     assert.equal((await res.json()).ok, false);
+  });
+
+  it('keeps the failure in a 503 health when there is no snapshot to carry it', async () => {
+    const errors = mock.method(console, 'error', () => {});
+    try {
+      stubUpstream(() => new Response('', { status: 503 }));
+      const before = Date.now();
+      const res = await call('/api/health', fakeEnv(null));
+      assert.equal(res.status, 503);
+      const [first] = (await res.json()).sources;
+      assert.equal(first.ok, false);
+      assert.match(first.lastError, /503/);
+      assert.equal(typeof first.failedAt, 'number');
+      assert.ok(first.failedAt >= before && first.failedAt <= Date.now());
+
+      // Inside the back-off the failure comes from the stored marker.
+      const again = await call('/api/health', fakeEnv(null));
+      assert.equal(again.status, 503);
+      const [second] = (await again.json()).sources;
+      assert.equal(second.lastError, first.lastError);
+      assert.equal(second.failedAt, first.failedAt);
+      assert.equal(errors.mock.callCount(), 1);
+    } finally {
+      errors.mock.restore();
+    }
   });
 
   it('answers JSON 404 for any other /api path', async () => {
@@ -433,9 +542,11 @@ describe('the Worker: /api/health and the rest', () => {
       assert.ok(res.headers.get('cache-control'));
       assert.equal(res.headers.get('access-control-allow-origin'), null);
     }
-    for (const res of responses.slice(0, 3)) {
-      assert.equal(res.headers.get('cache-control'), 'public, max-age=60');
-    }
+    // Releases and an unknown path are cacheable for a minute; health is never cached.
+    const [releases, health, nope] = responses;
+    assert.equal(releases.headers.get('cache-control'), 'public, max-age=60');
+    assert.equal(health.headers.get('cache-control'), 'no-store');
+    assert.equal(nope.headers.get('cache-control'), 'public, max-age=60');
   });
 });
 
@@ -700,5 +811,114 @@ describe('the Worker: the bundled snapshot', () => {
     const body = await (await call('/api/releases.json', env)).json();
     assert.equal(body.snapshot, true);
     assert.equal(body.releases.length, 1);
+  });
+});
+
+describe('the Worker: hosts that may fetch live', () => {
+  const at = (host, path, env = fakeEnv(), ctx = fakeCtx()) =>
+    worker.fetch(new Request(`https://${host}${path}`), env, ctx);
+
+  // Every cache method records its use, so a test can say the cache was never touched.
+  const spyOnCache = () => {
+    const used = [];
+    for (const name of ['match', 'put', 'delete']) {
+      const original = state.cache[name].bind(state.cache);
+      state.cache[name] = (...args) => {
+        used.push(name);
+        return original(...args);
+      };
+    }
+    return used;
+  };
+
+  it('names exactly the production and stage hosts, as docs/architecture.md does', () => {
+    assert.deepEqual([...LIVE_HOSTS].sort(), ['orbit.szolotov.com', 'stage.orbit.szolotov.com']);
+    const docs = readFileSync(new URL('../docs/architecture.md', import.meta.url), 'utf8');
+    for (const host of LIVE_HOSTS) assert.ok(docs.includes(`\`${host}\``), `${host} in the docs`);
+  });
+
+  for (const host of ['orbit.szolotov.com', 'stage.orbit.szolotov.com', 'ORBIT.szolotov.com']) {
+    it(`fetches live and caches on ${host}`, async () => {
+      const res = await at(host, '/api/releases.json');
+      const body = await res.json();
+      assert.equal(body.stale, false);
+      assert.equal(body.snapshot, false);
+      assert.equal(state.upstream.calls.length, 1);
+      assert.equal(state.cache.store.size, 1);
+    });
+  }
+
+  for (const host of [
+    'orbit.acct.workers.dev',
+    'pr-1.orbit.acct.workers.dev',
+    'orbit.szolotov.com.',
+    'evil.orbit.szolotov.com',
+    'orbit.szolotov.com.evil.example',
+    'szolotov.com',
+    'localhost',
+  ]) {
+    it(`answers from the snapshot alone on ${host}`, async () => {
+      const used = spyOnCache();
+      const live = { ...SNAPSHOT.releases[0], id: 'https://developer.apple.com/news/releases/?id=live1' };
+      await seed(ago(60 * 1000), {}, APPLE_ID, [live]); // production's copy: not to be served
+      used.length = 0;
+      const ctx = fakeCtx();
+      const res = await at(host, '/api/releases.json', fakeEnv(), ctx);
+      assert.equal(res.status, 200);
+      const body = await res.json();
+      assert.equal(body.snapshot, true);
+      assert.equal(body.stale, true);
+      assert.deepEqual(
+        body.releases.map((release) => release.id),
+        SNAPSHOT.releases.map((release) => release.id),
+      );
+      assert.equal(state.upstream.calls.length, 0, 'no vendor is fetched');
+      assert.deepEqual(used, [], 'the cache is neither read nor written');
+      assert.equal(ctx.pending.length, 0, 'nothing is left running in the background');
+    });
+  }
+
+  it('applies to the vendor filter and /api/health too', async () => {
+    const host = 'orbit.acct.workers.dev';
+    const used = spyOnCache();
+    const one = await (await at(host, '/api/releases.json?vendor=apple')).json();
+    assert.equal(one.snapshot, true);
+    const unknown = await at(host, '/api/releases.json?vendor=nope');
+    assert.equal(unknown.status, 400);
+    const errors = mock.method(console, 'error', () => {});
+    let healthRes;
+    try {
+      healthRes = await at(host, '/api/health');
+      assert.equal(errors.mock.callCount(), 0, 'nothing is logged off the live hosts');
+    } finally {
+      errors.mock.restore();
+    }
+    const health = await healthRes.json();
+    assert.equal(healthRes.headers.get('cache-control'), 'no-store');
+    assert.equal(health.degraded, true);
+    assert.equal(health.ok, true);
+    assert.equal(health.stale, true);
+    assert.equal(health.count, 1);
+    assert.equal(health.sources[0].stale, true);
+    assert.equal(health.sources[0].snapshot, true);
+    assert.equal(health.sources[0].lastError, null);
+    assert.equal(health.sources[0].failedAt, null);
+    assert.equal(state.upstream.calls.length, 0);
+    assert.deepEqual(used, []);
+  });
+
+  it('answers 503 off the live hosts when the snapshot cannot be read', async () => {
+    const res = await at('orbit.acct.workers.dev', '/api/releases.json', fakeEnv(null));
+    assert.equal(res.status, 503);
+    assert.equal(state.upstream.calls.length, 0);
+  });
+
+  it('keeps refusing other methods off the live hosts', async () => {
+    const res = await worker.fetch(
+      new Request('https://orbit.acct.workers.dev/api/releases.json', { method: 'POST' }),
+      fakeEnv(),
+      fakeCtx(),
+    );
+    assert.equal(res.status, 405);
   });
 });
