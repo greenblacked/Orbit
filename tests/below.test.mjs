@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { describe, it } from 'node:test';
 
-const { trail, steps, index, keeps, settle, move, keyStep, newest, blocked, brief } = createRequire(
+const { trail, steps, index, keeps, settle, move, keyStep, newest, blocked, brief, sameRows } = createRequire(
   import.meta.url,
 )('../src/assets/below.js');
 
@@ -207,5 +207,21 @@ describe('the date on the watch', () => {
   it('leaves text that is not a medium US date alone', () => {
     assert.equal(brief('2026-10-08'), '2026-10-08');
     assert.equal(brief('None'), 'None');
+  });
+});
+
+describe('whether a tab changes what the iPad steps through', () => {
+  const a = row('iPadOS', 'a');
+  const b = row('iPadOS', 'b');
+
+  it('is the same when the lists hold the same releases in the same order', () => {
+    assert.equal(sameRows([a, b], [a, b]), true);
+    assert.equal(sameRows([], []), true);
+  });
+
+  it('differs by length, by release or by order', () => {
+    assert.equal(sameRows([a], [a, b]), false);
+    assert.equal(sameRows([a], [b]), false);
+    assert.equal(sameRows([a, b], [b, a]), false);
   });
 });

@@ -943,6 +943,46 @@ def test_the_ipad_sidebar_chooses_what_the_ipad_steps_through(page, base_url):
     assert position(page, "iPadOS") == f"1 / {len(public('iPadOS'))}"
 
 
+def test_the_ipad_says_when_a_tab_changes_nothing(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [
+        r for r in data["releases"] if not (r["family"] == "iPadOS" and r["stage"] != "release")
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    ipad = device(page, "iPadOS")
+    live = ipad.locator("[data-f=step]")
+    group = ipad.get_by_role("group", name="iPadOS releases to show")
+    count = len(public("iPadOS", data))
+    assert len(releases("iPadOS", data)) == count, "the data has no iPadOS beta"
+    group.get_by_role("button", name="History", exact=True).click()
+    assert live.inner_text() == "History: same as Latest"
+    assert position(page, "iPadOS") == f"1 / {count}"
+    group.get_by_role("button", name="Latest", exact=True).click()
+    assert live.inner_text() == "Latest: same as History"
+    group.get_by_role("button", name="Latest", exact=True).click()
+    assert live.inner_text() == "Latest: same as History", "the tab already chosen says nothing new"
+
+
+def test_the_ipad_sidebar_labels_scale_with_the_screen(browser, base_url):
+    sizes = {}
+    for width in (360, 1280):
+        context = make_context(browser, base_url, width=width)
+        try:
+            page = context.new_page()
+            page.goto(base_url + "/")
+            cards_ready(page)
+            mocks_ready(page)
+            sizes[width] = page.eval_on_selector(
+                "[data-scope=pub]", "e => parseFloat(getComputedStyle(e).fontSize)"
+            )
+        finally:
+            context.close()
+    assert 11 <= sizes[360] <= sizes[1280] <= 14, sizes
+
+
 # --- the toast --------------------------------------------------------------------------
 
 

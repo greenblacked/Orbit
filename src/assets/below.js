@@ -79,6 +79,14 @@
   }
   // "Oct 8, 2026" as "Oct 8 '26": short enough for the watch, with the year kept.
   function brief(day) { return day.replace(/, \d\d(\d\d)$/, " '$1"); }
+  // The iPad sidebar's tabs by the scope each one picks.
+  var TABS = { pub: "Latest", pre: "Betas", all: "History" };
+  // Whether two lists of steps are the same releases in the same order.
+  function sameRows(a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i].id !== b[i].id) return false;
+    return true;
+  }
   var PAUSED = "Steps are paused on the beta channel";
   // Why a press cannot move (the same `by` as move): the words for the live region.
   function blocked(n, by, beta) {
@@ -89,7 +97,7 @@
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
       trail: trail, steps: steps, index: index, keeps: keeps, settle: settle, move: move,
-      keyStep: keyStep, newest: newest, blocked: blocked, brief: brief
+      keyStep: keyStep, newest: newest, blocked: blocked, brief: brief, sameRows: sameRows
     };
     return;
   }
@@ -283,11 +291,13 @@
     for (var t = 0; t < tabs.length; t++) tabs[t].addEventListener("click", function (e) {
       var pick = e.currentTarget.getAttribute("data-scope");
       var before = ipadScope();
+      var was = shown("iPadOS").rows;
       scope = pick;
       paintIpad();
       paintFields("iPadOS");
       var now = shown("iPadOS");
-      if (now.r && ipadScope() !== before) text(sec("iPadOS"), "step", said(now));
+      if (!now.r || pick === before) return;
+      text(sec("iPadOS"), "step", sameRows(was, now.rows) ? TABS[pick] + ": same as " + TABS[before] : said(now));
     });
     var comp = sec("watchOS").querySelector('[data-act="cycle"]');
     if (comp) comp.addEventListener("click", function () {
