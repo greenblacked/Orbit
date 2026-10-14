@@ -35,9 +35,9 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.149.0'
-  # wrangler 4 refuses to run below Node 22. Not a *_VERSION name: a freshness check
-  # that compares those to the newest release would compare Node to a different major
-  # from the one wrangler supports.
+  # wrangler 4 refuses to run below Node 22. The Node version is pinned as setup-node's
+  # node-version input in each job, not as a *_VERSION variable here, so only wrangler's
+  # own pin is in this env and every job checks the installed wrangler against it.
   WRANGLER_SEND_METRICS: 'false'
 
 jobs:
