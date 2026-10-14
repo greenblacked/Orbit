@@ -41,7 +41,7 @@
   // major is the update year, which no product is called. The ids are the option values, so the
   // groups change how the picker reads and nothing else.
   function line(r) {
-    var product = r.family === "Windows" ? /^Windows (\d+)/.exec(r.title || "") : null;
+    var product = r.family === "Windows" ? /^Windows (\d+)(?=\s|$)/.exec(r.title || "") : null;
     if (product) return { key: "p" + product[1], rank: Number(product[1]), text: "Windows " + product[1] };
     // A Windows row with no product in its title has no rank: it sorts after the products.
     return { key: "m" + r.major, rank: r.family === "Windows" ? NaN : r.major, text: r.family + " " + r.major };

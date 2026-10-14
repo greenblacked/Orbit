@@ -219,7 +219,8 @@
     var edge = drawn > 0 ? groups[drawn - 1].m : "";
     var held = document.activeElement === more;
     var focusedId = "";
-    rows.forEach(function (x) { if (x.li.contains(document.activeElement)) focusedId = x.r.id; });
+    var focusedAt = -1;
+    rows.forEach(function (x, n) { if (x.li.contains(document.activeElement)) { focusedId = x.r.id; focusedAt = n; } });
     releases = data.releases;
     // Only when the visitor opened more than the default view: the default stays the newest PAGE months.
     if (edge && limit > PAGE) {
@@ -236,6 +237,13 @@
       var kept = rows.filter(function (x) { return x.r.id === focusedId; })[0];
       var keptLink = kept && kept.li.querySelector("a");
       if (keptLink) keptLink.focus();
+      else if (focusedAt >= rows.length && !moreWrap.hidden) more.focus();
+      else if (rows.length) {
+        // The row is no longer drawn (a newer month pushed it out of the default view): the focus
+        // goes to the row now at its place, else the last one, never to the body.
+        var near = rows[Math.min(focusedAt, rows.length - 1)].li.querySelector("a");
+        if (near) near.focus();
+      }
     }
     if (target) reveal();
   });

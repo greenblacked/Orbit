@@ -1093,6 +1093,23 @@ def test_a_poll_that_adds_a_month_keeps_the_default_view_at_twelve_months(page, 
     assert page.locator(".month").count() == 12
 
 
+def test_a_poll_that_pushes_the_focused_row_out_moves_the_focus_to_a_neighbour(page, base_url):
+    first = monthly_data(30)
+    serve_json(page, "**/api/releases.json", json.dumps(first))
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    page.focus('.tl-item[data-id="m11"] a')
+    newest = {**first["releases"][0], "id": "new", "date": "2026-11-10T00:00:00Z"}
+    second = {**first, "releases": [newest, *first["releases"]]}
+    serve_json(page, "**/api/releases.json", json.dumps(second))
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector('.tl-item[data-id="new"]')
+    assert page.locator('.tl-item[data-id="m11"]').count() == 0
+    assert page.evaluate(
+        "document.activeElement.id === 'more' || !!document.activeElement.closest('.tl-item')"
+    )
+
+
 # --- compare ----------------------------------------------------------------------------
 
 
@@ -1299,6 +1316,24 @@ def test_compare_groups_windows_by_product_not_by_update_year(page, base_url):
     titles = {r["id"]: r["title"] for r in win}
     for label, ids in grouped:
         assert ids == [i for i in flat if titles[i].startswith(label + " ")]
+
+
+def test_compare_ranks_a_windows_row_without_a_title_after_the_products(page, base_url):
+    win = releases("Windows")
+    data = copy.deepcopy(SNAPSHOT)
+    bare = {**win[0], "id": "bare", "version": "26H2", "major": 26}
+    bare.pop("title", None)
+    data["releases"] = [*data["releases"], bare]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/compare/?family=Windows")
+    page.wait_for_selector(".cmp-cards")
+    grouped = page.locator("#c-to optgroup").evaluate_all(
+        "els => els.map(g => [g.label, [...g.children].map(o => o.value)])"
+    )
+    assert grouped[-1][0] == "Windows 26"
+    assert grouped[-1][1] == ["bare"]
+    assert all(ids != ["bare"] for _, ids in grouped[:-1])
+    assert grouped[0][0] != "Windows 26"
 
 
 def test_compare_counts_betas_in_between_and_changes_family(page, base_url):
