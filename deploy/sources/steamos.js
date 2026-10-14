@@ -96,6 +96,7 @@ export function summaryOfTitle(title) {
     const next = rest
       .replace(/^[\s:,;\-\u2013\u2014]+/, '')
       .replace(/^\([^)]*\)/, '')
+      .replace(/^\d{8}\.\d{1,3}\b/, '')
       .replace(/^(?:stable|beta|preview)\b/i, '');
     if (next === rest) break;
     rest = next;

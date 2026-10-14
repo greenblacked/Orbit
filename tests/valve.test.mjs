@@ -125,6 +125,7 @@ describe('summaryOfTitle', () => {
     assert.equal(summaryOfTitle('SteamOS 3.8.1 Preview (20250522.1) - Fan curve fixes'), 'Fan curve fixes');
     assert.equal(summaryOfTitle('SteamOS 3.7.13: Beta, Docking fixes'), 'Docking fixes');
     assert.equal(summaryOfTitle('SteamOS 3.7.13 Docking fixes'), 'Docking fixes');
+    assert.equal(summaryOfTitle('SteamOS 3.8.1 Preview 20250522.1 - Fan fixes'), 'Fan fixes');
   });
 
   it('gives nothing for a title that is only the name, version, channel and build', () => {
@@ -133,6 +134,7 @@ describe('summaryOfTitle', () => {
       'SteamOS 3.8.28 Beta',
       'SteamOS 3.9.1 Preview',
       'SteamOS 3.8.1 Preview (20250522.1)',
+      'SteamOS 3.8.1 Preview 20250522.1',
       'SteamOS 3.7.13 Stable:',
       'Steam Client Update',
       '',
