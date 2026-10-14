@@ -1,7 +1,8 @@
 // The releases API. Only /api/* reaches this Worker (wrangler.json: run_worker_first);
 // everything else is the static site, served by the ASSETS binding.
 //
-//   GET /api/releases.json            the releases of every vendor
+//   GET /api/releases.json            the releases of every vendor, with the owner's notes
+//                                     (/data/notes.json) laid over each release's `summary`
 //   GET /api/releases.json?vendor=X   only the releases of vendor X (400 for an unknown one)
 //   GET /api/security.json            the bundled security notes (/data/security.json), unchanged in content
 //   GET /api/health                   {ok, degraded, fetchedAt, stale, count, sources}, never cached
@@ -32,7 +33,7 @@
 // stage are both in one zone, so they share its cache: the keys name no host, and stage reads
 // and writes production's entries, negative markers included.
 
-import { mergeReleases } from './releases.js';
+import { applyNotes, mergeReleases } from './releases.js';
 import { SOURCES, isSource, vendorsOf } from './sources/index.js';
 
 // The exact hostnames (URL hostnames are lower-case) that may fetch live. Keep in step with
@@ -176,6 +177,19 @@ async function readSnapshot(source, env, request) {
   }
   // A copy, so a caller can never change what the next request sees.
   return narrowed && { ...narrowed, releases: [...narrowed.releases] };
+}
+
+// The owner's descriptions (/data/notes.json), or null when the asset is missing or is not a
+// JSON object. They only ever add a `summary` to a release the Worker already holds.
+async function readNotes(env, request) {
+  try {
+    const res = await env.ASSETS.fetch(new URL('/data/notes.json', request.url));
+    if (!res.ok) return null;
+    const payload = await res.json();
+    return payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
+  } catch {
+    return null;
+  }
 }
 
 // The bundled security notes, or null when the asset is missing or is not a JSON object. They
@@ -536,7 +550,11 @@ async function api(request, env, ctx, sources) {
         );
       }
     }
-    const payload = combine(await loadAll(chosen, request, env, ctx, live));
+    const combined = combine(await loadAll(chosen, request, env, ctx, live));
+    // Notes are laid over the answer, never stored in a source's cache, so removing one
+    // takes effect with the next deploy.
+    const payload =
+      combined && { ...combined, releases: applyNotes(combined.releases, await readNotes(env, request)) };
     return payload
       ? json(payload, 200, {}, head)
       : json({ error: 'no releases available' }, 503, { 'cache-control': 'no-store' }, head);

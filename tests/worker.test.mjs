@@ -922,3 +922,41 @@ describe('the Worker: hosts that may fetch live', () => {
     assert.equal(res.status, 405);
   });
 });
+
+describe('the Worker: the owner notes', () => {
+  // An ASSETS binding that also serves /data/notes.json with `notes` (a status code when a number).
+  const withNotes = (notes) => {
+    const env = fakeEnv();
+    const assets = env.ASSETS.fetch;
+    env.ASSETS.fetch = async (input) => {
+      const path = new URL(input instanceof Request ? input.url : input).pathname;
+      if (path !== '/data/notes.json') return assets(input);
+      return typeof notes === 'number' ? new Response('gone', { status: notes }) : Response.json(notes);
+    };
+    return env;
+  };
+  const summaryOf = (body, id) => body.releases.find((release) => release.id === id)?.summary;
+  const SNAPSHOT_ID = SNAPSHOT.releases[0].id;
+
+  it('lays a note over the release it names', async () => {
+    const env = withNotes({ schema: 1, notes: { [SNAPSHOT_ID]: ' The  first\nrelease. ' } });
+    const body = await (await call('/api/releases.json', env)).json();
+    assert.equal(summaryOf(body, SNAPSHOT_ID), 'The first release.');
+    assert.equal(body.releases.filter((release) => 'summary' in release).length, 1);
+  });
+
+  it('serves the same releases without a summary when there is no notes file', async () => {
+    for (const env of [fakeEnv(), withNotes(404), withNotes('not an object'), withNotes({ notes: [] })]) {
+      const body = await (await call('/api/releases.json', env)).json();
+      assert.equal(body.releases.length, 29);
+      assert.ok(body.releases.every((release) => !('summary' in release)));
+    }
+  });
+
+  it('does not store a note in the source cache', async () => {
+    const env = withNotes({ notes: { [SNAPSHOT_ID]: 'A note.' } });
+    await call('/api/releases.json', env);
+    const cached = await (await state.cache.match(CACHE_URL)).json();
+    assert.ok(cached.releases.every((release) => !('summary' in release)));
+  });
+});

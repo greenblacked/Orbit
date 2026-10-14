@@ -5,11 +5,14 @@
 //
 // A release (the multi-vendor data contract):
 //   { id, vendor, family, version, major, stage, beta, build, title, date, url, source }
+// plus one optional field, `summary`: a short plain-text line (see cleanSummary) that an
+// adapter fills from text it already read, or the owner writes in src/data/notes.json.
 // `vendor` is the maker ("apple"), `family` the platform ("iOS"), `source` the id of the
 // adapter that produced it ("apple-developer-releases"). `stage` is "release", "beta" or
 // "rc". `beta` is the iteration number of a beta or RC ("beta 3" and "RC 2" are 3 and 2; a
 // bare "beta" or "RC" and a final release are null). `date` is ISO-8601 UTC without
-// milliseconds. Only the title, build, date and link are kept, never release-notes text.
+// milliseconds. Apart from `summary`, only the title, build, date and link are kept, never
+// release-notes text: a summary is one line, at most SUMMARY_MAX characters, never markup.
 
 // Each source keeps its newest MAX_RELEASES_PER_SOURCE releases, so a large source cannot
 // push another's rows out. The largest live source is the AOSP tag page (about 300 release
@@ -20,6 +23,51 @@
 // tests/snapshot.test.mjs fails at 80% of it, and the snapshot script refuses a merge that
 // would drop rows.
 export const MAX_RELEASES_PER_SOURCE = 1000;
+
+/** The longest summary, in UTF-16 units, ellipsis included. */
+export const SUMMARY_MAX = 200;
+
+/**
+ * A summary as plain text, or '' when there is none: not a string, or nothing left once
+ * control characters are removed and runs of whitespace collapse to one space. Longer than
+ * SUMMARY_MAX it is cut at a word with an ellipsis (a hard cut when the text has no space
+ * past its first half). It is never HTML; every page writes it with textContent.
+ */
+export function cleanSummary(value) {
+  if (typeof value !== 'string') return '';
+  // Line breaks and tabs are whitespace; every other control character is dropped.
+  const text = value
+    .replace(/[\t\n\r\u2028\u2029]+/g, ' ')
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (text.length <= SUMMARY_MAX) return text;
+  const room = text.slice(0, SUMMARY_MAX - 1);
+  const space = room.lastIndexOf(' ');
+  const cut = space >= SUMMARY_MAX / 2 ? room.slice(0, space) : room;
+  return `${cut.replace(/[\s.,;:!?-]+$/, '')}\u2026`;
+}
+
+/** The release with `summary` set to the cleaned text; unchanged when nothing is left of it. */
+export function withSummary(release, value) {
+  const summary = cleanSummary(value);
+  return summary ? { ...release, summary } : release;
+}
+
+/**
+ * The owner's notes (src/data/notes.json) laid over a release list: a note for a release id
+ * replaces the release's own summary. Other releases are returned as they are. `payload` is
+ * the parsed notes document ({ schema: 1, notes: { id: text } }); anything else changes nothing.
+ */
+export function applyNotes(releases, payload) {
+  const notes = payload && typeof payload === 'object' ? payload.notes : null;
+  if (!Array.isArray(releases) || !notes || typeof notes !== 'object' || Array.isArray(notes)) {
+    return releases;
+  }
+  return releases.map((release) =>
+    release && Object.hasOwn(notes, release.id) ? withSummary(release, notes[release.id]) : release,
+  );
+}
 
 const ZONES = {
   Z: 0,
