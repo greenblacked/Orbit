@@ -7,7 +7,13 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { FAMILIES, VENDORS, familyIds } from '../deploy/families.js';
-import { mergeReleases, parseDate } from '../deploy/releases.js';
+import {
+  MAX_RELEASES_PER_SOURCE,
+  mergeReleases,
+  mergeReleasesChecked,
+  parseDate,
+  sortReleases,
+} from '../deploy/releases.js';
 import apple, { FEED_URL, parseFeed, parseTitle } from '../deploy/sources/apple.js';
 
 const FEED = readFileSync(fileURLToPath(new URL('./fixtures/releases.rss', import.meta.url)), 'utf8');
@@ -266,13 +272,45 @@ describe('mergeReleases', () => {
     assert.equal(merged[2].build, 'new');
   });
 
-  it('caps at 2000 and tolerates junk', () => {
-    const many = Array.from({ length: 2100 }, (_, i) =>
-      r(`id${i}`, new Date(Date.UTC(2026, 0, 1) + i * 60000).toISOString()),
+  const at = (i) => new Date(Date.UTC(2026, 0, 1) + i * 60000).toISOString();
+  const many = (source, n, offset = 0) =>
+    Array.from({ length: n }, (_, i) => r(`${source}-${i}`, at(offset + i), { source }));
+
+  it('caps each source at its newest rows and tolerates junk', () => {
+    const merged = mergeReleases(
+      many('big', MAX_RELEASES_PER_SOURCE + 100),
+      [null, { date: 'x' }, r('', 'y')],
     );
-    const merged = mergeReleases(many, [null, { date: 'x' }, r('', 'y')]);
-    assert.equal(merged.length, 2000);
-    assert.equal(merged[0].id, 'id2099');
+    assert.equal(merged.length, MAX_RELEASES_PER_SOURCE);
+    assert.equal(merged[0].id, `big-${MAX_RELEASES_PER_SOURCE + 99}`);
+    assert.equal(merged.at(-1).id, 'big-100');
     assert.deepEqual(mergeReleases(undefined, null), []);
+  });
+
+  it('caps per source: one big source cannot evict another', () => {
+    // The big source is newer than every small row, so a global cap would drop the small ones.
+    const small = many('small', 5);
+    const big = many('big', MAX_RELEASES_PER_SOURCE + 50, 1000);
+    const { releases, dropped } = mergeReleasesChecked(small, big);
+    assert.equal(releases.filter((x) => x.source === 'small').length, 5);
+    assert.equal(releases.filter((x) => x.source === 'big').length, MAX_RELEASES_PER_SOURCE);
+    assert.deepEqual(dropped, { big: 50 });
+  });
+
+  it('sortReleases orders and dedupes but never caps', () => {
+    const list = many('x', MAX_RELEASES_PER_SOURCE + 20);
+    const sorted = sortReleases([...list, list[0]]);
+    assert.equal(sorted.length, MAX_RELEASES_PER_SOURCE + 20);
+    assert.equal(sorted[0].id, `x-${MAX_RELEASES_PER_SOURCE + 19}`);
+    assert.equal(mergeReleasesChecked([], sorted).dropped.x, 20);
+  });
+
+  it('reports nothing dropped when every source fits', () => {
+    const { releases, dropped } = mergeReleasesChecked(
+      many('a', MAX_RELEASES_PER_SOURCE),
+      many('b', MAX_RELEASES_PER_SOURCE),
+    );
+    assert.equal(releases.length, 2 * MAX_RELEASES_PER_SOURCE);
+    assert.deepEqual(dropped, {});
   });
 });

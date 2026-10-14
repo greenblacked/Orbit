@@ -34,7 +34,7 @@
 // later parameter (`now`) is for tests: passing the url on would make it `now`.
 
 import { familyIds } from '../families.js';
-import { mergeReleases } from '../releases.js';
+import { sortReleases } from '../releases.js';
 
 export const ID = 'android-build-numbers';
 export const VENDOR = 'google';
@@ -241,7 +241,7 @@ export function parsePage(html, now = Date.now()) {
     const release = parseRow(cells, table, now);
     if (release) releases.push(release);
   }
-  return mergeReleases([], releases);
+  return sortReleases(releases);
 }
 
 // An HTML page: ask for it as one.
