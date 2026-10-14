@@ -1,8 +1,8 @@
 /* Release Orbit dial: one ring per platform family (the first outermost), one notch per release
    by date over a trailing window, drawn as SVG from the page's data. A release is a long, broad
    notch; a beta or RC a shorter, thinner one, in the same accent, with a status marker (pass,
-   warn, fail; untested until a verdict). A notch is a button: hover, focus or a tap opens a card
-   with the sigil, version, build, date and a link. The dial is SVG layers (base, one per ring,
+   warn, fail; none until any release has a verdict). A notch is a button: hover, focus or a tap
+   opens a card with the sigil, version, build, date and a link. The dial is SVG layers (base, one per ring,
    hand) so the rings can separate in 3D (see "Signature" in site.css). The hand is a slider and
    the time machine: drag it or use arrows, Page Up/Down, Home and End, and the page below shows
    the releases landed by that day; "Back to now" is the only way back.
@@ -27,6 +27,7 @@
   var dial = document.getElementById("orbit-dial");
   var card = document.getElementById("orbit-card");
   var all = [];                                    // every release, newest first
+  var judged = false;                              // some release has a validation verdict
   var WEEKS = 26;                                  // the dial's window, whatever the data spans
   var weeks = WEEKS, now = 0, start = 0, span = 0;
   var notches = [], signature = "", pinned = "", hideTimer = 0;
@@ -68,7 +69,7 @@
   }
   function label(r) {
     return r.title.replace(/ \(.*\)$/, "") + (r.build ? ", build " + r.build : "") + ", " +
-      RO.day(r.t) + ", validation " + VERDICT[r.status];
+      RO.day(r.t) + (judged ? ", validation " + VERDICT[r.status] : "");
   }
 
   // The marker by a notch's outer end: its shape carries the verdict, not colour alone.
@@ -180,7 +181,7 @@
         el("line", { "class": "nl", x1: a0[0], y1: a0[1], x2: a1[0], y2: a1[1], "stroke-width": r2(wid) }, g);
         // Just past the notch's outer end, sized to the free space before the next ring.
         var mk = Math.min(ms, Math.max(0.55, (step - len - 1.5) / 10.4));
-        marker(g, xy(ang, rad + len / 2 + 0.75 + 4.7 * mk), r.status, mk);
+        if (judged) marker(g, xy(ang, rad + len / 2 + 0.75 + 4.7 * mk), r.status, mk);
         notches.push(g);
         g.rel = r;
       });
@@ -329,9 +330,9 @@
     var text = RO.h("div", "oc-text");
     text.appendChild(RO.h("p", "oc-title", r.family + " " + RO.short(r)));
     text.appendChild(RO.h("p", "oc-build", r.build ? "Build " + r.build : RO.channel(r)));
-    text.appendChild(RO.h("p", "oc-date small", RO.day(r.t) + " · " + VERDICT[r.status]));
+    text.appendChild(RO.h("p", "oc-date small", RO.day(r.t) + (judged ? " · " + VERDICT[r.status] : "")));
     var link = RO.h("a", "rel-apple", "View release", { href: r.url, target: "_blank", rel: "noopener noreferrer" });
-    link.appendChild(RO.h("span", "sr-only", " (opens in a new tab)"));
+    link.appendChild(RO.h("span", "sr-only", " " + r.family + " " + RO.short(r) + " (opens in a new tab)"));
     text.appendChild(link);
     card.appendChild(text);
   }
@@ -539,6 +540,8 @@
     if (next === signature || stage.contains(document.activeElement)) return;
     signature = next;
     all = data.releases;
+    // With no published result, no verdict is shown: "untested" on every notch says nothing.
+    judged = all.some(function (r) { return r.status !== "untested"; });
     hide(true);
     build();
   });

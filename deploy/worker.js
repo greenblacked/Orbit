@@ -12,9 +12,10 @@
 // `stale` when any of them is out of date or has nothing at all.
 //
 // A source's feed carries only its latest items, so a live result is merged with the
-// bundled snapshot (/data/releases.json) and history survives beyond it. `stale` means "the
-// source could not be reached, this is the last good copy"; `snapshot` means the copy is the
-// one built into the deploy. A copy past its fresh window is still served at once while a
+// bundled snapshot (/data/releases.json) and with the copy already cached, and history
+// survives beyond both the feed and the snapshot. `stale` means "the source could not be
+// reached, this is the last good copy"; `snapshot` means the copy is the one built into
+// the deploy. A copy past its fresh window is still served at once while a
 // refresh runs in the background. A refresh that fails leaves a `failedAt` mark on the
 // cached copy: from then on the copy is served with stale true, and the source is not asked
 // again until RETRY_MS has passed. With nothing cached, a failed fetch leaves a short
@@ -33,7 +34,11 @@ const FRESH_MS = 10 * 60 * 1000;
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 5 * 60 * 1000;
 const STORE_MS = 7 * 24 * 60 * 60 * 1000;
+// One deadline for a whole source: its URLs are fetched together and share one signal, so a
+// source with several URLs waits as long as one, not the sum.
 const FETCH_TIMEOUT_MS = 8000;
+// A shared fetch older than this is treated as lost and replaced (see fetchAndStore).
+const INFLIGHT_MAX_MS = FETCH_TIMEOUT_MS + 2000;
 // What a source is asked for unless its adapter says otherwise: feeds first, then JSON and the
 // plain text of MikroTik's NEWEST files. An HTML source sets its own `accept` (see android.js).
 export const DEFAULT_ACCEPT =
@@ -103,18 +108,63 @@ async function dropCache(source) {
   }
 }
 
-// The bundled snapshot, narrowed to what one source produced; null when it holds none.
-async function readSnapshot(source, env, request) {
+// The bundled snapshot is parsed once per isolate. It is keyed by the deploy's version
+// (/version.txt), so a new deploy is read afresh; without a readable version nothing is kept.
+let snapshotMemo = null;
+
+async function deployVersion(env, request) {
+  try {
+    const res = await env.ASSETS.fetch(new URL('/version.txt', request.url));
+    if (!res.ok) return null;
+    const text = (await res.text()).trim();
+    return text && text.length <= 80 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+async function parseSnapshot(env, request) {
   try {
     const res = await env.ASSETS.fetch(new URL('/data/releases.json', request.url));
     if (!res.ok) return null;
     const payload = await res.json();
-    if (!usable(payload)) return null;
-    const releases = payload.releases.filter((release) => release && release.source === source.id);
-    return releases.length > 0 ? { ...payload, source: source.id, releases } : null;
+    return usable(payload) ? payload : null;
   } catch {
     return null;
   }
+}
+
+async function bundledSnapshot(env, request) {
+  const version = await deployVersion(env, request);
+  if (version === null) {
+    const payload = await parseSnapshot(env, request);
+    return payload && { memo: null, payload };
+  }
+  if (snapshotMemo?.version === version) {
+    return { memo: snapshotMemo, payload: snapshotMemo.payload };
+  }
+  // Only a payload that was read is remembered, never a pending promise: a request cut off
+  // mid-read must not leave the others waiting on it. A snapshot that could not be read is
+  // not remembered either, so the next request tries again.
+  const payload = await parseSnapshot(env, request);
+  if (!payload) return null;
+  snapshotMemo = { version, payload, bySource: new Map() };
+  return { memo: snapshotMemo, payload };
+}
+
+// The bundled snapshot, narrowed to what one source produced; null when it holds none.
+async function readSnapshot(source, env, request) {
+  const found = await bundledSnapshot(env, request);
+  if (!found) return null;
+  const { memo, payload } = found;
+  let narrowed = memo ? memo.bySource.get(source.id) : undefined;
+  if (narrowed === undefined) {
+    const releases = payload.releases.filter((release) => release && release.source === source.id);
+    narrowed = releases.length > 0 ? { ...payload, source: source.id, releases } : null;
+    if (memo) memo.bySource.set(source.id, narrowed);
+  }
+  // A copy, so a caller can never change what the next request sees.
+  return narrowed && { ...narrowed, releases: [...narrowed.releases] };
 }
 
 // The bundled security notes, or null when the asset is missing or is not a JSON object. They
@@ -160,25 +210,44 @@ async function readCapped(res) {
   return new TextDecoder('utf-8').decode(bytes);
 }
 
-// Fetch every URL on the source's allowlist and parse it. One URL failing fails the source.
-async function fetchLive(source, env, request) {
-  const found = [];
-  for (const url of source.urls) {
-    const res = await fetch(url, {
-      // The allowlist covers the URL itself: a redirect would leave it, so none is followed.
-      redirect: 'manual',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: {
-        'user-agent': USER_AGENT,
-        accept: source.accept || DEFAULT_ACCEPT,
-      },
-    });
-    if (res.status !== 200) {
-      await res.body?.cancel();
-      throw new Error(`${source.id} answered ${res.status}`);
-    }
-    found.push(...source.parse(await readCapped(res), url));
+// Fetch one URL of a source and parse it.
+async function fetchOne(source, url, signal) {
+  const res = await fetch(url, {
+    // The allowlist covers the URL itself: a redirect would leave it, so none is followed.
+    redirect: 'manual',
+    signal,
+    headers: {
+      'user-agent': USER_AGENT,
+      accept: source.accept || DEFAULT_ACCEPT,
+    },
+  });
+  if (res.status !== 200) {
+    await res.body?.cancel();
+    throw new Error(`${source.id} answered ${res.status}`);
   }
+  return source.parse(await readCapped(res), url);
+}
+
+// Fetch every URL on the source's allowlist at once, under one deadline, and parse them.
+// One URL failing fails the source and aborts the others. The work is raced against the
+// signal itself, so the deadline holds even for a fetch or a body read that ignores the abort.
+async function fetchLive(source, env, request, cached) {
+  const stop = new AbortController();
+  const signal = AbortSignal.any([AbortSignal.timeout(FETCH_TIMEOUT_MS), stop.signal]);
+  const deadline = new Promise((_resolve, reject) => {
+    signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+  });
+  let parts;
+  try {
+    parts = await Promise.race([
+      Promise.all(source.urls.map((url) => fetchOne(source, url, signal))),
+      deadline,
+    ]);
+  } catch (error) {
+    stop.abort();
+    throw error;
+  }
+  const found = parts.flat();
   // Whatever an adapter says, a release belongs to the source and vendor that produced it.
   const live = found.map((release) => ({ ...release, vendor: source.vendor, source: source.id }));
   if (live.length === 0) throw new Error(`${source.id} held no releases`);
@@ -188,7 +257,12 @@ async function fetchLive(source, env, request) {
     fetchedAt: now(),
     stale: false,
     snapshot: false,
-    releases: mergeReleases(snapshot ? snapshot.releases : [], live),
+    // Snapshot, then the copy already cached, then the live feed: a release that has left a
+    // short feed since the last fetch stays in the history.
+    releases: mergeReleases(
+      mergeReleases(snapshot ? snapshot.releases : [], cached ? cached.releases : []),
+      live,
+    ),
   };
 }
 
@@ -222,31 +296,48 @@ async function markUnavailable(source) {
 
 const inflight = new Map();
 
+// What a fetch that was replaced while it ran rejects with: it says nothing about the source,
+// so no caller marks the source failed because of it.
+class Replaced extends Error {}
+
 // One live fetch per source at a time, whoever asks: a background refresh and requests on a
 // cold cache share it. A success is cached; a failure rejects for each caller to handle.
-function fetchAndStore(source, env, request) {
-  if (!inflight.has(source.id)) {
-    inflight.set(
-      source.id,
-      (async () => {
-        try {
-          const live = await fetchLive(source, env, request);
-          await writeCache(source, live);
-          return live;
-        } finally {
-          inflight.delete(source.id);
-        }
-      })(),
-    );
-  }
-  return inflight.get(source.id);
+// `cached` is the copy the caller holds, if any: its releases are kept in the merge.
+// A promise shared across requests can be left pending by the platform, so an entry older than
+// INFLIGHT_MAX_MS is replaced, and the fetch is always registered with the waitUntil of the
+// request that started it, so it is not cut off when that request answers. A replaced fetch
+// that ends later writes nothing to the cache and marks nothing: its replacement owns both.
+function fetchAndStore(source, env, request, ctx, cached) {
+  const current = inflight.get(source.id);
+  if (current && Date.now() - current.startedAt <= INFLIGHT_MAX_MS) return current.promise;
+  if (current) current.replaced = true;
+  const entry = { startedAt: Date.now(), promise: null, replaced: false };
+  entry.promise = (async () => {
+    try {
+      let live;
+      try {
+        live = await fetchLive(source, env, request, cached);
+      } catch (error) {
+        throw entry.replaced ? new Replaced('replaced') : error;
+      }
+      if (!entry.replaced) await writeCache(source, live);
+      return live;
+    } finally {
+      // Only its own entry: a lost fetch that finally ends must not remove its replacement.
+      if (inflight.get(source.id) === entry) inflight.delete(source.id);
+    }
+  })();
+  inflight.set(source.id, entry);
+  // The failure is for the callers; this copy only keeps the fetch alive.
+  ctx.waitUntil(entry.promise.catch(() => undefined));
+  return entry.promise;
 }
 
 // A background refresh; a failure leaves the retry mark on the copy it was refreshing.
-function refresh(source, env, request, cached) {
-  return fetchAndStore(source, env, request).then(
+function refresh(source, env, request, ctx, cached) {
+  return fetchAndStore(source, env, request, ctx, cached).then(
     () => undefined,
-    () => markFailed(source, cached),
+    (error) => (error instanceof Replaced ? undefined : markFailed(source, cached)),
   );
 }
 
@@ -271,18 +362,19 @@ async function load(source, request, env, ctx) {
     if (failed && Date.now() - failedAt < RETRY_MS) return serve(cached, true);
     if (age <= FRESH_MS && !failed) return serve(cached, Boolean(cached.stale));
     if (age <= MAX_AGE_MS) {
-      ctx.waitUntil(refresh(source, env, request, cached));
+      ctx.waitUntil(refresh(source, env, request, ctx, cached));
       return serve(cached, failed);
     }
   }
   try {
-    return await fetchAndStore(source, env, request);
-  } catch {
+    return await fetchAndStore(source, env, request, ctx, cached);
+  } catch (error) {
+    const replaced = error instanceof Replaced;
     if (cached) {
-      await markFailed(source, cached);
+      if (!replaced) await markFailed(source, cached);
       return serve(cached, true);
     }
-    await markUnavailable(source);
+    if (!replaced) await markUnavailable(source);
     return fallback(source, request, env);
   }
 }

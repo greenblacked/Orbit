@@ -93,9 +93,9 @@ def apple_payload(big=False):
     return payload(notes, rows)
 
 
-def android_payload(missing=None, newer_patch="2026-06-05"):
+def android_payload(missing=None, newer_patch="2026-06-05", pair=None):
     android = releases("Android")
-    newer, older = android[0], android[1]
+    newer, older = pair or (android[0], android[1])
     months = ["2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"]
     notes = {}
     for index, month in enumerate(months):
@@ -299,6 +299,77 @@ def test_with_the_empty_payload_the_pages_show_no_security_line_and_no_error(
         context.close()
 
 
+def count_requests(page):
+    seen: list[str] = []
+    page.on("request", lambda r: seen.append(r.url.split("?")[0]))
+    return seen
+
+
+def test_the_timeline_asks_for_security_and_families_once_each(browser, base_url):
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        seen = count_requests(page)
+        errors = watch(page)
+        serve_security(page, apple_payload())
+        page.goto(base_url + "/timeline/")
+        page.wait_for_selector(".sec")
+        page.wait_for_load_state("networkidle")
+        assert len([u for u in seen if u.endswith("/api/security.json")]) == 1
+        assert [u for u in seen if u.endswith("/data/security.json")] == []
+        assert len([u for u in seen if u.endswith("/data/families.json")]) == 1
+        assert page.evaluate("() => window.__csp") == []
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_compare_asks_for_security_and_families_once_each(browser, base_url):
+    ios = releases("iOS")
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        seen = count_requests(page)
+        errors = watch(page)
+        serve_security(page, apple_payload())
+        page.goto(base_url + "/compare/")
+        page.wait_for_selector(".cmp-cards")
+        page.select_option("#c-family", "iOS")
+        page.select_option("#c-to", ios[0]["id"])
+        page.select_option("#c-from", ios[1]["id"])
+        page.wait_for_selector(".sec-cmp")
+        page.wait_for_load_state("networkidle")
+        assert len([u for u in seen if u.endswith("/api/security.json")]) == 1
+        assert [u for u in seen if u.endswith("/data/security.json")] == []
+        assert len([u for u in seen if u.endswith("/data/families.json")]) == 1
+        assert page.evaluate("() => window.__csp") == []
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_the_snapshot_is_the_fallback_when_the_api_fails(browser, base_url):
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        seen = count_requests(page)
+        text = json.dumps(apple_payload())
+        page.route("**/api/security.json", lambda route: route.fulfill(status=503, body="down"))
+        page.route(
+            "**/data/security.json",
+            lambda route: route.fulfill(status=200, content_type="application/json", body=text),
+        )
+        page.goto(base_url + "/timeline/")
+        page.wait_for_selector(".sec")
+        page.wait_for_load_state("networkidle")
+        api = [i for i, u in enumerate(seen) if u.endswith("/api/security.json")]
+        snapshot = [i for i, u in enumerate(seen) if u.endswith("/data/security.json")]
+        assert len(api) == 1 and len(snapshot) == 1
+        assert api[0] < snapshot[0]
+    finally:
+        context.close()
+
+
 def test_compare_lists_what_the_newer_notes_have_and_the_older_do_not(browser, base_url):
     ios = releases("iOS")
     context, page, errors = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[1])
@@ -306,7 +377,7 @@ def test_compare_lists_what_the_newer_notes_have_and_the_older_do_not(browser, b
         page.wait_for_selector(".sec-cmp")
         section = page.locator(".sec-cmp")
         assert section.locator("h2").inner_text() == "Security notes"
-        lead = f"Listed in iOS {ios[0]['version']}'s notes, not in iOS {ios[1]['version']}'s"
+        lead = f"Fixed after iOS {ios[1]['version']}, up to iOS {ios[0]['version']}"
         assert section.locator(".sec-lead").inner_text() == lead
         assert section.locator(".sec-count").inner_text() == "2 CVEs"
         assert section.locator(".cve-id").all_inner_texts() == [cve(1), cve(2)]
@@ -317,6 +388,133 @@ def test_compare_lists_what_the_newer_notes_have_and_the_older_do_not(browser, b
         assert order[:2] == ["Security notes", "In between"]
         assert section.locator(".sec-link").count() == 2
         assert errors == []
+    finally:
+        context.close()
+
+
+def test_compare_announces_the_cve_count_in_a_separate_live_region(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[1])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        assert page.get_attribute("#cmp-result", "aria-live") is None
+        assert page.locator("#cmp-result [aria-live]").count() == 0
+        want = f"2 CVEs. Fixed after iOS {ios[1]['version']}, up to iOS {ios[0]['version']}"
+        assert page.inner_text("#cmp-live") == want
+        assert errors == []
+    finally:
+        context.close()
+
+
+def three_notes(middle="listed"):
+    ios = releases("iOS")
+    a, b, c = APPLE + "100001", APPLE + "100002", APPLE + "100003"
+    notes = {
+        a: note("apple", "iOS newest", [1, 2], {1: "High"}),
+        b: note("apple", "iOS middle", [3, 4], {3: "Critical"}),
+        c: note("apple", "iOS oldest", [4, 9]),
+    }
+    rows = {
+        ios[0]["id"]: entry("listed", [a], [1, 2]),
+        ios[1]["id"]: (
+            entry("listed", [b], [3, 4])
+            if middle in ("listed", "stale")
+            else entry(middle, [b] if middle == "linked" else ())
+        ),
+        ios[2]["id"]: entry("listed", [c], [4, 9]),
+    }
+    if middle == "stale":
+        rows[ios[1]["id"]]["checkedAt"] = "2026-08-01T00:00:00Z"
+    return payload(notes, rows)
+
+
+def test_compare_announces_the_range_the_section_shows(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, three_notes(), "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        said = page.inner_text("#cmp-live")
+        assert "3 CVEs" in said
+        assert f"Fixed after iOS {ios[2]['version']}, up to iOS {ios[0]['version']}" in said
+        assert "listed in" not in said.lower()
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_compare_counts_the_public_releases_between_the_two_picks(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, three_notes(), "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        section = page.locator(".sec-cmp")
+        lead = f"Fixed after iOS {ios[2]['version']}, up to iOS {ios[0]['version']}"
+        assert section.locator(".sec-lead").inner_text() == lead
+        assert section.locator(".sec-count").inner_text() == "3 CVEs"
+        # CVE 4 is also in the oldest pick's own notes, so it is not "after" it.
+        assert section.locator(".cve-id").all_inner_texts() == [cve(n) for n in (1, 2, 3)]
+        assert section.locator(".sev").all_inner_texts() == ["High", "Critical"]
+        assert "Severity not published for 1 of 3." in section.inner_text()
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_compare_announces_why_the_security_comparison_is_unavailable(browser, base_url):
+    ios = releases("iOS")
+    context, page, errors = open_compare(browser, base_url, apple_payload(), "iOS", ios[0], ios[3])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        live = page.inner_text("#cmp-live")
+        assert live.startswith("Comparing iOS ")
+        assert "Security comparison unavailable: no known note for" in live
+        assert errors == []
+    finally:
+        context.close()
+
+
+def test_compare_links_the_note_of_a_release_between_that_adds_a_cve(browser, base_url):
+    ios = releases("iOS")
+    body = three_notes()
+    a, b, c = APPLE + "100001", APPLE + "100002", APPLE + "100003"
+    body["notes"][a] = note("apple", "iOS newest", [])
+    body["notes"][c] = note("apple", "iOS oldest", [])
+    body["releases"][ios[0]["id"]] = entry("no-cve-entries", [a])
+    body["releases"][ios[2]["id"]] = entry("no-cve-entries", [c])
+    context, page, errors = open_compare(browser, base_url, body, "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        section = page.locator(".sec-cmp")
+        assert section.locator(".cve-id").all_inner_texts() == [cve(3), cve(4)]
+        hrefs = section.locator(".sec-links .sec-link").evaluate_all("l => l.map(a => a.href)")
+        assert b in hrefs
+        assert len(hrefs) == len(set(hrefs))
+        assert errors == []
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("middle", ["not-found", "unavailable", "stale"])
+def test_compare_is_unavailable_when_a_release_between_has_no_known_note(browser, base_url, middle):
+    ios = releases("iOS")
+    body = three_notes(middle)
+    context, page, _ = open_compare(browser, base_url, body, "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        text = page.locator(".sec-cmp .sec-say").inner_text()
+        assert text == f"Security comparison unavailable: no known note for iOS {ios[1]['version']}"
+        assert page.locator(".sec-cmp .cve, .sec-cmp .sec-count").count() == 0
+    finally:
+        context.close()
+
+
+def test_compare_says_so_when_a_release_between_is_only_linked(browser, base_url):
+    ios = releases("iOS")
+    context, page, _ = open_compare(browser, base_url, three_notes("linked"), "iOS", ios[0], ios[2])
+    try:
+        page.wait_for_selector(".sec-cmp")
+        text = page.locator(".sec-cmp .sec-say").inner_text()
+        assert text == f"Cannot compare: CVEs not counted for iOS {ios[1]['version']}"
     finally:
         context.close()
 
@@ -438,3 +636,22 @@ def test_android_in_one_bulletin_month_or_from_a_first_part_level_is_unavailable
             assert page.locator(".sec-cmp .sec-count").count() == 0
         finally:
             context.close()
+
+
+def test_security_notes_name_two_releases_of_one_version_apart(browser, base_url):
+    same = [r for r in releases("Android") if r["version"] == "16.0.0" and r["build"]]
+    assert len(same) >= 2
+    newer, older = same[0], same[1]
+    body = android_payload(pair=(newer, older))
+    context, page, errors = open_compare(browser, base_url, body, "Android", newer, older)
+    try:
+        page.wait_for_selector(".sec-cmp")
+        lead = page.locator(".sec-cmp .sec-lead").inner_text()
+        assert newer["build"] in lead and older["build"] in lead, lead
+        names = page.locator(".sec-cmp .sec-link").all_inner_texts()
+        assert len(names) == 2 and len(set(names)) == 2, names
+        assert any(newer["build"] in n for n in names)
+        assert any(older["build"] in n for n in names)
+        assert errors == []
+    finally:
+        context.close()

@@ -14,6 +14,7 @@ import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import parse_qs, quote, urlencode, urlsplit
 
 import pytest
 from helpers import REPO
@@ -351,18 +352,77 @@ def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
     assert below["y"] > screen["y"] + screen["height"] * 0.4
 
 
+def version_key(row):
+    return tuple(int(x) for x in row["version"].split("."))
+
+
 def test_the_about_this_mac_mock_switches_between_release_and_beta(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
     mocks_ready(page)
-    public = next(r for r in releases("macOS") if r["stage"] == "release")
-    beta = next(r for r in releases("macOS") if r["stage"] != "release")
+    mac = releases("macOS")
+    public = next(r for r in mac if r["stage"] == "release")
+    pre = [r for r in mac if r["stage"] != "release"]
+    beta = max(pre, key=version_key)
+    # The snapshot has a beta newer than the release; the "no beta" case has its own test.
+    assert version_key(beta) > version_key(public) and beta["date"] > public["date"]
     info = page.locator(".m-mac .m-info")
     assert public["build"] in info.inner_text()
+    assert page.inner_text("[data-f=betanote]") == ""
+    assert page.get_attribute("[data-ch=beta]", "aria-disabled") == "false"
     page.click("[data-ch=beta]")
     assert beta["build"] in info.inner_text()
     assert page.get_attribute("[data-ch=beta]", "aria-pressed") == "true"
     assert page.get_attribute("[data-ch=release]", "aria-pressed") == "false"
+
+
+@pytest.mark.parametrize("width", [1280, 360], ids=["desktop", "phone"])
+def test_the_about_this_mac_mock_turns_the_beta_off_when_no_beta_is_newer(browser, base_url, width):
+    data = copy.deepcopy(SNAPSHOT)
+    old = next(r for r in data["releases"] if r["family"] == "macOS" and r["stage"] != "release")
+    old_build = old["build"]
+    old.update(
+        id="https://developer.apple.com/news/releases/?id=09012026a",
+        url="https://developer.apple.com/news/releases/?id=09012026a",
+        version="27.0",
+        beta=1,
+        build="26A5000a",
+        date="2026-09-01T17:00:00Z",
+        title="macOS 27.0 beta 1 (26A5000a)",
+    )
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        serve_json(page, "**/api/releases.json", json.dumps(data))
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        public = next(r for r in releases("macOS", data) if r["stage"] == "release")
+        beta = page.locator("[data-ch=beta]")
+        assert beta.is_disabled()
+        assert beta.get_attribute("aria-disabled") == "true"
+        assert beta.get_attribute("aria-describedby") == "mac-betanote"
+        assert page.inner_text("[data-f=betanote]") == "No newer beta"
+        assert page.get_attribute("[data-ch=release]", "aria-pressed") == "true"
+        info = page.locator(".m-mac .m-info").inner_text()
+        assert public["build"] in info
+        assert old_build not in info and "26A5000a" not in info
+        assert beta.bounding_box()["height"] >= 44
+        mac = page.locator(".m-mac").bounding_box()
+        note = page.locator("[data-f=betanote]").bounding_box()
+        assert note["y"] >= mac["y"] and note["x"] >= mac["x"]
+        assert note["y"] + note["height"] <= mac["y"] + mac["height"]
+        assert note["x"] + note["width"] <= mac["x"] + mac["width"]
+    finally:
+        context.close()
+
+
+def test_the_empty_mac_note_takes_no_space(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    assert page.inner_text("[data-f=betanote]") == ""
+    assert page.eval_on_selector("[data-f=betanote]", "e => getComputedStyle(e).display") == "none"
 
 
 def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
@@ -400,20 +460,7 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         page = context.new_page()
         page.clock.install()
         answers = {"count": 0}
-        fresh = copy.deepcopy(SNAPSHOT)
-        fresh["releases"].insert(
-            0,
-            {
-                **APPLE_FIRST,
-                "id": "https://developer.apple.com/news/releases/?id=new1",
-                "title": "iOS 27.2 beta 4 (24B5105a)",
-                "version": "27.2",
-                "beta": 4,
-                "build": "24B5105a",
-                "date": "2026-10-12T17:00:00Z",
-                "url": "https://developer.apple.com/news/releases/?id=new1",
-            },
-        )
+        fresh = fresh_snapshot()
 
         def answer(route):
             answers["count"] += 1
@@ -442,6 +489,218 @@ def test_a_toast_announces_releases_that_appear_while_the_page_is_open(browser, 
         assert "on" not in page.get_attribute("#toast", "class").split()
     finally:
         context.close()
+
+
+NEW_ID = "https://developer.apple.com/news/releases/?id=new1"
+
+
+def fresh_snapshot(count=1):
+    """The snapshot with `count` new Apple releases in front; the first has NEW_ID."""
+    fresh = copy.deepcopy(SNAPSHOT)
+    for n in range(count):
+        release_id = NEW_ID if n == 0 else f"{NEW_ID}-{n}"
+        fresh["releases"].insert(
+            n,
+            {
+                **APPLE_FIRST,
+                "id": release_id,
+                "title": f"iOS 27.{2 + n} beta {4 - n} (24B5105a)",
+                "version": f"27.{2 + n}",
+                "beta": 4 - n,
+                "build": "24B5105a",
+                "date": "2026-10-12T17:00:00Z",
+                "url": release_id,
+            },
+        )
+    return fresh
+
+
+def toast_page(browser, base_url, width=1280, count=1):
+    """A page whose second poll brings `count` new releases; the clock is faked."""
+    context = make_context(browser, base_url, width=width)
+    page = context.new_page()
+    page.clock.install()
+    fresh = fresh_snapshot(count)
+    answers = {"count": 0}
+
+    def answer(route):
+        answers["count"] += 1
+        body = SNAPSHOT if answers["count"] == 1 else fresh
+        route.fulfill(content_type="application/json", body=json.dumps(body))
+
+    page.route("**/api/releases.json", answer)
+    page.goto(base_url + "/")
+    cards_ready(page)
+    return context, page
+
+
+def show_toast(page):
+    page.clock.run_for(5 * 60 * 1000 + 1000)
+    page.wait_for_function("() => document.getElementById('toast').classList.contains('on')")
+
+
+def toast_on(page):
+    return "on" in page.get_attribute("#toast", "class").split()
+
+
+def test_the_toast_stays_while_it_has_focus_and_then_hides_after_12_seconds(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        page.clock.run_for(30 * 1000)
+        assert toast_on(page)
+        assert page.evaluate("document.activeElement.className") == "toast-close"
+        page.evaluate("document.activeElement.blur()")
+        page.clock.run_for(1)
+        page.clock.run_for(11 * 1000)
+        assert toast_on(page)
+        page.clock.run_for(2 * 1000)
+        assert not toast_on(page)
+    finally:
+        context.close()
+
+
+def test_the_toast_stays_while_the_pointer_is_over_it(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.hover("#toast .toast-close")
+        page.clock.run_for(30 * 1000)
+        assert toast_on(page)
+        page.mouse.move(2, 2)
+        page.clock.run_for(11 * 1000)
+        assert toast_on(page)
+        page.clock.run_for(2 * 1000)
+        assert not toast_on(page)
+    finally:
+        context.close()
+
+
+def test_hiding_the_toast_returns_focus_to_where_it_was(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    pill = ".actions a.pill[href='/timeline/']"
+    try:
+        page.focus(pill)
+        assert page.evaluate("document.activeElement !== document.body")
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        page.keyboard.press("Enter")
+        assert not toast_on(page)
+        assert page.evaluate("(sel) => document.activeElement.matches(sel)", pill)
+    finally:
+        context.close()
+
+
+def test_hiding_the_toast_returns_focus_to_the_element_focus_came_from(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.focus("footer a")
+        page.focus("#toast .toast-close")
+        page.keyboard.press("Enter")
+        assert not toast_on(page)
+        assert page.evaluate("document.activeElement.matches('footer a')")
+    finally:
+        context.close()
+
+
+def test_a_second_announcement_keeps_focus_in_the_toast(browser, base_url):
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        page.clock.install()
+        first = fresh_snapshot()
+        second = fresh_snapshot()
+        newer = {**second["releases"][0], "id": NEW_ID + "2", "url": NEW_ID + "2", "beta": 5}
+        second["releases"].insert(0, newer)
+        answers = {"count": 0}
+
+        def answer(route):
+            answers["count"] += 1
+            body = [SNAPSHOT, first][answers["count"] - 1] if answers["count"] < 3 else second
+            route.fulfill(content_type="application/json", body=json.dumps(body))
+
+        page.route("**/api/releases.json", answer)
+        page.goto(base_url + "/")
+        cards_ready(page)
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        with page.expect_response("**/api/releases.json"):
+            page.clock.run_for(5 * 60 * 1000 + 1000)
+        page.wait_for_timeout(200)
+        assert toast_on(page)
+        assert page.evaluate("document.activeElement.className") == "toast-close"
+    finally:
+        context.close()
+
+
+def test_hiding_the_toast_without_a_previous_focus_lands_on_the_content(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        page.focus("#toast .toast-close")
+        page.keyboard.press("Enter")
+        assert not toast_on(page)
+        assert page.evaluate("document.activeElement.id") == "content"
+    finally:
+        context.close()
+
+
+def test_each_release_in_the_toast_links_to_its_timeline_row(browser, base_url):
+    context, page = toast_page(browser, base_url)
+    try:
+        show_toast(page)
+        link = page.locator("#toast a.toast-link").first
+        assert link.inner_text() == "iOS 27.2 beta 4"
+        assert link.get_attribute("href") == "/timeline/?id=" + quote(NEW_ID, safe="-_.!~*'()")
+    finally:
+        context.close()
+
+
+def test_every_toast_link_is_a_44px_target(browser, base_url):
+    context, page = toast_page(browser, base_url, width=360, count=3)
+    try:
+        show_toast(page)
+        heights = page.eval_on_selector_all(
+            "#toast .toast-link", "els => els.map(e => e.getBoundingClientRect().height)"
+        )
+        assert len(heights) == 3 and all(h >= 43.5 for h in heights)
+        inside = page.evaluate(
+            """() => {
+                const toast = document.querySelector('#toast');
+                const box = toast.getBoundingClientRect();
+                const links = [...toast.querySelectorAll('.toast-link')];
+                return {
+                    left: box.left,
+                    right: box.right,
+                    width: window.innerWidth,
+                    scroll: toast.scrollWidth,
+                    client: toast.clientWidth,
+                    links: links.map(a => a.getBoundingClientRect().right),
+                };
+            }"""
+        )
+        assert inside["left"] >= 0 and inside["right"] <= inside["width"]
+        assert inside["scroll"] <= inside["client"]
+        assert all(r <= inside["right"] + 0.5 for r in inside["links"])
+    finally:
+        context.close()
+
+
+def test_the_timeline_lands_on_the_row_named_by_id(page, base_url):
+    serve_json(page, "**/api/releases.json", json.dumps(fresh_snapshot()))
+    page.goto(base_url + "/timeline/?stage=release&id=" + quote(NEW_ID, safe=""))
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert page.evaluate("document.activeElement.closest('.tl-item').dataset.id") == NEW_ID
+
+
+def test_the_used_id_leaves_the_address_when_the_filters_are_already_all(page, base_url):
+    serve_json(page, "**/api/releases.json", json.dumps(fresh_snapshot()))
+    page.goto(base_url + "/timeline/?id=" + quote(NEW_ID, safe=""))
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert page.evaluate("document.activeElement.closest('.tl-item').dataset.id") == NEW_ID
+    assert "id=" not in page.evaluate("() => window.location.search")
 
 
 # --- motion -----------------------------------------------------------------------------
@@ -664,6 +923,96 @@ def test_compare_counts_the_days_and_what_lies_between(page, base_url):
     assert page.locator(".cmp-card").all_inner_texts() == cards
 
 
+def test_compare_announces_one_sentence_and_the_result_is_not_a_live_region(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    assert page.get_attribute("#cmp-result", "aria-live") is None
+    assert page.locator("#cmp-result [aria-live]").count() == 0
+    assert page.get_attribute("#cmp-live", "aria-live") == "polite"
+    ios = releases("iOS")
+    newer, older = ios[0], ios[2]
+    page.select_option("#c-to", newer["id"])
+    page.select_option("#c-from", older["id"])
+    live = page.inner_text("#cmp-live")
+    assert live.startswith("Comparing ")
+    assert f"iOS {older['version']}" in live and f"iOS {newer['version']}" in live
+    assert page.eval_on_selector("#cmp-live", "e => getComputedStyle(e).position") == "absolute"
+    page.select_option("#c-from", newer["id"])
+    assert page.inner_text("#cmp-live").startswith("Compare unavailable: pick two different")
+
+
+def test_compare_announces_when_the_platform_has_no_releases(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [r for r in data["releases"] if r["family"] != "visionOS"]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/compare/?family=visionOS")
+    page.wait_for_function("() => document.getElementById('cmp-live').textContent !== ''")
+    assert page.inner_text("#cmp-live").startswith("Compare unavailable: no releases")
+
+
+def link_names(page, selector):
+    return page.evaluate(
+        """sel => [...document.querySelectorAll(sel)]
+          .filter(e => !e.hidden && e.offsetParent !== null)
+          .map(e => e.textContent.replace(/\\s+/g, ' ').trim())""",
+        selector,
+    )
+
+
+def test_every_view_release_link_has_its_own_name(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    page.wait_for_function(
+        "() => [...document.querySelectorAll('#latest-grid [data-f=link]')].every(a => !a.hidden)"
+    )
+    names = link_names(page, "#latest-grid [data-f=link]")
+    cards = page.eval_on_selector_all(
+        "#latest-grid [data-family]", "els => els.map(e => e.getAttribute('data-family'))"
+    )
+    assert len(names) == len(cards)
+    assert len(set(names)) == len(names), names
+    for name in cards:
+        # The card shows the highest version, which is not always the most recent date.
+        stable = [r for r in releases(name) if r["stage"] == "release"]
+        newest = max(stable, key=lambda r: [int(n) for n in re.split(r"[.H]", r["version"])])
+        want = f"View release {name} {newest['version']} (opens in a new tab)"
+        assert want in names
+    # The visible words are unchanged; the name sits in the hidden suffix.
+    assert (
+        page.locator("#latest-grid [data-f=link]").first.evaluate("a => a.firstChild.data")
+        == "View release"
+    )
+
+
+def test_compare_view_release_links_are_distinct(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    names = link_names(page, ".cmp-card .rel-apple")
+    assert len(names) == 2 and len(set(names)) == 2, names
+    assert all(n.startswith("View release iOS ") for n in names)
+    assert all(n.endswith("(opens in a new tab)") and n.count("(opens") == 1 for n in names)
+
+
+def test_compare_tells_two_releases_of_one_version_apart(page, base_url):
+    page.goto(base_url + "/compare/?family=Android")
+    page.wait_for_selector(".cmp-cards")
+    same = [r for r in releases("Android") if r["version"] == "16.0.0" and r["build"]]
+    assert len(same) >= 2
+    newer, older = same[0], same[1]
+    page.select_option("#c-to", newer["id"])
+    page.select_option("#c-from", older["id"])
+    names = link_names(page, ".cmp-card .rel-apple")
+    assert len(names) == 2 and len(set(names)) == 2, names
+    assert any(older["build"] in n for n in names) and any(newer["build"] in n for n in names)
+    page.wait_for_function("() => document.getElementById('cmp-live').textContent !== ''")
+    live = page.inner_text("#cmp-live")
+    assert older["build"] in live and newer["build"] in live, live
+    # Two different versions keep the plain names.
+    other = next(r for r in releases("Android") if r["version"] != "16.0.0")
+    page.select_option("#c-from", other["id"])
+    assert all("(" not in n.split(" (opens")[0] for n in link_names(page, ".cmp-card .rel-apple"))
+
+
 def test_compare_cards_draw_a_sigil_and_name_the_channel_without_a_build(page, base_url):
     page.goto(base_url + "/compare/")
     page.wait_for_selector(".cmp-cards")
@@ -839,6 +1188,108 @@ def test_compare_states_where_the_history_starts_only_for_the_oldest_pick(page, 
     page.select_option("#c-from", ios[-2]["id"])
     assert page.locator(".stat").count() == 3
     assert page.locator("p.data-range").count() == 0
+
+
+def query_of(page):
+    return page.evaluate(
+        "Object.fromEntries(new URLSearchParams(window.location.search).entries())"
+    )
+
+
+def test_compare_writes_the_picks_to_the_address(page, base_url):
+    page.goto(base_url + "/compare/")
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    older = next(r for r in ios if r["version"] == "15.8.8")
+    newer = next(r for r in ios if r["version"] == "27.0.1")
+    page.select_option("#c-from", older["id"])
+    assert query_of(page)["from"] == older["id"]
+    page.select_option("#c-to", newer["id"])
+    assert query_of(page) == {"family": "iOS", "from": older["id"], "to": newer["id"]}
+    page.select_option("#c-family", "macOS")
+    query = query_of(page)
+    assert query["family"] == "macOS"
+    macos_ids = [r["id"] for r in releases("macOS")]
+    assert query["from"] in macos_ids and query["to"] in macos_ids
+
+
+def test_compare_restores_the_picks_from_the_address(page, base_url):
+    ios = releases("iOS")
+    older = next(r for r in ios if r["version"] == "15.8.8")
+    newer = next(r for r in ios if r["version"] == "27.0.1")
+    query = urlencode({"family": "iOS", "from": older["id"], "to": newer["id"]})
+    page.goto(base_url + "/compare/?" + query)
+    page.wait_for_selector(".cmp-cards")
+    assert page.input_value("#c-from") == older["id"]
+    assert page.input_value("#c-to") == newer["id"]
+    cards = page.locator(".cmp-card").all_inner_texts()
+    assert older["build"] in cards[0] and newer["build"] in cards[1]
+
+
+def test_compare_ignores_ids_that_are_not_in_the_list(page, base_url):
+    macos = releases("macOS")[0]
+    query = urlencode({"family": "iOS", "from": "no-such-id", "to": macos["id"]})
+    page.goto(base_url + "/compare/?" + query)
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    # Neither id belongs to iOS: both selects keep the defaults.
+    assert page.input_value("#c-to") == ios[0]["id"]
+    assert page.input_value("#c-from") == default_from(ios)["id"]
+
+
+def test_compare_rewrites_a_bad_shared_address_to_what_is_shown(page, base_url):
+    page.goto(base_url + "/compare/?family=iOS&from=no-such-id&to=also-bad")
+    page.wait_for_selector(".cmp-cards")
+    ios = releases("iOS")
+    query = parse_qs(urlsplit(page.url).query)
+    assert query["from"] == [default_from(ios)["id"]]
+    assert query["to"] == [ios[0]["id"]]
+
+
+def test_compare_keeps_the_address_in_step_when_a_poll_drops_a_pick(page, base_url):
+    ios = releases("iOS")
+    older = next(r for r in ios if r["version"] == "15.8.8")
+    query = urlencode({"family": "iOS", "from": older["id"], "to": ios[0]["id"]})
+    fresh = copy.deepcopy(SNAPSHOT)
+    fresh["releases"] = [r for r in fresh["releases"] if r["id"] != older["id"]]
+    answers = {"body": json.dumps(SNAPSHOT)}
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(content_type="application/json", body=answers["body"]),
+    )
+    page.goto(base_url + "/compare/?" + query)
+    page.wait_for_selector(".cmp-cards")
+    assert page.input_value("#c-from") == older["id"]
+    answers["body"] = json.dumps(fresh)
+    page.evaluate("() => RO.refresh()")
+    page.wait_for_function(
+        "(id) => document.getElementById('c-from').value !== id && "
+        "!document.querySelector('#c-from option[value=\"' + id + '\"]')",
+        arg=older["id"],
+    )
+    shown = {"family": "iOS", "from": page.input_value("#c-from"), "to": page.input_value("#c-to")}
+    assert shown["from"] != older["id"]
+    assert query_of(page) == shown
+
+
+def test_home_compare_link_does_not_indent_when_it_wraps(page, base_url):
+    page.set_viewport_size({"width": 360, "height": 800})
+    page.goto(base_url + "/")
+    first = page.locator("#visionos .more-row a").nth(0).bounding_box()
+    second = page.locator("#visionos .more-row a").nth(1).bounding_box()
+    # Wrapped under the first link, the second starts at the same left edge.
+    assert second["y"] > first["y"]
+    assert abs(second["x"] - first["x"]) < 1
+
+
+def test_home_compare_link_goes_to_the_family(page, base_url):
+    page.goto(base_url + "/")
+    link = page.locator("#macos a.more-cmp")
+    assert link.get_attribute("href") == "/compare/?family=macOS"
+    assert link.bounding_box()["height"] >= 43.5
+    link.click()
+    page.wait_for_selector(".cmp-cards")
+    assert page.input_value("#c-family") == "macOS"
 
 
 def test_a_poll_with_nothing_new_leaves_the_compare_page_alone(page, base_url):

@@ -57,8 +57,10 @@ def test_the_notes_script_writes_text_only_and_never_a_style():
         assert banned not in text, banned
 
 
-def test_the_notes_script_reads_the_snapshot_before_the_optional_api():
+def test_the_notes_script_asks_the_api_and_falls_back_to_the_snapshot():
     text = SCRIPT.read_text(encoding="utf-8")
-    assert text.index("/data/security.json") < text.index("/api/security.json")
-    assert "loadJson(SNAPSHOT)" in text
+    api = text.index("loadJson(API)")
+    assert api < text.index("loadJson(SNAPSHOT)", api)
+    assert "fetch(" not in text
+    assert "/data/families.json" not in text
     assert "console." not in text

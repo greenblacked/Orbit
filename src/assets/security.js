@@ -1,15 +1,15 @@
-/* Security notes for the timeline and compare pages (docs/adr/0008). Loads the bundled snapshot
-   /data/security.json first and then asks /api/security.json for a newer copy; a failure of
-   either leaves the pages as they are. The file holds ids, titles, dates and links only, so
-   the wording here is ours: "listed in" and never "fixed in". Elements are built with
-   textContent, and a link is used only if it is an https address. Nothing here runs on the
+/* Security notes for the timeline and compare pages (docs/adr/0008). Asks /api/security.json
+   once and falls back to the bundled /data/security.json only if that fails; a failure of both
+   leaves the pages as they are. The file holds ids, titles, dates and links only, so
+   the wording here is ours: "listed in" or "fixed after ... up to ...", never "fixed in" or
+   "newly fixed". Elements are built with textContent, and a link is used only if it is an
+   https address. Nothing here runs on the
    front page. window.Sec = { on, chip, compare }. */
 (function () {
   "use strict";
   var RO = window.RO;
   var SNAPSHOT = "/data/security.json";
   var API = "/api/security.json";
-  var FAMILIES = "/data/families.json";
   var DAY = 864e5;
   var GRACE = 14 * DAY;
   var STALE = 30 * DAY;
@@ -43,29 +43,20 @@
   // A vendor's name from the families config (already cached by releases.js); its id otherwise.
   function vendorName(id) { return own(vendors, id) ? vendors[id] : String(id); }
   function named() {
-    return RO.loadJson(FAMILIES).then(function (json) {
-      if (!plain(json) || !Array.isArray(json.vendors)) return;
-      json.vendors.forEach(function (v) {
+    return RO.ready().then(function () {
+      RO.vendors().forEach(function (v) {
         if (plain(v) && typeof v.id === "string" && typeof v.name === "string") vendors[v.id] = v.name;
       });
     }, function () {});
   }
   function on(fn) { listeners.push(fn); }
 
-  function apiJson() {
-    return fetch(API, { headers: { accept: "application/json" } }).then(function (res) {
-      if (!res.ok || (res.headers.get("content-type") || "").indexOf("json") < 0) throw new Error("not json");
-      return res.json();
-    });
-  }
-  // The bundled preview embeds the snapshot and cannot fetch; it skips the optional newer copy.
-  var snapshot = RO.loadJson(SNAPSHOT).then(function (json) { return accept(json); }, function () { return false; });
-  Promise.all([named(), snapshot])
-    .then(function (done) {
-      if (done[1]) notify();
-      if (document.querySelector("script[data-seed]")) return;
-      return apiJson().then(function (json) { if (accept(json)) notify(); }).catch(function () {});
-    });
+  // One request: the API, then the static snapshot only if the API fails. The bundled preview
+  // embeds the snapshot and cannot fetch, so it reads that alone.
+  var embedded = !!document.querySelector("script[data-seed]");
+  var loaded = (embedded ? RO.loadJson(SNAPSHOT) : RO.loadJson(API)).catch(function () { return RO.loadJson(SNAPSHOT); })
+    .then(function (json) { return accept(json); }, function () { return false; });
+  Promise.all([named(), loaded]).then(function (done) { if (done[1]) notify(); });
 
   // One release's entry, kept only if it has the shape the contract gives its status.
   function read(id) {
@@ -150,7 +141,7 @@
 
   // --- compare ---------------------------------------------------------------------------
 
-  function name(r) { return r.family + " " + RO.short(r); }
+  function plainName(r) { return r.family + " " + RO.short(r); }
   function month(note, url) {
     var m = /(\d{4})-(0[1-9]|1[0-2])/.exec(String(note.title || "")) || /(\d{4})-(0[1-9]|1[0-2])/.exec(url);
     return m ? m[1] + "-" + m[2] : "";
@@ -196,22 +187,30 @@
   }
 
   // The security section of Compare for two releases of one family, or null for nothing.
-  function compare(newer, older) {
+  // `between` is Compare's in-between list: its public releases count toward a non-Android range.
+  // `label` names a release (twin-aware); the plain "family version" is the default.
+  function compare(newer, older, between, label) {
+    var name = typeof label === "function" ? label : plainName;
     if (!payload || newer.family !== older.family) return null;
     var en = read(newer.id), eo = read(older.id);
     if (!en && !eo) return null;
+    var android = newer.family === "Android";
+    var mids = android ? [] : (Array.isArray(between) ? between : []).filter(function (r) {
+      return plain(r) && r.stage === "release" && r.family === newer.family;
+    }).map(function (r) { return [r, read(r.id)]; });
     var box = RO.h("section", "sec-cmp");
     box.appendChild(RO.h("h2", "month-h", "Security notes"));
     var say = function (text) { box.appendChild(RO.h("p", "small sec-say", text)); return box; };
     var sides = [[newer, en], [older, eo]];
-    var names = function (pick) {
-      return sides.filter(function (s) { return pick(s[1]); }).map(function (s) { return name(s[0]); }).join(" and ");
+    var counted = sides.concat(mids);
+    var names = function (pick, from) {
+      return (from || sides).filter(function (s) { return pick(s[1]); }).map(function (s) { return name(s[0]); }).join(" and ");
     };
     var unknown = names(function (e) {
       return !e || stale(e) || ["listed", "linked", "no-cve-entries"].indexOf(e.status) < 0;
-    });
+    }, counted);
     if (unknown) return say("Security comparison unavailable: no known note for " + unknown);
-    var linked = names(function (e) { return e.status === "linked"; });
+    var linked = names(function (e) { return e.status === "linked"; }, counted);
     if (linked) return say("Cannot compare: CVEs not counted for " + linked);
 
     var urls = en.notes, seen = Object.create(null), ids;
@@ -233,11 +232,19 @@
         }); });
       ids = Object.keys(union).sort();
     } else {
-      ids = en.cves;
+      // Every release after the older one, up to the newer: Apple's notes list one release each.
+      var all = Object.create(null);
+      mids.concat([[newer, en]]).forEach(function (s) {
+        s[1].cves.forEach(function (c) { all[c] = true; });
+        s[1].notes.forEach(function (u) { if (urls.indexOf(u) < 0) urls = urls.concat(u); });
+      });
+      ids = Object.keys(all).sort();
     }
     ids = ids.filter(function (c) { return !seen[c]; });
 
-    box.appendChild(RO.h("p", "sec-lead", "Listed in " + name(newer) + "'s notes, not in " + name(older) + "'s"));
+    box.appendChild(RO.h("p", "sec-lead", android
+      ? "Listed in " + name(newer) + "'s notes, not in " + name(older) + "'s"
+      : "Fixed after " + name(older) + ", up to " + name(newer)));
     box.appendChild(RO.h("p", "sec-count", ids.length ? ids.length + (ids.length === 1 ? " CVE" : " CVEs") : "No CVEs"));
     if (ids.length) {
       var sev = severities(urls);
@@ -249,8 +256,15 @@
       if (bare) box.appendChild(RO.h("p", "small", "Severity not published for " + bare + " of " + ids.length + "."));
     }
     var links = RO.h("p", "sec-links");
-    sides.forEach(function (s) {
-      if (s[1].notes[0]) links.appendChild(anchor(name(s[0]) + " notes", s[1].notes[0]));
+    // Both picks, then every release in between whose note adds a CVE to the list above.
+    var shown = Object.create(null), seenUrl = Object.create(null);
+    ids.forEach(function (id) { shown[id] = true; });
+    var adds = function (s) { return s[1].cves.some(function (c) { return shown[c]; }); };
+    sides.slice(0, 1).concat(mids.filter(adds), sides.slice(1)).forEach(function (s) {
+      var u = s[1].notes[0];
+      if (!u || seenUrl[u]) return;
+      seenUrl[u] = true;
+      links.appendChild(anchor(name(s[0]) + " notes", u));
     });
     if (links.firstChild) box.appendChild(links);
     return box;

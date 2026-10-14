@@ -147,10 +147,15 @@
       state.data = data;
       state.failed = false;
       state.at = Date.now();
+      note(data);
       if (fresh.length) announce(fresh);
       listeners.forEach(function (fn) { fn(data, fresh); });
     }, function () {
       state.failed = true;
+      if (state.data) note(state.data, true);
+      // Nothing to say and nothing ever will: give back the space the line keeps for itself.
+      var line = document.getElementById("data-note");
+      if (line && !state.data) line.classList.add("none");
       listeners.forEach(function (fn) { fn(state.data, [], true); });
     }).then(function () { state.busy = false; });
   }
@@ -247,24 +252,119 @@
     for (var i = 0; i < els.length; i++) els[i].textContent = ago(Number(els[i].getAttribute("data-rel")));
   }
 
+  var toastBack = null, toastHover = false, toastWired = null;
+  function toastHeld(box) { return toastHover || box.contains(document.activeElement); }
+  function armToast(box) {
+    window.clearTimeout(toastTimer);
+    if (!toastHeld(box)) toastTimer = window.setTimeout(hideToast, 12000);
+  }
+  function wireToast(box) {
+    if (toastWired === box) return;
+    toastWired = box;
+    box.addEventListener("focusin", function (e) {
+      window.clearTimeout(toastTimer);
+      // Where focus came from is where Dismiss should send it back to.
+      if (e.relatedTarget && !box.contains(e.relatedTarget)) toastBack = e.relatedTarget;
+    });
+    box.addEventListener("focusout", function (e) {
+      if (!e.relatedTarget || !box.contains(e.relatedTarget)) {
+        window.setTimeout(function () { if (box.classList.contains("on")) armToast(box); }, 0);
+      }
+    });
+    box.addEventListener("pointerenter", function () {
+      toastHover = true;
+      window.clearTimeout(toastTimer);
+    });
+    box.addEventListener("pointerleave", function () {
+      toastHover = false;
+      if (box.classList.contains("on")) armToast(box);
+    });
+  }
+
+  // The one freshness line (#data-note on a page): when the data was checked, or that the
+  // live source is down and this is the saved copy (or, after a failed poll, the last load).
+  // Its space is reserved in CSS.
+  function note(data, failed) {
+    var el = document.getElementById("data-note");
+    if (!el) return;
+    var saved = data.stale || data.snapshot;
+    var old = !!(saved || failed);
+    var t = data.fetchedAt;
+    el.textContent = "";
+    el.classList.remove("none");
+    // old is a real boolean: toggle(name, undefined) ignores the force argument and flips the class.
+    el.classList.toggle("old", old);
+    if (old) {
+      var what = saved ? "the saved copy" : "the last data";
+      el.appendChild(document.createTextNode("Live source unavailable, showing " + what + (t ? (saved ? " from " : ", checked ") : ".")));
+      if (t) {
+        el.appendChild(saved ? h("time", null, day(t), { datetime: new Date(t).toISOString() }) : when(t));
+        el.appendChild(document.createTextNode("."));
+      }
+    } else if (t) {
+      el.appendChild(document.createTextNode("Data checked "));
+      el.appendChild(when(t));
+      el.appendChild(document.createTextNode("."));
+    }
+  }
+  // "Now" for counting days: a stale or bundled copy is as of when it was fetched, so it does
+  // not look more dormant every day.
+  // A failed poll keeps Date.now(): the data on screen is the last good live load. Only a stale or
+  // saved copy freezes time at its fetch.
+  function clock() {
+    var d = state.data;
+    // Never earlier than the newest release it holds: one source may have fallen back to an old copy.
+    return d && (d.stale || d.snapshot) && d.fetchedAt ? Math.max(d.fetchedAt, d.releases[0].t) : Date.now();
+  }
+
   function announce(fresh) {
     var box = document.getElementById("toast");
     if (!box) return;
-    var names = fresh.slice(0, 3).map(function (r) { return r.title.replace(/ \(.*\)$/, ""); });
-    var text = "New: " + names.join(", ") +
-      (fresh.length > 3 ? " and " + (fresh.length - 3) + " more" : "") + ".";
+    wireToast(box);
+    var shown = fresh.slice(0, 3);
+    var p = h("p", "toast-text", "New: ");
+    shown.forEach(function (r, i) {
+      if (i) p.appendChild(document.createTextNode(", "));
+      p.appendChild(h("a", "toast-link", r.title.replace(/ \(.*\)$/, ""), {
+        href: "/timeline/?id=" + encodeURIComponent(r.id)
+      }));
+    });
+    p.appendChild(document.createTextNode(
+      (fresh.length > 3 ? " and " + (fresh.length - 3) + " more" : "") + "."));
+    var wasOn = box.classList.contains("on");
+    var active = document.activeElement;
+    if (!wasOn || !toastBack) toastBack = active && !box.contains(active) ? active : null;
+    var held = box.contains(active);
     box.textContent = "";
-    box.appendChild(h("p", "toast-text", text));
+    box.appendChild(p);
     var close = h("button", "toast-close", "Dismiss", { type: "button" });
     close.addEventListener("click", hideToast);
     box.appendChild(close);
+    // Rebuilding the toast must not drop the focus it held onto the page body.
+    if (held) close.focus();
     box.classList.add("on");
-    window.clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(hideToast, 12000);
+    armToast(box);
   }
   function hideToast() {
     var box = document.getElementById("toast");
-    if (box) box.classList.remove("on");
+    window.clearTimeout(toastTimer);
+    if (!box) return;
+    if (box.contains(document.activeElement)) {
+      var back = toastBack && toastBack !== document.body && document.contains(toastBack) ?
+        toastBack : null;
+      if (!back) {
+        back = document.getElementById("content");
+        if (back && !back.hasAttribute("tabindex")) {
+          back.setAttribute("tabindex", "-1");
+          back.addEventListener("blur", function () { back.removeAttribute("tabindex"); },
+            { once: true });
+        }
+      }
+      if (back) back.focus({ preventScroll: true });
+    }
+    toastBack = null;
+    toastHover = false;
+    box.classList.remove("on");
   }
 
   function visible() { return document.visibilityState === "visible"; }
@@ -277,9 +377,10 @@
 
   window.RO = {
     loadJson: loadJson, ready: loadConfig, families: function () { return config.families; },
+    vendors: function () { return config.vendors; },
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
-    channel: channel, sigilKey: sigilKey,
+    channel: channel, sigilKey: sigilKey, clock: clock,
     latest: latest, lead: lead, newer: newer, compareVersions: compareVersions,
     reduced: function () {
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -9,6 +9,7 @@
   var selFrom = document.getElementById("c-from");
   var selTo = document.getElementById("c-to");
   var out = document.getElementById("cmp-result");
+  var live = document.getElementById("cmp-live");
   var all = [];
   var list = [];
   // null until the first data arrives, so an empty platform still renders once.
@@ -17,8 +18,17 @@
   var shown = null;
   var slot = null;
 
+  // The from and to ids in the address, used once when the first data arrives. An id that is not
+  // in the loaded list is ignored by fill(), which falls back to the defaults.
+  var initial = { from: "", to: "" };
+  var shared = false;
+
   try {
-    var wanted = new URLSearchParams(window.location.search).get("family");
+    var params = new URLSearchParams(window.location.search);
+    initial.from = params.get("from") || "";
+    initial.to = params.get("to") || "";
+    shared = params.has("from") || params.has("to") || params.has("family");
+    var wanted = params.get("family");
     var offered = Array.prototype.map.call(selFamily.options, function (o) { return o.value; });
     if (offered.indexOf(wanted) >= 0) selFamily.value = wanted;
   } catch (e) { /* the default platform stays */ }
@@ -31,6 +41,25 @@
     list.forEach(function (r) { select.appendChild(RO.h("option", "", label(r), { value: r.id })); });
     var has = list.some(function (r) { return r.id === keep; });
     select.value = has ? keep : fallback;
+  }
+  // Releases in the shown set (both picks and everything between) that share a family and a
+  // version are told apart by build (or date without one), the same details the pickers show,
+  // so each link and the announcement name its own release.
+  var twins = Object.create(null);
+  function name(r) {
+    var base = r.family + " " + RO.short(r);
+    return twins[r.id] ? base + " (" + (r.build || RO.day(r.t)) + ")" : base;
+  }
+  // One sentence for a screen reader; the result itself is rebuilt silently.
+  function announce(text) { if (live) live.textContent = text; }
+  // Keep the address in step with the picks, so a comparison can be shared.
+  function remember() {
+    var q = "family=" + encodeURIComponent(selFamily.value);
+    if (selFrom.value) q += "&from=" + encodeURIComponent(selFrom.value);
+    if (selTo.value) q += "&to=" + encodeURIComponent(selTo.value);
+    try {
+      window.history.replaceState(null, "", window.location.pathname + "?" + q);
+    } catch (e) { /* the comparison still works without a shareable address */ }
   }
   function days(a, b) { return Math.round(Math.abs(Math.floor(a / 864e5) - Math.floor(b / 864e5))); }
 
@@ -46,7 +75,7 @@
     text.appendChild(RO.h("p", "build", r.build ? "Build " + r.build : RO.channel(r)));
     text.appendChild(RO.h("p", "small", RO.day(r.t)));
     var a = RO.h("a", "rel-apple", "View release", { href: r.url, target: "_blank", rel: "noopener noreferrer" });
-    a.appendChild(RO.h("span", "sr-only", " (opens in a new tab)"));
+    a.appendChild(RO.h("span", "sr-only", " " + name(r) + " (opens in a new tab)"));
     text.appendChild(a);
     box.appendChild(text);
     return box;
@@ -63,8 +92,16 @@
     if (!slot) return;
     slot.textContent = "";
     var section = null;
-    try { section = window.Sec ? window.Sec.compare(shown.newer, shown.older) : null; } catch (e) { section = null; }
+    try { section = window.Sec ? window.Sec.compare(shown.newer, shown.older, shown.between, name) : null; } catch (e) { section = null; }
     if (section) slot.appendChild(section);
+    var between = name(shown.older) + " and " + name(shown.newer);
+    var count = section && section.querySelector(".sec-count");
+    var say = section && section.querySelector(".sec-say");
+    var lead = section && section.querySelector(".sec-lead");
+    if (count && lead) announce(count.textContent + ". " + lead.textContent);
+    else if (count) announce(count.textContent);
+    else if (say) announce("Comparing " + between + ". " + say.textContent);
+    else announce("Comparing " + between);
   }
   if (window.Sec) window.Sec.on(secure);
 
@@ -72,22 +109,37 @@
     out.textContent = "";
     shown = null;
     slot = null;
+    twins = Object.create(null);
     var i = list.map(function (r) { return r.id; }).indexOf(selFrom.value);
     var j = list.map(function (r) { return r.id; }).indexOf(selTo.value);
-    if (i < 0 || j < 0) { out.appendChild(RO.h("p", "small", "No releases for this platform in the data.")); return; }
+    if (i < 0 || j < 0) {
+      out.appendChild(RO.h("p", "small", "No releases for this platform in the data."));
+      announce("Compare unavailable: no releases for this platform in the data.");
+      return;
+    }
     if (list.length === 1) {
       out.appendChild(RO.h("p", "notice", "Only one " + list[0].family + " release in the data so far."));
+      announce("Compare unavailable: only one " + list[0].family + " release in the data so far.");
       out.appendChild(card("Release", list[0]));
       return;
     }
     if (i === j) {
       out.appendChild(RO.h("p", "notice", "Pick two different releases to compare."));
+      announce("Compare unavailable: pick two different releases to compare.");
       out.appendChild(card("Release", list[i]));
       return;
     }
     var newerAt = Math.min(i, j), olderAt = Math.max(i, j);
     var newer = list[newerAt], older = list[olderAt];
     var between = list.slice(newerAt + 1, olderAt);
+    var seenName = Object.create(null);
+    [newer, older].concat(between).forEach(function (r) {
+      var key = r.family + " " + RO.short(r);
+      (seenName[key] = seenName[key] || []).push(r.id);
+    });
+    Object.keys(seenName).forEach(function (key) {
+      if (seenName[key].length > 1) seenName[key].forEach(function (id) { twins[id] = true; });
+    });
     var pre = between.filter(function (r) { return r.stage !== "release"; }).length;
     var span = newer.t - older.t;
 
@@ -119,7 +171,7 @@
     });
     out.appendChild(track);
 
-    shown = { newer: newer, older: older };
+    shown = { newer: newer, older: older, between: between };
     slot = RO.h("div", "sec-slot");
     out.appendChild(slot);
     secure();
@@ -155,19 +207,25 @@
 
   function pick(reset) {
     list = all.filter(function (r) { return r.family === selFamily.value; });
-    var keepFrom = reset ? "" : selFrom.value, keepTo = reset ? "" : selTo.value;
+    var keepFrom = reset ? "" : initial.from || selFrom.value;
+    var keepTo = reset ? "" : initial.to || selTo.value;
+    initial = { from: "", to: "" };
     var newest = list.length ? list[0].id : "";
     signature = list.map(function (r) { return r.id; }).join("|");
     fill(selFrom, keepFrom, defaultFrom());
     fill(selTo, keepTo, newest);
     render();
   }
-  selFamily.addEventListener("change", function () { pick(true); });
-  selFrom.addEventListener("change", render);
-  selTo.addEventListener("change", render);
+  selFamily.addEventListener("change", function () { pick(true); remember(); });
+  selFrom.addEventListener("change", function () { render(); remember(); });
+  selTo.addEventListener("change", function () { render(); remember(); });
 
   RO.on(function (data) {
-    if (!data) { out.textContent = "Could not load releases. The source is linked below."; return; }
+    if (!data) {
+      out.textContent = "Could not load releases. The source is linked below.";
+      announce("Compare unavailable: could not load releases.");
+      return;
+    }
     form.hidden = false;
     all = data.releases;
     // Rebuild the pickers only when this platform's releases changed: a poll with nothing new must
@@ -175,6 +233,11 @@
     var next = all.filter(function (r) { return r.family === selFamily.value; })
       .map(function (r) { return r.id; }).join("|");
     if (next === signature && out.firstChild) return;
+    var first = signature === null, was = selFrom.value + "|" + selTo.value;
     pick(false);
+    // The address follows what is shown: a shared one that named ids not in the list, and a poll
+    // that dropped a picked release. A bare first visit leaves it alone.
+    if (shared || (!first && was !== selFrom.value + "|" + selTo.value)) remember();
+    shared = false;
   });
 })();
