@@ -125,8 +125,8 @@ FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
 # Raw bytes. below.js (the drawn devices that step through releases), cadence.js, lookup.js and
-# sigil-generic.js are 35,879 together (16,863 + 4,788 + 12,708 + 1,520); the limit leaves about
-# 15% room for each to grow a little.
+# sigil-generic.js are 36,247 together (17,231 + 4,788 + 12,708 + 1,520); the limit leaves about
+# 10% room for each to grow a little.
 AFTER_PAINT_BUDGET = 39_800
 
 

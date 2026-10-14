@@ -1179,8 +1179,8 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
 }
 .m-comp .k { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85); }
 .m-comp .v { max-width: 100%; font-size: 0.875rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
-/* A width cap, not a font guess: in any fallback font the date wraps at the space before the year. */
-.m-comp[data-mode="2"] .v { max-width: 4.25rem; font-size: 0.8125rem; text-wrap: balance; }
+/* A width cap, not a font guess: in any fallback font the date wraps at the space before the year. Greedy wrapping (no balance) keeps "Sep 28" whole and moves "'26" down. */
+.m-comp[data-mode="2"] .v { max-width: 4.25rem; font-size: 0.8125rem; }
 .m-watch .m-name { font-size: 0.75rem; font-weight: 500; text-wrap: balance; }
 
 /* The straps sit in the side padding, which is as wide as a strap (both 2.75rem, no percentages): never over the visor. */
