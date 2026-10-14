@@ -1513,7 +1513,7 @@ def test_an_address_with_a_line_opens_filtered_and_an_unknown_line_is_ignored(pa
     page.wait_for_selector(".tl-item")
     only = [r for r in releases("Windows") if r["line"] == "24H2"]
     assert page.locator(".tl-item").count() == len(only)
-    assert page.get_attribute("#chips-line [data-v=24H2]", "aria-pressed") == "true"
+    assert page.get_attribute('#chips-line [data-v="24H2"]', "aria-pressed") == "true"
     page.goto(base_url + "/timeline/?family=RouterOS&line=nope")
     page.wait_for_selector(".tl-item")
     assert page.locator(".tl-item").count() == len(releases("RouterOS"))
