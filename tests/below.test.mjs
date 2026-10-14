@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { describe, it } from 'node:test';
 
-const { trail, steps, index, move, keyStep, newest } = createRequire(import.meta.url)(
+const { trail, steps, index, keeps, move, keyStep, newest } = createRequire(import.meta.url)(
   '../src/assets/below.js',
 );
 
@@ -114,6 +114,33 @@ describe('the releases a device steps through', () => {
     assert.equal(index(before, id), 1);
     assert.equal(index(after, id), 2);
     assert.equal(after[index(after, id)].id, id);
+  });
+});
+
+describe('forgetting a pick that drops out', () => {
+  const full = steps(
+    [row('SteamOS', 'b', 'release', '3.8', 4), row('SteamOS', 'd', 'release', '3.7', 2)],
+    'SteamOS',
+  );
+
+  it('knows whether a release is one of the steps', () => {
+    assert.equal(keeps(full, 'd'), true);
+    assert.equal(keeps(full, 'gone'), false);
+    assert.equal(keeps(full, undefined), false);
+    assert.equal(keeps([], 'd'), false);
+  });
+
+  it('clears the pick on an empty list so a later full list starts at the newest', () => {
+    // The rule of shown() in below.js, applied as the time machine moves back and forth.
+    const picked = { SteamOS: 'd' };
+    const view = (rows) => {
+      if (!keeps(rows, picked.SteamOS)) delete picked.SteamOS;
+      return index(rows, picked.SteamOS);
+    };
+    assert.equal(view(full), 1);
+    assert.equal(view([]), 0);
+    assert.equal(picked.SteamOS, undefined);
+    assert.equal(view(full), 0);
   });
 });
 

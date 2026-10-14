@@ -57,6 +57,12 @@
     for (var i = 0; i < rows.length; i++) if (rows[i].id === id) return i;
     return 0;
   }
+  // Whether a release id is one of the steps. A pick that is not (including on an empty list,
+  // when the time machine is before the family's first release) is forgotten.
+  function keeps(rows, id) {
+    for (var i = 0; i < rows.length; i++) if (rows[i].id === id) return true;
+    return false;
+  }
   // From step i of n: -1 or 1 for one step, "first" or "last"; never past either end.
   function move(i, n, by) {
     if (n < 1) return 0;
@@ -67,7 +73,8 @@
   }
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
-      trail: trail, steps: steps, index: index, move: move, keyStep: keyStep, newest: newest
+      trail: trail, steps: steps, index: index, keeps: keeps, move: move, keyStep: keyStep,
+      newest: newest
     };
     return;
   }
@@ -99,7 +106,7 @@
   function shown(family) {
     var rows = steps(releases, family, family === "iPadOS" ? ipadScope() : "pub");
     var i = index(rows, picked[family]);
-    if (rows[i] && rows[i].id !== picked[family]) delete picked[family];
+    if (!keeps(rows, picked[family])) delete picked[family];
     var beta = family === "macOS" && channel === "beta" ? RO.lead(releases, family).pre : null;
     return { rows: rows, i: i, r: beta || rows[i] || null, beta: !!beta };
   }
