@@ -1,8 +1,8 @@
 """The security notes on the timeline and Compare, driven in Chromium with a mocked payload.
 
-The real src/data/security.json is empty, so each test serves its own schema-1 payload for the
-release ids of the bundled snapshot. The clock is fixed so the 14-day and 30-day rules are
-the same on every run.
+The real src/data/security.json changes with each refresh, so each test serves
+its own schema-1 payload for the release ids of the bundled snapshot. The clock is fixed so
+the 14-day and 30-day rules are the same on every run.
 """
 
 from __future__ import annotations
@@ -289,6 +289,7 @@ def test_with_the_empty_payload_the_pages_show_no_security_line_and_no_error(
     try:
         page = context.new_page()
         errors = watch(page)
+        serve_security(page, payload({}, {}))
         page.goto(base_url + path)
         page.wait_for_selector(".tl-item, .cmp-cards")
         page.wait_for_load_state("networkidle")

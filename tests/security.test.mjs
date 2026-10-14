@@ -21,6 +21,14 @@ describe('src/data/security.json', () => {
     assert.deepEqual(problems(security, releases), []);
   });
 
+  it('keeps note titles free of entities and the site suffix', () => {
+    for (const [url, note] of Object.entries(security.notes)) {
+      for (const bad of ['&nbsp;', '&amp;', 'Android Open Source Project']) {
+        assert.ok(!String(note.title).includes(bad), `${url} title contains ${bad}`);
+      }
+    }
+  });
+
   it('is rejected by the contract when it breaks an invariant', () => {
     const rows = [
       { id: 'r1', stage: 'release' },

@@ -21,6 +21,7 @@
 // the ADR defines no rule for it.
 
 import { buildTable, PAGE_URL, tables } from '../sources/android.js';
+import { decode } from './apple.js';
 
 export const SOURCE_ID = 'android-security-bulletin';
 export const PIXEL_SOURCE_ID = 'android-pixel-bulletin';
@@ -123,10 +124,10 @@ function titleOf(html) {
   const start = folded.indexOf('>', open);
   const end = start < 0 ? -1 : folded.indexOf('</title', start);
   if (end < 0) return null;
-  const title = text
-    .slice(start + 1, Math.min(end, start + 1 + MAX_TITLE))
+  // The live page writes the separator as `&nbsp;|&nbsp;`: decode first, then split.
+  const title = decode(text.slice(start + 1, Math.min(end, start + 1 + MAX_TITLE)))
     .replace(/\s+/g, ' ')
-    .split(' | ')[0]
+    .split(/\s*\|\s*/)[0]
     .trim();
   return title === '' ? null : title;
 }
