@@ -798,6 +798,7 @@ def test_the_router_mends_links_a_script_builds_at_run_time(text):
     assert "function routeOf(href)" in router
     assert 'document.addEventListener("click", mend)' in router
     assert 'document.addEventListener("auxclick", mend)' in router
+    assert 'document.addEventListener("contextmenu", mend)' in router
     assert "template[data-route=" in router  # the routes are the bundle's own templates
     # the router that runs is the one the policy hashes
     assert bundle.sha256_source(f"\n{bundle.ROUTER}\n") in policy_of(text)
@@ -814,8 +815,8 @@ def test_the_router_mends_links_a_script_builds_at_run_time(text):
     ],
 )
 def test_a_link_built_at_run_time_stays_inside_the_bundle(tab, served, href, hash, title):
-    tab.goto(served + "/#/about/")
-    heading(tab, "About Release Orbit")
+    tab.goto(served + "/#/")
+    tab.wait_for_selector("main")
     tab.evaluate(
         "(href) => { const a = document.createElement('a'); a.id = 'rt'; a.href = href;"
         " a.textContent = 'runtime'; document.querySelector('main').appendChild(a); }",
@@ -823,8 +824,8 @@ def test_a_link_built_at_run_time_stays_inside_the_bundle(tab, served, href, has
     )
     tab.locator("#rt").click()
     tab.wait_for_function(f"() => location.hash === {hash!r}")
+    tab.wait_for_function(f"() => document.title.includes({title!r})")
     assert tab.url.startswith(served + "/#/")  # still the one file
-    assert title in tab.title()
     assert tab.requested == []
     assert tab.errors == []
 

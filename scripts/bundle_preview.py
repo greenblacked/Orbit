@@ -247,15 +247,17 @@ ROUTER = r"""
     var path = q >= 0 ? href.slice(0, q) : href;
     var tries = [path, path.replace(/index\.html$/, "")];
     if (path.slice(-1) !== "/") tries.push(path + "/");
+    var routes = {};
+    document.querySelectorAll("template[data-route]").forEach(function (t) {
+      routes[t.getAttribute("data-route")] = true;
+    });
     for (var i = 0; i < tries.length; i++) {
-      if (document.querySelector('template[data-route="' + tries[i] + '"]')) {
-        return "#" + tries[i] + frag;
-      }
+      if (Object.prototype.hasOwnProperty.call(routes, tries[i])) return "#" + tries[i] + frag;
     }
     return null;
   }
   // Point such a link at its hash route before the browser acts on it, so a plain click,
-  // a modifier click and a middle click all stay inside the file.
+  // a modifier click, a middle click and the context menu's "open in new tab" all stay inside the file.
   function mend(event) {
     if (event.defaultPrevented) return;
     var link = event.target.closest ? event.target.closest("a[href]") : null;
@@ -264,6 +266,7 @@ ROUTER = r"""
   }
   document.addEventListener("click", mend);
   document.addEventListener("auxclick", mend);
+  document.addEventListener("contextmenu", mend);
   document.addEventListener("click", function (event) {
     if (event.defaultPrevented || event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
