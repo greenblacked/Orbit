@@ -469,7 +469,8 @@ def test_activating_a_dot_fills_the_readout_with_its_links_and_show_in_list_reve
     )
     for height in heights:
         assert height >= TARGET
-    show.click()
+    show.focus()
+    page.keyboard.press("Enter")
     page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
     assert page.evaluate("document.activeElement.closest('.tl-item').dataset.id") == release_id
     assert page.get_attribute("#chips-view [data-v=list]", "aria-pressed") == "true"
