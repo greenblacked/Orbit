@@ -764,6 +764,56 @@ def test_a_poll_that_adds_a_release_to_a_same_day_dot_keeps_its_focus_and_choice
     assert page.locator("#lanes-read .lanes-r-ver").count() == 2
 
 
+def test_a_release_id_with_a_space_keeps_its_dot_focused_across_a_poll_redraw(opened):
+    first = crowded(spread=True)
+    old = next(r for r in first["releases"] if r["date"].startswith("2026-10-12"))
+    spaced = {**old, "id": "feed guid 1"}
+    first = {**first, "releases": [spaced if r is old else r for r in first["releases"]]}
+    page, _ = opened("/timeline/?view=cadence", body=first)
+    lanes_open(page)
+    page.locator('.lanes-dot[data-id="feed guid 1"]').focus()
+    newest = {**old, "id": "fresh", "version": "26.99", "date": "2026-10-12T08:00:00Z"}
+    second = {**first, "releases": [newest, *first["releases"]]}
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body=json.dumps(second)
+        ),
+    )
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector(".lanes-dot .lanes-n")
+    assert page.evaluate("document.activeElement.dataset.id") == "fresh"
+
+
+def test_a_poll_during_readout_focus_is_shown_once_the_focus_leaves_the_readout(opened):
+    first = crowded(spread=True)
+    page, _ = opened("/timeline/?view=cadence", body=first)
+    lanes_open(page)
+    old = next(r for r in first["releases"] if r["date"].startswith("2026-10-12"))
+    dot = page.locator(f'.lanes-dot[data-id="{old["id"]}"]')
+    dot.focus()
+    page.keyboard.press("Enter")
+    read = page.locator("#lanes-read")
+    read.locator("a", has_text="Show in list").first.focus()
+    newest = {**old, "id": "fresh", "version": "26.99", "date": "2026-10-12T08:00:00Z"}
+    second = {**first, "releases": [newest, *first["releases"]]}
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body=json.dumps(second)
+        ),
+    )
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector(".lanes-dot .lanes-n")
+    assert page.evaluate("document.activeElement.textContent") == "Show in list"
+    assert read.locator(".lanes-r-ver").count() == 1
+    page.locator(".lanes-dot.is-sel").focus()
+    page.wait_for_function(
+        "() => document.querySelectorAll('#lanes-read .lanes-r-ver').length === 2"
+    )
+    assert read.inner_text().count("26.99") >= 1
+
+
 def test_a_same_day_dot_shows_the_strongest_stage_of_its_releases(opened):
     page, errors = opened("/timeline/?view=cadence&family=SteamOS")
     lanes_open(page)

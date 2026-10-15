@@ -74,6 +74,11 @@
       if (d) select(d);
     });
     board.addEventListener("keydown", keys);
+    read.addEventListener("focusout", function () {
+      setTimeout(function () {
+        if (S.stale && !holding()) { S.stale = false; settle(); }
+      }, 0);
+    });
     board.addEventListener("focusin", function (e) {
       var d = dotOf(e.target);
       if (d) stop(d);
@@ -225,7 +230,8 @@
     function x(t) { return labelPx + LEAD + Math.round((Math.min(t, now) - start) / DAY * PX); }
 
     var active = document.activeElement;
-    var focusIds = active && board.contains(active) && active.getAttribute ? (active.getAttribute("data-ids") || "").split(" ") : [];
+    var held = active && board.contains(active) && active.closest ? dotOf(active) : null;
+    var focusIds = held ? idsOf(held) : [];
     var kept = board.scrollLeft;
 
     var inner = h("div", "lanes-inner");
@@ -313,12 +319,15 @@
       if (window.requestAnimationFrame) window.requestAnimationFrame(toEnd);
     } else jump(board, kept);
     var chosen = find(S.sel);
-    var before = S.sel ? S.sel.join(" ") : "";
+    var before = JSON.stringify(S.sel);
     if (chosen) chosen.btn.classList.add("is-sel");
     S.sel = chosen ? idsOf(chosen) : null;
-    // A chosen dot that gained or lost a release shows its new list (unless a link in the readout
-    // has the focus).
-    if (chosen && S.sel.join(" ") !== before && !fresh && !holding()) fill(chosen, true, false);
+    // A chosen dot that gained or lost a release shows its new list; with the focus on a link in
+    // the readout that waits (S.stale) until the focus leaves it.
+    if (chosen && JSON.stringify(S.sel) !== before && !fresh) {
+      if (holding()) S.stale = true;
+      else fill(chosen, true, false);
+    }
     var back = find(focusIds);
     if (back) back.btn.focus({ preventScroll: true });
     if (!S.sel || fresh) settle();
