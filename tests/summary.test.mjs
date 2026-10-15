@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { SUMMARY_MAX, applyNotes, cleanSummary, withSummary } from '../deploy/releases.js';
+import { SUMMARY_MAX, applyNotes, backfillLine, cleanSummary, withSummary } from '../deploy/releases.js';
 
 const release = (id, extra = {}) => ({ id, title: `Release ${id}`, ...extra });
 
@@ -117,5 +117,33 @@ describe('applyNotes', () => {
     const copy = JSON.parse(JSON.stringify(list));
     applyNotes(list, { notes: { a: 'Note A' } });
     assert.deepEqual(list, copy);
+  });
+});
+
+describe('backfillLine', () => {
+  it('gives a cached RouterOS row the channel at the end of its id', () => {
+    for (const channel of ['stable', 'long-term', 'testing']) {
+      const out = backfillLine({ id: `routeros-7.23.8-${channel}`, family: 'RouterOS', version: '7.23.8' });
+      assert.equal(out.line, channel);
+    }
+    assert.equal(backfillLine({ id: 'routeros-7.23.8', family: 'RouterOS' }).line, undefined);
+  });
+
+  it('gives a cached Windows feature update its version as the line', () => {
+    assert.equal(backfillLine({ id: 'w#24h2-1', family: 'Windows', version: '24H2' }).line, '24H2');
+    assert.equal(backfillLine({ id: 'w#x', family: 'Windows', version: '22621' }).line, undefined);
+  });
+
+  it('keeps a line that is already there', () => {
+    const row = { id: 'routeros-7.23.8-stable', family: 'RouterOS', line: 'testing' };
+    assert.equal(backfillLine(row), row);
+    const win = { id: 'w#1', family: 'Windows', version: '24H2', line: '23H2' };
+    assert.equal(backfillLine(win).line, '23H2');
+  });
+
+  it('adds no line to other families', () => {
+    const row = { id: 'ios-26-stable', family: 'iOS', version: '26H2' };
+    assert.equal(backfillLine(row), row);
+    assert.equal('line' in backfillLine(row), false);
   });
 });

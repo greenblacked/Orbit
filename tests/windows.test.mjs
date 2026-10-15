@@ -27,9 +27,11 @@ import {
   APPLE_ID,
   FEED,
   FEED_URL,
+  ago,
   fakeCtx,
   fakeEnv,
   ORIGIN,
+  seed,
   stubUpstream,
   useHarness,
 } from './support/harness.mjs';
@@ -450,5 +452,26 @@ describe('the Worker with the Windows source', () => {
   it('answers 503 when neither page yields a release and there is no snapshot', async () => {
     routes({ [WINDOWS_11_URL]: '<html></html>', [WINDOWS_10_URL]: '<html></html>' });
     assert.equal((await call('/api/releases.json')).status, 503);
+  });
+
+  it('gives a row cached before lines existed its feature update as the line', async () => {
+    const legacy = {
+      id: 'legacy#24h2-26100',
+      vendor: 'microsoft',
+      family: 'Windows',
+      version: '24H2',
+      major: 24,
+      stage: 'release',
+      beta: null,
+      build: '26100.1',
+      title: 'Windows 11 24H2',
+      date: '2026-01-01T00:00:00Z',
+      url: 'https://support.microsoft.com/help/1',
+      source: ID,
+    };
+    await seed(ago(60 * 1000), {}, ID, [legacy]);
+    const res = await call('/api/releases.json?vendor=microsoft');
+    const body = await res.json();
+    assert.equal(body.releases.find((r) => r.id === legacy.id).line, '24H2');
   });
 });

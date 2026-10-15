@@ -21,7 +21,15 @@ import mikrotik, {
   unixToIso,
 } from '../deploy/sources/mikrotik.js';
 import { createWorker } from '../deploy/worker.js';
-import { fakeCtx, fakeEnv, ORIGIN, stubUpstream, useHarness } from './support/harness.mjs';
+import {
+  ago,
+  fakeCtx,
+  fakeEnv,
+  ORIGIN,
+  seed,
+  stubUpstream,
+  useHarness,
+} from './support/harness.mjs';
 
 const fixture = (name) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/mikrotik/${name}`, import.meta.url)), 'utf8');
@@ -235,5 +243,24 @@ describe('the Worker with the MikroTik source', () => {
       ['RouterOS 7.23.8 long-term', 'RouterOS 7.25rc1', 'RouterOS 7.24.5 stable'],
     );
     assert.ok(body.releases.every((r) => r.vendor === 'mikrotik' && r.source === ID));
+  });
+
+  it('gives a row cached before lines existed its channel, and keeps a line it has', async () => {
+    const stable = makeRelease({ version: '7.24.5', channel: 'stable', date: '2026-09-01T00:00:00Z' });
+    const longTerm = makeRelease({ version: '7.23.8', channel: 'long-term', date: '2026-08-01T00:00:00Z' });
+    const { line: _a, ...legacy } = stable;
+    const { line: _b, summary: _c, ...legacyLongTerm } = longTerm;
+    // A fresh cached copy is served without a fetch; the answer must still carry `line`.
+    await seed(ago(60 * 1000), {}, ID, [legacy, legacyLongTerm, { ...longTerm, id: 'routeros-7.22-x', line: 'testing' }]);
+    const worker = createWorker([mikrotik]);
+    const res = await worker.fetch(
+      new Request(`${ORIGIN}/api/releases.json?vendor=mikrotik`),
+      fakeEnv(null),
+      fakeCtx(),
+    );
+    const byId = Object.fromEntries((await res.json()).releases.map((r) => [r.id, r]));
+    assert.equal(byId[legacy.id].line, 'stable');
+    assert.equal(byId[legacyLongTerm.id].line, 'long-term');
+    assert.equal(byId['routeros-7.22-x'].line, 'testing');
   });
 });
