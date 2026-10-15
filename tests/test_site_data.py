@@ -125,8 +125,8 @@ FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
 # Raw bytes. below.js (the drawn devices that step through releases), cadence.js, lookup.js and
-# sigil-generic.js are 36,247 together (17,231 + 4,788 + 12,708 + 1,520); the limit leaves about
-# 10% room for each to grow a little.
+# sigil-generic.js are 36,349 together (17,231 + 4,788 + 12,810 + 1,520); the limit leaves about
+# 9% room for each to grow a little.
 AFTER_PAINT_BUDGET = 39_800
 
 
@@ -348,3 +348,22 @@ def test_the_android_status_bar_is_drawn_the_android_way():
         assert re.search(rf"\.{glyph} \{{[^}}]*\}}", CSS), glyph
     # The iPhone keeps its own bar.
     assert "<span>9:41</span>" in html[html.index('id="ios"') : html.index('id="ipados"')]
+
+
+@pytest.mark.parametrize("name", pages())
+def test_every_page_advertises_the_atom_feed(name):
+    tag = (
+        '<link rel="alternate" type="application/atom+xml" title="Release Orbit releases" '
+        'href="/api/feed.atom">'
+    )
+    html = page(name)
+    assert html.count(tag) == 1
+    assert html.index(tag) < html.index("</head>")
+
+
+def test_the_timeline_offers_a_subscribe_link_near_its_filters():
+    html = page("timeline/index.html")
+    link = re.search(r'<a class="chip-link" href="/api/feed\.atom"[^>]*>Subscribe', html)
+    assert link
+    assert html.index('id="filters"') < link.start() < html.index('id="count"')
+    assert html.count("/api/feed.atom") == 2  # the head link and this one

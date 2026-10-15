@@ -77,7 +77,9 @@ describe('src/data/releases.json', () => {
   it('gives every release the whole contract, from a registered source and a known family', () => {
     const ids = new Set(SOURCES.map((s) => s.id));
     for (const r of payload.releases) {
-      assert.deepEqual(Object.keys(r).sort(), keys, r.id);
+      // `line` is the one optional field: RouterOS and Windows carry it, every other family not.
+      const expected = r.family === 'RouterOS' || r.family === 'Windows' ? [...keys, 'line'] : keys;
+      assert.deepEqual(Object.keys(r).sort(), expected.sort(), r.id);
       assert.ok(ids.has(r.source), `${r.id}: unknown source ${r.source}`);
       const source = SOURCES.find((s) => s.id === r.source);
       assert.equal(r.vendor, source.vendor, r.id);

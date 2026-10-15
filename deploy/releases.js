@@ -10,6 +10,9 @@
 // "rc". `beta` is the iteration number of a beta or RC ("beta 3" and "RC 2" are 3 and 2; a
 // bare "beta" or "RC" and a final release are null). `date` is ISO-8601 UTC without
 // milliseconds. Only the title, build, date and link are kept, never release-notes text.
+// A family with several supported lines at once adds an optional last field, `line`: the
+// RouterOS channel ("stable", "long-term", "testing") or the Windows feature update ("24H2").
+// A family with one line (Apple, Android, SteamOS) has no `line` key at all, never null.
 
 // Each source keeps its newest MAX_RELEASES_PER_SOURCE releases, so a large source cannot
 // push another's rows out. The largest live source is the AOSP tag page (about 300 release
@@ -20,6 +23,21 @@
 // tests/snapshot.test.mjs fails at 80% of it, and the snapshot script refuses a merge that
 // would drop rows.
 export const MAX_RELEASES_PER_SOURCE = 1000;
+
+const LINE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,15}$/;
+
+/** True for a value a release may carry as `line`: a short token of letters, digits and . _ - */
+export function isLine(value) {
+  return typeof value === 'string' && LINE_RE.test(value);
+}
+
+/**
+ * The release with `line` added as its last field, or the release as it was when `line` is
+ * not a valid token. Used by the adapters whose family has several lines.
+ */
+export function withLine(release, line) {
+  return isLine(line) ? { ...release, line } : release;
+}
 
 const ZONES = {
   Z: 0,

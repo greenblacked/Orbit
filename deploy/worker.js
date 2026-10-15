@@ -3,6 +3,8 @@
 //
 //   GET /api/releases.json            the releases of every vendor
 //   GET /api/releases.json?vendor=X   only the releases of vendor X (400 for an unknown one)
+//   GET /api/feed.atom                the newest releases as an Atom feed (feeds.js); ?vendor=, ?family=, ?stage=
+//   GET /api/feed.json                the same as a JSON Feed 1.1
 //   GET /api/security.json            the bundled security notes (/data/security.json), unchanged in content
 //   GET /api/health                   {ok, degraded, fetchedAt, stale, count, sources}, never cached
 //
@@ -32,6 +34,7 @@
 // stage are both in one zone, so they share its cache: the keys name no host, and stage reads
 // and writes production's entries, negative markers included.
 
+import { atomFeed, feedQuery, jsonFeed } from './feeds.js';
 import { mergeReleases } from './releases.js';
 import { SOURCES, isSource, vendorsOf } from './sources/index.js';
 
@@ -540,6 +543,22 @@ async function api(request, env, ctx, sources) {
     return payload
       ? json(payload, 200, {}, head)
       : json({ error: 'no releases available' }, 503, { 'cache-control': 'no-store' }, head);
+  }
+  if (url.pathname === '/api/feed.atom' || url.pathname === '/api/feed.json') {
+    const asked = feedQuery(url.searchParams, vendorsOf(sources));
+    if (asked.error) return json(asked.error, 400, { 'cache-control': 'no-store' }, head);
+    const { vendor } = asked.filters;
+    const chosen = vendor === undefined ? sources : sources.filter((s) => s.vendor === vendor);
+    const payload = combine(await loadAll(chosen, request, env, ctx, live));
+    if (!payload) {
+      return json({ error: 'no releases available' }, 503, { 'cache-control': 'no-store' }, head);
+    }
+    const feed = (url.pathname === '/api/feed.atom' ? atomFeed : jsonFeed)(payload, asked.filters);
+    // The feed sets its own type; a reader polls, so it may be a few minutes old.
+    return new Response(head ? null : feed.body, {
+      status: 200,
+      headers: { ...API_HEADERS, 'content-type': feed.type, 'cache-control': 'public, max-age=300' },
+    });
   }
   if (url.pathname === '/api/security.json') {
     const payload = await readSecurity(env, request);

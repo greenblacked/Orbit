@@ -16,6 +16,7 @@
 // needs the URL of the document, because a NEWEST file does not say which channel it is.
 
 import { familyIds } from '../families.js';
+import { withLine } from '../releases.js';
 
 export const ID = 'mikrotik-routeros';
 export const VENDOR = 'mikrotik';
@@ -50,7 +51,9 @@ export function unixToIso(seconds) {
  * One release row, or null when the version does not fit its channel or its date lies in the
  * future. stable and long-term carry a plain version ("7.23.8"); testing carries a
  * pre-release ("7.25rc1", "7.25beta2"), whose `version` is the number alone ("7.25") and
- * whose `build` is the full string. The link is always built from the version.
+ * whose `build` is the full string. The link is always built from the version. `line` is the
+ * channel the document came from ("stable", "long-term" or "testing"), the supported lines
+ * RouterOS keeps side by side.
  */
 export function makeRelease({ version, channel, date, now = Date.now() }) {
   const m = VERSION_RE.exec(String(version ?? ''));
@@ -59,7 +62,7 @@ export function makeRelease({ version, channel, date, now = Date.now() }) {
   if (preRelease !== (channel === 'testing')) return null;
   if (Date.parse(date) > now + MAX_SKEW_MS) return null;
   const number = preRelease ? `${m[1]}.${m[2]}${m[3] === undefined ? '' : `.${m[3]}`}` : version;
-  return {
+  const release = {
     id: `routeros-${version}-${channel}`,
     vendor: VENDOR,
     family: FAMILY,
@@ -73,6 +76,7 @@ export function makeRelease({ version, channel, date, now = Date.now() }) {
     url: downloadUrl(version),
     source: ID,
   };
+  return withLine(release, channel);
 }
 
 /** The release in one NEWEST document ("<version> <unix-seconds>") of a channel; [] if malformed. */

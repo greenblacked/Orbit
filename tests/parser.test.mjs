@@ -9,10 +9,12 @@ import { fileURLToPath } from 'node:url';
 import { FAMILIES, VENDORS, familyIds } from '../deploy/families.js';
 import {
   MAX_RELEASES_PER_SOURCE,
+  isLine,
   mergeReleases,
   mergeReleasesChecked,
   parseDate,
   sortReleases,
+  withLine,
 } from '../deploy/releases.js';
 import apple, { FEED_URL, parseFeed, parseTitle } from '../deploy/sources/apple.js';
 
@@ -49,6 +51,26 @@ describe('parseDate', () => {
     ]) {
       assert.equal(parseDate(bad), null, bad);
     }
+  });
+});
+
+describe('release lines', () => {
+  it('accepts a short token and nothing else', () => {
+    for (const good of ['stable', 'long-term', 'testing', '24H2', '7.23', 'a']) {
+      assert.equal(isLine(good), true, good);
+    }
+    for (const bad of ['', ' ', '-x', 'a b', 'x'.repeat(17), '<b>', 'a/b', 24, null, undefined, {}]) {
+      assert.equal(isLine(bad), false, String(bad));
+    }
+  });
+
+  it('adds line as the last field, or leaves the release alone', () => {
+    const base = { id: 'a', version: '1' };
+    assert.deepEqual(Object.keys(withLine(base, 'stable')), ['id', 'version', 'line']);
+    assert.equal(withLine(base, 'stable').line, 'stable');
+    assert.equal(withLine(base, 'bad value'), base);
+    assert.equal('line' in withLine(base, null), false);
+    assert.equal('line' in base, false);
   });
 });
 
@@ -210,6 +232,7 @@ describe('parseFeed on the recorded feed', () => {
     ];
     for (const r of releases) {
       assert.deepEqual(Object.keys(r).sort(), keys);
+      assert.ok(!('line' in r), 'Apple has one line per family');
       assert.equal(r.vendor, 'apple');
       assert.equal(r.source, 'apple-developer-releases');
       assert.match(r.date, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);

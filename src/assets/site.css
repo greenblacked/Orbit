@@ -754,6 +754,9 @@ html[data-theme="reactor"] { --aurora: 0.3; }
   overflow-wrap: anywhere;
 }
 .rel-pre { margin-top: 0.25rem; font-size: 0.9375rem; }
+.rel-lines { margin-top: 0.25rem; padding: 0; list-style: none; color: var(--muted); }
+.rel-lines li { overflow-wrap: anywhere; }
+.rel-lines .rel-more { display: inline-flex; min-height: 2.75rem; align-items: center; color: var(--fam-text-card); text-decoration: underline; text-underline-offset: 4px; }
 .rel-pre a { display: inline-flex; min-height: 2.75rem; align-items: center; color: var(--fam-text-card); text-decoration: underline; text-underline-offset: 4px; overflow-wrap: anywhere; }
 .rel-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin-top: 0.5rem; }
 .badge {
@@ -864,6 +867,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   text-decoration: none;
 }
 @media (min-width: 64rem) { .subnav { display: none; } }
+.page .subscribe { margin-top: 1.25rem; }
 
 /* Motion: only transform and opacity move, only when the visitor has not asked for less,
    and everything is on screen without it. Scroll-driven reveals where the browser has
