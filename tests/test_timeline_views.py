@@ -41,9 +41,7 @@ document.addEventListener("securitypolicyviolation", (e) => {
 
 
 def make_context(browser, base_url, width=1280, theme=None):
-    context = browser.new_context(
-        viewport={"width": width, "height": 900}, reduced_motion="reduce"
-    )
+    context = browser.new_context(viewport={"width": width, "height": 900}, reduced_motion="reduce")
     context.set_default_timeout(5000)
     context.add_init_script(RECORD)
     if theme:
