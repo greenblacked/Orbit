@@ -137,6 +137,8 @@ HOME_SCRIPT = "/assets/home.js"
 BELOW_SCRIPT = "/assets/below.js"
 LOOKUP_SCRIPT = "/assets/lookup.js"
 COMPARE_SCRIPT = "/assets/compare.js"
+TIMELINE_SCRIPT = "/assets/timeline.js"
+LANES_SCRIPT = "/assets/lanes.js"
 # The live site loads the generic sigil rule on demand; a bundle cannot fetch it, so it runs
 # right after sigil.js on every page that loads sigil.js, before any script that draws.
 SIGIL_SCRIPT = "/assets/sigil.js"
@@ -627,7 +629,9 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
     # home.js loads below.js (the drawn devices that step through releases) and lookup.js
     # (Check my version; compare.js loads it too) after the page has painted, which a bundle
     # cannot do; the bundle runs them right after home.js (lookup.js right after compare.js)
-    # instead.
+    # instead. timeline.js loads lanes.js (the Cadence view) the first time that view is shown,
+    # so the bundle runs it right after timeline.js; timeline.js finds window.Lanes and does not
+    # fetch.
     for page in pages:
         if HOME_SCRIPT in page["body_scripts"]:
             at = page["body_scripts"].index(HOME_SCRIPT) + 1
@@ -636,6 +640,10 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
         if COMPARE_SCRIPT in page["body_scripts"] and LOOKUP_SCRIPT not in page["body_scripts"]:
             at = page["body_scripts"].index(COMPARE_SCRIPT) + 1
             page["body_scripts"].insert(at, LOOKUP_SCRIPT)
+        if TIMELINE_SCRIPT in page["body_scripts"] and LANES_SCRIPT not in page["body_scripts"]:
+            if (dist / "assets" / "lanes.js").is_file():
+                at = page["body_scripts"].index(TIMELINE_SCRIPT) + 1
+                page["body_scripts"].insert(at, LANES_SCRIPT)
         if (dist / "assets" / "sigil-generic.js").is_file():
             for key in ("head_scripts", "body_scripts"):
                 if SIGIL_SCRIPT in page[key]:

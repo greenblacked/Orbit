@@ -113,6 +113,10 @@ AFTER_PAINT = {
     "lookup.js": ("compare.js", "home.js"),
     "sigil-generic.js": ("sigil.js",),
 }
+# On demand, a step further than after paint: the Cadence view of the timeline. timeline.js
+# fetches lanes.js only when a visitor shows that view (or opens ?view=cadence), so it is neither
+# on the first paint nor loaded after it. No page names it; timeline.js is the only file that does.
+ON_DEMAND = {"lanes.js": ("timeline.js",)}
 # The first paint is budgeted on what crosses the wire: the sum of each script gzipped alone at
 # level 9 (the scripts are separate responses, so a per-file sum is what a visitor downloads;
 # a concatenation would flatter it). When set, the front page was 20,767 bytes and the limit
@@ -124,6 +128,8 @@ LAZY_BUDGET = 16_000
 # sigil-generic.js are 36,349 together (17,231 + 4,788 + 12,810 + 1,520); the limit leaves about
 # 9% room for each to grow a little.
 AFTER_PAINT_BUDGET = 39_800
+# Raw bytes. lanes.js is 11,399 (4,077 gzipped); the limit is about 25% above that.
+ON_DEMAND_BUDGET = 14_300
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])
@@ -132,6 +138,7 @@ def test_the_scripts_a_page_loads_stay_under_the_first_paint_budgets(name):
     assert loaded, name
     assert not set(LAZY) & set(loaded), "the effects load after first paint, not from the page"
     assert not set(AFTER_PAINT) & set(loaded), "these load after first paint, not from the page"
+    assert not set(ON_DEMAND) & set(loaded), "these load on demand, not from the page"
     raw = sum((ASSETS / script).stat().st_size for script in loaded)
     assert raw < FIRST_PAINT_RAW_BUDGET, (name, raw)
     packed = sum(len(gzip.compress((ASSETS / script).read_bytes(), 9)) for script in loaded)
@@ -158,6 +165,19 @@ def test_the_scripts_loaded_after_the_first_paint_are_named_only_by_their_loader
             if f"/assets/{name}" in script.read_text(encoding="utf-8")
         ]
         assert sorted(named) == sorted(loaders), name
+
+
+def test_the_scripts_loaded_on_demand_are_named_only_by_their_loader_and_no_page():
+    assert sum((ASSETS / name).stat().st_size for name in ON_DEMAND) < ON_DEMAND_BUDGET
+    for name, loaders in ON_DEMAND.items():
+        named = [
+            script.name
+            for script in ASSETS.glob("*.js")
+            if f"/assets/{name}" in script.read_text(encoding="utf-8")
+        ]
+        assert sorted(named) == sorted(loaders), name
+        for path in pages():
+            assert f"/assets/{name}" not in page(path), (name, path)
 
 
 @pytest.mark.parametrize("script", sorted(ASSETS.glob("*.js")), ids=lambda p: p.name)
