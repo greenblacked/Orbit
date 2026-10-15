@@ -84,21 +84,22 @@ export function parseTitle(title, tags = []) {
 /**
  * The headline words of a post title that follow the release name: "SteamOS 3.7.13 Stable:
  * Deck update" gives "Deck update". The version, the channel words (Stable, Beta, Preview),
- * a build in brackets and the punctuation between them are not a summary, so a title that
+ * a build in parentheses and the punctuation between them are not a summary, so a title that
  * is only those gives ''. The text is the title Valve wrote, cleaned like any summary.
  */
 export function summaryOfTitle(title) {
   const m = TITLE_RE.exec(String(title ?? '').trim());
   if (!m) return '';
   let rest = String(title).trim().slice(m[0].length);
-  // Peel separators and builds (bracketed or bare) off the front. Only a bracket holding a
-  // build (date.number) is a build: a qualifier such as "(LCD)" is part of the summary.
+  // Peel separators and builds (in parentheses or bare, as BUILD_RE reads them) off the front.
+  // Only a parenthesised build (date.number) is a build: a qualifier such as "(LCD)" or a
+  // square-bracketed "[20250101.12]" is part of the summary.
   const peel = (text) => {
     for (;;) {
       const next = text
         .replace(/^[\s:,;\-\u2013\u2014]+/, '')
-        .replace(/^[([]\s*\d{8}\.\d{1,3}\s*[)\]]/, '')
-        .replace(/^\d{8}\.\d{1,3}\b/, '');
+        .replace(/^\(\d{8}\.\d{1,3}\)/, '')
+        .replace(/^\d{8}\.\d{1,3}(?=$|\s)/, '');
       if (next === text) return text;
       text = next;
     }
