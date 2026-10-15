@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import bisect
 import mimetypes
+import posixpath
 import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
@@ -86,7 +87,22 @@ WORKER_PREFIX = "/api/"
 
 
 def is_worker_path(url: str) -> bool:
-    return url.strip().startswith(WORKER_PREFIX)
+    """True when a browser would send the URL to the Worker: its path, with percent-encoded
+    dots decoded and ``.``/``..`` segments removed, still starts with ``/api/``.
+
+    ``/api/../gone/`` and ``/api/%2e%2e/gone/`` both land on ``/gone/``, so they are not exempt.
+    """
+    try:
+        path = urlsplit(url.strip()).path
+    except ValueError:
+        return False
+    if not path.startswith(WORKER_PREFIX):
+        return False
+    decoded = unquote(path)
+    if "\\" in decoded or "\x00" in decoded:
+        return False
+    normal = posixpath.normpath(decoded)
+    return normal.startswith(WORKER_PREFIX) or normal + "/" == WORKER_PREFIX
 
 
 def resolve_local(root: Path, base: str, ref: str, *, index: bool = False) -> Resolved:

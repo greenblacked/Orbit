@@ -302,6 +302,18 @@ def test_a_feed_link_under_the_workers_prefix_is_not_looked_up_in_the_build(tmp_
     assert check.main([str(root)]) == 0
 
 
+def test_a_url_that_stays_under_the_workers_prefix_after_normalising_is_exempt(tmp_path):
+    page = '<a href="/api/feed.atom">a</a><a href="/api/x/../feed.atom">b</a>'
+    root = make_site(tmp_path, {"index.html": page})
+    assert check.check_links(root) == []
+
+
+@pytest.mark.parametrize("href", ["/api/../gone/", "/api/%2e%2e/gone/", "/api/%2E%2E/gone/"])
+def test_a_dot_segment_that_leaves_the_workers_prefix_is_looked_up_in_the_build(tmp_path, href):
+    root = make_site(tmp_path, {"index.html": f'<a href="{href}">x</a>'})
+    assert check.check_links(root)
+
+
 @pytest.mark.parametrize(
     "page",
     [
