@@ -61,6 +61,20 @@ def test_the_front_page_runs_below_js_after_home_js_as_the_bundle_cannot_load_it
     assert 'data-page-script="/assets/below.js"' in text
 
 
+def test_the_timeline_runs_lanes_js_right_after_timeline_js_as_the_bundle_cannot_fetch_it(text):
+    tag = re.search(r'<template data-route="/timeline/"[^>]*data-scripts="([^"]*)"', text)
+    assert tag
+    names = tag.group(1).split()
+    assert names.index("/assets/lanes.js") == names.index("/assets/timeline.js") + 1
+    assert names.count("/assets/lanes.js") == 1
+    assert 'data-page-script="/assets/lanes.js"' in text
+    # No other page runs it.
+    pages = re.findall(r'<template data-route="([^"]+)"[^>]*data-scripts="([^"]*)"', text)
+    for route, scripts in pages:
+        if route != "/timeline/":
+            assert "/assets/lanes.js" not in scripts.split(), route
+
+
 def test_the_generic_sigil_rule_runs_right_after_sigil_js_on_every_page_that_draws(text):
     assert 'data-page-script="/assets/sigil-generic.js"' in text
     tags = re.findall(r'<template data-route="([^"]+)"[^>]*data-scripts="([^"]*)"', text)
@@ -826,6 +840,28 @@ def test_a_link_built_at_run_time_stays_inside_the_bundle(tab, served, href, has
     tab.wait_for_function(f"() => location.hash === {hash!r}")
     tab.wait_for_function(f"() => document.title.includes({title!r})")
     assert tab.url.startswith(served + "/#/")  # still the one file
+    assert tab.requested == []
+    assert tab.errors == []
+
+
+@pytest.mark.browser
+def test_the_cadence_view_draws_in_the_bundle_without_fetching_lanes_js(tab, served):
+    tab.goto(served + "/#/timeline/")
+    tab.wait_for_selector(".tl-item")
+    tab.click("#chips-view [data-v=cadence]")
+    tab.wait_for_selector(".lanes-lane .lanes-dot")
+    assert tab.locator(".lanes-lane").count() >= 1
+    assert tab.get_attribute("#chips-view [data-v=cadence]", "aria-pressed") == "true"
+    # A chosen dot's "Show in list" works in the bundle too: it switches views in place.
+    dot = tab.locator(".lanes-dot[tabindex='0']").first
+    release_id = dot.get_attribute("data-id")
+    dot.focus()
+    tab.keyboard.press("Enter")
+    tab.locator("#lanes-read a", has_text="Show in list").focus()
+    tab.keyboard.press("Enter")
+    tab.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert tab.evaluate("document.activeElement.closest('.tl-item').dataset.id") == release_id
+    assert tab.get_attribute("#chips-view [data-v=list]", "aria-pressed") == "true"
     assert tab.requested == []
     assert tab.errors == []
 

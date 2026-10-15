@@ -1534,7 +1534,7 @@ button.m-comp:active { filter: brightness(1.2); }
 .chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
 .page .count { margin-top: 1.5rem; }
 .timeline { margin-top: 1rem; }
-.month { margin-top: 2rem; }
+.month { margin-top: 1.25rem; }
 .tl-more { margin-top: 2rem; }
 .month-h { position: relative; padding-left: 1.25rem; font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
 .month-h::before {
@@ -1547,32 +1547,118 @@ button.m-comp:active { filter: brightness(1.2); }
   border-radius: 50%;
   background: var(--ink);
 }
-.tl { margin: 0.5rem 0 0 0.2rem; border-left: 2px solid var(--line); }
+/* Timeline, list view: a git log --graph. A trunk runs down the left edge; a release has its dot
+   on it, and a beta or release candidate branches one column to the right with a short
+   connector. The dot's shape says the stage as well as its colour (filled for a release, a ring
+   for a beta, a diamond for a release candidate), and the text badge stays. */
+.tl { --trunk: color-mix(in srgb, var(--muted) 45%, var(--bg)); margin: 0; }
+.tl-item {
+  --ind: 1.75rem;
+  position: relative;
+  isolation: isolate;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 12rem;
+}
+/* Keyboard focus lands on the link inside the row, not on the row, so the margin that keeps it
+   clear of the header, the dock and the sticky month bar belongs to the link as well. */
+.tl-item a { scroll-margin-top: 12rem; }
+.tl-item.tl-branch { --ind: 2.75rem; }
+.tl-item::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 0.75rem;
+  top: 0;
+  bottom: -1px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--trunk);
+}
 .tl-link {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   align-items: center;
-  gap: 0.25rem 0.75rem;
+  gap: 0.125rem 0.625rem;
   min-height: 2.75rem;
-  padding: 0.5rem 0 0.5rem 1.25rem;
-  border-bottom: 1px solid var(--line);
+  padding: 0.5rem 0.25rem 0.5rem var(--ind);
 }
+.tl-link:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
 .tl-link:hover .tl-ver { text-decoration: underline; text-underline-offset: 4px; }
-.tl-day { width: 6.75rem; color: var(--muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
-.tl-fam { min-width: 4.5rem; color: var(--fam-text); font-size: 0.875rem; font-weight: 500; }
-.tl-ver { font-weight: 500; }
-@media (max-width: 36rem) { .tl-day { width: 100%; } }
-/* The description of a release (summary) under a timeline row: muted, at most two lines. The
-   clamp sits on the inner span so the row's padding is never clipped, and the row's rule moves
-   to the last line under the link, as it does for the security note. */
-.tl-item.has-note .tl-link { border-bottom: 0; padding-bottom: 0.25rem; }
-.tl-note { margin: 0; padding: 0 0 0.5rem 1.25rem; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.875rem; line-height: 1.4286; }
+.tl-dot {
+  position: absolute;
+  z-index: 2;
+  top: 1.3rem;
+  left: 0.75rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--fam-a);
+  transform: translate(-50%, -50%);
+}
+.tl-branch .tl-dot { left: 1.75rem; }
+.st-beta .tl-dot { border: 2px solid var(--fam-a); background: var(--bg); }
+.st-rc .tl-dot { width: 0.6875rem; height: 0.6875rem; border-radius: 2px; transform: translate(-50%, -50%) rotate(45deg); }
+.tl-branch .tl-link::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 0.75rem;
+  top: 1.3rem;
+  width: 1rem;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--trunk);
+}
+.tl-day { flex: none; width: 3.25rem; color: var(--muted); font-family: var(--font-mono); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.tl-fam { flex: none; min-width: 4.5rem; color: var(--fam-text); font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 500; }
+.tl-ver { font-family: var(--font-mono); font-size: 0.9375rem; font-weight: 500; overflow-wrap: anywhere; }
+.tl-link .build { min-width: 0; overflow-wrap: anywhere; }
+/* The month's sticky bar: name, count and a density bar (--d is the month's share of the busiest
+   month drawn). It sticks below the header and the Back bar, and 3.8125rem when the header has
+   slid away, so a row never scrolls under a bar it needs. */
+.month-bar {
+  position: sticky;
+  top: 7.875rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+.site-header.away ~ main .month-bar { top: 3.8125rem; }
+.month-bar .month-h { padding-left: 0; font-size: 1.125rem; letter-spacing: -0.01em; }
+.month-bar .month-h::before { content: none; }
+.month-n { color: var(--muted); font-family: var(--font-mono); font-size: 0.75rem; }
+.month-dens {
+  width: max(0.25rem, calc(var(--d, 0) * 6rem));
+  height: 0.375rem;
+  border-radius: 0.1875rem;
+  background: var(--ink);
+  opacity: 0.55;
+}
+/* The description of a release (summary), muted and at most two lines; the clamp sits on the
+   inner span so the row's padding is never clipped. Under the row on a narrow screen. */
+.tl-item.has-note .tl-link { padding-bottom: 0.125rem; }
+.tl-note { margin: 0; padding: 0 0.25rem 0.5rem var(--ind); color: var(--muted); font-size: 0.875rem; line-height: 1.4286; }
 .tl-note-t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
-.tl-item.has-sec .tl-note { border-bottom: 0; padding-bottom: 0.25rem; }
+.tl-item.has-sec .tl-note { padding-bottom: 0.125rem; }
+/* Wide: the summary sits inline, after the version. */
+@media (min-width: 48rem) {
+  .tl-item { display: grid; grid-template-columns: minmax(0, max-content) minmax(10rem, 1fr); column-gap: 1rem; align-items: center; }
+  .tl-item .tl-link { grid-column: 1; flex-wrap: nowrap; }
+  .tl-item .tl-note { grid-column: 2; grid-row: 1; padding: 0.25rem 0.25rem 0.25rem 0; }
+  .tl-item.has-note .tl-link { padding-bottom: 0.5rem; }
+  .tl-item .sec { grid-column: 1 / -1; }
+  .tl-item.has-sec .tl-note { padding-bottom: 0.25rem; }
+}
 /* Security notes (security.js): one line under a timeline row. Only a link is a control, and it
    keeps the 44px floor; a state with nothing to open is plain text. */
-.tl-item.has-sec .tl-link { border-bottom: 0; padding-bottom: 0.25rem; }
-.sec { margin: 0; padding: 0 0 0.5rem 1.25rem; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.875rem; line-height: 1.4286; }
+.tl-item.has-sec .tl-link { padding-bottom: 0.125rem; }
+.sec { margin: 0; padding: 0 0.25rem 0.5rem var(--ind, 1.25rem); color: var(--muted); font-size: 0.875rem; line-height: 1.4286; }
 .sec-link {
   display: inline-flex;
   max-width: 100%;
@@ -1588,6 +1674,114 @@ button.m-comp:active { filter: brightness(1.2); }
 .sec-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .sec-text { display: inline-block; max-width: 100%; padding: 0.25rem 0; overflow-wrap: anywhere; }
 .sec-missing .sec-text, .sec-unavailable .sec-text { font-style: italic; }
+/* The view switch: two chips joined into one segmented control. */
+.seg { display: inline-flex; flex-wrap: nowrap; gap: 0; }
+.seg .chip { border-radius: 0; }
+.seg .chip + .chip { margin-left: -1px; }
+.seg .chip:first-child { border-radius: 999px 0 0 999px; }
+.seg .chip:last-child { border-radius: 0 999px 999px 0; }
+html[data-theme="reactor"] .seg .chip { border-radius: 0; }
+
+/* Timeline, Cadence view (lanes.js): one lane per platform over the last 12 months. The board
+   scrolls sideways inside its own box and never widens the page; the family labels stay at the
+   left edge. Every dot is a 44px button around a small mark; neighbouring buttons may overlap. */
+.lanes { min-width: 0; margin-top: 1rem; }
+.lanes-board {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--bg);
+}
+/* The bottom padding is room for the lowest row of the last lane: its 44px buttons hang 4px below
+   the lane, and the board clips what is outside the box. */
+.lanes-inner { position: relative; width: var(--w, 100%); padding-bottom: 0.375rem; }
+.lanes-head { position: relative; height: 2rem; border-bottom: 1px solid var(--line); }
+.lanes-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--x);
+  padding: 0.4375rem 0 0 0.375rem;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.lanes-gl { position: absolute; top: 2rem; bottom: 0; left: var(--x); width: 0; border-left: 1px solid var(--line); opacity: 0.7; }
+.lanes-today { position: absolute; z-index: 2; top: 0; bottom: 0; left: var(--x); width: 0; border-left: 2px dashed var(--ink); pointer-events: none; }
+.lanes-today span {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.3125rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lanes-lane { position: relative; height: 4rem; border-bottom: 1px solid var(--line); }
+.lanes-lane:last-child { border-bottom: 0; }
+.lanes-label {
+  position: sticky;
+  z-index: 5;
+  left: 0;
+  display: flex;
+  width: var(--label, 5.5rem);
+  height: 100%;
+  align-items: center;
+  padding-left: 0.625rem;
+  border-right: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fam-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.lanes-none { position: absolute; top: 50%; left: calc(var(--label, 5.5rem) + 0.75rem); color: var(--muted); font-size: 0.8125rem; transform: translateY(-50%); }
+.lanes-dot {
+  position: absolute;
+  z-index: 3;
+  top: calc(50% + var(--y, 0px));
+  left: var(--x);
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -1.375rem 0 0 -1.375rem;
+  padding: 0;
+  place-items: center;
+  border-radius: 50%;
+  scroll-margin: 0 1.5rem 0 calc(var(--label, 5.5rem) + 1.5rem);
+}
+.lanes-dot:hover, .lanes-dot:focus-visible, .lanes-dot.is-sel { z-index: 4; }
+.lanes-dot:focus-visible { outline-offset: -4px; }
+.lanes-mark { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--fam-a); }
+.lanes-mark[data-kind="beta"] { border: 2px solid var(--fam-a); background: var(--bg); }
+.lanes-mark[data-kind="rc"] { width: 0.6875rem; height: 0.6875rem; border-radius: 2px; transform: rotate(45deg); }
+.lanes-dot:hover .lanes-mark { box-shadow: 0 0 0 3px color-mix(in srgb, var(--fam-a) 30%, transparent); }
+.lanes-dot.is-sel .lanes-mark { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); }
+.lanes-read { min-height: 8.5rem; margin-top: 1rem; }
+.lanes-card { padding: 0.75rem 1rem; border: 1px solid var(--line); border-radius: 0.75rem; background: var(--card); }
+.lanes-r-t { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
+.lanes-r-fam { color: var(--fam-text-card); font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 500; }
+.lanes-r-ver { font-family: var(--font-mono); font-weight: 500; overflow-wrap: anywhere; }
+.lanes-r-d { margin-top: 0.25rem; color: var(--muted); font-size: 0.875rem; }
+.lanes-r-s { margin-top: 0.25rem; font-size: 0.875rem; overflow-wrap: anywhere; }
+.lanes-r-a { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin-top: 0.25rem; }
+.lanes-link { display: inline-flex; min-height: 2.75rem; align-items: center; font-size: 0.875rem; text-decoration: underline; text-underline-offset: 4px; }
+.lanes-hint { padding: 0.75rem 0; color: var(--muted); font-size: 0.875rem; }
+.lanes-note { margin-top: 0.5rem; }
+html[data-theme="reactor"] .lanes-board, html[data-theme="reactor"] .lanes-card { border-radius: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .lanes-board { scroll-behavior: smooth; }
+}
+/* Forced colours drop backgrounds: the marks keep their shape in the text colour. */
+@media (forced-colors: active) {
+  .tl-dot, .lanes-mark { forced-color-adjust: none; --fam-a: CanvasText; --bg: Canvas; }
+}
 @media (min-width: 40rem) { .page .filters { grid-template-columns: repeat(2, auto); justify-content: start; gap: 2rem 3rem; } }
 
 /* Compare. */

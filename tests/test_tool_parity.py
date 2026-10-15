@@ -394,11 +394,13 @@ def test_the_real_site_is_accepted_by_both_and_weighs_what_is_inlined(tmp_path, 
     infos = check.inspect_all(out)
     weighed = {path for info in infos.values() for path in info.weighed}
     icons = {target for info in infos.values() for ref, target in info.targets if ref.icon}
-    # The bundle also runs below.js, lookup.js and the generic sigil rule, which load after the
-    # first paint and are not weighed.
+    # The bundle also runs below.js, lookup.js, lanes.js (the Cadence view, which timeline.js
+    # fetches on demand) and the generic sigil rule, which load after the first paint and are
+    # not weighed.
     late = {
         out / "assets" / "below.js",
         out / "assets" / "lookup.js",
+        out / "assets" / "lanes.js",
         out / "assets" / "sigil-generic.js",
     }
     assert inlined - icons - late == weighed
