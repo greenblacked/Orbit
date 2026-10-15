@@ -1774,7 +1774,7 @@ html[data-theme="reactor"] .seg .chip { border-radius: 0; }
   background: var(--ink);
   color: var(--bg);
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 0.8125rem;
   text-align: center;
   pointer-events: none;
