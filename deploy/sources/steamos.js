@@ -91,12 +91,13 @@ export function summaryOfTitle(title) {
   const m = TITLE_RE.exec(String(title ?? '').trim());
   if (!m) return '';
   let rest = String(title).trim().slice(m[0].length);
-  // Peel separators and builds (bracketed or bare) off the front.
+  // Peel separators and builds (bracketed or bare) off the front. Only a bracket holding a
+  // build (date.number) is a build: a qualifier such as "(LCD)" is part of the summary.
   const peel = (text) => {
     for (;;) {
       const next = text
         .replace(/^[\s:,;\-\u2013\u2014]+/, '')
-        .replace(/^\([^)]*\)/, '')
+        .replace(/^[([]\s*\d{8}\.\d{1,3}\s*[)\]]/, '')
         .replace(/^\d{8}\.\d{1,3}\b/, '');
       if (next === text) return text;
       text = next;
