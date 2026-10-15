@@ -341,6 +341,32 @@ def test_each_dot_is_a_labelled_button_of_44px_in_every_theme(opened, theme):
     assert errors == []
 
 
+def test_no_dot_is_clipped_by_the_board_and_none_starts_under_a_label(opened):
+    # Fourteen iOS releases in two weeks fill all three rows of the one lane.
+    page, _ = opened("/timeline/?view=cadence", body=crowded())
+    lanes_open(page)
+    edges = page.evaluate(
+        """() => {
+            const board = document.querySelector('.lanes-board').getBoundingClientRect();
+            return [...document.querySelectorAll('.lanes-dot')].map((d) => {
+                const b = d.getBoundingClientRect();
+                return { clipped: b.bottom > board.bottom - 1 || b.top < board.top, y: b.bottom };
+            });
+        }"""
+    )
+    assert edges and not any(e["clipped"] for e in edges), edges
+    page.evaluate("() => { document.querySelector('.lanes-board').scrollLeft = 0 }")
+    first = page.evaluate(
+        """() => {
+            const label = document.querySelector('.lanes-label').getBoundingClientRect().right;
+            const xs = [...document.querySelectorAll('.lanes-tick')].map((t) => t.getBoundingClientRect().left);
+            return { label, tick: Math.min(...xs) };
+        }"""
+    )
+    # The axis starts after the label, so the first month tick is not covered.
+    assert first["tick"] >= first["label"], first
+
+
 def test_each_lane_is_one_tab_stop_and_the_arrows_move_inside_and_across_lanes(opened):
     page, _ = opened("/timeline/?view=cadence")
     lanes_open(page)

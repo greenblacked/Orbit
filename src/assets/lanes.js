@@ -11,8 +11,12 @@
   var DAY = 86400000;
   // Pixels per day: a month is about 150px, so a year is a few screens of board on a phone.
   var PX = 5;
-  // The sticky family label on the left, and the room after Today for its own label.
-  var LABEL = 88;
+  // The sticky family label on the left is 5.5rem wide (a custom property, so this file and the
+  // style sheet cannot disagree at another root font size), and the axis starts LEAD px after it:
+  // a dot at the very start of the window keeps its whole 44px button clear of the label.
+  var LABEL_REM = 5.5;
+  var LEAD = 24;
+  // The room after Today for its own label.
   var TAIL = 64;
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   // Dots close in time stack in three rows of a lane, so that a busy week stays readable.
@@ -175,14 +179,17 @@
     var d0 = new Date(now);
     var start = Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() - 11, 1);
     var width = Math.round((now - start) / DAY * PX);
-    function x(t) { return LABEL + Math.round((Math.min(t, now) - start) / DAY * PX); }
+    var root = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+    var label = Math.round(LABEL_REM * root);
+    function x(t) { return label + LEAD + Math.round((Math.min(t, now) - start) / DAY * PX); }
 
     var active = document.activeElement;
     var focusId = active && board.contains(active) && active.getAttribute ? active.getAttribute("data-id") : "";
     var kept = board.scrollLeft;
 
     var inner = h("div", "lanes-inner");
-    inner.style.setProperty("--w", (LABEL + width + TAIL) + "px");
+    inner.style.setProperty("--w", (label + LEAD + width + TAIL) + "px");
+    inner.style.setProperty("--label", label + "px");
     var head = h("div", "lanes-head", null, { "aria-hidden": "true" });
     inner.appendChild(head);
     for (var m = 0; Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() - 11 + m, 1) <= now; m++) {
