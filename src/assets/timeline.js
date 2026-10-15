@@ -360,6 +360,22 @@
   press("chips-stage", state.stage);
   showView();
 
+  // "Show in list" in the Cadence readout switches views here, without a page load: a plain click
+  // only. The link keeps its address for a new tab, no script, and the bundled preview, whose
+  // router would drop the query. reveal() is defined below and runs once a click can happen.
+  lanes.addEventListener("click", function (event) {
+    var link = event.target.closest ? event.target.closest("a[data-show]") : null;
+    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey ||
+        event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    target = link.getAttribute("data-show").slice(0, 300);
+    state.view = "list";
+    showView();
+    remember();
+    render();
+    reveal();
+  });
+
   // A link with ?id= (the toast's) lands on that row, whatever the filters hide and however far
   // back it is: the months down to it are opened, in whole steps.
   function reveal() {

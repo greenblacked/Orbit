@@ -113,7 +113,7 @@
       var src = h("a", "lanes-link", "Source page", { href: r.url, target: "_blank", rel: "noopener noreferrer" });
       src.appendChild(h("span", "sr-only", " (opens in a new tab)"));
       row.appendChild(src);
-      row.appendChild(h("a", "lanes-link", "Show in list", { href: "/timeline/?id=" + encodeURIComponent(r.id) }));
+      row.appendChild(h("a", "lanes-link", "Show in list", { href: "/timeline/?id=" + encodeURIComponent(r.id), "data-show": r.id }));
       box.appendChild(row);
     }
     read.appendChild(box);

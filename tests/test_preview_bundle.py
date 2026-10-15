@@ -852,6 +852,14 @@ def test_the_cadence_view_draws_in_the_bundle_without_fetching_lanes_js(tab, ser
     tab.wait_for_selector(".lanes-lane .lanes-dot")
     assert tab.locator(".lanes-lane").count() >= 1
     assert tab.get_attribute("#chips-view [data-v=cadence]", "aria-pressed") == "true"
+    # A chosen dot's "Show in list" works in the bundle too: it switches views in place.
+    dot = tab.locator(".lanes-lane .lanes-dot").first
+    release_id = dot.get_attribute("data-id")
+    dot.click()
+    tab.locator("#lanes-read a", has_text="Show in list").click()
+    tab.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert tab.evaluate("document.activeElement.closest('.tl-item').dataset.id") == release_id
+    assert tab.get_attribute("#chips-view [data-v=list]", "aria-pressed") == "true"
     assert tab.requested == []
     assert tab.errors == []
 
