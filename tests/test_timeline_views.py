@@ -393,7 +393,8 @@ def test_no_dot_is_clipped_by_the_board_and_none_starts_under_a_label(opened):
     first = page.evaluate(
         """() => {
             const label = document.querySelector('.lanes-label').getBoundingClientRect().right;
-            const xs = [...document.querySelectorAll('.lanes-tick')].map((t) => t.getBoundingClientRect().left);
+            const ticks = document.querySelectorAll('.lanes-tick');
+            const xs = [...ticks].map((t) => t.getBoundingClientRect().left);
             return { label, tick: Math.min(...xs) };
         }"""
     )
