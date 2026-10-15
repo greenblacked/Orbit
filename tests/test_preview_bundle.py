@@ -1868,9 +1868,7 @@ def test_the_head_alternate_is_not_carried_and_the_feed_link_is_not_left_relativ
     assert bundle.external_requests(text) == []
 
 
-def test_the_bundled_subscribe_link_is_absolute_and_the_live_build_keeps_it_relative(
-    text, built
-):
+def test_the_bundled_subscribe_link_is_absolute_and_the_live_build_keeps_it_relative(text, built):
     # A root-relative /api/ link would resolve against whatever host (or file://) opens the
     # bundle, so the bundle points at the production origin; the live page is unchanged.
     href = "https://orbit.szolotov.com/api/feed.atom"
