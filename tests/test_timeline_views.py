@@ -204,6 +204,29 @@ def test_a_month_bar_stays_in_view_below_the_header_while_its_rows_scroll(opened
     assert covering
 
 
+def test_a_row_focused_from_below_is_not_left_under_the_month_bar(opened):
+    page, _ = opened(body=crowded())
+    links = page.locator(".tl-link")
+    last = links.count() - 1
+    links.nth(last).focus()
+    page.evaluate("() => window.scrollTo(0, document.documentElement.scrollHeight)")
+    # Shift+Tab walks up the list; the browser scrolls the previous link to the top edge.
+    page.keyboard.press("Shift+Tab")
+    page.keyboard.press("Shift+Tab")
+    page.wait_for_function("() => document.activeElement.classList.contains('tl-link')")
+    # The bar in force is the stuck one: the last whose top is at or above the link's.
+    gap = page.evaluate(
+        """() => {
+            const top = document.activeElement.getBoundingClientRect().top;
+            const bars = [...document.querySelectorAll('.month-bar')]
+              .map((b) => b.getBoundingClientRect())
+              .filter((b) => b.top <= top);
+            return top - Math.max(...bars.map((b) => b.bottom));
+        }"""
+    )
+    assert gap >= 0, gap
+
+
 # --- the switch --------------------------------------------------------------------------
 
 

@@ -1559,6 +1559,9 @@ button.m-comp:active { filter: brightness(1.2); }
   border-bottom: 1px solid var(--line);
   scroll-margin-top: 12rem;
 }
+/* Keyboard focus lands on the link inside the row, not on the row, so the margin that keeps it
+   clear of the header, the dock and the sticky month bar belongs to the link as well. */
+.tl-item a { scroll-margin-top: 12rem; }
 .tl-item.tl-branch { --ind: 2.75rem; }
 .tl-item::before {
   content: "";
