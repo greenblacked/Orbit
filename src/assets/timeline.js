@@ -2,7 +2,9 @@
    with two groups of toggle buttons, and by line (?line=long-term) for a platform that keeps several
    supported lines at once. The filters live in the query string (?family=iOS&stage=beta),
    so a filtered view can be linked to. Only the newest PAGE months of the filtered list are drawn;
-   "Show older" adds the next PAGE, so a long history does not build thousands of rows at once. */
+   "Show older" adds the next PAGE, so a long history does not build thousands of rows at once.
+   The list is the default view. "Cadence" (?view=cadence) is the same filtered releases as lanes
+   over the last 12 months; lanes.js draws it and loads only when it is first asked for. */
 (function () {
   "use strict";
   var RO = window.RO;
@@ -11,6 +13,8 @@
   var host = document.getElementById("timeline");
   var moreWrap = document.getElementById("tl-more");
   var more = document.getElementById("more");
+  var lanes = document.getElementById("lanes");
+  var viewChips = document.getElementById("chips-view");
   // Month sections drawn per step. A month is a section that has releases, so a gap in the data
   // never makes an empty step, and one step is a bounded amount of markup.
   var PAGE = 12;
@@ -20,7 +24,8 @@
     beta: ["beta", "betas"],
     rc: ["release candidate", "release candidates"]
   };
-  var state = { family: "all", stage: "all", line: "all" };
+  var state = { family: "all", stage: "all", line: "all", view: "list" };
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   var lineChips = document.getElementById("chips-line");
   var lineBox = document.getElementById("filter-line");
   var releases = [];
@@ -31,6 +36,12 @@
   var limit = PAGE;
   var signature = "";
   var target = "";
+  // Cadence: the filtered ids last drawn (a poll that changes none of them redraws nothing), how
+  // many releases fall in its 12 months (null until drawn), and whether the next draw is the
+  // first of a visit to the view (it opens scrolled to today).
+  var lanesSig = "";
+  var inWindow = null;
+  var freshLanes = false;
 
   // The values a group of chips offers: a query string can only pick one of those.
   function offered(group) {
@@ -46,6 +57,8 @@
       // The line chips follow the data, so the address is checked against them once it loads.
       if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,15}$/.test(q.get("line") || "")) state.line = q.get("line");
       target = (q.get("id") || "").slice(0, 300);
+      // A link to one release is a link to its row, so ?id= always means the list.
+      if (q.get("view") === "cadence" && !target) state.view = "cadence";
     } catch (e) { /* no query support: show everything */ }
   })();
 
@@ -86,11 +99,22 @@
     });
   }
 
+  // "05 Oct": the year is in the month header above, and a fixed width keeps the column straight.
+  function shortDay(t) {
+    var d = new Date(t);
+    return (d.getUTCDate() < 10 ? "0" : "") + d.getUTCDate() + " " + MONTHS[d.getUTCMonth()];
+  }
+
+  // A row of the git-log graph: a release sits on the trunk, a beta or release candidate branches
+  // one column to the right. The dot's shape (filled, ring, diamond) says the stage as well as its
+  // colour does, and the text badge stays.
   function item(r) {
-    var li = RO.h("li", "tl-item fam-" + r.family.toLowerCase() + (r.summary ? " has-note" : ""), null, { "data-id": r.id });
+    var li = RO.h("li", "tl-item fam-" + r.family.toLowerCase() + " st-" + r.stage +
+      (r.stage === "release" ? " tl-trunk" : " tl-branch") + (r.summary ? " has-note" : ""), null, { "data-id": r.id });
     rows.push({ li: li, r: r });
     var a = RO.h("a", "tl-link", null, { href: r.url, target: "_blank", rel: "noopener noreferrer" });
-    a.appendChild(RO.h("span", "tl-day", RO.day(r.t)));
+    a.appendChild(RO.h("span", "tl-dot", null, { "aria-hidden": "true" }));
+    a.appendChild(RO.h("span", "tl-day", shortDay(r.t)));
     a.appendChild(RO.h("span", "tl-fam", r.family));
     a.appendChild(RO.h("span", "tl-ver", r.version));
     var badge = RO.h("span", "badge", null, { "data-kind": r.stage });
@@ -100,7 +124,8 @@
     if (r.build) a.appendChild(RO.h("span", "build", r.build));
     a.appendChild(RO.h("span", "sr-only", " (opens the release page in a new tab)"));
     li.appendChild(a);
-    // The description, under the version line; clamped to two lines by CSS (.tl-note-t).
+    // The description: inline after the version on a wide screen, a line under the row on a
+    // narrow one (CSS); clamped to two lines by .tl-note-t either way.
     if (r.summary) {
       var d = RO.h("p", "tl-note");
       d.appendChild(RO.h("span", "tl-note-t", r.summary));
@@ -143,17 +168,37 @@
   }
   function noun(n) { return NOUNS[state.stage][n === 1 ? 0 : 1]; }
 
+  // The sticky bar of a month: its name (the h2), how many releases it has, and a small bar whose
+  // width (--d, 0 to 1) is that count against the busiest month drawn. The bar is decoration.
+  function monthBar(g) {
+    var bar = RO.h("div", "month-bar");
+    bar.appendChild(RO.h("h2", "month-h", g.m));
+    bar.appendChild(RO.h("span", "month-n", g.items.length + (g.items.length === 1 ? " release" : " releases")));
+    bar.appendChild(RO.h("span", "month-dens", null, { "aria-hidden": "true" }));
+    return bar;
+  }
+  // Show older can bring a busier month, so every bar is measured again against the drawn peak.
+  function density() {
+    var peak = 1;
+    groups.slice(0, drawn).forEach(function (g) { if (g.items.length > peak) peak = g.items.length; });
+    var bars = host.querySelectorAll(".month-dens");
+    for (var i = 0; i < bars.length; i++) {
+      bars[i].style.setProperty("--d", (groups[i].items.length / peak).toFixed(3));
+    }
+  }
+
   // Draw sections [from, to) after the ones already there.
   function draw(from, to) {
     groups.slice(from, to).forEach(function (g) {
       var sec = RO.h("section", "month");
-      sec.appendChild(RO.h("h2", "month-h", g.m));
+      sec.appendChild(monthBar(g));
       var ul = RO.h("ul", "tl");
       g.items.forEach(function (r) { ul.appendChild(item(r)); });
       sec.appendChild(ul);
       host.appendChild(sec);
     });
     drawn = Math.min(groups.length, to);
+    density();
   }
   function button() {
     var left = list.length - rows.length;
@@ -161,19 +206,100 @@
     if (left > 0) more.textContent = "Show older (" + left + " more " + noun(left) + ")";
   }
 
+  // The count line, the same filtered total in both views. In Cadence it also says how many of
+  // them the 12 months hold, once the lanes have drawn.
+  function paintCount() {
+    var which = state.family === "all" ? "" : state.family + " " + (state.line === "all" ? "" : state.line + " ");
+    var n = list.length;
+    if (!n) count.textContent = "No " + which + NOUNS[state.stage][1] + " in the data.";
+    else if (state.view !== "cadence" || inWindow === null) count.textContent = n + " " + which + noun(n);
+    else if (!inWindow) count.textContent = "No " + which + NOUNS[state.stage][1] + " in the last 12 months (" + n + " in all)";
+    else count.textContent = inWindow + " " + which + noun(inWindow) + " in the last 12 months" +
+      (inWindow === n ? "" : " (" + n + " in all)");
+  }
+
   // Redraw from the filtered list; `limit` sections stay open, so a poll that brings a release
   // does not fold what the visitor opened, and a filter change resets it.
   function render() {
     list = releases.filter(matches);
     groups = byMonth(list);
+    if (state.view === "cadence") {
+      renderLanes();
+      paintCount();
+      return;
+    }
     host.textContent = "";
     rows = [];
     draw(0, limit);
     button();
-    var which = state.family === "all" ? "" : state.family + " " + (state.line === "all" ? "" : state.line + " ");
-    count.textContent = list.length
-      ? list.length + " " + which + noun(list.length)
-      : "No " + which + NOUNS[state.stage][1] + " in the data.";
+    paintCount();
+  }
+
+  // Cadence: lanes.js is fetched the first time the view is shown, never from the page. A failed
+  // load leaves a sentence and the List button, which needs no script of its own.
+  var lanesLoad = "idle";
+  var lanesWaiting = null;
+  function lanesNote(text) {
+    lanes.textContent = "";
+    lanes.appendChild(RO.h("p", "notice", text));
+  }
+  function whenLanes(go) {
+    if (window.Lanes) { go(); return; }
+    // The preview bundle runs lanes.js right after this script and cannot fetch it.
+    if (lanesLoad === "failed" || document.querySelector("script[data-seed]")) {
+      lanesNote("The Cadence view could not load. Switch to List to read the releases.");
+      return;
+    }
+    lanesWaiting = go;
+    lanesNote("Loading the Cadence view…");
+    if (lanesLoad === "loading") return;
+    lanesLoad = "loading";
+    var s = document.createElement("script");
+    s.src = "/assets/lanes.js";
+    s.onload = function () {
+      lanesLoad = window.Lanes ? "ready" : "failed";
+      var go2 = lanesWaiting;
+      lanesWaiting = null;
+      if (go2 && window.Lanes) go2();
+      else if (state.view === "cadence") lanesNote("The Cadence view could not load. Switch to List to read the releases.");
+    };
+    s.onerror = function () {
+      lanesLoad = "failed";
+      lanesWaiting = null;
+      if (state.view === "cadence") lanesNote("The Cadence view could not load. Switch to List to read the releases.");
+    };
+    document.head.appendChild(s);
+  }
+  function renderLanes() {
+    var sig = list.map(function (r) { return r.id; }).join("|");
+    // A poll that changes none of the filtered releases redraws nothing, so a focused dot stays.
+    if (!freshLanes && sig === lanesSig && window.Lanes) return;
+    whenLanes(function () {
+      if (state.view !== "cadence") return;
+      var fresh = freshLanes;
+      freshLanes = false;
+      lanesSig = sig;
+      inWindow = window.Lanes.draw(lanes, list, { now: RO.clock(), fresh: fresh });
+      paintCount();
+    });
+  }
+
+  // List or Cadence: one of the two hosts shows, and the one that does not is emptied (the list)
+  // or kept (the lanes, which would only cost a redraw).
+  function showView() {
+    var cadence = state.view === "cadence";
+    host.hidden = cadence;
+    lanes.hidden = !cadence;
+    if (cadence) {
+      moreWrap.hidden = true;
+      host.textContent = "";
+      rows = [];
+      drawn = 0;
+      freshLanes = true;
+    } else {
+      inWindow = null;
+    }
+    press("chips-view", state.view);
   }
 
   // The next step of older months, added below the open ones; the focus goes to the first new
@@ -200,6 +326,7 @@
     if (state.family !== "all") q.push("family=" + encodeURIComponent(state.family));
     if (state.stage !== "all") q.push("stage=" + encodeURIComponent(state.stage));
     if (state.line !== "all") q.push("line=" + encodeURIComponent(state.line));
+    if (state.view === "cadence") q.push("view=cadence");
     try {
       window.history.replaceState(null, "", window.location.pathname + (q.length ? "?" + q.join("&") : ""));
     } catch (e) { /* the filters still work without a shareable address */ }
@@ -219,8 +346,19 @@
   document.getElementById("chips-family").addEventListener("click", choose("family", "chips-family"));
   document.getElementById("chips-stage").addEventListener("click", choose("stage", "chips-stage"));
   lineChips.addEventListener("click", choose("line", "chips-line"));
+  viewChips.addEventListener("click", function (event) {
+    var chip = event.target.closest ? event.target.closest(".chip") : null;
+    if (!chip) return;
+    var next = chip.getAttribute("data-v") === "cadence" ? "cadence" : "list";
+    if (next === state.view) return;
+    state.view = next;
+    showView();
+    remember();
+    if (releases.length) render();
+  });
   press("chips-family", state.family);
   press("chips-stage", state.stage);
+  showView();
 
   // A link with ?id= (the toast's) lands on that row, whatever the filters hide and however far
   // back it is: the months down to it are opened, in whole steps.
