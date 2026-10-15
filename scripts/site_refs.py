@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import bisect
 import mimetypes
+import posixpath
 import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
@@ -77,6 +78,36 @@ def classify(url: str) -> str:
     if value.startswith("//") or re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", value):
         return "remote"
     return "local"
+
+
+# The Worker answers every path under this prefix (wrangler's run_worker_first), so a link to
+# one names no file of the build and is not looked up there: <link rel="alternate"> feeds and
+# the Subscribe link. Only navigation is exempt; a page can never load a file from it.
+WORKER_PREFIX = "/api/"
+
+
+def is_worker_path(url: str) -> bool:
+    """True when a browser would send the URL to the Worker: it names no other origin (no scheme
+    or host, so ``//evil/api/x`` and ``https://e/api/x`` are not Worker paths) and its path,
+    with percent-encoded dots decoded and ``.``/``..`` segments removed, still starts with
+    ``/api/``.
+
+    ``/api/../gone/`` and ``/api/%2e%2e/gone/`` both land on ``/gone/``, so they are not exempt.
+    """
+    try:
+        parts = urlsplit(url.strip())
+    except ValueError:
+        return False
+    if parts.scheme or parts.netloc:
+        return False
+    path = parts.path
+    if not path.startswith(WORKER_PREFIX):
+        return False
+    decoded = unquote(path)
+    if "\\" in decoded or "\x00" in decoded:
+        return False
+    normal = posixpath.normpath(decoded)
+    return normal.startswith(WORKER_PREFIX) or normal + "/" == WORKER_PREFIX
 
 
 def resolve_local(root: Path, base: str, ref: str, *, index: bool = False) -> Resolved:
@@ -764,7 +795,7 @@ def inspect_page(root: Path, page: Path) -> PageInfo:
                 continue
         if value.startswith("#") and ref.navigates:
             info.targets.append((ref, page.resolve()))  # a fragment on this very page
-        if kind != "local":
+        if kind != "local" or (ref.navigates and is_worker_path(value)):
             continue
         result = resolve_local(root, url, value, index=ref.navigates)
         category = "link" if ref.navigates else "asset"

@@ -867,6 +867,7 @@ html[data-theme="reactor"] .chip-link, html[data-theme="reactor"] .sec-link, htm
   text-decoration: none;
 }
 @media (min-width: 64rem) { .subnav { display: none; } }
+.page .subscribe { margin-top: 1.25rem; }
 
 /* Motion: only transform and opacity move, only when the visitor has not asked for less,
    and everything is on screen without it. Scroll-driven reveals where the browser has

@@ -95,6 +95,7 @@ from site_refs import (
     form_method,
     import_problems,
     inspect_page,
+    is_worker_path,
     parse_html,
     parse_srcset,
     replace_css_refs,
@@ -103,6 +104,9 @@ from site_refs import (
 )
 
 ROOT = Path(__file__).resolve().parent.parent
+# The bundle opens on any host or as file://, where a root-relative /api/ link would resolve
+# to the wrong place; the Worker that answers it lives on the production origin.
+PRODUCTION_ORIGIN = "https://orbit.szolotov.com"
 MAX_BYTES = 5_000_000
 # The preview's only boundary against a request: nothing but the file itself. Scripts and
 # styles are allowed by hash (see ``preview_csp``), never by ``'unsafe-inline'``, so an
@@ -444,6 +448,8 @@ def rewrite_body(root: Path, body: str, here: str, routes: set[str]) -> str:
             return raw
         if attribute == "href":
             if tag in ("a", "area"):
+                if is_worker_path(raw):
+                    return PRODUCTION_ORIGIN + raw
                 route = page_route(root, here, raw)
                 if route in routes:
                     fragment = urlsplit(raw).fragment
