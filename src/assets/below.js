@@ -77,10 +77,27 @@
   function keyStep(key) {
     return Object.prototype.hasOwnProperty.call(KEYS, key) ? KEYS[key] : null;
   }
+  // "Oct 8, 2026" as "Oct 8 '26": short enough for the watch, with the year kept.
+  function brief(day) { return day.replace(/, \d\d(\d\d)$/, " '$1"); }
+  // The iPad sidebar's tabs by the scope each one picks.
+  var TABS = { pub: "Latest", pre: "Betas", all: "History" };
+  // Whether two lists of steps are the same releases in the same order.
+  function sameRows(a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i].id !== b[i].id) return false;
+    return true;
+  }
+  var PAUSED = "Steps are paused on the beta channel";
+  // Why a press cannot move (the same `by` as move): the words for the live region.
+  function blocked(n, by, beta) {
+    if (beta) return PAUSED;
+    if (n < 1) return "No releases to step through";
+    return by === "first" || by < 0 ? "Already the newest" : "Already the oldest";
+  }
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
       trail: trail, steps: steps, index: index, keeps: keeps, settle: settle, move: move,
-      keyStep: keyStep, newest: newest
+      keyStep: keyStep, newest: newest, blocked: blocked, brief: brief, sameRows: sameRows
     };
     return;
   }
@@ -90,6 +107,7 @@
   var releases = [];
   var picked = {};
   var iosChecked = false;
+  var checking = false;
   var channel = "release";
   var scope = "pub";
   var mode = 0;
@@ -98,6 +116,13 @@
   function text(root, name, value) {
     var els = root.querySelectorAll('[data-f="' + name + '"]');
     for (var i = 0; i < els.length; i++) els[i].textContent = value;
+  }
+
+  // Writes a live-region message. The same words twice would not be announced again, so every
+  // other identical message carries a trailing no-break space (tests compare stripped text).
+  function announce(root, msg) {
+    var el = root.querySelector('[data-f="step"]');
+    if (el) el.textContent = msg + (el.textContent === msg ? "\u00a0" : "");
   }
 
   function sec(family) { return document.querySelector('section.fam[data-family="' + family + '"]'); }
@@ -158,6 +183,7 @@
     var latestBeta = newestBeta("iOS");
     text(box, "pubrow", latestPub ? latestPub.version : "None");
     text(box, "betarow", latestBeta && (!latestPub || latestBeta.t > latestPub.t) ? RO.short(latestBeta) : "None");
+    if (checking) return;
     btn.removeAttribute("aria-busy");
     btn.textContent = iosChecked ? "Check again" : "Check the data";
     if (!iosChecked) { out.textContent = ""; return; }
@@ -167,7 +193,7 @@
     if (beta && (!pub || beta.t > pub.t)) line += " The newest beta is " + label(beta) + ".";
     out.textContent = line;
   }
-  function paintMac(announce) {
+  function paintMac(say) {
     var box = sec("macOS");
     var seg = box.querySelectorAll("[data-ch]");
     if (!seg.length) return;
@@ -181,12 +207,12 @@
     seg[0].disabled = false;
     seg[1].disabled = !beta;
     seg[1].setAttribute("aria-disabled", String(!beta));
-    text(box, "betanote", beta ? "" : "No newer beta");
+    text(box, "betanote", !beta ? "No newer beta" : s.beta ? PAUSED : "");
     text(box, "name", r ? r.family + " " + RO.short(r) : "macOS");
     text(box, "version", r ? r.version : "None in the data");
     text(box, "build", r && r.build ? r.build : "None");
     text(box, "date", r ? RO.day(r.t) : "None");
-    if (announce && r) text(box, "step", said(s));
+    if (say && r) announce(box, said(s));
   }
   // The chosen tab, unless it has nothing to show (no beta on the day shown): the choice itself is
   // kept, so it applies again once betas return.
@@ -209,27 +235,31 @@
       tabs[i].setAttribute("aria-disabled", String(off));
     }
   }
-  function paintWatch(announce) {
+  function paintWatch(say) {
     var box = sec("watchOS");
     var v = box.querySelector('[data-f="v"]');
     if (!v) return;
     box.querySelector('[data-act="cycle"]').disabled = false;
     var r = shown("watchOS").r;
-    var values = r ? [r.version, r.build || "None", RO.day(r.t).replace(/, \d{4}$/, "")] : ["None", "None", "None"];
+    var values = r ? [r.version, r.build || "None", brief(RO.day(r.t))] : ["None", "None", "None"];
     text(box, "k", MODES[mode]);
     text(box, "v", values[mode]);
-    if (announce) text(box, "said", "Showing " + MODES[mode].toLowerCase() + " " + values[mode]);
+    box.querySelector('[data-act="cycle"]').setAttribute("data-mode", String(mode));
+    if (say) text(box, "said", "Showing " + MODES[mode].toLowerCase() + " " + values[mode]);
   }
   // One device after a step; the others and the iPhone's rows do not depend on it.
   function stepTo(family, by) {
     var s = shown(family);
     var j = move(s.i, s.rows.length, by);
-    if (s.beta || !s.rows.length || j === s.i) return;
+    if (s.beta || !s.rows.length || j === s.i) {
+      announce(sec(family), blocked(s.rows.length, by, s.beta));
+      return;
+    }
     picked[family] = s.rows[j].id;
     paintFields(family);
     if (family === "macOS") paintMac(false);
     if (family === "watchOS") paintWatch(false);
-    text(sec(family), "step", said(shown(family)));
+    announce(sec(family), said(shown(family)));
   }
   function wireDevice(box) {
     var family = box.getAttribute("data-family");
@@ -254,11 +284,13 @@
     for (var k = 0; k < boxes.length; k++) wireDevice(boxes[k]);
     var ios = sec("iOS").querySelector('[data-act="check"]');
     if (ios) ios.addEventListener("click", function () {
+      if (checking) return;
+      checking = true;
       var out = sec("iOS").querySelector('[data-f="result"]');
       ios.setAttribute("aria-busy", "true");
       ios.textContent = "Checking…";
-      out.textContent = "Checking the data…";
-      window.setTimeout(function () { iosChecked = true; paintIos(); }, RO.reduced() ? 0 : 900);
+      out.textContent = "Checking the loaded releases…";
+      window.setTimeout(function () { checking = false; iosChecked = true; paintIos(); }, RO.reduced() ? 0 : 900);
     });
     var seg = sec("macOS").querySelectorAll("[data-ch]");
     for (var i = 0; i < seg.length; i++) seg[i].addEventListener("click", function (e) {
@@ -270,11 +302,13 @@
     for (var t = 0; t < tabs.length; t++) tabs[t].addEventListener("click", function (e) {
       var pick = e.currentTarget.getAttribute("data-scope");
       var before = ipadScope();
+      var was = shown("iPadOS").rows;
       scope = pick;
       paintIpad();
       paintFields("iPadOS");
       var now = shown("iPadOS");
-      if (now.r && ipadScope() !== before) text(sec("iPadOS"), "step", said(now));
+      if (!now.r || pick === before) return;
+      announce(sec("iPadOS"), sameRows(was, now.rows) ? TABS[pick] + ": same as " + TABS[before] : said(now));
     });
     var comp = sec("watchOS").querySelector('[data-act="cycle"]');
     if (comp) comp.addEventListener("click", function () {

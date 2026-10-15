@@ -387,6 +387,37 @@ def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     assert page.inner_text("[data-act=check]") == "Check again"
 
 
+def test_a_second_click_on_the_iphone_check_while_it_runs_does_nothing(browser, base_url):
+    counter = """
+        window.__checks = 0;
+        const real = window.setTimeout;
+        window.setTimeout = function (fn, ms, ...rest) {
+            if (ms === 900) window.__checks += 1;
+            return real.call(window, fn, ms, ...rest);
+        };
+    """
+    context = make_context(browser, base_url, motion="no-preference")
+    try:
+        context.add_init_script(counter)
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        button = page.locator("[data-act=check]")
+        result = page.locator("[data-f=result]")
+        button.evaluate("e => { e.click(); e.click(); e.click(); }")
+        assert button.get_attribute("aria-busy") == "true"
+        assert result.inner_text() == "Checking the loaded releases…"
+        page.wait_for_function(
+            "() => document.querySelector('[data-f=result]').textContent.includes('latest release')"
+        )
+        assert page.evaluate("window.__checks") == 1, "one check ran for three clicks"
+        assert button.get_attribute("aria-busy") is None
+        assert button.inner_text() == "Check again"
+    finally:
+        context.close()
+
+
 def test_the_mock_screens_and_highlights_wait_for_their_script_and_then_paint(page, base_url):
     held = []
     page.route("**/assets/below.js", lambda route: held.append(route))
@@ -421,7 +452,7 @@ def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
     cards_ready(page)
     mocks_ready(page)
     rows = page.locator(".m-ios .m-rows")
-    assert rows.get_attribute("aria-hidden") == "true"
+    assert rows.get_attribute("aria-hidden") is None, "the rows hold data shown nowhere else"
     ios = releases("iOS")
     public = next(r for r in ios if r["stage"] == "release")
     assert rows.locator("[data-f=pubrow]").inner_text() == public["version"]
@@ -499,6 +530,25 @@ def test_the_about_this_mac_mock_turns_the_beta_off_when_no_beta_is_newer(browse
         context.close()
 
 
+def test_the_mac_paused_note_fits_the_screen_at_phone_width(browser, base_url):
+    context = make_context(browser, base_url, width=360)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        page.click("[data-ch=beta]")
+        mac = page.locator(".m-mac").bounding_box()
+        note = page.locator("[data-f=betanote]")
+        assert note.inner_text() == "Steps are paused on the beta channel"
+        box = note.bounding_box()
+        assert box["x"] >= mac["x"] and box["y"] >= mac["y"]
+        assert box["x"] + box["width"] <= mac["x"] + mac["width"]
+        assert box["y"] + box["height"] <= mac["y"] + mac["height"]
+    finally:
+        context.close()
+
+
 def test_the_empty_mac_note_takes_no_space(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
@@ -521,6 +571,28 @@ def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
     assert page.inner_text("[data-f=said]").startswith("Showing released")
     page.click(".m-comp")
     assert page.text_content(".m-comp .k") == "Version"
+
+
+def test_the_watch_keeps_the_year_in_the_released_mode(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    newest = public("watchOS")[0]
+    when = datetime.datetime.fromisoformat(newest["date"].replace("Z", "+00:00"))
+    page.click(".m-comp")
+    page.click(".m-comp")
+    assert page.text_content(".m-comp .k") == "Released"
+    shown = page.text_content(".m-comp .v")
+    assert shown == f"{when:%b} {when.day} '{when:%y}"
+    assert page.inner_text("[data-f=said]") == f"Showing released {shown}"
+    disc = page.locator(".m-comp").bounding_box()
+    text = page.locator(".m-comp .v").bounding_box()
+    assert text["x"] >= disc["x"] and text["x"] + text["width"] <= disc["x"] + disc["width"]
+    assert text["y"] >= disc["y"] and text["y"] + text["height"] <= disc["y"] + disc["height"]
+    assert text["width"] <= 68, "the date must stay inside the black disc in any font"
+    for selector in (".m-comp .k", ".m-wname .m-pos", ".m-watch .m-name"):
+        size = page.eval_on_selector(selector, "e => parseFloat(getComputedStyle(e).fontSize)")
+        assert size >= 11, (selector, size)
 
 
 def test_mock_controls_are_real_buttons_and_big_enough(page, base_url):
@@ -716,11 +788,11 @@ def test_a_step_is_announced_once_with_its_position(page, base_url, family):
     rows = public(family)
     live = device(page, family).locator("[data-f=step]")
     assert live.get_attribute("aria-live") == "polite"
-    assert live.inner_text() == "", "nothing is announced for the first paint"
+    assert live.inner_text().strip() == "", "nothing is announced for the first paint"
     press(page, family, "Older")
-    assert live.inner_text() == f"{named(family, rows[1])}, 2 of {len(rows)}"
+    assert live.inner_text().strip() == f"{named(family, rows[1])}, 2 of {len(rows)}"
     press(page, family, "Older")
-    assert live.inner_text() == f"{named(family, rows[2])}, 3 of {len(rows)}"
+    assert live.inner_text().strip() == f"{named(family, rows[2])}, 3 of {len(rows)}"
     assert device(page, family).locator("[data-f=step][aria-live]").count() == 1
 
 
@@ -752,6 +824,48 @@ def test_the_mac_channel_switch_keeps_the_release_it_was_on(page, base_url):
     assert position(page, "macOS") == f"2 / {len(public('macOS'))}"
     info = device(page, "macOS").locator(".m-info").inner_text()
     assert public("macOS")[1]["build"] in info
+
+
+@pytest.mark.parametrize("family", ["iOS", "SteamOS", "watchOS"])
+def test_a_press_that_cannot_move_says_why(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    count = len(public(family))
+    live = device(page, family).locator("[data-f=step]")
+    assert hardware(page, family, "Newer").get_attribute("aria-disabled") == "true"
+    press(page, family, "Newer")
+    assert live.inner_text().strip() == "Already the newest"
+    assert position(page, family) == f"1 / {count}"
+    hardware(page, family, "Older").focus()
+    page.keyboard.press("End")
+    assert position(page, family) == f"{count} / {count}"
+    press(page, family, "Older")
+    assert live.inner_text().strip() == "Already the oldest"
+    assert position(page, family) == f"{count} / {count}"
+    focused = page.evaluate("document.activeElement.getAttribute('aria-label')")
+    assert focused == f"Older {family} release", "a blocked key keeps the focus"
+    page.keyboard.press("Home")
+    assert live.inner_text().strip() == f"{named(family, public(family)[0])}, 1 of {count}"
+
+
+def test_the_mac_on_the_beta_channel_says_why_its_steps_are_paused(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    paused = "Steps are paused on the beta channel"
+    note = page.locator("[data-f=betanote]")
+    assert note.inner_text() == ""
+    page.click("[data-ch=beta]")
+    assert note.inner_text() == paused
+    assert note.is_visible()
+    live = device(page, "macOS").locator("[data-f=step]")
+    hardware(page, "macOS", "Older").evaluate("button => button.click()")
+    assert live.inner_text().strip() == paused
+    for which in ("Newer", "Older"):
+        assert hardware(page, "macOS", which).get_attribute("aria-disabled") == "true"
+    page.click("[data-ch=release]")
+    assert note.inner_text() == ""
 
 
 @pytest.mark.parametrize("family", DEVICES)
@@ -922,7 +1036,7 @@ def test_the_ipad_sidebar_chooses_what_the_ipad_steps_through(page, base_url):
     assert tabs["History"].get_attribute("aria-pressed") == "true"
     assert tabs["Latest"].get_attribute("aria-pressed") == "false"
     assert position(page, "iPadOS") == f"1 / {len(everything)}"
-    assert ipad.locator("[data-f=step]").inner_text().endswith(f"1 of {len(everything)}")
+    assert ipad.locator("[data-f=step]").inner_text().strip().endswith(f"1 of {len(everything)}")
     if pre:
         tabs["Betas"].click()
         assert position(page, "iPadOS") == f"1 / {len(pre)}"
@@ -930,6 +1044,77 @@ def test_the_ipad_sidebar_chooses_what_the_ipad_steps_through(page, base_url):
         assert tabs["Betas"].is_disabled()
     tabs["Latest"].click()
     assert position(page, "iPadOS") == f"1 / {len(public('iPadOS'))}"
+
+
+@pytest.mark.parametrize("width", [320, 360, 768, 1280])
+def test_the_vision_straps_never_overlap_the_visor(browser, base_url, width):
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        visor = page.locator("#visionos .v-visor").bounding_box()
+        for which, side in (("Newer", "left"), ("Older", "right")):
+            strap = hardware(page, "visionOS", which).bounding_box()
+            assert strap["width"] >= 43.9 and strap["height"] >= 43.9, (which, strap)
+            if side == "left":
+                assert strap["x"] + strap["width"] <= visor["x"] + 0.5, (width, which)
+            else:
+                assert strap["x"] >= visor["x"] + visor["width"] - 0.5, (width, which)
+            assert strap["x"] >= 0 and strap["x"] + strap["width"] <= width, (width, which)
+        hardware(page, "visionOS", "Older").focus()
+        page.keyboard.press("Tab")
+        page.keyboard.press("Shift+Tab")
+        ring = page.evaluate(
+            "() => { const s = getComputedStyle(document.activeElement);"
+            " return [s.outlineStyle, parseFloat(s.outlineWidth)]; }"
+        )
+        assert ring[0] == "solid" and ring[1] >= 3, ring
+    finally:
+        context.close()
+
+
+def test_the_ipad_says_when_a_tab_changes_nothing(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [
+        r for r in data["releases"] if not (r["family"] == "iPadOS" and r["stage"] != "release")
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    ipad = device(page, "iPadOS")
+    live = ipad.locator("[data-f=step]")
+    group = ipad.get_by_role("group", name="iPadOS releases to show")
+    count = len(public("iPadOS", data))
+    assert len(releases("iPadOS", data)) == count, "the data has no iPadOS beta"
+    group.get_by_role("button", name="History", exact=True).click()
+    assert live.inner_text().strip() == "History: same as Latest"
+    assert position(page, "iPadOS") == f"1 / {count}"
+    group.get_by_role("button", name="Latest", exact=True).click()
+    assert live.inner_text().strip() == "Latest: same as History"
+    group.get_by_role("button", name="Latest", exact=True).click()
+    assert live.inner_text().strip() == "Latest: same as History", (
+        "the tab already chosen says nothing new"
+    )
+
+
+def test_the_ipad_sidebar_labels_scale_with_the_screen(browser, base_url):
+    sizes = {}
+    for width in (360, 1280):
+        context = make_context(browser, base_url, width=width)
+        try:
+            page = context.new_page()
+            page.goto(base_url + "/")
+            cards_ready(page)
+            mocks_ready(page)
+            sizes[width] = page.eval_on_selector(
+                "[data-scope=pub]", "e => parseFloat(getComputedStyle(e).fontSize)"
+            )
+        finally:
+            context.close()
+    assert 12 <= sizes[360] <= sizes[1280] <= 14, sizes
 
 
 # --- the toast --------------------------------------------------------------------------
