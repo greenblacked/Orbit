@@ -107,6 +107,35 @@ def crowded():
     return data
 
 
+CONTRAST = """(selector) => {
+    // A canvas turns any computed colour (rgb, color-mix, oklch) into plain sRGB bytes.
+    const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    const rgb = (css) => {
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = '#000';
+        ctx.fillStyle = css;
+        ctx.fillRect(0, 0, 1, 1);
+        return Array.from(ctx.getImageData(0, 0, 1, 1).data).slice(0, 3);
+    };
+    const lum = (c) => {
+        const [r, g, b] = c.map((v) => {
+            v /= 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const el = document.querySelector(selector);
+    const fg = lum(rgb(getComputedStyle(el).color));
+    let node = el, back = 'rgba(0, 0, 0, 0)';
+    while (node && /rgba\\(.*, 0\\)$|transparent/.test(back)) {
+        back = getComputedStyle(node).backgroundColor;
+        node = node.parentElement;
+    }
+    const bg = lum(rgb(back));
+    return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+}"""
+
+
 def lanes_open(page):
     page.wait_for_selector(".lanes-lane .lanes-dot")
 
@@ -186,6 +215,7 @@ def test_a_month_bar_names_the_month_counts_its_releases_and_scales_its_bar(open
     )
     assert max(shares) == 1 and all(0 < s <= 1 for s in shares)
     assert page.locator(".month-dens").first.get_attribute("aria-hidden") == "true"
+    assert page.evaluate(CONTRAST, ".month-bar .month-n") >= 4.5
 
 
 def test_a_month_bar_stays_in_view_below_the_header_while_its_rows_scroll(opened):
@@ -337,6 +367,10 @@ def test_each_dot_is_a_labelled_button_of_44px_in_every_theme(opened, theme):
     pattern = r"[A-Za-z]+ [^,]+, [^,]+(, build [^,]+)?, [A-Z][a-z]{2} \d+, \d{4}"
     assert re.fullmatch(pattern, label), label
     assert dots.first.evaluate("e => e.tagName") == "BUTTON"
+    # What is read on the board must be readable in this theme.
+    for selector in (".lanes-label", ".lanes-tick", ".lanes-none"):
+        if page.locator(selector).count():
+            assert page.evaluate(CONTRAST, selector) >= 4.5, selector
     assert page.evaluate("() => window.__csp") == []
     assert errors == []
 
@@ -470,8 +504,37 @@ def test_a_click_chooses_a_dot_and_the_choice_survives_a_poll_that_changes_nothi
     release_id = dot.get_attribute("data-id")
     dot.click()
     assert page.locator(".lanes-dot.is-sel").get_attribute("data-id") == release_id
+    page.evaluate("RO.refresh()")  # resolves once every listener has run
+    assert page.locator(".lanes-dot.is-sel").get_attribute("data-id") == release_id
+    assert page.evaluate("document.activeElement.dataset.id") == release_id
+
+
+def test_a_poll_that_adds_a_release_of_another_platform_leaves_the_board_untouched(opened):
+    first = crowded()
+    page, _ = opened("/timeline/?view=cadence&family=iOS", body=first)
+    lanes_open(page)
+    dot = page.locator(".lanes-dot").first
+    release_id = dot.get_attribute("data-id")
+    dot.click()
+    page.evaluate("() => { document.querySelector('.lanes-inner').dataset.mark = 'same' }")
+    other = {
+        **first["releases"][0],
+        "id": "other",
+        "family": "macOS",
+        "version": "27.9",
+        "date": "2026-10-13T00:00:00Z",
+    }
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({**first, "releases": [other, *first["releases"]]}),
+        ),
+    )
     page.evaluate("RO.refresh()")
-    page.evaluate("() => new Promise(r => setTimeout(r, 300))")
+    # The whole data changed, the filtered releases did not: the board is not drawn again.
+    assert page.evaluate("document.querySelector('.lanes-inner').dataset.mark") == "same"
     assert page.locator(".lanes-dot.is-sel").get_attribute("data-id") == release_id
     assert page.evaluate("document.activeElement.dataset.id") == release_id
 
