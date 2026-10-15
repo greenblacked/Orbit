@@ -640,10 +640,13 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
         if COMPARE_SCRIPT in page["body_scripts"] and LOOKUP_SCRIPT not in page["body_scripts"]:
             at = page["body_scripts"].index(COMPARE_SCRIPT) + 1
             page["body_scripts"].insert(at, LOOKUP_SCRIPT)
-        if TIMELINE_SCRIPT in page["body_scripts"] and LANES_SCRIPT not in page["body_scripts"]:
-            if (dist / "assets" / "lanes.js").is_file():
-                at = page["body_scripts"].index(TIMELINE_SCRIPT) + 1
-                page["body_scripts"].insert(at, LANES_SCRIPT)
+        if (
+            TIMELINE_SCRIPT in page["body_scripts"]
+            and LANES_SCRIPT not in page["body_scripts"]
+            and (dist / "assets" / "lanes.js").is_file()
+        ):
+            at = page["body_scripts"].index(TIMELINE_SCRIPT) + 1
+            page["body_scripts"].insert(at, LANES_SCRIPT)
         if (dist / "assets" / "sigil-generic.js").is_file():
             for key in ("head_scripts", "body_scripts"):
                 if SIGIL_SCRIPT in page[key]:
