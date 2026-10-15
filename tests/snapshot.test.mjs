@@ -77,9 +77,11 @@ describe('src/data/releases.json', () => {
   it('gives every release the whole contract, from a registered source and a known family', () => {
     const ids = new Set(SOURCES.map((s) => s.id));
     for (const r of payload.releases) {
-      // `summary` is the one optional key: a short plain line from the adapter (ADR 0008 keeps
+      // Two optional keys. `line`: RouterOS and Windows carry it, every other family not.
+      // `summary`: a short plain line from the adapter or an owner note (ADR 0008 keeps
       // security notes out of this file; a summary is not one).
-      assert.deepEqual(Object.keys(r).filter((k) => k !== 'summary').sort(), keys, r.id);
+      const expected = r.family === 'RouterOS' || r.family === 'Windows' ? [...keys, 'line'] : keys;
+      assert.deepEqual(Object.keys(r).filter((k) => k !== 'summary').sort(), [...expected].sort(), r.id);
       if ('summary' in r) {
         assert.equal(typeof r.summary, 'string', r.id);
         assert.equal(r.summary, cleanSummary(r.summary), r.id);

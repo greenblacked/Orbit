@@ -121,7 +121,12 @@ describe('parsePage on the recorded Windows 11 table', () => {
       date: '2026-09-22T00:00:00Z',
       url: 'https://support.microsoft.com/help/5124010',
       source: ID,
+      line: '25H2',
     });
+  });
+
+  it('gives every row its feature update as its line', () => {
+    for (const r of releases) assert.equal(r.line, r.version, r.id);
   });
 
   it('gives each row its own update label and link', () => {
@@ -134,7 +139,7 @@ describe('parsePage on the recorded Windows 11 table', () => {
 
   it('marks every row a release and gives it the whole contract', () => {
     const keys = [
-      'beta', 'build', 'date', 'family', 'id', 'major', 'source', 'stage', 'title', 'url',
+      'beta', 'build', 'date', 'family', 'id', 'line', 'major', 'source', 'stage', 'title', 'url',
       'vendor', 'version',
     ];
     for (const r of releases) {
@@ -159,6 +164,7 @@ describe('parsePage on the recorded Windows 10 table', () => {
         vendor: 'microsoft',
         family: 'Windows',
         version: '22H2',
+        line: '22H2',
         major: 22,
         stage: 'release',
         beta: null,

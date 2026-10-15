@@ -9,8 +9,10 @@ Content-Security-Policy a browser enforces here is the one it will enforce in pr
 It does not run the Worker, but it answers the API paths the pages call from the files the
 Worker falls back on: ``/api/releases.json`` is ``data/releases.json`` (with ``?vendor=``
 applied, and ``data/notes.json`` laid over each release's ``summary`` as the Worker does),
-``/api/security.json`` is ``data/security.json`` and ``/api/health`` is
-``{"ok": true}``, so a local page loads its data the way a live one does.
+``/api/security.json`` is ``data/security.json``, ``/api/feed.atom`` and ``/api/feed.json``
+are the same releases as feeds (``deploy/feeds.js`` in Python, with the same filters; notes do
+not apply, a feed carries no summary) and ``/api/health`` is ``{"ok": true}``, so a local page
+loads its data the way a live one does.
 
     python scripts/serve_site.py --dir dist/site --port 8000
     python scripts/serve_site.py --port 0        # pick a free port; the first line says which
@@ -26,8 +28,9 @@ import json
 import mimetypes
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 # Present in the build output but never served: the sentinel and Wrangler's ignore list,
@@ -120,6 +123,172 @@ def releases_answer(body: bytes, query: str, notes: bytes | None = None) -> tupl
     return 200, json.dumps(payload, separators=(",", ":")).encode("utf-8")
 
 
+SITE = "https://orbit.szolotov.com"
+MAX_ENTRIES = 100
+STAGES = ["release", "beta", "rc"]
+ATOM_TYPE = "application/atom+xml; charset=utf-8"
+JSON_FEED_TYPE = "application/feed+json; charset=utf-8"
+FEED_TITLE = "Release Orbit releases"
+FEED_SUBTITLE = "Recent OS releases, betas and release candidates, newest first."
+TAG_PREFIX = "tag:orbit.szolotov.com,2026:release:"
+FEED_FILTERS = ("vendor", "family", "stage")
+FILTER_PLURALS = {"vendor": "vendors", "family": "families", "stage": "stages"}
+XML_FORBIDDEN = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
+XML_ESCAPES = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"}
+
+
+def xml_escape(value: object) -> str:
+    """Text for an XML text node or attribute; mirrors ``xmlEscape`` in deploy/feeds.js."""
+    text = XML_FORBIDDEN.sub("", "" if value is None else str(value))
+    return re.sub(r"[&<>\"']", lambda m: XML_ESCAPES[m.group(0)], text)
+
+
+def _component(value: str) -> str:
+    return quote(value, safe="-_.!~*'()")  # JavaScript's encodeURIComponent
+
+
+def _when(text: object) -> datetime | None:
+    try:
+        moment = datetime.fromisoformat(str(text).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(timezone.utc)
+
+
+def _stamp(moment: datetime) -> str:
+    return moment.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def _allowed_link(hosts: dict[str, list[str]], vendor: object, link: object) -> bool:
+    try:
+        parts = urlsplit(str(link))
+        return parts.scheme == "https" and parts.hostname in hosts.get(str(vendor), [])
+    except ValueError:
+        return False
+
+
+def _summary(release: dict) -> str:
+    if release.get("stage") == "release":
+        stage = "Release"
+    else:
+        stage = "RC" if release.get("stage") == "rc" else "Beta"
+        stage += f" {release['beta']}" if release.get("beta") else ""
+    build = release.get("build")
+    extra = f", build {build}" if build and build != release.get("version") else ""
+    text = f"{release.get('family') or release.get('vendor')} {release.get('version') or ''}: "
+    return re.sub(r"\s+", " ", f"{text}{stage}{extra}").strip()
+
+
+def feed_answer(
+    kind: str, snapshot: bytes, config: bytes | None, query: str
+) -> tuple[int, bytes, str]:
+    """The status, body and content type of ``/api/feed.<kind>?<query>`` from the snapshot.
+
+    The Python twin of ``deploy/feeds.js``: the same filters (an unknown ``vendor``, ``family``
+    or ``stage`` is a 400 JSON), the newest ``MAX_ENTRIES`` releases, an entry linking to its
+    vendor only on an allowed host and otherwise to its timeline row. ``config`` is
+    ``data/families.json`` (the families and the vendors' hosts).
+    """
+    json_type = "application/json; charset=utf-8"
+    try:
+        document = json.loads(snapshot)
+        releases = document["releases"]
+        fetched = _when(document.get("fetchedAt"))
+        fetched = _stamp(fetched) if fetched else _stamp(datetime.now(timezone.utc))
+        known = json.loads(config) if config else {}
+        families = [f["id"] for f in known.get("families", [])] or sorted(
+            {r["family"] for r in releases}
+        )
+        hosts = {v["id"]: v["source"]["hosts"] for v in known.get("vendors", [])}
+        vendors = sorted({r["vendor"] for r in releases})
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return 503, b'{"error":"no releases available"}', json_type
+    options = {"vendor": vendors, "family": families, "stage": STAGES}
+    asked = parse_qs(query, keep_blank_values=True)
+    filters: dict[str, str] = {}
+    for name in FEED_FILTERS:
+        if name in asked:
+            if asked[name][0] not in options[name]:
+                error = {"error": f"unknown {name}", FILTER_PLURALS[name]: options[name]}
+                return 400, json.dumps(error, separators=(",", ":")).encode("utf-8"), json_type
+            filters[name] = asked[name][0]
+    chosen = []
+    for release in releases:
+        moment = _when(release.get("date")) if isinstance(release, dict) else None
+        if moment is None or not isinstance(release.get("id"), str) or not release["id"]:
+            continue
+        if all(release.get(name) == value for name, value in filters.items()):
+            chosen.append((moment, release))
+    chosen.sort(key=lambda item: item[0], reverse=True)
+    chosen = chosen[:MAX_ENTRIES]
+
+    def link(release: dict) -> str:
+        if _allowed_link(hosts, release.get("vendor"), release.get("url")):
+            return urlsplit(release["url"]).geturl()
+        return f"{SITE}/timeline/?id={_component(release['id'])}"
+
+    suffix = "&".join(f"{n}={_component(filters[n])}" for n in FEED_FILTERS if n in filters)
+    suffix = f"?{suffix}" if suffix else ""
+    parts = [filters[n] for n in FEED_FILTERS if n in filters]
+    title = f"{FEED_TITLE} ({', '.join(parts)})" if parts else FEED_TITLE
+    if kind == "json":
+        feed = {
+            "version": "https://jsonfeed.org/version/1.1",
+            "title": title,
+            "description": FEED_SUBTITLE,
+            "home_page_url": f"{SITE}/timeline/",
+            "feed_url": f"{SITE}/api/feed.json{suffix}",
+            "language": "en",
+            "authors": [{"name": "Release Orbit"}],
+            "items": [
+                {
+                    "id": TAG_PREFIX + _component(r["id"]),
+                    "url": link(r),
+                    "title": r.get("title") or _summary(r),
+                    "content_text": _summary(r),
+                    "date_published": _stamp(m),
+                    "tags": [t for t in (r.get("family"), r.get("stage")) if t],
+                }
+                for m, r in chosen
+            ],
+        }
+        return 200, json.dumps(feed, separators=(",", ":")).encode("utf-8"), JSON_FEED_TYPE
+    own = f"{SITE}/api/feed.atom{suffix}"
+    updated = _stamp(chosen[0][0]) if chosen else fetched
+    lines = [
+        '<?xml version="1.0" encoding="utf-8"?>',
+        '<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">',
+        f"<id>{xml_escape(own)}</id>",
+        f"<title>{xml_escape(title)}</title>",
+        f"<subtitle>{xml_escape(FEED_SUBTITLE)}</subtitle>",
+        f"<updated>{updated}</updated>",
+        f'<link rel="self" type="application/atom+xml" href="{xml_escape(own)}"/>',
+        f'<link rel="alternate" type="text/html" href="{xml_escape(SITE + "/timeline/")}"/>',
+        "<author><name>Release Orbit</name></author>",
+    ]
+    for moment, release in chosen:
+        when = _stamp(moment)
+        lines += [
+            "<entry>",
+            f"<id>{xml_escape(TAG_PREFIX + _component(release['id']))}</id>",
+            f"<title>{xml_escape(release.get('title') or _summary(release))}</title>",
+            f'<link rel="alternate" type="text/html" href="{xml_escape(link(release))}"/>',
+            f"<published>{when}</published>",
+            f"<updated>{when}</updated>",
+            *(
+                f'<category term="{xml_escape(t)}"/>'
+                for t in (release.get("family"), release.get("stage"))
+                if isinstance(t, str) and t
+            ),
+            f'<summary type="text">{xml_escape(_summary(release))}</summary>',
+            "</entry>",
+        ]
+    lines += ["</feed>", ""]
+    return 200, "\n".join(lines).encode("utf-8", errors="replace"), ATOM_TYPE
+
+
 def parse_headers(text: str) -> list[tuple[re.Pattern[str], list[tuple[str, str]]]]:
     """Rules from a Cloudflare ``_headers`` file: a path pattern, then indented ``Name: value``.
 
@@ -208,6 +377,18 @@ def make_handler(root: Path):
                         notes.read_bytes() if notes is not None else None,
                     )
                     self._send(status, body, "application/json; charset=utf-8", path, head)
+                    return
+            if path in ("/api/feed.atom", "/api/feed.json"):
+                snapshot = self._locate("/data/releases.json")
+                if snapshot is not None:
+                    config = self._locate("/data/families.json")
+                    status, body, kind = feed_answer(
+                        path.rsplit(".", 1)[1],
+                        snapshot.read_bytes(),
+                        config.read_bytes() if config is not None else None,
+                        parts.query,
+                    )
+                    self._send(status, body, kind, path, head)
                     return
             if path == "/api/security.json":
                 notes = self._locate("/data/security.json")

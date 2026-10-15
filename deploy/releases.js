@@ -5,14 +5,21 @@
 //
 // A release (the multi-vendor data contract):
 //   { id, vendor, family, version, major, stage, beta, build, title, date, url, source }
-// plus one optional field, `summary`: a short plain-text line (see cleanSummary) that an
-// adapter fills from text it already read, or the owner writes in src/data/notes.json.
+// plus two optional fields (`summary` and `line`, described below). An adapter fills
+// `summary` from text it already read, or the owner writes it in src/data/notes.json.
 // `vendor` is the maker ("apple"), `family` the platform ("iOS"), `source` the id of the
 // adapter that produced it ("apple-developer-releases"). `stage` is "release", "beta" or
 // "rc". `beta` is the iteration number of a beta or RC ("beta 3" and "RC 2" are 3 and 2; a
 // bare "beta" or "RC" and a final release are null). `date` is ISO-8601 UTC without
-// milliseconds. Apart from `summary`, only the title, build, date and link are kept, never
-// release-notes text: a summary is one line, at most SUMMARY_MAX characters, never markup.
+// milliseconds. Apart from the two optional fields below, only the title, build, date and
+// link are kept, never release-notes text.
+// Two optional fields, each absent (never null) when it does not apply:
+//   `summary`: a short plain-text line (see cleanSummary), at most SUMMARY_MAX characters,
+//     never markup.
+//   `line`: for a family with several supported lines at once, the RouterOS channel
+//     ("stable", "long-term", "testing") or the Windows feature update ("24H2"). A family with
+//     one line (Apple, Android, SteamOS) has no `line` key at all.
+// When both are set, an adapter adds `line` first and `summary` after it.
 
 // Each source keeps its newest MAX_RELEASES_PER_SOURCE releases, so a large source cannot
 // push another's rows out. The largest live source is the AOSP tag page (about 300 release
@@ -23,6 +30,21 @@
 // tests/snapshot.test.mjs fails at 80% of it, and the snapshot script refuses a merge that
 // would drop rows.
 export const MAX_RELEASES_PER_SOURCE = 1000;
+
+const LINE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,15}$/;
+
+/** True for a value a release may carry as `line`: a short token of letters, digits and . _ - */
+export function isLine(value) {
+  return typeof value === 'string' && LINE_RE.test(value);
+}
+
+/**
+ * The release with `line` added, or the release as it was when `line` is
+ * not a valid token. Used by the adapters whose family has several lines.
+ */
+export function withLine(release, line) {
+  return isLine(line) ? { ...release, line } : release;
+}
 
 /** The longest summary, in UTF-16 units, ellipsis included. */
 export const SUMMARY_MAX = 200;

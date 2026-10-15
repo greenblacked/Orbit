@@ -219,6 +219,88 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     assert pre.locator(".sr-only").text_content() == " (opens in a new tab)"
 
 
+def test_the_routeros_card_lists_its_other_supported_line_under_the_headline(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="RouterOS"]')
+    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.24.5"
+    lines = card.locator("[data-f=lines]")
+    assert lines.is_visible()
+    # Plain text, no link: the headline's own line (stable) and the testing pre-release are not
+    # repeated.
+    assert lines.locator("li").all_inner_texts() == ["Long-term: 7.23.8"]
+    assert lines.locator("a").count() == 0
+
+
+def test_the_windows_card_lists_the_next_feature_updates_with_their_builds(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="Windows"]')
+    assert card.locator("[data-f=ver]").inner_text() == "Windows 26H2"
+    rows = {r["line"]: r["build"] for r in releases("Windows")}
+    assert card.locator("[data-f=lines] li:not(:has(a))").all_inner_texts() == [
+        f"{name}: {rows[name]}" for name in ("26H1", "25H2", "24H2")
+    ]
+
+
+def line_count(family):
+    """Lines of a family the way RO.lead derives them: those with a public release."""
+    return len({r["line"] for r in releases(family) if r["stage"] == "release" and r.get("line")})
+
+
+def test_a_card_with_many_lines_lists_three_and_links_the_rest(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="Windows"]')
+    hidden = line_count("Windows") - 4
+    assert hidden > 0
+    assert card.locator("[data-f=lines] li").count() == 4
+    more = card.locator("[data-f=lines] a")
+    assert more.count() == 1
+    assert more.inner_text() == f"+{hidden} more Windows lines"
+    assert more.get_attribute("href") == "/timeline/?family=Windows"
+    assert more.bounding_box()["height"] >= 44
+
+
+def test_a_card_with_three_other_lines_or_fewer_has_no_more_link(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    keep = {"26H2", "26H1", "25H2", "24H2"}
+    data["releases"] = [
+        r for r in data["releases"] if r["family"] != "Windows" or r.get("line") in keep
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    lines = page.locator('#latest-grid [data-family="Windows"] [data-f=lines]')
+    assert lines.locator("li:not(:has(a))").count() == 3
+    assert lines.locator("a").count() == 0
+
+
+def test_a_family_without_lines_and_a_card_with_one_line_list_nothing_extra(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [
+        r for r in data["releases"] if r.get("line") != "long-term" and r["family"] != "Windows"
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    for family in ("iOS", "Android", "SteamOS", "RouterOS"):
+        lines = page.locator(f'#latest-grid [data-family="{family}"] [data-f=lines]')
+        assert lines.is_hidden() and lines.locator("li").count() == 0, family
+
+
+def test_a_line_that_is_not_a_plain_token_is_dropped_by_the_page(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    for r in data["releases"]:
+        if r.get("line") == "long-term":
+            r["line"] = "<img src=x>"
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    lines = page.locator('#latest-grid [data-family="RouterOS"] [data-f=lines]')
+    assert lines.is_hidden()
+
+
 def test_the_newest_release_is_the_highest_version_not_the_latest_date(page, base_url):
     ios = [r for r in SNAPSHOT["releases"] if r["family"] == "iOS" and r["stage"] == "release"]
     old_branch = copy.deepcopy(ios[0]) | {
@@ -1421,6 +1503,57 @@ def test_the_filter_chips_narrow_by_os_and_by_stage(page, base_url):
     assert page.inner_text("#count") == "No iOS release candidates in the data."
     page.click("#chips-family [data-v=all]")
     page.click("#chips-stage [data-v=all]")
+    assert page.locator(".tl-item").count() == len(newest_months(SNAPSHOT["releases"]))
+
+
+def test_the_line_chips_appear_only_for_a_platform_with_lines(page, base_url):
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    assert page.locator("#filter-line").is_hidden()
+    page.click("#chips-family [data-v=iOS]")
+    assert page.locator("#filter-line").is_hidden()
+    page.click("#chips-family [data-v=RouterOS]")
+    assert page.locator("#filter-line").is_visible()
+    chips = page.locator("#chips-line .chip")
+    assert chips.all_inner_texts() == ["All", "Stable", "Long-term", "Testing"]
+    assert page.get_attribute("#chips-line [data-v=all]", "aria-pressed") == "true"
+    page.click("#chips-line [data-v=long-term]")
+    assert page.get_attribute("#chips-line [data-v=long-term]", "aria-pressed") == "true"
+    assert page.locator(".tl-item").count() == 1
+    assert page.locator(".tl-ver").inner_text() == "7.23.8"
+    assert page.inner_text("#count") == "1 RouterOS long-term release"
+    assert page.url.endswith("?family=RouterOS&line=long-term")
+    # Another platform starts again from all of its lines.
+    page.click("#chips-family [data-v=Windows]")
+    assert page.locator("#chips-line .chip").all_inner_texts()[0] == "All"
+    assert "line=" not in page.url
+    assert page.locator(".tl-item").count() == len(releases("Windows"))
+    page.click("#chips-family [data-v=SteamOS]")
+    assert page.locator("#filter-line").is_hidden()
+
+
+def test_the_line_chips_are_real_buttons_of_at_least_44px(page, base_url):
+    page.goto(base_url + "/timeline/?family=RouterOS")
+    page.wait_for_selector(".tl-item")
+    for box in page.locator("#chips-line .chip").evaluate_all(
+        "els => els.map(e => e.getBoundingClientRect().toJSON())"
+    ):
+        assert box["height"] >= 44, box
+
+
+def test_an_address_with_a_line_opens_filtered_and_an_unknown_line_is_ignored(page, base_url):
+    page.goto(base_url + "/timeline/?family=Windows&line=24H2")
+    page.wait_for_selector(".tl-item")
+    only = [r for r in releases("Windows") if r["line"] == "24H2"]
+    assert page.locator(".tl-item").count() == len(only)
+    assert page.get_attribute('#chips-line [data-v="24H2"]', "aria-pressed") == "true"
+    page.goto(base_url + "/timeline/?family=RouterOS&line=nope")
+    page.wait_for_selector(".tl-item")
+    assert page.locator(".tl-item").count() == len(releases("RouterOS"))
+    assert page.get_attribute("#chips-line [data-v=all]", "aria-pressed") == "true"
+    page.goto(base_url + "/timeline/?line=stable")
+    page.wait_for_selector(".tl-item")
+    assert page.locator("#filter-line").is_hidden()
     assert page.locator(".tl-item").count() == len(newest_months(SNAPSHOT["releases"]))
 
 
