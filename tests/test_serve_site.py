@@ -84,7 +84,10 @@ def test_the_releases_api_is_answered_from_the_snapshot(base_url):
     status, headers, body = get(base_url, "/api/releases.json")
     assert status == 200
     assert headers["Content-Type"].startswith("application/json")
-    assert body == get(base_url, "/data/releases.json")[2]
+    snapshot = get(base_url, "/data/releases.json")[2]
+    notes = get(base_url, "/data/notes.json")[2]
+    # The owner's notes are laid over the snapshot, so compare with them applied.
+    assert body == serve.apply_notes(snapshot, notes)
     assert "default-src 'self'" in headers["Content-Security-Policy"]
 
 
@@ -133,6 +136,50 @@ def test_releases_answer_passes_an_unreadable_snapshot_through():
     assert serve.releases_answer(b"not json", "vendor=apple") == (200, b"not json")
     assert serve.releases_answer(b"[]", "vendor=apple") == (200, b"[]")
     assert serve.releases_answer(b'{"releases":[]}', "") == (200, b'{"releases":[]}')
+
+
+RELEASE_BODY = json.dumps(
+    {
+        "releases": [
+            {"id": "a", "vendor": "apple"},
+            {"id": "b", "vendor": "mikrotik", "summary": "x"},
+        ]
+    }
+).encode()
+
+
+def test_notes_are_laid_over_the_releases_like_the_worker_does():
+    notes = json.dumps({"schema": 1, "notes": {"a": " Hello \n world ", "b": "Own", "zzz": "n"}})
+    status, body = serve.releases_answer(RELEASE_BODY, "", notes.encode())
+    assert status == 200
+    summaries = {r["id"]: r.get("summary") for r in json.loads(body)["releases"]}
+    assert summaries == {"a": "Hello world", "b": "Own"}
+    status, body = serve.releases_answer(RELEASE_BODY, "vendor=apple", notes.encode())
+    assert [r["id"] for r in json.loads(body)["releases"]] == ["a"]
+
+
+def test_notes_that_change_nothing_leave_the_snapshot_bytes_alone():
+    unchanged = (
+        None,
+        b"",
+        b"not json",
+        b"[]",
+        b'{"notes":[]}',
+        b'{"notes":{}}',
+        b'{"notes":{"zzz":"n"}}',
+        b'{"notes":{"a":"  "}}',
+    )
+    for notes in unchanged:
+        assert serve.releases_answer(RELEASE_BODY, "", notes) == (200, RELEASE_BODY), notes
+
+
+def test_clean_summary_follows_the_rules_of_the_contract():
+    assert serve.clean_summary(None) == ""
+    assert serve.clean_summary(" a\tb\n\nc\x00d ") == "a b cd"
+    long = serve.clean_summary("word " * 80)
+    assert len(long) <= serve.SUMMARY_MAX and long.endswith("\u2026")
+    assert serve.clean_summary(long) == long
+    assert len(serve.clean_summary("y" * 500)) == serve.SUMMARY_MAX
 
 
 def test_a_cache_rule_in_headers_replaces_the_no_store_default(base_url):

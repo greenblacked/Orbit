@@ -268,4 +268,15 @@
     if (shared || (!first && was !== selFrom.value + "|" + selTo.value)) remember();
     shared = false;
   });
+
+  // "Check my version" loads once the page has painted, as on the front page (a bundle runs it
+  // with the page scripts instead). It asks RO.on, which replays the data, and reads its own query.
+  function loadLookup() {
+    if (document.querySelector("script[data-seed]")) return;
+    var s = document.createElement("script");
+    s.src = "/assets/lookup.js";
+    document.head.appendChild(s);
+  }
+  if (document.readyState === "complete") loadLookup();
+  else window.addEventListener("load", loadLookup);
 })();

@@ -20,6 +20,7 @@ import steamos, {
   parseFeed,
   parseNews,
   parseTitle,
+  summaryOfTitle,
   titlePattern,
   linkOf,
 } from '../deploy/sources/steamos.js';
@@ -118,6 +119,37 @@ describe('parseTitle', () => {
   });
 });
 
+describe('summaryOfTitle', () => {
+  it('gives the words after the version, the channel and the build', () => {
+    assert.equal(summaryOfTitle('SteamOS 3.7.13 Stable: Deck update'), 'Deck update');
+    assert.equal(summaryOfTitle('SteamOS 3.8.1 Preview (20250522.1) - Fan curve fixes'), 'Fan curve fixes');
+    assert.equal(summaryOfTitle('SteamOS 3.7.13: Beta, Docking fixes'), 'Docking fixes');
+    assert.equal(summaryOfTitle('SteamOS 3.7.13 Docking fixes'), 'Docking fixes');
+    assert.equal(summaryOfTitle('SteamOS 3.8.1 Preview 20250522.1 - Fan fixes'), 'Fan fixes');
+    assert.equal(summaryOfTitle('SteamOS 3.8 Stable: Preview of new UI'), 'Preview of new UI');
+    assert.equal(summaryOfTitle('SteamOS 3.8 Stable (20250101.1): Beta fixes'), 'Beta fixes');
+    assert.equal(summaryOfTitle('SteamOS 3.8 Stable: (LCD) Display fixes'), '(LCD) Display fixes');
+    assert.equal(summaryOfTitle('SteamOS 3.8 Stable: (LCD)'), '(LCD)');
+    assert.equal(summaryOfTitle('SteamOS 3.8 Stable: [20250101.12] Fan fixes'), '[20250101.12] Fan fixes');
+  });
+
+  it('gives nothing for a title that is only the name, version, channel and build', () => {
+    for (const title of [
+      'SteamOS 3.8.28',
+      'SteamOS 3.8.28 Beta',
+      'SteamOS 3.9.1 Preview',
+      'SteamOS 3.8.1 Preview (20250522.1)',
+      'SteamOS 3.8.1 Preview 20250522.1',
+      'SteamOS 3.7.13 Stable:',
+      'Steam Client Update',
+      '',
+      undefined,
+    ]) {
+      assert.equal(summaryOfTitle(title), '', String(title));
+    }
+  });
+});
+
 describe('parseNews', () => {
   it('skips every recorded Steam Client update', () => {
     assert.deepEqual(news(RECORDED_JSON), []);
@@ -147,6 +179,19 @@ describe('parseNews', () => {
       assert.equal(r.major, 3);
       assert.equal(r.url, NEWS_PAGE);
     }
+  });
+
+  it('keeps a headline in the title as the summary, and no summary for the recorded titles', () => {
+    assert.ok(news(TITLES).every((r) => !('summary' in r)));
+    const [headline] = news(doc(post({ title: 'SteamOS 3.7.15 Stable: Deck update' })));
+    assert.equal(headline.summary, 'Deck update');
+    assert.equal(headline.title, 'SteamOS 3.7.15 Stable: Deck update');
+    const [rss] = parseFeed(
+      '<rss><channel><item><title>SteamOS 3.7.15 Stable: Deck update</title>' +
+        '<pubDate>Fri, 09 Oct 2026 10:00:00 GMT</pubDate></item></channel></rss>',
+      NOW,
+    );
+    assert.equal(rss.summary, 'Deck update');
   });
 
   it('maps the real channel tags: stable wins, beta and preview are betas', () => {

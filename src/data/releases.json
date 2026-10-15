@@ -17,7 +17,8 @@
       "date": "2026-10-08T09:46:16Z",
       "url": "https://mikrotik.com/download?v=7.23.8",
       "source": "mikrotik-routeros",
-      "line": "long-term"
+      "line": "long-term",
+      "summary": "Long-term channel release"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=10052026a",

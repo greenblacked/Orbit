@@ -116,8 +116,9 @@
           ? "Security notes not published yet (checked " + checked(e) + ")"
           : "No matching security note found (checked " + checked(e) + ")");
       case "not-connected":
-        return say("unavailable", "Security details not connected for " + r.family + " yet",
-          RO.allowed(r.vendor, RO.source(r.vendor).url) ? RO.source(r.vendor).url : "");
+        // A family with no security source says nothing: the timeline states once which
+        // vendors are covered (#sec-scope), and a pill per row only repeated that.
+        return null;
       default:
         return say("unavailable", android && e.patchLevel
           ? "No Android Security Bulletin read for " + e.patchLevel.slice(0, 7) + " yet"

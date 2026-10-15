@@ -103,20 +103,16 @@ def test_the_front_page_has_one_card_per_family_in_the_order_of_the_config():
 # The effects are separate modules that load after the first paint; no page names them.
 LAZY = ("fx.js", "aurora.js")
 # Also off the first paint: below.js (the drawn devices that step through releases) and the
-# cadence row, which home.js loads once the page has painted, and the generic sigil rule
+# cadence row, which home.js loads once the page has painted, Check my version (home.js, and
+# compare.js on Compare), and the generic sigil rule
 # (sigil.js loads it when a build that is not an Apple build appears). The script that loads
 # each one is the only file that names it.
 AFTER_PAINT = {
-    "below.js": "home.js",
-    "cadence.js": "home.js",
-    "lookup.js": "home.js",
-    "sigil-generic.js": "sigil.js",
+    "below.js": ("home.js",),
+    "cadence.js": ("home.js",),
+    "lookup.js": ("compare.js", "home.js"),
+    "sigil-generic.js": ("sigil.js",),
 }
-# Check my version is off the first paint on the front page (its budget is nearly spent) but
-# stays a deferred <script src> on Compare, whose budget has room and where compare.js and
-# security.js already load from the page; there is one script tag to keep in step, not a second
-# loader.
-DEFERRED_ON_PAGE = {"compare/index.html": {"lookup.js"}}
 # The first paint is budgeted on what crosses the wire: the sum of each script gzipped alone at
 # level 9 (the scripts are separate responses, so a per-file sum is what a visitor downloads;
 # a concatenation would flatter it). When set, the front page was 20,767 bytes and the limit
@@ -135,8 +131,7 @@ def test_the_scripts_a_page_loads_stay_under_the_first_paint_budgets(name):
     loaded = re.findall(r'<script src="/assets/([a-z.-]+\.js)"', page(name))
     assert loaded, name
     assert not set(LAZY) & set(loaded), "the effects load after first paint, not from the page"
-    late = set(AFTER_PAINT) - DEFERRED_ON_PAGE.get(name, set())
-    assert not late & set(loaded), "these load after first paint, not from the page"
+    assert not set(AFTER_PAINT) & set(loaded), "these load after first paint, not from the page"
     raw = sum((ASSETS / script).stat().st_size for script in loaded)
     assert raw < FIRST_PAINT_RAW_BUDGET, (name, raw)
     packed = sum(len(gzip.compress((ASSETS / script).read_bytes(), 9)) for script in loaded)
@@ -156,13 +151,13 @@ def test_the_lazily_loaded_effects_stay_small_and_are_only_loaded_by_the_scripts
 
 def test_the_scripts_loaded_after_the_first_paint_are_named_only_by_their_loader():
     assert sum((ASSETS / name).stat().st_size for name in AFTER_PAINT) < AFTER_PAINT_BUDGET
-    for name, loader in AFTER_PAINT.items():
+    for name, loaders in AFTER_PAINT.items():
         named = [
             script.name
             for script in ASSETS.glob("*.js")
             if f"/assets/{name}" in script.read_text(encoding="utf-8")
         ]
-        assert named == [loader], name
+        assert sorted(named) == sorted(loaders), name
 
 
 @pytest.mark.parametrize("script", sorted(ASSETS.glob("*.js")), ids=lambda p: p.name)

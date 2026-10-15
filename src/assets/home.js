@@ -53,6 +53,15 @@
     line.appendChild(a);
   }
 
+  // The release's description, a muted line clamped to two lines by CSS; hidden when it has none.
+  function paintNote(card, r) {
+    var line = card.querySelector('[data-f="note"]');
+    if (!line) return;
+    var text = r && r.summary ? r.summary : "";
+    if (line.textContent !== text) line.textContent = text;
+    line.hidden = !text;
+  }
+
   // The other supported lines of a family under its headline ("Long-term: 7.23.8", "24H2:
   // 26100.9550"), as plain text. A line named like its version shows the build instead. Past
   // MAX_LINES the rest are one link, "+2 more Windows lines", to that family on the timeline.
@@ -89,6 +98,7 @@
       card.removeAttribute("data-stage");
       card.querySelector('[data-f="badge"]').hidden = true;
       card.querySelector('[data-f="link"]').hidden = true;
+      paintNote(card, null);
       return;
     }
     set("ver", r.family + " " + r.version);
@@ -108,6 +118,7 @@
     var hint = link.querySelector(".sr-only");
     if (hint) hint.textContent = " " + r.family + " " + r.version + " (opens in a new tab)";
     card.querySelector('[data-f="badge"]').hidden = false;
+    paintNote(card, r);
   }
 
   // The newest release of each platform under the intro, on a phone only (CSS).

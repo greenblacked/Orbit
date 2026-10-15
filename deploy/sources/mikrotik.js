@@ -16,7 +16,7 @@
 // needs the URL of the document, because a NEWEST file does not say which channel it is.
 
 import { familyIds } from '../families.js';
-import { withLine } from '../releases.js';
+import { withLine, withSummary } from '../releases.js';
 
 export const ID = 'mikrotik-routeros';
 export const VENDOR = 'mikrotik';
@@ -48,6 +48,16 @@ export function unixToIso(seconds) {
 }
 
 /**
+ * What the channel of a RouterOS release says, from the NEWEST file it came from: only the
+ * long-term channel says something the row does not ("Long-term channel release"). The stable
+ * and testing channels are already in the title and the stage badge, so they get no summary.
+ * No changelog text is read (the changelog page is not on the allowlist).
+ */
+export function summaryOfChannel(channel) {
+  return channel === 'long-term' ? 'Long-term channel release' : '';
+}
+
+/**
  * One release row, or null when the version does not fit its channel or its date lies in the
  * future. stable and long-term carry a plain version ("7.23.8"); testing carries a
  * pre-release ("7.25rc1", "7.25beta2"), whose `version` is the number alone ("7.25") and
@@ -76,7 +86,7 @@ export function makeRelease({ version, channel, date, now = Date.now() }) {
     url: downloadUrl(version),
     source: ID,
   };
-  return withLine(release, channel);
+  return withSummary(withLine(release, channel), summaryOfChannel(channel));
 }
 
 /** The release in one NEWEST document ("<version> <unix-seconds>") of a channel; [] if malformed. */
