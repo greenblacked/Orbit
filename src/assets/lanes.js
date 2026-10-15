@@ -193,16 +193,16 @@
     var start = Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() - 11, 1);
     var width = Math.round((now - start) / DAY * PX);
     var root = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
-    var label = Math.round(LABEL_REM * root);
-    function x(t) { return label + LEAD + Math.round((Math.min(t, now) - start) / DAY * PX); }
+    var labelPx = Math.round(LABEL_REM * root);
+    function x(t) { return labelPx + LEAD + Math.round((Math.min(t, now) - start) / DAY * PX); }
 
     var active = document.activeElement;
     var focusId = active && board.contains(active) && active.getAttribute ? active.getAttribute("data-id") : "";
     var kept = board.scrollLeft;
 
     var inner = h("div", "lanes-inner");
-    inner.style.setProperty("--w", (label + LEAD + width + TAIL) + "px");
-    inner.style.setProperty("--label", label + "px");
+    inner.style.setProperty("--w", (labelPx + LEAD + width + TAIL) + "px");
+    inner.style.setProperty("--label", labelPx + "px");
     var head = h("div", "lanes-head", null, { "aria-hidden": "true" });
     inner.appendChild(head);
     for (var m = 0; Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() - 11 + m, 1) <= now; m++) {
