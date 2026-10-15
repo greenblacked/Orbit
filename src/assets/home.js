@@ -55,7 +55,7 @@
 
   // The other supported lines of a family under its headline ("Long-term: 7.23.8", "24H2:
   // 26100.9550"), as plain text. A line named like its version shows the build instead. Past
-  // MAX_LINES the rest are one link, "+2 more lines", to that family on the timeline.
+  // MAX_LINES the rest are one link, "+2 more Windows lines", to that family on the timeline.
   var MAX_LINES = 3;
   function paintLines(card, lines) {
     var ul = card.querySelector('[data-f="lines"]');
@@ -70,8 +70,9 @@
     });
     if (more > 0) {
       var li = RO.h("li");
-      li.appendChild(RO.h("a", "rel-more", "+" + more + (more === 1 ? " more line" : " more lines"),
-        { href: "/timeline/?family=" + encodeURIComponent(card.getAttribute("data-family")) }));
+      var fam = card.getAttribute("data-family");
+      li.appendChild(RO.h("a", "rel-more", "+" + more + " more " + fam + (more === 1 ? " line" : " lines"),
+        { href: "/timeline/?family=" + encodeURIComponent(fam) }));
       ul.appendChild(li);
     }
   }

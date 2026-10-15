@@ -238,7 +238,7 @@ def test_the_windows_card_lists_the_next_feature_updates_with_their_builds(page,
     card = page.locator('#latest-grid [data-family="Windows"]')
     assert card.locator("[data-f=ver]").inner_text() == "Windows 26H2"
     rows = {r["line"]: r["build"] for r in releases("Windows")}
-    assert card.locator("[data-f=lines] li").all_inner_texts() == [
+    assert card.locator("[data-f=lines] li:not(:has(a))").all_inner_texts() == [
         f"{name}: {rows[name]}" for name in ("26H1", "25H2", "24H2")
     ]
 
@@ -257,7 +257,7 @@ def test_a_card_with_many_lines_lists_three_and_links_the_rest(page, base_url):
     assert card.locator("[data-f=lines] li").count() == 4
     more = card.locator("[data-f=lines] a")
     assert more.count() == 1
-    assert more.inner_text() == f"+{hidden} more lines"
+    assert more.inner_text() == f"+{hidden} more Windows lines"
     assert more.get_attribute("href") == "/timeline/?family=Windows"
     assert more.bounding_box()["height"] >= 44
 
@@ -272,7 +272,7 @@ def test_a_card_with_three_other_lines_or_fewer_has_no_more_link(page, base_url)
     page.goto(base_url + "/")
     cards_ready(page)
     lines = page.locator('#latest-grid [data-family="Windows"] [data-f=lines]')
-    assert lines.locator("li").count() == 3
+    assert lines.locator("li:not(:has(a))").count() == 3
     assert lines.locator("a").count() == 0
 
 
