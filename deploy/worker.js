@@ -36,7 +36,7 @@
 // and writes production's entries, negative markers included.
 
 import { atomFeed, feedQuery, jsonFeed } from './feeds.js';
-import { applyNotes, mergeReleases } from './releases.js';
+import { applyNotes, backfillLine, mergeReleases } from './releases.js';
 import { SOURCES, isSource, vendorsOf } from './sources/index.js';
 
 // The exact hostnames (URL hostnames are lower-case) that may fetch live. Keep in step with
@@ -511,7 +511,8 @@ function combine(results) {
     fetchedAt: oldest.fetchedAt,
     stale: parts.length < results.length || parts.some((part) => Boolean(part.stale)),
     snapshot: parts.some((part) => Boolean(part.snapshot)),
-    releases: mergeReleases([], parts.flatMap((part) => part.releases)),
+    // A served RouterOS or Windows row cached before `line` existed gets its line here, so /api/releases.json is consistent.
+    releases: mergeReleases([], parts.flatMap((part) => part.releases)).map(backfillLine),
   };
 }
 

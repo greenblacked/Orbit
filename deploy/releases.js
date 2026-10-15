@@ -46,6 +46,29 @@ export function withLine(release, line) {
   return isLine(line) ? { ...release, line } : release;
 }
 
+const ROUTEROS_CHANNEL_RE = /-(stable|long-term|testing)$/;
+const WINDOWS_UPDATE_RE = /^\d\dH\d$/;
+
+/**
+ * The release with `line` derived when it has none: a row cached before lines existed.
+ * The same rules as the adapters and as normalise() in src/assets/releases.js: a RouterOS
+ * row's channel is the end of its id, a Windows row's feature update is its version
+ * (26H2). A line already there is never changed, and no other family gets one.
+ */
+export function backfillLine(release) {
+  if (!release || typeof release !== 'object' || (release.line !== undefined && release.line !== null)) {
+    return release;
+  }
+  if (release.family === 'RouterOS' && typeof release.id === 'string') {
+    const channel = ROUTEROS_CHANNEL_RE.exec(release.id);
+    return channel ? withLine(release, channel[1]) : release;
+  }
+  if (release.family === 'Windows' && WINDOWS_UPDATE_RE.test(String(release.version))) {
+    return withLine(release, release.version);
+  }
+  return release;
+}
+
 /** The longest summary, in UTF-16 units, ellipsis included. */
 export const SUMMARY_MAX = 200;
 
