@@ -128,8 +128,8 @@ LAZY_BUDGET = 16_000
 # sigil-generic.js are 36,349 together (17,231 + 4,788 + 12,810 + 1,520); the limit leaves about
 # 9% room for each to grow a little.
 AFTER_PAINT_BUDGET = 39_800
-# Raw bytes. lanes.js is 11,399 (4,077 gzipped); the limit is about 25% above that.
-ON_DEMAND_BUDGET = 14_300
+# Raw bytes. lanes.js is 12,500 (4,477 gzipped); the limit is about 25% above that.
+ON_DEMAND_BUDGET = 15_600
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])
