@@ -13,6 +13,7 @@ import copy
 import json
 import os
 import re
+from datetime import datetime
 from urllib.parse import quote
 
 import pytest
@@ -172,11 +173,14 @@ def test_a_month_bar_names_the_month_counts_its_releases_and_scales_its_bar(open
     bars = page.locator(".month-bar")
     assert bars.count() >= 2
     first = bars.first
-    assert first.locator("h2.month-h").inner_text() == "October 2026"
-    in_october = [r for r in SNAPSHOT["releases"] if r["date"].startswith("2026-10")]
-    noun = "release" if len(in_october) == 1 else "releases"
-    assert first.locator(".month-n").inner_text() == f"{len(in_october)} {noun}"
-    assert page.locator(".month").first.locator(".tl-item").count() == len(in_october)
+    # The newest month comes from the data, so a refreshed snapshot does not break the test.
+    newest = max(r["date"] for r in SNAPSHOT["releases"])[:7]
+    name = datetime.strptime(newest, "%Y-%m").strftime("%B %Y")
+    in_newest = [r for r in SNAPSHOT["releases"] if r["date"].startswith(newest)]
+    assert first.locator("h2.month-h").inner_text() == name
+    noun = "release" if len(in_newest) == 1 else "releases"
+    assert first.locator(".month-n").inner_text() == f"{len(in_newest)} {noun}"
+    assert page.locator(".month").first.locator(".tl-item").count() == len(in_newest)
     shares = page.locator(".month-dens").evaluate_all(
         "els => els.map(e => parseFloat(e.style.getPropertyValue('--d')))"
     )
