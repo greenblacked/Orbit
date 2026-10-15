@@ -2,9 +2,10 @@
    to right and every release a mark placed to scale by its date. timeline.js loads this file the
    first time the view is shown and calls Lanes.draw(host, releases, opts) with the filtered list.
    Releases of one family on the same UTC day are ONE dot that holds them all (a count shows how
-   many; its readout lists each). Each dot is a button of at least 44px; a lane is ONE tab stop (roving tabindex) and the arrow
-   keys move inside it and between lanes. Activating a dot, or pointing at it, fills a readout under
-   the board; the readout of an activated dot links to the source page and to the row in the list.
+   many; its readout lists each). Each dot is a button of at least 44px; a lane is ONE tab stop
+   (roving tabindex) and the arrow keys move inside it and between lanes. Activating a dot, or
+   pointing at it, fills a readout under the board; the readout of an activated dot links to the
+   source page and to the row in the list.
    Nothing here writes markup: text goes in with textContent, positions as custom properties. */
 (function () {
   "use strict";

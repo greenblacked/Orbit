@@ -1684,8 +1684,8 @@ html[data-theme="reactor"] .seg .chip { border-radius: 0; }
 
 /* Timeline, Cadence view (lanes.js): one lane per platform over the last 12 months. The board
    scrolls sideways inside its own box and never widens the page; the family labels stay at the
-   left edge. Every dot is a 44px button around a small mark; neighbouring buttons may overlap. Releases of one family on the same UTC day are one dot with a
-   count (.lanes-n). */
+   left edge. Every dot is a 44px button around a small mark; neighbouring buttons may overlap.
+   Releases of one family on the same UTC day are one dot with a count (.lanes-n). */
 .lanes { min-width: 0; margin-top: 1rem; }
 .lanes-board {
   overflow-x: auto;
