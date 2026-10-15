@@ -7,6 +7,7 @@ from helpers import REPO, load_script
 
 check = load_script("check_site")
 build = load_script("build_site")
+site_refs = load_script("site_refs")
 
 
 def make_site(tmp_path, pages: dict[str, str], extra: dict[str, bytes] | None = None):
@@ -326,3 +327,9 @@ def test_a_dot_segment_that_leaves_the_workers_prefix_is_looked_up_in_the_build(
 def test_only_navigation_is_exempt_under_the_workers_prefix(tmp_path, page):
     root = make_site(tmp_path, {"index.html": page})
     assert check.check_links(root)
+
+
+@pytest.mark.parametrize("url", ["//evil/api/x", "https://e/api/x", "http://e/api/x"])
+def test_a_url_naming_another_origin_is_not_a_worker_path(url):
+    assert not site_refs.is_worker_path(url)
+    assert site_refs.is_worker_path("/api/feed.atom")
