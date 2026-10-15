@@ -857,7 +857,8 @@ def test_the_cadence_view_draws_in_the_bundle_without_fetching_lanes_js(tab, ser
     release_id = dot.get_attribute("data-id")
     dot.focus()
     tab.keyboard.press("Enter")
-    tab.locator("#lanes-read a", has_text="Show in list").focus()
+    # A same-day dot lists several releases, newest first, and its data-id is the newest.
+    tab.locator("#lanes-read a", has_text="Show in list").first.focus()
     tab.keyboard.press("Enter")
     tab.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
     assert tab.evaluate("document.activeElement.closest('.tl-item').dataset.id") == release_id

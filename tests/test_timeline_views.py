@@ -13,7 +13,7 @@ import copy
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 import pytest
@@ -82,12 +82,17 @@ def opened(browser, base_url):
         context.close()
 
 
-def crowded():
-    """Seventeen iOS releases: fourteen in October 2026 and three in September."""
+def crowded(spread=False):
+    """Seventeen iOS releases: fourteen in October 2026 and three in September.
+
+    By default four October days hold two releases each (the list tests want them close). With
+    spread=True every release has a day of its own, so Cadence draws seventeen dots.
+    """
     data = copy.deepcopy(SNAPSHOT)
     rows = []
     for k in range(17):
-        month, day = (10, 12 - k % 10) if k < 14 else (9, 20 - k)
+        day = 14 - k if spread else 12 - k % 10
+        month, day = (10, day) if k < 14 else (9, 20 - k)
         rows.append(
             {
                 **FIRST,
@@ -137,6 +142,30 @@ CONTRAST = """(selector) => {
 
 def lanes_open(page):
     page.wait_for_selector(".lanes-lane .lanes-dot")
+
+
+def utc(release):
+    return datetime.fromisoformat(release["date"].replace("Z", "+00:00"))
+
+
+def window_days(page, family):
+    """{UTC day: releases} of one family in the last 12 months, the days lanes.js draws."""
+    now = datetime.fromtimestamp(page.evaluate("RO.clock()") / 1000, tz=timezone.utc)
+    month = now.month - 11
+    start = now.replace(
+        year=now.year + (month - 1) // 12,
+        month=(month - 1) % 12 + 1,
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+    days: dict = {}
+    for r in SNAPSHOT["releases"]:
+        if r["family"] == family and start <= utc(r) <= now:
+            days.setdefault(utc(r).date(), []).append(r)
+    return days
 
 
 # --- the list: a git log -----------------------------------------------------------------
@@ -323,7 +352,11 @@ def test_the_filters_apply_in_cadence_and_the_count_line_follows(opened):
     assert page.url.endswith("?family=iOS&view=cadence")
     count = page.inner_text("#count")
     assert re.match(r"\d+ iOS releases? in the last 12 months", count), count
-    assert int(count.split()[0]) == page.locator(".lanes-dot").count()
+    # The count line counts releases; a same-day dot holds several.
+    held = page.locator(".lanes-dot").evaluate_all(
+        "els => els.reduce((n, e) => n + e.dataset.ids.split(' ').length, 0)"
+    )
+    assert int(count.split()[0]) == held
     page.click("#chips-stage [data-v=rc]")
     page.wait_for_function("() => document.querySelector('#count').textContent.startsWith('No')")
     page.click("#chips-stage [data-v=all]")
@@ -362,9 +395,10 @@ def test_each_dot_is_a_labelled_button_of_44px_in_every_theme(opened, theme):
     assert dots.count() > 0
     for box in dots.evaluate_all("els => els.map(e => e.getBoundingClientRect().toJSON())"):
         assert box["width"] >= TARGET and box["height"] >= TARGET, box
-    label = dots.first.get_attribute("aria-label")
-    pattern = r"[A-Za-z]+ [^,]+, [^,]+(, build [^,]+)?, [A-Z][a-z]{2} \d+, \d{4}"
-    assert re.fullmatch(pattern, label), label
+    single = r"[A-Za-z]+ [^,]+, [^,]+(, build [^,]+)?, [A-Z][a-z]{2} \d+, \d{4}"
+    group = r"[A-Za-z]+, \d+ releases on [A-Z][a-z]{2} \d+, \d{4}: .+"
+    for label in dots.evaluate_all("els => els.map(e => e.getAttribute('aria-label'))"):
+        assert re.fullmatch(single, label) or re.fullmatch(group, label), label
     assert dots.first.evaluate("e => e.tagName") == "BUTTON"
     # What is read on the board must be readable in this theme.
     for selector in (".lanes-label", ".lanes-tick", ".lanes-none"):
@@ -375,8 +409,8 @@ def test_each_dot_is_a_labelled_button_of_44px_in_every_theme(opened, theme):
 
 
 def test_no_dot_is_clipped_by_the_board_and_none_starts_under_a_label(opened):
-    # Fourteen iOS releases in two weeks fill all three rows of the one lane.
-    page, _ = opened("/timeline/?view=cadence", body=crowded())
+    # Fourteen iOS days in two weeks fill all three rows of the one lane.
+    page, _ = opened("/timeline/?view=cadence", body=crowded(spread=True))
     lanes_open(page)
     edges = page.evaluate(
         """() => {
@@ -448,7 +482,8 @@ def test_activating_a_dot_fills_the_readout_with_its_links_and_show_in_list_reve
     read = page.locator("#lanes-read")
     assert read.get_attribute("aria-live") == "polite"
     assert "Select a release" in read.inner_text()
-    dot = page.locator(".lanes-lane").first.locator(".lanes-dot[tabindex='0']")
+    # A dot of one release (a same-day dot lists several and has its own test below).
+    dot = page.locator(".lanes-lane").first.locator(".lanes-dot:not(:has(.lanes-n))").last
     release_id = dot.get_attribute("data-id")
     release = next(r for r in SNAPSHOT["releases"] if r["id"] == release_id)
     dot.focus()
@@ -492,10 +527,13 @@ def test_pointing_at_a_dot_previews_silently_and_never_takes_the_focused_link(op
     dots.nth(0).focus()
     page.keyboard.press("Enter")
     assert read.get_attribute("aria-live") == "polite"
-    read.locator("a", has_text="Show in list").focus()
+    links = read.locator("a", has_text="Show in list")
+    held = len(dots.nth(0).get_attribute("data-ids").split(" "))
+    assert links.count() == held
+    links.first.focus()
     dots.nth(1).hover()
     assert page.evaluate("document.activeElement.textContent") == "Show in list"
-    assert read.locator("a", has_text="Show in list").count() == 1
+    assert read.locator("a", has_text="Show in list").count() == held
 
 
 def test_a_click_chooses_a_dot_and_the_choice_survives_a_poll_that_changes_nothing(opened):
@@ -511,7 +549,7 @@ def test_a_click_chooses_a_dot_and_the_choice_survives_a_poll_that_changes_nothi
 
 
 def test_a_poll_that_adds_a_release_of_another_platform_leaves_the_board_untouched(opened):
-    first = crowded()
+    first = crowded(spread=True)
     page, _ = opened("/timeline/?view=cadence&family=iOS", body=first)
     lanes_open(page)
     dot = page.locator(".lanes-dot[tabindex='0']").first
@@ -541,7 +579,7 @@ def test_a_poll_that_adds_a_release_of_another_platform_leaves_the_board_untouch
 
 
 def test_a_poll_with_a_new_release_redraws_and_keeps_the_focused_dot(opened):
-    first = crowded()
+    first = crowded(spread=True)
     page, _ = opened("/timeline/?view=cadence", body=first)
     lanes_open(page)
     focus_id = page.locator(".lanes-dot[tabindex='0']").get_attribute("data-id")
@@ -550,7 +588,7 @@ def test_a_poll_with_a_new_release_redraws_and_keeps_the_focused_dot(opened):
         **first["releases"][0],
         "id": "fresh",
         "version": "26.99",
-        "date": "2026-10-12T00:00:00Z",
+        "date": "2026-10-15T00:00:00Z",
     }
     second = {**first, "releases": [newest, *first["releases"]]}
     page.route(
@@ -607,4 +645,188 @@ def test_the_cadence_view_passes_the_page_audit_and_sideways_check_at_320(opened
     assert page.evaluate("() => document.documentElement.scrollWidth") <= 320
     problems = page.evaluate((REPO / "tests" / "audit.js").read_text(encoding="utf-8"))
     assert problems == []
+    assert errors == []
+
+
+# --- one dot for a family's releases of the same UTC day ----------------------------------
+
+
+def same_day_pair():
+    """A family with two or more releases on one UTC day in the snapshot, preferring iOS."""
+    days: dict = {}
+    for r in SNAPSHOT["releases"]:
+        days.setdefault((r["family"], utc(r).date()), []).append(r)
+    pairs = sorted(
+        ((f, d, rs) for (f, d), rs in days.items() if len(rs) > 1 and f == "iOS"),
+        key=lambda p: p[1],
+    )
+    assert pairs, "the snapshot needs an iOS day with two releases for these tests"
+    return pairs[-1]
+
+
+def test_releases_of_one_family_on_the_same_day_are_one_dot_with_a_count(opened):
+    family, day, releases = same_day_pair()
+    page, errors = opened("/timeline/?view=cadence&family=" + family)
+    lanes_open(page)
+    versions = [r["version"] for r in releases]
+    dots = page.locator(".lanes-dot").filter(has=page.locator(".lanes-n"))
+    labels = dots.evaluate_all("els => els.map(e => e.getAttribute('aria-label'))")
+    mine = [text for text in labels if all(f" {v}" in text for v in versions)]
+    assert len(mine) == 1, labels
+    head = rf"{family}, {len(releases)} releases on [A-Z][a-z]{{2}} \d+, {day.year}: "
+    assert re.match(head, mine[0])
+    dot = page.locator(f'.lanes-dot[aria-label="{mine[0]}"]')
+    assert dot.locator(".lanes-n").inner_text() == str(len(releases))
+    assert dot.get_attribute("data-ids").split(" ").count(dot.get_attribute("data-id")) == 1
+    box = dot.bounding_box()
+    assert box["width"] >= TARGET and box["height"] >= TARGET
+    # No other dot of the lane holds one of these releases.
+    for r in releases:
+        assert page.locator(f'.lanes-dot[data-ids~="{r["id"]}"]').count() == 1
+
+
+@pytest.mark.parametrize("theme", ["day", "night", "reactor"])
+def test_the_count_of_a_same_day_dot_is_legible_in_every_theme(opened, theme):
+    family, _, _ = same_day_pair()
+    page, _ = opened("/timeline/?view=cadence&family=" + family, theme=theme)
+    lanes_open(page)
+    assert page.evaluate(CONTRAST, ".lanes-n") >= 4.5
+
+
+def test_activating_a_same_day_dot_lists_each_release_and_show_in_list_reveals_its_row(opened):
+    family, _, releases = same_day_pair()
+    page, errors = opened("/timeline/?view=cadence&family=" + family)
+    lanes_open(page)
+    dot = page.locator(f'.lanes-dot[data-ids~="{releases[0]["id"]}"]')
+    dot.focus()
+    page.keyboard.press("Enter")
+    read = page.locator("#lanes-read")
+    text = read.inner_text()
+    for r in releases:
+        assert r["version"] in text
+    assert read.locator("a", has_text="Source page").count() == len(releases)
+    shows = read.locator("a", has_text="Show in list")
+    assert shows.count() == len(releases)
+    for height in shows.evaluate_all("els => els.map(e => e.getBoundingClientRect().height)"):
+        assert height >= TARGET
+    shown = shows.evaluate_all("els => els.map(e => e.dataset.show)")
+    assert sorted(shown) == sorted(r["id"] for r in releases)
+    target = shown[-1]
+    shows.last.focus()
+    page.keyboard.press("Enter")
+    page.wait_for_function("() => document.activeElement.closest('.tl-item') !== null")
+    assert page.evaluate("document.activeElement.closest('.tl-item').dataset.id") == target
+    assert errors == []
+
+
+def test_a_preview_of_a_same_day_dot_has_no_links(opened):
+    family, _, releases = same_day_pair()
+    page, _ = opened("/timeline/?view=cadence&family=" + family)
+    lanes_open(page)
+    page.locator(f'.lanes-dot[data-ids~="{releases[0]["id"]}"]').hover()
+    read = page.locator("#lanes-read")
+    assert read.get_attribute("aria-live") == "off"
+    assert read.locator("a").count() == 0
+    assert read.locator(".lanes-r-ver").count() == len(releases)
+
+
+def test_there_is_a_dot_for_each_family_and_day_while_the_count_line_counts_releases(opened):
+    family, _, _ = same_day_pair()
+    page, _ = opened("/timeline/?view=cadence&family=" + family)
+    lanes_open(page)
+    days = window_days(page, family)
+    assert page.locator(".lanes-dot").count() == len(days)
+    assert len(days) < sum(len(rs) for rs in days.values())
+    assert page.inner_text("#count").split()[0] == str(sum(len(rs) for rs in days.values()))
+
+
+def test_a_poll_that_adds_a_release_to_a_same_day_dot_keeps_its_focus_and_choice(opened):
+    first = crowded(spread=True)
+    page, _ = opened("/timeline/?view=cadence", body=first)
+    lanes_open(page)
+    # The release on 12 October is alone on its day; a poll brings a second one.
+    old = next(r for r in first["releases"] if r["date"].startswith("2026-10-12"))
+    dot = page.locator(f'.lanes-dot[data-id="{old["id"]}"]')
+    dot.focus()
+    page.keyboard.press("Enter")
+    newest = {**old, "id": "fresh", "version": "26.99", "date": "2026-10-12T08:00:00Z"}
+    second = {**first, "releases": [newest, *first["releases"]]}
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body=json.dumps(second)
+        ),
+    )
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector(".lanes-dot .lanes-n")
+    assert page.evaluate("document.activeElement.dataset.id") == "fresh"
+    assert page.locator(".lanes-dot.is-sel").get_attribute("data-id") == "fresh"
+    assert page.locator("#lanes-read .lanes-r-ver").count() == 2
+
+
+def test_a_release_id_with_a_space_keeps_its_dot_focused_across_a_poll_redraw(opened):
+    first = crowded(spread=True)
+    old = next(r for r in first["releases"] if r["date"].startswith("2026-10-12"))
+    spaced = {**old, "id": "feed guid 1"}
+    first = {**first, "releases": [spaced if r is old else r for r in first["releases"]]}
+    page, _ = opened("/timeline/?view=cadence", body=first)
+    lanes_open(page)
+    page.locator('.lanes-dot[data-id="feed guid 1"]').focus()
+    newest = {**old, "id": "fresh", "version": "26.99", "date": "2026-10-12T08:00:00Z"}
+    second = {**first, "releases": [newest, *first["releases"]]}
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body=json.dumps(second)
+        ),
+    )
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector(".lanes-dot .lanes-n")
+    assert page.evaluate("document.activeElement.dataset.id") == "fresh"
+
+
+def test_a_poll_during_readout_focus_is_shown_once_the_focus_leaves_the_readout(opened):
+    first = crowded(spread=True)
+    page, _ = opened("/timeline/?view=cadence", body=first)
+    lanes_open(page)
+    old = next(r for r in first["releases"] if r["date"].startswith("2026-10-12"))
+    dot = page.locator(f'.lanes-dot[data-id="{old["id"]}"]')
+    dot.focus()
+    page.keyboard.press("Enter")
+    read = page.locator("#lanes-read")
+    read.locator("a", has_text="Show in list").first.focus()
+    newest = {**old, "id": "fresh", "version": "26.99", "date": "2026-10-12T08:00:00Z"}
+    second = {**first, "releases": [newest, *first["releases"]]}
+    page.route(
+        "**/api/releases.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body=json.dumps(second)
+        ),
+    )
+    page.evaluate("RO.refresh()")
+    page.wait_for_selector(".lanes-dot .lanes-n")
+    assert page.evaluate("document.activeElement.textContent") == "Show in list"
+    assert read.locator(".lanes-r-ver").count() == 1
+    page.locator(".lanes-dot.is-sel").focus()
+    page.wait_for_function(
+        "() => document.querySelectorAll('#lanes-read .lanes-r-ver').length === 2"
+    )
+    assert read.inner_text().count("26.99") >= 1
+
+
+def test_a_same_day_dot_shows_the_strongest_stage_of_its_releases(opened):
+    page, errors = opened("/timeline/?view=cadence&family=SteamOS")
+    lanes_open(page)
+    mixed = []
+    for rs in window_days(page, "SteamOS").values():
+        rs = sorted(rs, key=lambda r: r["date"])
+        stages = {r["stage"] for r in rs}
+        # A day whose newest release is not a release, though the day holds one.
+        if len(rs) > 1 and "release" in stages and rs[-1]["stage"] != "release":
+            mixed.append(rs)
+    assert mixed, "the snapshot needs a SteamOS day in the window with a beta and a release"
+    for rs in mixed:
+        dot = page.locator(f'.lanes-dot[data-ids~="{rs[0]["id"]}"]')
+        assert dot.count() == 1
+        assert dot.locator(".lanes-mark").get_attribute("data-kind") == "release"
     assert errors == []
