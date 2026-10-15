@@ -588,7 +588,7 @@ def test_a_poll_with_a_new_release_redraws_and_keeps_the_focused_dot(opened):
         **first["releases"][0],
         "id": "fresh",
         "version": "26.99",
-        "date": "2026-10-12T00:00:00Z",
+        "date": "2026-10-15T00:00:00Z",
     }
     second = {**first, "releases": [newest, *first["releases"]]}
     page.route(
@@ -762,3 +762,21 @@ def test_a_poll_that_adds_a_release_to_a_same_day_dot_keeps_its_focus_and_choice
     assert page.evaluate("document.activeElement.dataset.id") == "fresh"
     assert page.locator(".lanes-dot.is-sel").get_attribute("data-id") == "fresh"
     assert page.locator("#lanes-read .lanes-r-ver").count() == 2
+
+
+def test_a_same_day_dot_shows_the_strongest_stage_of_its_releases(opened):
+    page, errors = opened("/timeline/?view=cadence&family=SteamOS")
+    lanes_open(page)
+    mixed = []
+    for rs in window_days(page, "SteamOS").values():
+        rs = sorted(rs, key=lambda r: r["date"])
+        stages = {r["stage"] for r in rs}
+        # A day whose newest release is not a release, though the day holds one.
+        if len(rs) > 1 and "release" in stages and rs[-1]["stage"] != "release":
+            mixed.append(rs)
+    assert mixed, "the snapshot needs a SteamOS day in the window with a beta and a release"
+    for rs in mixed:
+        dot = page.locator(f'.lanes-dot[data-ids~="{rs[0]["id"]}"]')
+        assert dot.count() == 1
+        assert dot.locator(".lanes-mark").get_attribute("data-kind") == "release"
+    assert errors == []
