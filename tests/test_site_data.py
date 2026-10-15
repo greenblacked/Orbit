@@ -128,8 +128,8 @@ LAZY_BUDGET = 16_000
 # sigil-generic.js are 36,349 together (17,231 + 4,788 + 12,810 + 1,520); the limit leaves about
 # 9% room for each to grow a little.
 AFTER_PAINT_BUDGET = 39_800
-# Raw bytes. lanes.js is 15,023 (5,292 gzipped); the limit leaves under 4% room, so the next
-# addition to it needs a deliberate, measured raise here.
+# Raw bytes. lanes.js is 15,277 (5,357 gzipped); the limit leaves 323 bytes (about 2%) of room,
+# so the next addition to it needs a deliberate, measured raise here.
 ON_DEMAND_BUDGET = 15_600
 
 
