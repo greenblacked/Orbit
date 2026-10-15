@@ -52,7 +52,7 @@
     host.appendChild(board);
     host.appendChild(read);
     host.appendChild(h("p", "small lanes-note", NOTE));
-    S = { host: host, board: board, read: read, lanes: [], byId: {}, sel: "", cur: {} };
+    S = { host: host, board: board, read: read, lanes: [], byId: {}, sel: "", cur: {}, peek: "" };
     board.addEventListener("click", function (e) {
       var d = dotOf(e.target);
       if (d) select(d);
@@ -62,14 +62,20 @@
       var d = dotOf(e.target);
       if (d) stop(d);
     });
-    // Pointing previews the release; a touch has no hover, and its tap activates.
+    // Pointing previews the release; a touch has no hover, and its tap activates. A preview is
+    // silent (the readout is only announced for a chosen dot), is drawn once per dot, and never
+    // replaces the readout while focus is inside it: that would delete the link in focus.
     board.addEventListener("pointerover", function (e) {
       var d = e.pointerType === "touch" ? null : dotOf(e.target);
-      if (d) fill(d.r, false);
+      if (!d || holding() || S.peek === d.r.id) return;
+      S.peek = d.r.id;
+      fill(d.r, false, false);
     });
     board.addEventListener("pointerout", function (e) {
       var d = e.pointerType === "touch" ? null : dotOf(e.target);
-      if (d && !(e.relatedTarget && d.btn.contains(e.relatedTarget))) settle();
+      if (!d || holding() || (e.relatedTarget && d.btn.contains(e.relatedTarget))) return;
+      S.peek = "";
+      settle();
     });
     settle();
   }
@@ -79,10 +85,16 @@
     return btn && S ? S.byId[btn.getAttribute("data-id")] || null : null;
   }
 
+  // Focus is on a link inside the readout: it must not be rebuilt under the visitor.
+  function holding() {
+    return S.read.contains(document.activeElement);
+  }
+
   // The readout: family, version, stage, build and date, the summary, and (for a chosen dot) the
   // two links. A preview under the pointer has none, as it goes when the pointer leaves.
-  function fill(r, links) {
+  function fill(r, links, announce) {
     var read = S.read;
+    read.setAttribute("aria-live", announce ? "polite" : "off");
     read.textContent = "";
     var box = h("div", "lanes-card fam-" + r.family.toLowerCase());
     var top = h("p", "lanes-r-t");
@@ -109,7 +121,7 @@
   // The readout shows the chosen release, or says how to choose one.
   function settle() {
     var d = S.sel ? S.byId[S.sel] : null;
-    if (d) fill(d.r, true);
+    if (d) fill(d.r, true, false);
     else {
       S.read.textContent = "";
       S.read.appendChild(h("p", "lanes-hint", HINT));
@@ -120,7 +132,8 @@
     if (was) was.btn.classList.remove("is-sel");
     S.sel = d.r.id;
     d.btn.classList.add("is-sel");
-    fill(d.r, true);
+    S.peek = "";
+    fill(d.r, true, true);
   }
 
   // The lane's one tab stop is the dot last focused or chosen in it (else its newest).

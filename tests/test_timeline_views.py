@@ -442,6 +442,27 @@ def test_activating_a_dot_fills_the_readout_with_its_links_and_show_in_list_reve
     assert errors == []
 
 
+def test_pointing_at_a_dot_previews_silently_and_never_takes_the_focused_link(opened):
+    page, _ = opened("/timeline/?view=cadence")
+    lanes_open(page)
+    read = page.locator("#lanes-read")
+    dots = page.locator(".lanes-dot")
+    dots.nth(0).hover()
+    assert read.get_attribute("aria-live") == "off"
+    card = read.locator(".lanes-card").element_handle()
+    dots.nth(0).hover(position={"x": 22, "y": 22})
+    assert read.locator(".lanes-card").element_handle().evaluate("(a, b) => a === b", card), (
+        "the same dot is not drawn again"
+    )
+    dots.nth(0).focus()
+    page.keyboard.press("Enter")
+    assert read.get_attribute("aria-live") == "polite"
+    read.locator("a", has_text="Show in list").focus()
+    dots.nth(1).hover()
+    assert page.evaluate("document.activeElement.textContent") == "Show in list"
+    assert read.locator("a", has_text="Show in list").count() == 1
+
+
 def test_a_click_chooses_a_dot_and_the_choice_survives_a_poll_that_changes_nothing(opened):
     page, _ = opened("/timeline/?view=cadence")
     lanes_open(page)
