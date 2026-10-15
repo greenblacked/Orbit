@@ -1863,5 +1863,16 @@ def test_the_feed_link_stays_a_plain_link_and_the_head_alternate_is_not_carried(
     # The head is rebuilt from the front page's icons alone, so a <link rel=alternate> never
     # reaches the file; the timeline's Subscribe link is a body link and is left as written.
     assert not re.search(r"<link[^>]*rel=\"alternate\"", text)
-    assert text.count('class="chip-link" href="/api/feed.atom"') == 1
+    assert 'class="chip-link" href="/api/feed.atom"' not in text
     assert bundle.external_requests(text) == []
+
+
+def test_the_bundled_subscribe_link_is_absolute_and_the_live_build_keeps_it_relative(
+    text, built
+):
+    # A root-relative /api/ link would resolve against whatever host (or file://) opens the
+    # bundle, so the bundle points at the production origin; the live page is unchanged.
+    href = "https://orbit.szolotov.com/api/feed.atom"
+    assert text.count(f'class="chip-link" href="{href}"') == 1
+    live = (built / "timeline" / "index.html").read_text(encoding="utf-8")
+    assert 'class="chip-link" href="/api/feed.atom"' in live
