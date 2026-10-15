@@ -7,6 +7,7 @@ from helpers import REPO, load_script
 
 check = load_script("check_site")
 build = load_script("build_site")
+site_refs = load_script("site_refs")
 
 
 def make_site(tmp_path, pages: dict[str, str], extra: dict[str, bytes] | None = None):
@@ -290,3 +291,45 @@ def test_a_get_or_dialog_form_is_accepted(tmp_path, form):
     )
     assert check.check_policy(root) == []
     assert check.check_links(root) == []
+
+
+def test_a_feed_link_under_the_workers_prefix_is_not_looked_up_in_the_build(tmp_path):
+    page = (
+        '<link rel="alternate" type="application/atom+xml" href="/api/feed.atom">'
+        '<a href="/api/feed.json?family=iOS">json</a><a href="/api/feed.atom#x">atom</a>'
+    )
+    root = make_site(tmp_path, {"index.html": page})
+    assert check.check_links(root) == []
+    assert check.main([str(root)]) == 0
+
+
+def test_a_url_that_stays_under_the_workers_prefix_after_normalising_is_exempt(tmp_path):
+    page = '<a href="/api/feed.atom">a</a><a href="/api/x/../feed.atom">b</a>'
+    root = make_site(tmp_path, {"index.html": page})
+    assert check.check_links(root) == []
+
+
+@pytest.mark.parametrize("href", ["/api/../gone/", "/api/%2e%2e/gone/", "/api/%2E%2E/gone/"])
+def test_a_dot_segment_that_leaves_the_workers_prefix_is_looked_up_in_the_build(tmp_path, href):
+    root = make_site(tmp_path, {"index.html": f'<a href="{href}">x</a>'})
+    assert check.check_links(root)
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        '<link rel="stylesheet" href="/api/x.css">',
+        '<img src="/api/x.png" alt="">',
+        '<a href="/apix/feed.atom">x</a>',
+        '<a href="api/feed.atom">x</a>',
+    ],
+)
+def test_only_navigation_is_exempt_under_the_workers_prefix(tmp_path, page):
+    root = make_site(tmp_path, {"index.html": page})
+    assert check.check_links(root)
+
+
+@pytest.mark.parametrize("url", ["//evil/api/x", "https://e/api/x", "http://e/api/x"])
+def test_a_url_naming_another_origin_is_not_a_worker_path(url):
+    assert not site_refs.is_worker_path(url)
+    assert site_refs.is_worker_path("/api/feed.atom")
