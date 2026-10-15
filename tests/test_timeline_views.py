@@ -480,7 +480,7 @@ def test_pointing_at_a_dot_previews_silently_and_never_takes_the_focused_link(op
     page, _ = opened("/timeline/?view=cadence")
     lanes_open(page)
     read = page.locator("#lanes-read")
-    dots = page.locator(".lanes-dot")
+    dots = page.locator(".lanes-dot[tabindex='0']")
     dots.nth(0).hover()
     assert read.get_attribute("aria-live") == "off"
     card = read.locator(".lanes-card").element_handle()
@@ -513,7 +513,7 @@ def test_a_poll_that_adds_a_release_of_another_platform_leaves_the_board_untouch
     first = crowded()
     page, _ = opened("/timeline/?view=cadence&family=iOS", body=first)
     lanes_open(page)
-    dot = page.locator(".lanes-dot").first
+    dot = page.locator(".lanes-dot[tabindex='0']").first
     release_id = dot.get_attribute("data-id")
     dot.click()
     page.evaluate("() => { document.querySelector('.lanes-inner').dataset.mark = 'same' }")
