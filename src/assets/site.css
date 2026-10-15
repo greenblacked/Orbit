@@ -1684,7 +1684,8 @@ html[data-theme="reactor"] .seg .chip { border-radius: 0; }
 
 /* Timeline, Cadence view (lanes.js): one lane per platform over the last 12 months. The board
    scrolls sideways inside its own box and never widens the page; the family labels stay at the
-   left edge. Every dot is a 44px button around a small mark; neighbouring buttons may overlap. */
+   left edge. Every dot is a 44px button around a small mark; neighbouring buttons may overlap. Releases of one family on the same UTC day are one dot with a
+   count (.lanes-n). */
 .lanes { min-width: 0; margin-top: 1rem; }
 .lanes-board {
   overflow-x: auto;
@@ -1761,6 +1762,23 @@ html[data-theme="reactor"] .seg .chip { border-radius: 0; }
 .lanes-mark { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--fam-a); }
 .lanes-mark[data-kind="beta"] { border: 2px solid var(--fam-a); background: var(--bg); }
 .lanes-mark[data-kind="rc"] { width: 0.6875rem; height: 0.6875rem; border-radius: 2px; transform: rotate(45deg); }
+.lanes-n {
+  position: absolute;
+  top: calc(50% - 1rem);
+  left: calc(50% + 0.125rem);
+  min-width: 0.9375rem;
+  height: 0.9375rem;
+  padding: 0 0.1875rem;
+  border: 1px solid var(--bg);
+  border-radius: 0.5rem;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 0.8125rem;
+  text-align: center;
+  pointer-events: none;
+}
 .lanes-dot:hover .lanes-mark { box-shadow: 0 0 0 3px color-mix(in srgb, var(--fam-a) 30%, transparent); }
 .lanes-dot.is-sel .lanes-mark { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); }
 .lanes-read { min-height: 8.5rem; margin-top: 1rem; }
@@ -1769,6 +1787,7 @@ html[data-theme="reactor"] .seg .chip { border-radius: 0; }
 .lanes-r-fam { color: var(--fam-text-card); font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 500; }
 .lanes-r-ver { font-family: var(--font-mono); font-weight: 500; overflow-wrap: anywhere; }
 .lanes-r-d { margin-top: 0.25rem; color: var(--muted); font-size: 0.875rem; }
+.lanes-rel + .lanes-rel { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
 .lanes-r-s { margin-top: 0.25rem; font-size: 0.875rem; overflow-wrap: anywhere; }
 .lanes-r-a { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin-top: 0.25rem; }
 .lanes-link { display: inline-flex; min-height: 2.75rem; align-items: center; font-size: 0.875rem; text-decoration: underline; text-underline-offset: 4px; }
