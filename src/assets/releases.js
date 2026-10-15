@@ -7,10 +7,14 @@
   var API = "/api/releases.json";
   var SNAPSHOT = "/data/releases.json";
   var CONFIG = "/data/families.json";
+  var NOTES = "/data/notes.json";
+  var SUMMARY_MAX = 200;
   var POLL = 5 * 60 * 1000;
   var STAGES = ["release", "beta", "rc"];
   // Only a released build may carry a verdict (docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
+  // A release's optional line (RouterOS channel, Windows feature update): a short token.
+  var LINE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,15}$/;
   // Used when the families config cannot be read.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
 
@@ -64,6 +68,19 @@
     return !!f && f.vendor === r.vendor;
   }
 
+  // A summary is one line of plain text (deploy/releases.js cleanSummary): written with
+  // textContent only, never as markup. Anything that is not a string is dropped.
+  function summary(v) {
+    if (typeof v !== "string") return "";
+    var t = v.replace(/[\t\n\r\u2028\u2029]+/g, " ").replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, "").replace(/\s+/g, " ").trim();
+    if (t.length <= SUMMARY_MAX) return t;
+    var room = t.slice(0, SUMMARY_MAX - 1);
+    var last = room.charCodeAt(room.length - 1);
+    if (last >= 0xd800 && last <= 0xdbff) room = room.slice(0, -1);
+    var space = room.lastIndexOf(" ");
+    return (space >= SUMMARY_MAX / 2 ? room.slice(0, space) : room).replace(/[\s.,;:!?-]+$/, "") + "\u2026";
+  }
+
   // Keep only entries safe to show; null if none.
   function normalise(json) {
     if (!json || !Array.isArray(json.releases)) return null;
@@ -76,15 +93,28 @@
       if (typeof r.version !== "string" || typeof r.url !== "string") return;
       if (!allowed(r.vendor, r.url)) return;
       seen[r.id] = true;
-      list.push({
+      var entry = {
         id: r.id, vendor: r.vendor, family: r.family, version: r.version,
         major: Number(r.major) || parts(r.version)[0],
         stage: r.stage, beta: typeof r.beta === "number" ? r.beta : null,
         build: typeof r.build === "string" ? r.build : "",
         status: r.stage === "release" && VERDICTS.indexOf(r.status) >= 0 ? r.status : "untested",
         title: typeof r.title === "string" ? r.title : r.family + " " + r.version,
+        summary: summary(r.summary),
         date: new Date(t).toISOString(), t: t, url: r.url
-      });
+      };
+      // A line that is present but not a plain token is dropped, never replaced.
+      if (r.line !== undefined && r.line !== null) {
+        if (typeof r.line === "string" && LINE.test(r.line)) entry.line = r.line;
+      } else if (r.family === "RouterOS") {
+        // A row cached before lines existed: its channel is the end of its id.
+        var ch = /-(stable|long-term|testing)$/.exec(r.id);
+        if (ch) entry.line = ch[1];
+      } else if (r.family === "Windows" && /^\d\dH\d$/.test(r.version)) {
+        // Likewise a Windows feature update is its own line, named by its version.
+        entry.line = r.version;
+      }
+      list.push(entry);
     });
     if (!list.length) return null;
     list.sort(newer);
@@ -127,6 +157,27 @@
     }
     return ready;
   }
+  // The owner's descriptions (/data/notes.json), laid over the releases as the Worker does, so
+  // the bundled snapshot shows them too. Optional: a failed read just leaves the summaries as
+  // they came. A note wins over a summary from the source.
+  var notes = null;
+  var notesReady = null;
+  function loadNotes() {
+    if (!notesReady) {
+      notesReady = loadJson(NOTES).then(function (json) {
+        if (json && json.notes && typeof json.notes === "object" && !Array.isArray(json.notes)) notes = json.notes;
+      }, function () { /* no notes file: nothing to add */ });
+    }
+    return notesReady;
+  }
+  function joinNotes(data) {
+    return loadNotes().then(function () {
+      if (notes) data.releases.forEach(function (r) {
+        if (Object.prototype.hasOwnProperty.call(notes, r.id) && summary(notes[r.id])) r.summary = summary(notes[r.id]);
+      });
+      return data;
+    });
+  }
   function refresh() {
     if (state.busy) return Promise.resolve();
     state.busy = true;
@@ -134,10 +185,11 @@
     // Asked for at once with the config; only reading it waits.
     var early = loadJson(API);
     early.catch(function () {});
+    loadNotes();
     return loadConfig().then(function () { return getJson(API, early); }).catch(function (err) {
       if (state.data) throw err;
       return getJson(SNAPSHOT);
-    }).then(function (data) {
+    }).then(joinNotes).then(function (data) {
       var fresh = [];
       if (state.known) {
         fresh = data.releases.filter(function (r) { return !state.known[r.id]; });
@@ -240,8 +292,26 @@
     var pre = any && any.stage !== "release" && main.stage === "release" &&
       (NUM.test(any.version) && NUM.test(main.version) ?
         compareVersions(any.version, main.version) > 0 : any.t > main.t) ? any : null;
-    return { main: main, pre: pre };
+    return { main: main, pre: pre, lines: lines(list, family, main) };
   }
+  // The newest public release of each line the family has (RouterOS channels, Windows feature
+  // updates), as [{ line, release }], the headlined release's line first and then by version.
+  // A family whose headline has no line, or whose headline is not a public release, has none.
+  function lines(list, family, main) {
+    if (!main || main.stage !== "release" || !main.line) return [];
+    var best = Object.create(null), order = [];
+    list.forEach(function (r) {
+      if (r.family !== family || r.stage !== "release" || !r.line) return;
+      if (!best[r.line]) order.push(r.line);
+      if (!best[r.line] || better(r, best[r.line])) best[r.line] = r;
+    });
+    order.sort(function (a, b) {
+      return a === main.line ? -1 : b === main.line ? 1 : better(best[a], best[b]) ? -1 : 1;
+    });
+    return order.map(function (name) { return { line: name, release: best[name] }; });
+  }
+  // A line named for people: "long-term" is "Long-term", "24H2" stays.
+  function lineLabel(name) { return name.charAt(0).toUpperCase() + name.slice(1); }
   function when(t) {
     var el = h("time", "when", ago(t), { datetime: new Date(t).toISOString() });
     el.setAttribute("data-rel", String(t));
@@ -381,7 +451,7 @@
     familyIds: familyIds, source: source, allowed: allowed, h: h, on: on, refresh: refresh, day: day,
     month: month, ago: ago, when: when, tick: tick, stageLabel: stageLabel, short: short,
     channel: channel, sigilKey: sigilKey, clock: clock,
-    latest: latest, lead: lead, newer: newer, compareVersions: compareVersions,
+    latest: latest, lead: lead, lineLabel: lineLabel, newer: newer, compareVersions: compareVersions,
     reduced: function () {
       return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }

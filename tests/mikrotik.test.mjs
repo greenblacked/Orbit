@@ -17,10 +17,19 @@ import mikrotik, {
   makeRelease,
   parse,
   parseNewest,
+  summaryOfChannel,
   unixToIso,
 } from '../deploy/sources/mikrotik.js';
 import { createWorker } from '../deploy/worker.js';
-import { fakeCtx, fakeEnv, ORIGIN, stubUpstream, useHarness } from './support/harness.mjs';
+import {
+  ago,
+  fakeCtx,
+  fakeEnv,
+  ORIGIN,
+  seed,
+  stubUpstream,
+  useHarness,
+} from './support/harness.mjs';
 
 const fixture = (name) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/mikrotik/${name}`, import.meta.url)), 'utf8');
@@ -36,7 +45,7 @@ const DOCUMENTS = {
 };
 
 const KEYS = [
-  'beta', 'build', 'date', 'family', 'id', 'major', 'source', 'stage', 'title', 'url',
+  'beta', 'build', 'date', 'family', 'id', 'line', 'major', 'source', 'stage', 'title', 'url',
   'vendor', 'version',
 ];
 
@@ -70,8 +79,20 @@ describe('the NEWEST documents', () => {
         date: '2026-09-29T14:21:27Z',
         url: 'https://mikrotik.com/download?v=7.24.5',
         source: ID,
+        line: 'stable',
       },
     ]);
+  });
+
+  it('gives every release the channel it came from as its line', () => {
+    assert.equal(parseNewest(STABLE, 'stable')[0].line, 'stable');
+    assert.equal(parseNewest(LONG_TERM, 'long-term')[0].line, 'long-term');
+    assert.equal(parseNewest(TESTING, 'testing')[0].line, 'testing');
+    for (const name of Object.keys(NEWEST_URLS)) {
+      const [release] = mikrotik.parse(DOCUMENTS[NEWEST_URLS[name]], NEWEST_URLS[name]);
+      assert.equal(release.line, name);
+      assert.ok(release.id.endsWith(`-${name}`), release.id);
+    }
   });
 
   it('keeps the channel in the title of a long-term release', () => {
@@ -92,9 +113,17 @@ describe('the NEWEST documents', () => {
     assert.equal(release.title, 'RouterOS 7.25rc1');
     assert.equal(release.date, '2026-10-01T14:18:48Z');
     assert.equal(release.url, 'https://mikrotik.com/download?v=7.25rc1');
-    assert.deepEqual(Object.keys(release).sort(), KEYS);
+    assert.deepEqual(Object.keys(release).filter((k) => k !== 'summary').sort(), KEYS);
     const beta = parseNewest('7.25.1beta2 1790864328\n', 'testing')[0];
     assert.deepEqual([beta.stage, beta.beta, beta.version, beta.build], ['beta', 2, '7.25.1', '7.25.1beta2']);
+  });
+
+  it('summarises only a long-term release, which the row alone does not say', () => {
+    assert.equal(parseNewest(LONG_TERM, 'long-term')[0].summary, 'Long-term channel release');
+    assert.equal(parseNewest(TESTING, 'testing')[0].summary, undefined);
+    assert.equal(summaryOfChannel('stable'), '');
+    assert.equal(summaryOfChannel('testing'), '');
+    assert.equal(summaryOfChannel('nightly'), '');
   });
 
   it('keeps a pre-release out of the stable channels and a plain version out of testing', () => {
@@ -214,5 +243,24 @@ describe('the Worker with the MikroTik source', () => {
       ['RouterOS 7.23.8 long-term', 'RouterOS 7.25rc1', 'RouterOS 7.24.5 stable'],
     );
     assert.ok(body.releases.every((r) => r.vendor === 'mikrotik' && r.source === ID));
+  });
+
+  it('gives a row cached before lines existed its channel, and keeps a line it has', async () => {
+    const stable = makeRelease({ version: '7.24.5', channel: 'stable', date: '2026-09-01T00:00:00Z' });
+    const longTerm = makeRelease({ version: '7.23.8', channel: 'long-term', date: '2026-08-01T00:00:00Z' });
+    const { line: _a, ...legacy } = stable;
+    const { line: _b, summary: _c, ...legacyLongTerm } = longTerm;
+    // A fresh cached copy is served without a fetch; the answer must still carry `line`.
+    await seed(ago(60 * 1000), {}, ID, [legacy, legacyLongTerm, { ...longTerm, id: 'routeros-7.22-x', line: 'testing' }]);
+    const worker = createWorker([mikrotik]);
+    const res = await worker.fetch(
+      new Request(`${ORIGIN}/api/releases.json?vendor=mikrotik`),
+      fakeEnv(null),
+      fakeCtx(),
+    );
+    const byId = Object.fromEntries((await res.json()).releases.map((r) => [r.id, r]));
+    assert.equal(byId[legacy.id].line, 'stable');
+    assert.equal(byId[legacyLongTerm.id].line, 'long-term');
+    assert.equal(byId['routeros-7.22-x'].line, 'testing');
   });
 });

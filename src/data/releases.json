@@ -16,7 +16,9 @@
       "title": "RouterOS 7.23.8 long-term",
       "date": "2026-10-08T09:46:16Z",
       "url": "https://mikrotik.com/download?v=7.23.8",
-      "source": "mikrotik-routeros"
+      "source": "mikrotik-routeros",
+      "line": "long-term",
+      "summary": "Long-term channel release"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=10052026a",
@@ -114,7 +116,8 @@
       "title": "RouterOS 7.25rc1",
       "date": "2026-10-01T14:18:48Z",
       "url": "https://mikrotik.com/download?v=7.25rc1",
-      "source": "mikrotik-routeros"
+      "source": "mikrotik-routeros",
+      "line": "testing"
     },
     {
       "id": "routeros-7.24.5-stable",
@@ -128,7 +131,8 @@
       "title": "RouterOS 7.24.5 stable",
       "date": "2026-09-29T14:21:27Z",
       "url": "https://mikrotik.com/download?v=7.24.5",
-      "source": "mikrotik-routeros"
+      "source": "mikrotik-routeros",
+      "line": "stable"
     },
     {
       "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h2-26300.9550",
@@ -142,7 +146,8 @@
       "title": "Windows 11 26H2 (2026-09 D)",
       "date": "2026-09-29T00:00:00Z",
       "url": "https://support.microsoft.com/help/5124010",
-      "source": "microsoft-windows-release-health"
+      "source": "microsoft-windows-release-health",
+      "line": "26H2"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=09282026e",
@@ -282,7 +287,8 @@
       "title": "Windows 11 24H2 (2026-09 D)",
       "date": "2026-09-22T00:00:00Z",
       "url": "https://support.microsoft.com/help/5124010",
-      "source": "microsoft-windows-release-health"
+      "source": "microsoft-windows-release-health",
+      "line": "24H2"
     },
     {
       "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#25h2-26200.9550",
@@ -296,7 +302,8 @@
       "title": "Windows 11 25H2 (2026-09 D)",
       "date": "2026-09-22T00:00:00Z",
       "url": "https://support.microsoft.com/help/5124010",
-      "source": "microsoft-windows-release-health"
+      "source": "microsoft-windows-release-health",
+      "line": "25H2"
     },
     {
       "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h1-28000.3086",
@@ -310,7 +317,8 @@
       "title": "Windows 11 26H1 (2026-09 D)",
       "date": "2026-09-22T00:00:00Z",
       "url": "https://support.microsoft.com/help/5124006",
-      "source": "microsoft-windows-release-health"
+      "source": "microsoft-windows-release-health",
+      "line": "26H1"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.9.1-preview",
@@ -380,7 +388,8 @@
       "title": "Windows 10 22H2 (2026-09 OOB, end of updates)",
       "date": "2026-09-14T00:00:00Z",
       "url": "https://support.microsoft.com/help/5129236",
-      "source": "microsoft-windows-release-health"
+      "source": "microsoft-windows-release-health",
+      "line": "22H2"
     },
     {
       "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#23h2-22631.7584",
@@ -394,7 +403,8 @@
       "title": "Windows 11 23H2 (2026-09 OOB)",
       "date": "2026-09-14T00:00:00Z",
       "url": "https://support.microsoft.com/help/5129242",
-      "source": "microsoft-windows-release-health"
+      "source": "microsoft-windows-release-health",
+      "line": "23H2"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=09092026g",

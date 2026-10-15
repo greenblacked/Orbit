@@ -103,20 +103,16 @@ def test_the_front_page_has_one_card_per_family_in_the_order_of_the_config():
 # The effects are separate modules that load after the first paint; no page names them.
 LAZY = ("fx.js", "aurora.js")
 # Also off the first paint: below.js (the drawn devices that step through releases) and the
-# cadence row, which home.js loads once the page has painted, and the generic sigil rule
+# cadence row, which home.js loads once the page has painted, Check my version (home.js, and
+# compare.js on Compare), and the generic sigil rule
 # (sigil.js loads it when a build that is not an Apple build appears). The script that loads
 # each one is the only file that names it.
 AFTER_PAINT = {
-    "below.js": "home.js",
-    "cadence.js": "home.js",
-    "lookup.js": "home.js",
-    "sigil-generic.js": "sigil.js",
+    "below.js": ("home.js",),
+    "cadence.js": ("home.js",),
+    "lookup.js": ("compare.js", "home.js"),
+    "sigil-generic.js": ("sigil.js",),
 }
-# Check my version is off the first paint on the front page (its budget is nearly spent) but
-# stays a deferred <script src> on Compare, whose budget has room and where compare.js and
-# security.js already load from the page; there is one script tag to keep in step, not a second
-# loader.
-DEFERRED_ON_PAGE = {"compare/index.html": {"lookup.js"}}
 # The first paint is budgeted on what crosses the wire: the sum of each script gzipped alone at
 # level 9 (the scripts are separate responses, so a per-file sum is what a visitor downloads;
 # a concatenation would flatter it). When set, the front page was 20,767 bytes and the limit
@@ -125,8 +121,8 @@ FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
 # Raw bytes. below.js (the drawn devices that step through releases), cadence.js, lookup.js and
-# sigil-generic.js are 34,598 together (15,582 + 4,788 + 12,708 + 1,520); the limit leaves about
-# 15% room for each to grow a little.
+# sigil-generic.js are 36,349 together (17,231 + 4,788 + 12,810 + 1,520); the limit leaves about
+# 9% room for each to grow a little.
 AFTER_PAINT_BUDGET = 39_800
 
 
@@ -135,8 +131,7 @@ def test_the_scripts_a_page_loads_stay_under_the_first_paint_budgets(name):
     loaded = re.findall(r'<script src="/assets/([a-z.-]+\.js)"', page(name))
     assert loaded, name
     assert not set(LAZY) & set(loaded), "the effects load after first paint, not from the page"
-    late = set(AFTER_PAINT) - DEFERRED_ON_PAGE.get(name, set())
-    assert not late & set(loaded), "these load after first paint, not from the page"
+    assert not set(AFTER_PAINT) & set(loaded), "these load after first paint, not from the page"
     raw = sum((ASSETS / script).stat().st_size for script in loaded)
     assert raw < FIRST_PAINT_RAW_BUDGET, (name, raw)
     packed = sum(len(gzip.compress((ASSETS / script).read_bytes(), 9)) for script in loaded)
@@ -156,13 +151,13 @@ def test_the_lazily_loaded_effects_stay_small_and_are_only_loaded_by_the_scripts
 
 def test_the_scripts_loaded_after_the_first_paint_are_named_only_by_their_loader():
     assert sum((ASSETS / name).stat().st_size for name in AFTER_PAINT) < AFTER_PAINT_BUDGET
-    for name, loader in AFTER_PAINT.items():
+    for name, loaders in AFTER_PAINT.items():
         named = [
             script.name
             for script in ASSETS.glob("*.js")
             if f"/assets/{name}" in script.read_text(encoding="utf-8")
         ]
-        assert named == [loader], name
+        assert sorted(named) == sorted(loaders), name
 
 
 @pytest.mark.parametrize("script", sorted(ASSETS.glob("*.js")), ids=lambda p: p.name)
@@ -266,3 +261,104 @@ def test_the_compare_page_offers_each_family_in_the_order_of_the_config():
     html = page("compare/index.html")
     block = re.search(r'<select id="c-family">(.*?)</select>', html, re.DOTALL).group(1)
     assert re.findall(r'<option value="([A-Za-z]+)">\1</option>', block) == ALL
+
+
+CQ_UNIT = re.compile(r"[\d.]\s*cq(?:w|h|i|b|min|max)\b")
+
+
+def css_rules() -> list[tuple[str, list[tuple[str, str]]]]:
+    """Every innermost rule of the stylesheet as (selector, [(property, value), ...])."""
+    bare = re.sub(r"/\*.*?\*/", "", CSS, flags=re.DOTALL)
+    rules = []
+    for match in re.finditer(r"([^{}]*)\{([^{}]*)\}", bare):
+        decls = []
+        for part in match.group(2).split(";"):
+            name, sep, value = part.partition(":")
+            if sep:
+                decls.append((name.strip(), value.strip()))
+        rules.append((match.group(1).strip(), decls))
+    return rules
+
+
+def test_every_container_query_unit_has_a_plain_declaration_before_it_in_its_rule():
+    # A browser without container query units drops the declaration that uses one, so the same
+    # property needs an earlier declaration without them, in the same rule.
+    found = 0
+    for selector, decls in css_rules():
+        for at, (name, value) in enumerate(decls):
+            if not CQ_UNIT.search(value):
+                continue
+            found += 1
+            before = [v for n, v in decls[:at] if n == name and not CQ_UNIT.search(v)]
+            assert before, f"{selector}: {name}: {value} has no plain {name} before it"
+            # var() is accepted at parse time and only fails when computed, so the cq line would
+            # win in an old engine and leave the property unset.
+            assert "var(" not in value, f"{selector}: {name}: a cq value must not use var()"
+    assert found > 20
+
+
+def test_the_device_mocks_use_color_mix_only_behind_a_support_check():
+    # A declaration that names a custom property is valid at parse time, so an engine without
+    # color-mix() would drop the whole property: the drawings are plain, the accent is a gated
+    # enhancement.
+    start = CSS.index(".dev { position: relative")
+    end = CSS.index("/* Developer highlights")
+    section = re.sub(r"/\*.*?\*/", "", CSS[start:end], flags=re.DOTALL)
+    for gate in ("@supports (color: color-mix(", "@supports not (color: color-mix("):
+        assert gate in section, gate
+        while gate in section:
+            first = section.index(gate)
+            depth = 0
+            for at in range(section.index("{", first), len(section)):
+                depth += {"{": 1, "}": -1}.get(section[at], 0)
+                if depth == 0:
+                    break
+            section = section[:first] + section[at + 1 :]
+    assert "color-mix(" not in section
+    assert "var(--glow, transparent)" in section
+
+
+def test_the_card_lift_needs_a_hover_pointer_and_motion_allowed():
+    block = motion_block()
+    gated = re.search(r"@media \(hover: hover\) \{\s*\.rel:hover \{[^}]*translate", block)
+    assert gated, "the .rel:hover lift is not behind (hover: hover) inside the motion block"
+    assert block.count(".rel:hover {") == 1
+
+
+def test_the_refraction_effect_needs_a_fine_hovering_pointer_like_the_glass():
+    fx = (ASSETS / "fx.js").read_text(encoding="utf-8")
+    body = fx[fx.index("function refraction()") : fx.index("function aurora()")]
+    assert '"(hover: hover) and (pointer: fine)"' in body
+    assert body.index("(hover: hover)") < body.index("document.body.appendChild")
+
+
+def test_the_android_status_bar_is_drawn_the_android_way():
+    html = page("index.html")
+    android = html[html.index('id="android"') : html.index('id="windows"')]
+    bar = re.search(r'<p class="m-bar" aria-hidden="true">(.*?)</p>', android).group(1)
+    assert "9:41" not in bar and "m-batt" not in bar
+    assert bar.startswith("<span>") and 'class="m-icons"' in bar
+    assert all(glyph in bar for glyph in ("a-sig", "a-wifi", "a-batt"))
+    for glyph in ("a-sig", "a-wifi", "a-batt"):
+        assert re.search(rf"\.{glyph} \{{[^}}]*\}}", CSS), glyph
+    # The iPhone keeps its own bar.
+    assert "<span>9:41</span>" in html[html.index('id="ios"') : html.index('id="ipados"')]
+
+
+@pytest.mark.parametrize("name", pages())
+def test_every_page_advertises_the_atom_feed(name):
+    tag = (
+        '<link rel="alternate" type="application/atom+xml" title="Release Orbit releases" '
+        'href="/api/feed.atom">'
+    )
+    html = page(name)
+    assert html.count(tag) == 1
+    assert html.index(tag) < html.index("</head>")
+
+
+def test_the_timeline_offers_a_subscribe_link_near_its_filters():
+    html = page("timeline/index.html")
+    link = re.search(r'<a class="chip-link" href="/api/feed\.atom"[^>]*>Subscribe', html)
+    assert link
+    assert html.index('id="filters"') < link.start() < html.index('id="count"')
+    assert html.count("/api/feed.atom") == 2  # the head link and this one

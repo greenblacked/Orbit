@@ -78,6 +78,7 @@ function glass() {
 // where the engine accepts a filter reference, so nothing changes elsewhere.
 function refraction() {
   if (!window.CSS || !CSS.supports || !CSS.supports("filter", "url(#fx-refract)")) return;
+  if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
   const NS = "http://www.w3.org/2000/svg";
   const make = (tag, attrs, parent) => {
     const node = document.createElementNS(NS, tag);

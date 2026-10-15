@@ -237,8 +237,11 @@ def test_the_other_states_say_what_they_know_and_nothing_more(browser, base_url)
         linked = page.locator(f'.tl-item[data-id="{router["id"]}"] .sec')
         assert said(linked) == "MikroTik security notes for this build (CVEs not counted)"
         assert "0" not in linked.inner_text()
+        # A family with no security source gets no pill; one line says who is covered.
         absent = page.locator(f'.tl-item[data-id="{windows["id"]}"] .sec')
-        assert said(absent) == "Security details not connected for Windows yet"
+        assert absent.count() == 0
+        assert "not connected" not in page.locator("#timeline").inner_text()
+        assert page.inner_text("#sec-scope") == "Security details: Apple and Android"
         assert errors == []
     finally:
         context.close()

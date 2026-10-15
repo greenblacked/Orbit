@@ -9,7 +9,7 @@
 // label and link are kept, never page text.
 
 import { familyIds } from '../families.js';
-import { isHttpsOn, sortReleases } from '../releases.js';
+import { isHttpsOn, sortReleases, withLine } from '../releases.js';
 
 export const ID = 'microsoft-windows-release-health';
 export const VENDOR = 'microsoft';
@@ -195,7 +195,7 @@ export function parsePage(html, _url = '', now = Date.now()) {
     const ended = cols.ends.every((i) => row[i].text.toLowerCase() === 'end of updates');
     const label = UPDATE_RE.test(row[cols.update].text) ? row[cols.update].text : '';
     const notes = [label, ended ? 'end of updates' : ''].filter(Boolean);
-    releases.push({
+    const release = {
       id: `${page}#${version[0].toLowerCase()}-${build}`,
       vendor: VENDOR,
       family,
@@ -208,7 +208,8 @@ export function parsePage(html, _url = '', now = Date.now()) {
       date,
       url: kbUrl(row[cols.update].href) ?? page,
       source: ID,
-    });
+    };
+    releases.push(withLine(release, version[0]));
   }
   return sortReleases(releases);
 }

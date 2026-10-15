@@ -219,6 +219,88 @@ def test_the_routeros_card_and_section_show_the_snapshot_releases(page, base_url
     assert pre.locator(".sr-only").text_content() == " (opens in a new tab)"
 
 
+def test_the_routeros_card_lists_its_other_supported_line_under_the_headline(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="RouterOS"]')
+    assert card.locator("[data-f=ver]").inner_text() == "RouterOS 7.24.5"
+    lines = card.locator("[data-f=lines]")
+    assert lines.is_visible()
+    # Plain text, no link: the headline's own line (stable) and the testing pre-release are not
+    # repeated.
+    assert lines.locator("li").all_inner_texts() == ["Long-term: 7.23.8"]
+    assert lines.locator("a").count() == 0
+
+
+def test_the_windows_card_lists_the_next_feature_updates_with_their_builds(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="Windows"]')
+    assert card.locator("[data-f=ver]").inner_text() == "Windows 26H2"
+    rows = {r["line"]: r["build"] for r in releases("Windows")}
+    assert card.locator("[data-f=lines] li:not(:has(a))").all_inner_texts() == [
+        f"{name}: {rows[name]}" for name in ("26H1", "25H2", "24H2")
+    ]
+
+
+def line_count(family):
+    """Lines of a family the way RO.lead derives them: those with a public release."""
+    return len({r["line"] for r in releases(family) if r["stage"] == "release" and r.get("line")})
+
+
+def test_a_card_with_many_lines_lists_three_and_links_the_rest(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="Windows"]')
+    hidden = line_count("Windows") - 4
+    assert hidden > 0
+    assert card.locator("[data-f=lines] li").count() == 4
+    more = card.locator("[data-f=lines] a")
+    assert more.count() == 1
+    assert more.inner_text() == f"+{hidden} more Windows lines"
+    assert more.get_attribute("href") == "/timeline/?family=Windows"
+    assert more.bounding_box()["height"] >= 44
+
+
+def test_a_card_with_three_other_lines_or_fewer_has_no_more_link(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    keep = {"26H2", "26H1", "25H2", "24H2"}
+    data["releases"] = [
+        r for r in data["releases"] if r["family"] != "Windows" or r.get("line") in keep
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    lines = page.locator('#latest-grid [data-family="Windows"] [data-f=lines]')
+    assert lines.locator("li:not(:has(a))").count() == 3
+    assert lines.locator("a").count() == 0
+
+
+def test_a_family_without_lines_and_a_card_with_one_line_list_nothing_extra(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [
+        r for r in data["releases"] if r.get("line") != "long-term" and r["family"] != "Windows"
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    for family in ("iOS", "Android", "SteamOS", "RouterOS"):
+        lines = page.locator(f'#latest-grid [data-family="{family}"] [data-f=lines]')
+        assert lines.is_hidden() and lines.locator("li").count() == 0, family
+
+
+def test_a_line_that_is_not_a_plain_token_is_dropped_by_the_page(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    for r in data["releases"]:
+        if r.get("line") == "long-term":
+            r["line"] = "<img src=x>"
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    lines = page.locator('#latest-grid [data-family="RouterOS"] [data-f=lines]')
+    assert lines.is_hidden()
+
+
 def test_the_newest_release_is_the_highest_version_not_the_latest_date(page, base_url):
     ios = [r for r in SNAPSHOT["releases"] if r["family"] == "iOS" and r["stage"] == "release"]
     old_branch = copy.deepcopy(ios[0]) | {
@@ -305,6 +387,37 @@ def test_the_data_check_mock_reports_the_real_latest_release(page, base_url):
     assert page.inner_text("[data-act=check]") == "Check again"
 
 
+def test_a_second_click_on_the_iphone_check_while_it_runs_does_nothing(browser, base_url):
+    counter = """
+        window.__checks = 0;
+        const real = window.setTimeout;
+        window.setTimeout = function (fn, ms, ...rest) {
+            if (ms === 900) window.__checks += 1;
+            return real.call(window, fn, ms, ...rest);
+        };
+    """
+    context = make_context(browser, base_url, motion="no-preference")
+    try:
+        context.add_init_script(counter)
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        button = page.locator("[data-act=check]")
+        result = page.locator("[data-f=result]")
+        button.evaluate("e => { e.click(); e.click(); e.click(); }")
+        assert button.get_attribute("aria-busy") == "true"
+        assert result.inner_text() == "Checking the loaded releases…"
+        page.wait_for_function(
+            "() => document.querySelector('[data-f=result]').textContent.includes('latest release')"
+        )
+        assert page.evaluate("window.__checks") == 1, "one check ran for three clicks"
+        assert button.get_attribute("aria-busy") is None
+        assert button.inner_text() == "Check again"
+    finally:
+        context.close()
+
+
 def test_the_mock_screens_and_highlights_wait_for_their_script_and_then_paint(page, base_url):
     held = []
     page.route("**/assets/below.js", lambda route: held.append(route))
@@ -339,7 +452,7 @@ def test_the_iphone_screen_fills_its_lower_half_from_the_data(page, base_url):
     cards_ready(page)
     mocks_ready(page)
     rows = page.locator(".m-ios .m-rows")
-    assert rows.get_attribute("aria-hidden") == "true"
+    assert rows.get_attribute("aria-hidden") is None, "the rows hold data shown nowhere else"
     ios = releases("iOS")
     public = next(r for r in ios if r["stage"] == "release")
     assert rows.locator("[data-f=pubrow]").inner_text() == public["version"]
@@ -417,6 +530,25 @@ def test_the_about_this_mac_mock_turns_the_beta_off_when_no_beta_is_newer(browse
         context.close()
 
 
+def test_the_mac_paused_note_fits_the_screen_at_phone_width(browser, base_url):
+    context = make_context(browser, base_url, width=360)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        page.click("[data-ch=beta]")
+        mac = page.locator(".m-mac").bounding_box()
+        note = page.locator("[data-f=betanote]")
+        assert note.inner_text() == "Steps are paused on the beta channel"
+        box = note.bounding_box()
+        assert box["x"] >= mac["x"] and box["y"] >= mac["y"]
+        assert box["x"] + box["width"] <= mac["x"] + mac["width"]
+        assert box["y"] + box["height"] <= mac["y"] + mac["height"]
+    finally:
+        context.close()
+
+
 def test_the_empty_mac_note_takes_no_space(page, base_url):
     page.goto(base_url + "/")
     cards_ready(page)
@@ -439,6 +571,28 @@ def test_the_watch_complication_cycles_version_build_and_date(page, base_url):
     assert page.inner_text("[data-f=said]").startswith("Showing released")
     page.click(".m-comp")
     assert page.text_content(".m-comp .k") == "Version"
+
+
+def test_the_watch_keeps_the_year_in_the_released_mode(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    newest = public("watchOS")[0]
+    when = datetime.datetime.fromisoformat(newest["date"].replace("Z", "+00:00"))
+    page.click(".m-comp")
+    page.click(".m-comp")
+    assert page.text_content(".m-comp .k") == "Released"
+    shown = page.text_content(".m-comp .v")
+    assert shown == f"{when:%b} {when.day} '{when:%y}"
+    assert page.inner_text("[data-f=said]") == f"Showing released {shown}"
+    disc = page.locator(".m-comp").bounding_box()
+    text = page.locator(".m-comp .v").bounding_box()
+    assert text["x"] >= disc["x"] and text["x"] + text["width"] <= disc["x"] + disc["width"]
+    assert text["y"] >= disc["y"] and text["y"] + text["height"] <= disc["y"] + disc["height"]
+    assert text["width"] <= 68, "the date must stay inside the black disc in any font"
+    for selector in (".m-comp .k", ".m-wname .m-pos", ".m-watch .m-name"):
+        size = page.eval_on_selector(selector, "e => parseFloat(getComputedStyle(e).fontSize)")
+        assert size >= 11, (selector, size)
 
 
 def test_mock_controls_are_real_buttons_and_big_enough(page, base_url):
@@ -634,11 +788,11 @@ def test_a_step_is_announced_once_with_its_position(page, base_url, family):
     rows = public(family)
     live = device(page, family).locator("[data-f=step]")
     assert live.get_attribute("aria-live") == "polite"
-    assert live.inner_text() == "", "nothing is announced for the first paint"
+    assert live.inner_text().strip() == "", "nothing is announced for the first paint"
     press(page, family, "Older")
-    assert live.inner_text() == f"{named(family, rows[1])}, 2 of {len(rows)}"
+    assert live.inner_text().strip() == f"{named(family, rows[1])}, 2 of {len(rows)}"
     press(page, family, "Older")
-    assert live.inner_text() == f"{named(family, rows[2])}, 3 of {len(rows)}"
+    assert live.inner_text().strip() == f"{named(family, rows[2])}, 3 of {len(rows)}"
     assert device(page, family).locator("[data-f=step][aria-live]").count() == 1
 
 
@@ -670,6 +824,48 @@ def test_the_mac_channel_switch_keeps_the_release_it_was_on(page, base_url):
     assert position(page, "macOS") == f"2 / {len(public('macOS'))}"
     info = device(page, "macOS").locator(".m-info").inner_text()
     assert public("macOS")[1]["build"] in info
+
+
+@pytest.mark.parametrize("family", ["iOS", "SteamOS", "watchOS"])
+def test_a_press_that_cannot_move_says_why(page, base_url, family):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    count = len(public(family))
+    live = device(page, family).locator("[data-f=step]")
+    assert hardware(page, family, "Newer").get_attribute("aria-disabled") == "true"
+    press(page, family, "Newer")
+    assert live.inner_text().strip() == "Already the newest"
+    assert position(page, family) == f"1 / {count}"
+    hardware(page, family, "Older").focus()
+    page.keyboard.press("End")
+    assert position(page, family) == f"{count} / {count}"
+    press(page, family, "Older")
+    assert live.inner_text().strip() == "Already the oldest"
+    assert position(page, family) == f"{count} / {count}"
+    focused = page.evaluate("document.activeElement.getAttribute('aria-label')")
+    assert focused == f"Older {family} release", "a blocked key keeps the focus"
+    page.keyboard.press("Home")
+    assert live.inner_text().strip() == f"{named(family, public(family)[0])}, 1 of {count}"
+
+
+def test_the_mac_on_the_beta_channel_says_why_its_steps_are_paused(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    paused = "Steps are paused on the beta channel"
+    note = page.locator("[data-f=betanote]")
+    assert note.inner_text() == ""
+    page.click("[data-ch=beta]")
+    assert note.inner_text() == paused
+    assert note.is_visible()
+    live = device(page, "macOS").locator("[data-f=step]")
+    hardware(page, "macOS", "Older").evaluate("button => button.click()")
+    assert live.inner_text().strip() == paused
+    for which in ("Newer", "Older"):
+        assert hardware(page, "macOS", which).get_attribute("aria-disabled") == "true"
+    page.click("[data-ch=release]")
+    assert note.inner_text() == ""
 
 
 @pytest.mark.parametrize("family", DEVICES)
@@ -840,7 +1036,7 @@ def test_the_ipad_sidebar_chooses_what_the_ipad_steps_through(page, base_url):
     assert tabs["History"].get_attribute("aria-pressed") == "true"
     assert tabs["Latest"].get_attribute("aria-pressed") == "false"
     assert position(page, "iPadOS") == f"1 / {len(everything)}"
-    assert ipad.locator("[data-f=step]").inner_text().endswith(f"1 of {len(everything)}")
+    assert ipad.locator("[data-f=step]").inner_text().strip().endswith(f"1 of {len(everything)}")
     if pre:
         tabs["Betas"].click()
         assert position(page, "iPadOS") == f"1 / {len(pre)}"
@@ -848,6 +1044,77 @@ def test_the_ipad_sidebar_chooses_what_the_ipad_steps_through(page, base_url):
         assert tabs["Betas"].is_disabled()
     tabs["Latest"].click()
     assert position(page, "iPadOS") == f"1 / {len(public('iPadOS'))}"
+
+
+@pytest.mark.parametrize("width", [320, 360, 768, 1280])
+def test_the_vision_straps_never_overlap_the_visor(browser, base_url, width):
+    context = make_context(browser, base_url, width=width)
+    try:
+        page = context.new_page()
+        page.goto(base_url + "/")
+        cards_ready(page)
+        mocks_ready(page)
+        visor = page.locator("#visionos .v-visor").bounding_box()
+        for which, side in (("Newer", "left"), ("Older", "right")):
+            strap = hardware(page, "visionOS", which).bounding_box()
+            assert strap["width"] >= 43.9 and strap["height"] >= 43.9, (which, strap)
+            if side == "left":
+                assert strap["x"] + strap["width"] <= visor["x"] + 0.5, (width, which)
+            else:
+                assert strap["x"] >= visor["x"] + visor["width"] - 0.5, (width, which)
+            assert strap["x"] >= 0 and strap["x"] + strap["width"] <= width, (width, which)
+        hardware(page, "visionOS", "Older").focus()
+        page.keyboard.press("Tab")
+        page.keyboard.press("Shift+Tab")
+        ring = page.evaluate(
+            "() => { const s = getComputedStyle(document.activeElement);"
+            " return [s.outlineStyle, parseFloat(s.outlineWidth)]; }"
+        )
+        assert ring[0] == "solid" and ring[1] >= 3, ring
+    finally:
+        context.close()
+
+
+def test_the_ipad_says_when_a_tab_changes_nothing(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    data["releases"] = [
+        r for r in data["releases"] if not (r["family"] == "iPadOS" and r["stage"] != "release")
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    mocks_ready(page)
+    ipad = device(page, "iPadOS")
+    live = ipad.locator("[data-f=step]")
+    group = ipad.get_by_role("group", name="iPadOS releases to show")
+    count = len(public("iPadOS", data))
+    assert len(releases("iPadOS", data)) == count, "the data has no iPadOS beta"
+    group.get_by_role("button", name="History", exact=True).click()
+    assert live.inner_text().strip() == "History: same as Latest"
+    assert position(page, "iPadOS") == f"1 / {count}"
+    group.get_by_role("button", name="Latest", exact=True).click()
+    assert live.inner_text().strip() == "Latest: same as History"
+    group.get_by_role("button", name="Latest", exact=True).click()
+    assert live.inner_text().strip() == "Latest: same as History", (
+        "the tab already chosen says nothing new"
+    )
+
+
+def test_the_ipad_sidebar_labels_scale_with_the_screen(browser, base_url):
+    sizes = {}
+    for width in (360, 1280):
+        context = make_context(browser, base_url, width=width)
+        try:
+            page = context.new_page()
+            page.goto(base_url + "/")
+            cards_ready(page)
+            mocks_ready(page)
+            sizes[width] = page.eval_on_selector(
+                "[data-scope=pub]", "e => parseFloat(getComputedStyle(e).fontSize)"
+            )
+        finally:
+            context.close()
+    assert 12 <= sizes[360] <= sizes[1280] <= 14, sizes
 
 
 # --- the toast --------------------------------------------------------------------------
@@ -1421,6 +1688,57 @@ def test_the_filter_chips_narrow_by_os_and_by_stage(page, base_url):
     assert page.inner_text("#count") == "No iOS release candidates in the data."
     page.click("#chips-family [data-v=all]")
     page.click("#chips-stage [data-v=all]")
+    assert page.locator(".tl-item").count() == len(newest_months(SNAPSHOT["releases"]))
+
+
+def test_the_line_chips_appear_only_for_a_platform_with_lines(page, base_url):
+    page.goto(base_url + "/timeline/")
+    page.wait_for_selector(".tl-item")
+    assert page.locator("#filter-line").is_hidden()
+    page.click("#chips-family [data-v=iOS]")
+    assert page.locator("#filter-line").is_hidden()
+    page.click("#chips-family [data-v=RouterOS]")
+    assert page.locator("#filter-line").is_visible()
+    chips = page.locator("#chips-line .chip")
+    assert chips.all_inner_texts() == ["All", "Stable", "Long-term", "Testing"]
+    assert page.get_attribute("#chips-line [data-v=all]", "aria-pressed") == "true"
+    page.click("#chips-line [data-v=long-term]")
+    assert page.get_attribute("#chips-line [data-v=long-term]", "aria-pressed") == "true"
+    assert page.locator(".tl-item").count() == 1
+    assert page.locator(".tl-ver").inner_text() == "7.23.8"
+    assert page.inner_text("#count") == "1 RouterOS long-term release"
+    assert page.url.endswith("?family=RouterOS&line=long-term")
+    # Another platform starts again from all of its lines.
+    page.click("#chips-family [data-v=Windows]")
+    assert page.locator("#chips-line .chip").all_inner_texts()[0] == "All"
+    assert "line=" not in page.url
+    assert page.locator(".tl-item").count() == len(releases("Windows"))
+    page.click("#chips-family [data-v=SteamOS]")
+    assert page.locator("#filter-line").is_hidden()
+
+
+def test_the_line_chips_are_real_buttons_of_at_least_44px(page, base_url):
+    page.goto(base_url + "/timeline/?family=RouterOS")
+    page.wait_for_selector(".tl-item")
+    for box in page.locator("#chips-line .chip").evaluate_all(
+        "els => els.map(e => e.getBoundingClientRect().toJSON())"
+    ):
+        assert box["height"] >= 44, box
+
+
+def test_an_address_with_a_line_opens_filtered_and_an_unknown_line_is_ignored(page, base_url):
+    page.goto(base_url + "/timeline/?family=Windows&line=24H2")
+    page.wait_for_selector(".tl-item")
+    only = [r for r in releases("Windows") if r["line"] == "24H2"]
+    assert page.locator(".tl-item").count() == len(only)
+    assert page.get_attribute('#chips-line [data-v="24H2"]', "aria-pressed") == "true"
+    page.goto(base_url + "/timeline/?family=RouterOS&line=nope")
+    page.wait_for_selector(".tl-item")
+    assert page.locator(".tl-item").count() == len(releases("RouterOS"))
+    assert page.get_attribute("#chips-line [data-v=all]", "aria-pressed") == "true"
+    page.goto(base_url + "/timeline/?line=stable")
+    page.wait_for_selector(".tl-item")
+    assert page.locator("#filter-line").is_hidden()
     assert page.locator(".tl-item").count() == len(newest_months(SNAPSHOT["releases"]))
 
 
@@ -2203,3 +2521,88 @@ def test_a_family_with_only_pre_releases_headlines_the_newest_of_them(page, base
     card = page.locator('#latest-grid [data-family="SteamOS"]')
     assert card.locator("[data-f=ver]").inner_text() == "SteamOS 3.9.2"
     assert card.locator("[data-f=pre]").is_hidden()
+
+
+SUMMARY_TEXT = (
+    "A short description. <b>Not markup</b> and long enough to need more than one line "
+) * 3
+
+
+def with_summaries():
+    """The snapshot with a summary on its first iOS and first RouterOS release."""
+    data = copy.deepcopy(SNAPSHOT)
+    first = {}
+    for release in data["releases"]:
+        first.setdefault(release["family"], release)
+    first["iOS"]["summary"] = SUMMARY_TEXT[:150]
+    first["RouterOS"]["summary"] = "Owner line"
+    return data
+
+
+def test_a_summary_shows_under_the_timeline_row_as_plain_text_clamped_to_two_lines(
+    browser, base_url
+):
+    data = with_summaries()
+    ios_id = next(r["id"] for r in data["releases"] if r["family"] == "iOS")
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        serve_json(page, "**/api/releases.json", json.dumps(data))
+        page.goto(base_url + "/timeline/")
+        page.wait_for_selector(".tl-item")
+        row = page.locator(f'.tl-item[data-id="{ios_id}"]')
+        assert row.locator(".tl-note").count() == 1
+        # Text, never markup: the angle brackets are on the page as characters.
+        assert row.locator(".tl-note b").count() == 0
+        assert "<b>" in row.locator(".tl-note").inner_text()
+        assert "has-note" in row.get_attribute("class").split()
+        clamp = row.locator(".tl-note-t").evaluate("e => getComputedStyle(e).webkitLineClamp")
+        assert clamp == "2"
+        # A release without a summary has no note line.
+        bare = next(r["id"] for r in data["releases"] if "summary" not in r)
+        assert page.locator(f'.tl-item[data-id="{bare}"] .tl-note').count() == 0
+    finally:
+        context.close()
+
+
+def test_the_owner_notes_win_over_a_summary_and_reach_the_front_page_card(browser, base_url):
+    data = with_summaries()
+    ios = public("iOS", data)[0]  # the release the card headlines
+    notes = {"schema": 1, "notes": {ios["id"]: "  Written\n by the owner  "}}
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        serve_json(page, "**/api/releases.json", json.dumps(data))
+        serve_json(page, "**/data/notes.json", json.dumps(notes))
+        page.goto(base_url + "/")
+        cards_ready(page)
+        note = page.locator("#latest-grid [data-family=iOS] [data-f=note]")
+        page.wait_for_function(
+            "() => document.querySelector('#latest-grid [data-family=iOS] [data-f=note]')"
+            ".textContent !== ''"
+        )
+        assert note.inner_text() == "Written by the owner"
+        assert note.is_visible()
+        # A family with no summary keeps its note slot hidden.
+        assert page.locator("#latest-grid [data-family=macOS] [data-f=note]").is_hidden()
+    finally:
+        context.close()
+
+
+def test_a_missing_notes_file_changes_nothing(browser, base_url):
+    data = with_summaries()
+    with_id = next(r["id"] for r in data["releases"] if r["family"] == "iOS")
+    bare_id = next(r["id"] for r in data["releases"] if "summary" not in r)
+    context = make_context(browser, base_url)
+    try:
+        page = context.new_page()
+        serve_json(page, "**/api/releases.json", json.dumps(data))
+        serve_json(page, "**/data/notes.json", "no", status=404, kind="text/plain")
+        page.goto(base_url + "/timeline/")
+        page.wait_for_selector(".tl-item")
+        note = page.locator(f'.tl-item[data-id="{with_id}"] .tl-note')
+        assert note.count() == 1
+        assert note.inner_text().strip() == SUMMARY_TEXT[:150].strip()
+        assert page.locator(f'.tl-item[data-id="{bare_id}"] .tl-note').count() == 0
+    finally:
+        context.close()

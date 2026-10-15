@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
+import xml.etree.ElementTree as ET
 
 import pytest
 from helpers import load_script
@@ -83,7 +84,10 @@ def test_the_releases_api_is_answered_from_the_snapshot(base_url):
     status, headers, body = get(base_url, "/api/releases.json")
     assert status == 200
     assert headers["Content-Type"].startswith("application/json")
-    assert body == get(base_url, "/data/releases.json")[2]
+    snapshot = get(base_url, "/data/releases.json")[2]
+    notes = get(base_url, "/data/notes.json")[2]
+    # The owner's notes are laid over the snapshot, so compare with them applied.
+    assert body == serve.apply_notes(snapshot, notes)
     assert "default-src 'self'" in headers["Content-Security-Policy"]
 
 
@@ -134,6 +138,50 @@ def test_releases_answer_passes_an_unreadable_snapshot_through():
     assert serve.releases_answer(b'{"releases":[]}', "") == (200, b'{"releases":[]}')
 
 
+RELEASE_BODY = json.dumps(
+    {
+        "releases": [
+            {"id": "a", "vendor": "apple"},
+            {"id": "b", "vendor": "mikrotik", "summary": "x"},
+        ]
+    }
+).encode()
+
+
+def test_notes_are_laid_over_the_releases_like_the_worker_does():
+    notes = json.dumps({"schema": 1, "notes": {"a": " Hello \n world ", "b": "Own", "zzz": "n"}})
+    status, body = serve.releases_answer(RELEASE_BODY, "", notes.encode())
+    assert status == 200
+    summaries = {r["id"]: r.get("summary") for r in json.loads(body)["releases"]}
+    assert summaries == {"a": "Hello world", "b": "Own"}
+    status, body = serve.releases_answer(RELEASE_BODY, "vendor=apple", notes.encode())
+    assert [r["id"] for r in json.loads(body)["releases"]] == ["a"]
+
+
+def test_notes_that_change_nothing_leave_the_snapshot_bytes_alone():
+    unchanged = (
+        None,
+        b"",
+        b"not json",
+        b"[]",
+        b'{"notes":[]}',
+        b'{"notes":{}}',
+        b'{"notes":{"zzz":"n"}}',
+        b'{"notes":{"a":"  "}}',
+    )
+    for notes in unchanged:
+        assert serve.releases_answer(RELEASE_BODY, "", notes) == (200, RELEASE_BODY), notes
+
+
+def test_clean_summary_follows_the_rules_of_the_contract():
+    assert serve.clean_summary(None) == ""
+    assert serve.clean_summary(" a\tb\n\nc\x00d ") == "a b cd"
+    long = serve.clean_summary("word " * 80)
+    assert len(long) <= serve.SUMMARY_MAX and long.endswith("\u2026")
+    assert serve.clean_summary(long) == long
+    assert len(serve.clean_summary("y" * 500)) == serve.SUMMARY_MAX
+
+
 def test_a_cache_rule_in_headers_replaces_the_no_store_default(base_url):
     def cache_control(path: str) -> list[str]:
         opener = urllib.request.build_opener(NoRedirect)
@@ -145,3 +193,134 @@ def test_a_cache_rule_in_headers_replaces_the_no_store_default(base_url):
     ]
     assert cache_control("/data/releases.json") == ["public, max-age=300"]
     assert cache_control("/") == ["no-store"]
+
+
+ATOM = "{http://www.w3.org/2005/Atom}"
+HOSTS = {"apple": ["developer.apple.com"]}
+FEED_CONFIG = json.dumps(
+    {
+        "families": [{"id": "iOS"}, {"id": "macOS"}],
+        "vendors": [{"id": "apple", "source": {"hosts": HOSTS["apple"]}}],
+    }
+).encode()
+
+
+def parse_xml(body: bytes) -> ET.Element:
+    return ET.fromstring(body)  # noqa: S314 - our own output, in a test
+
+
+def snapshot_of(*releases: dict) -> bytes:
+    return json.dumps({"releases": list(releases)}).encode()
+
+
+def release(rid: str, date: str, **over) -> dict:
+    return {
+        "id": rid,
+        "vendor": "apple",
+        "family": "iOS",
+        "version": "27.2",
+        "stage": "beta",
+        "beta": 2,
+        "build": "24B1",
+        "title": f"iOS {rid}",
+        "date": date,
+        "url": f"https://developer.apple.com/news/releases/?id={rid}",
+        **over,
+    }
+
+
+def test_the_atom_feed_is_answered_from_the_snapshot(base_url):
+    status, headers, body = get(base_url, "/api/feed.atom")
+    assert status == 200
+    assert headers["Content-Type"] == "application/atom+xml; charset=utf-8"
+    assert "default-src 'self'" in headers["Content-Security-Policy"]
+    assert headers["X-Content-Type-Options"] == "nosniff"
+    feed = parse_xml(body)  # well formed
+    assert feed.tag == ATOM + "feed"
+    assert feed.findtext(ATOM + "id") == "https://orbit.szolotov.com/api/feed.atom"
+    entries = feed.findall(ATOM + "entry")
+    snapshot = json.loads(get(base_url, "/data/releases.json")[2])["releases"]
+    assert len(entries) == min(len(snapshot), serve.MAX_ENTRIES)
+    for entry in entries:
+        assert entry.findtext(ATOM + "id").startswith("tag:orbit.szolotov.com,2026:release:")
+        assert entry.find(ATOM + "link").get("href").startswith("https://")
+    assert get(base_url, "/api/feed.atom", method="HEAD")[2] == b""
+
+
+def test_the_json_feed_is_answered_from_the_snapshot(base_url):
+    status, headers, body = get(base_url, "/api/feed.json")
+    assert status == 200
+    assert headers["Content-Type"] == "application/feed+json; charset=utf-8"
+    feed = json.loads(body)
+    assert feed["version"] == "https://jsonfeed.org/version/1.1"
+    assert feed["items"]
+    assert all(item["id"].startswith("tag:orbit.szolotov.com,2026:") for item in feed["items"])
+
+
+def test_the_feeds_filter_and_refuse_unknown_values_like_the_worker(base_url):
+    status, _, body = get(base_url, "/api/feed.json?family=iOS&stage=beta")
+    assert status == 200
+    items = json.loads(body)["items"]
+    assert items
+    assert all(item["tags"] == ["iOS", "beta"] for item in items)
+    bad = (("vendor=nope", "vendors"), ("family=", "families"), ("stage=x", "stages"))
+    for path in ("/api/feed.atom", "/api/feed.json"):
+        for query, plural in bad:
+            status, headers, body = get(base_url, f"{path}?{query}")
+            assert status == 400, (path, query)
+            assert headers["Content-Type"].startswith("application/json")
+            answer = json.loads(body)
+            assert answer["error"] == f"unknown {query.split('=')[0]}"
+            assert answer[plural]
+
+
+def test_the_feed_orders_caps_links_and_escapes():
+    hostile = release(
+        'x&<"1',
+        "2026-10-06T00:00:00Z",
+        title='<script>"a" & b</script>\x00',
+        url="https://evil.example/p",
+    )
+    later = release("late", "2026-10-07T00:00:00Z", url="https://developer.apple.com/p?a=1&b=2")
+    bad_date = release("bad", "nope")
+    snapshot = snapshot_of(hostile, later, bad_date)
+    status, body, kind = serve.feed_answer("atom", snapshot, FEED_CONFIG, "")
+    assert (status, kind) == (200, serve.ATOM_TYPE)
+    text = body.decode()
+    assert "<script>" not in text and "\x00" not in text
+    feed = parse_xml(body)
+    entries = feed.findall(ATOM + "entry")
+    assert [e.findtext(ATOM + "title") for e in entries] == [
+        "iOS late",
+        '<script>"a" & b</script>',
+    ]
+    assert entries[0].find(ATOM + "link").get("href") == "https://developer.apple.com/p?a=1&b=2"
+    assert entries[1].find(ATOM + "link").get("href") == (
+        "https://orbit.szolotov.com/timeline/?id=x%26%3C%221"
+    )
+    assert feed.findtext(ATOM + "updated") == "2026-10-07T00:00:00.000Z"
+    days = (release(f"r{n}", f"2026-01-{n % 28 + 1:02d}T00:00:00Z") for n in range(130))
+    many = snapshot_of(*days)
+    capped = parse_xml(serve.feed_answer("atom", many, FEED_CONFIG, "")[1])
+    assert len(capped.findall(ATOM + "entry")) == serve.MAX_ENTRIES
+
+
+def test_the_feed_names_its_filters_in_fixed_order():
+    snapshot = snapshot_of(release("a", "2026-10-06T00:00:00Z"))
+    feed = parse_xml(
+        serve.feed_answer("atom", snapshot, FEED_CONFIG, "stage=beta&family=iOS&vendor=apple")[1]
+    )
+    assert feed.findtext(ATOM + "id") == (
+        "https://orbit.szolotov.com/api/feed.atom?vendor=apple&family=iOS&stage=beta"
+    )
+    assert feed.findtext(ATOM + "title") == "Release Orbit releases (apple, iOS, beta)"
+
+
+def test_an_unreadable_snapshot_is_a_503_for_the_feeds():
+    assert serve.feed_answer("atom", b"not json", None, "")[0] == 503
+    assert serve.feed_answer("json", b"[]", None, "")[0] == 503
+
+
+def test_xml_escape_matches_the_worker():
+    assert serve.xml_escape('<a b="c">&\'\x01') == "&lt;a b=&quot;c&quot;&gt;&amp;&apos;"
+    assert serve.xml_escape(None) == ""

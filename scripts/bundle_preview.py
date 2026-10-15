@@ -95,6 +95,7 @@ from site_refs import (
     form_method,
     import_problems,
     inspect_page,
+    is_worker_path,
     parse_html,
     parse_srcset,
     replace_css_refs,
@@ -103,6 +104,9 @@ from site_refs import (
 )
 
 ROOT = Path(__file__).resolve().parent.parent
+# The bundle opens on any host or as file://, where a root-relative /api/ link would resolve
+# to the wrong place; the Worker that answers it lives on the production origin.
+PRODUCTION_ORIGIN = "https://orbit.szolotov.com"
 MAX_BYTES = 5_000_000
 # The preview's only boundary against a request: nothing but the file itself. Scripts and
 # styles are allowed by hash (see ``preview_csp``), never by ``'unsafe-inline'``, so an
@@ -132,6 +136,7 @@ def preview_csp(scripts: list[str], styles: list[str], style_attrs: list[str]) -
 HOME_SCRIPT = "/assets/home.js"
 BELOW_SCRIPT = "/assets/below.js"
 LOOKUP_SCRIPT = "/assets/lookup.js"
+COMPARE_SCRIPT = "/assets/compare.js"
 # The live site loads the generic sigil rule on demand; a bundle cannot fetch it, so it runs
 # right after sigil.js on every page that loads sigil.js, before any script that draws.
 SIGIL_SCRIPT = "/assets/sigil.js"
@@ -444,6 +449,8 @@ def rewrite_body(root: Path, body: str, here: str, routes: set[str]) -> str:
             return raw
         if attribute == "href":
             if tag in ("a", "area"):
+                if is_worker_path(raw):
+                    return PRODUCTION_ORIGIN + raw
                 route = page_route(root, here, raw)
                 if route in routes:
                     fragment = urlsplit(raw).fragment
@@ -618,13 +625,17 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
     site_name = front["site_name"] or front["title"]
 
     # home.js loads below.js (the drawn devices that step through releases) and lookup.js
-    # (Check my version) after the page has painted, which a bundle cannot do; the bundle runs
-    # them right after home.js instead.
+    # (Check my version; compare.js loads it too) after the page has painted, which a bundle
+    # cannot do; the bundle runs them right after home.js (lookup.js right after compare.js)
+    # instead.
     for page in pages:
         if HOME_SCRIPT in page["body_scripts"]:
             at = page["body_scripts"].index(HOME_SCRIPT) + 1
             page["body_scripts"].insert(at, BELOW_SCRIPT)
             page["body_scripts"].insert(at + 1, LOOKUP_SCRIPT)
+        if COMPARE_SCRIPT in page["body_scripts"] and LOOKUP_SCRIPT not in page["body_scripts"]:
+            at = page["body_scripts"].index(COMPARE_SCRIPT) + 1
+            page["body_scripts"].insert(at, LOOKUP_SCRIPT)
         if (dist / "assets" / "sigil-generic.js").is_file():
             for key in ("head_scripts", "body_scripts"):
                 if SIGIL_SCRIPT in page[key]:
