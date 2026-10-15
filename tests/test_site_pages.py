@@ -243,6 +243,39 @@ def test_the_windows_card_lists_the_next_feature_updates_with_their_builds(page,
     ]
 
 
+def line_count(family):
+    """Lines of a family the way RO.lead derives them: those with a public release."""
+    return len({r["line"] for r in releases(family) if r["stage"] == "release" and r.get("line")})
+
+
+def test_a_card_with_many_lines_lists_three_and_links_the_rest(page, base_url):
+    page.goto(base_url + "/")
+    cards_ready(page)
+    card = page.locator('#latest-grid [data-family="Windows"]')
+    hidden = line_count("Windows") - 4
+    assert hidden > 0
+    assert card.locator("[data-f=lines] li").count() == 4
+    more = card.locator("[data-f=lines] a")
+    assert more.count() == 1
+    assert more.inner_text() == f"+{hidden} more lines"
+    assert more.get_attribute("href") == "/timeline/?family=Windows"
+    assert more.bounding_box()["height"] >= 44
+
+
+def test_a_card_with_three_other_lines_or_fewer_has_no_more_link(page, base_url):
+    data = copy.deepcopy(SNAPSHOT)
+    keep = {"26H2", "26H1", "25H2", "24H2"}
+    data["releases"] = [
+        r for r in data["releases"] if r["family"] != "Windows" or r.get("line") in keep
+    ]
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    lines = page.locator('#latest-grid [data-family="Windows"] [data-f=lines]')
+    assert lines.locator("li").count() == 3
+    assert lines.locator("a").count() == 0
+
+
 def test_a_family_without_lines_and_a_card_with_one_line_list_nothing_extra(page, base_url):
     data = copy.deepcopy(SNAPSHOT)
     data["releases"] = [
