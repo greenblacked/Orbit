@@ -46,7 +46,7 @@ Release Orbit is a static site and one small API, served by a single Cloudflare 
 | The security notes asset is missing or invalid | `/api/security.json` answers 503 `{error}` with `no-store`; nothing is fetched. |
 | The Worker script fails | `/api/*` errors. The page falls back to `/data/releases.json`. Static pages are unaffected. |
 | JavaScript is off or blocked | Pages show placeholders and a link to the source. |
-| A browser lacks a feature | Scroll-driven effects, WebGL and the pointer highlight are skipped by feature detection and the plain page remains. |
+| A browser lacks a feature | Scroll-driven effects, WebGL and the refraction are skipped by feature detection and the plain page remains. |
 | A production release fails its smoke test | The release job rolls back to the version that was serving. |
 | A bad result file is committed | `check_results.py` fails CI and the build. A beta or release-candidate result is refused. |
 

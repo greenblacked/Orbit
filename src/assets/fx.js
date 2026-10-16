@@ -6,11 +6,11 @@ const motionOk = !!window.matchMedia && matchMedia("(prefers-reduced-motion: no-
 const reduce = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : null;
 const reduced = () => !!reduce && reduce.matches;
 
-// Reduce Motion turned on after the effects loaded: the pointer highlight and the refraction
-// stop at once (the aurora watches the setting itself).
+// Reduce Motion turned on after the effects loaded: the refraction stops at once (the aurora
+// watches the setting itself).
 function onReduce(e) {
   if (!e.matches) return;
-  root.classList.remove("fx-glass", "fx-refract");
+  root.classList.remove("fx-refract");
 }
 if (reduce) {
   if (reduce.addEventListener) reduce.addEventListener("change", onReduce);
@@ -45,32 +45,6 @@ function pauseOffscreen() {
 if (motionOk) {
   explodeFallback();
   pauseOffscreen();
-}
-
-// Liquid-light glass on the cards. A pointer-following specular highlight: the pointer's
-// position inside the hovered card goes into two custom properties (--mx, --my) and the CSS
-// paints a soft highlight at that spot. Only for a fine pointer that can hover; a finger has
-// no hover to follow.
-const GLASS = ".rel, .orbit-card";
-function glass() {
-  if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-  root.classList.add("fx-glass");
-  let frame = 0;
-  let last = null;
-  const paint = () => {
-    frame = 0;
-    if (reduced()) return;
-    const card = last.target.closest(GLASS);
-    if (!card) return;
-    const box = card.getBoundingClientRect();
-    card.style.setProperty("--mx", Math.round(last.x - box.left) + "px");
-    card.style.setProperty("--my", Math.round(last.y - box.top) + "px");
-  };
-  document.addEventListener("pointermove", (e) => {
-    if (e.pointerType === "touch" || !e.target.closest || !e.target.closest(GLASS)) return;
-    last = { target: e.target, x: e.clientX, y: e.clientY };
-    if (!frame) frame = requestAnimationFrame(paint);
-  }, { passive: true });
 }
 
 // Refraction: an SVG feTurbulence and feDisplacementMap filter that bends a card's tile a little
@@ -117,7 +91,6 @@ function aurora() {
 }
 
 if (motionOk) {
-  glass();
   refraction();
   aurora();
 }
