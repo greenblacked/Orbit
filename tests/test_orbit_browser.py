@@ -649,8 +649,11 @@ def test_the_effects_load_after_the_page_and_the_page_stays_clean_while_they_run
             "() => performance.getEntriesByType('resource').some(e => /\\/fx\\.js$/.test(e.name))",
             timeout=15000,
         )
-        page.wait_for_function("() => document.documentElement.classList.contains('fx-glass')")
-        # Use the page: a card, the hand, the hover highlight, a scroll away and back.
+        page.wait_for_function("() => document.documentElement.classList.contains('fx-refract')")
+        assert not page.evaluate(
+            "() => document.documentElement.classList.contains('fx-glass')"
+        )
+        # Use the page: a card, the hand, a hover, a scroll away and back.
         show_stage(page)
         page.locator("#orbit-dial .notch").first.focus()
         page.keyboard.press("Enter")
@@ -658,10 +661,13 @@ def test_the_effects_load_after_the_page_and_the_page_stays_clean_while_they_run
         page.keyboard.press("PageDown")
         page.locator(f"{IOS}").scroll_into_view_if_needed()
         page.locator(IOS).hover(position={"x": 40, "y": 40})
-        page.wait_for_function(
+        page.mouse.move(60, 60)
+        page.mouse.move(80, 80)
+        page.wait_for_timeout(300)
+        assert page.evaluate(
             "() => document.querySelector(\"#latest-grid [data-family='iOS']\")"
-            ".style.getPropertyValue('--mx') !== ''"
-        )
+            ".style.getPropertyValue('--mx')"
+        ) == ""
         page.evaluate("() => window.scrollTo(0, 0)")
         page.wait_for_function("() => window.scrollY === 0")
         page.wait_for_load_state("networkidle")
@@ -677,7 +683,7 @@ def test_turning_on_reduce_motion_after_load_stops_the_effects(browser, base_url
         page = context.new_page()
         open_front_page(page, base_url)
         page.wait_for_function(
-            "() => document.documentElement.classList.contains('fx-glass')", timeout=15000
+            "() => document.documentElement.classList.contains('fx-refract')", timeout=15000
         )
         has_webgl = page.evaluate("() => !!document.createElement('canvas').getContext('webgl')")
         if not has_webgl:

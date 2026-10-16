@@ -346,7 +346,7 @@ def test_the_card_lift_needs_a_hover_pointer_and_motion_allowed():
     assert block.count(".rel:hover {") == 1
 
 
-def test_the_refraction_effect_needs_a_fine_hovering_pointer_like_the_glass():
+def test_the_refraction_effect_needs_a_fine_hovering_pointer():
     fx = (ASSETS / "fx.js").read_text(encoding="utf-8")
     body = fx[fx.index("function refraction()") : fx.index("function aurora()")]
     assert '"(hover: hover) and (pointer: fine)"' in body
@@ -383,3 +383,11 @@ def test_the_timeline_offers_a_subscribe_link_near_its_filters():
     assert link
     assert html.index('id="filters"') < link.start() < html.index('id="count"')
     assert html.count("/api/feed.atom") == 2  # the head link and this one
+
+
+def test_the_pointer_highlight_on_cards_is_gone():
+    fx = (ASSETS / "fx.js").read_text(encoding="utf-8")
+    for name in ("fx-glass", "--mx", "--my", "GLASS", "function glass"):
+        assert name not in fx, name
+    for name in ("fx-glass", "--mx", "--my"):
+        assert name not in CSS, name
