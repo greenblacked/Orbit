@@ -2106,24 +2106,11 @@ html[data-theme="reactor"] .orbit-card { border-radius: 0; }
   }
 }
 
-/* Liquid-light glass (fx.js): a specular highlight that follows the pointer over a card
-   (--mx and --my are set by the script), and a slight refraction of the hovered card's tile
-   (never the text beside it). The
-   classes on <html> are added only where the effect is supported, so nothing here applies
+/* Refraction (fx.js): a slight bend of the hovered card's tile (never the text beside it). The
+   class on <html> is added only where the effect is supported, so nothing here applies
    otherwise. */
 .fx-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 @media (prefers-reduced-motion: no-preference) {
-  .fx-glass .rel::after, .fx-glass .orbit-card::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    opacity: 0;
-    background: radial-gradient(16rem circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--glass-edge) 70%, transparent), transparent 62%);
-    transition: opacity 200ms ease;
-  }
-  .fx-glass .rel:hover::after, .fx-glass .orbit-card:hover::after { opacity: 1; }
   .fx-refract .rel:hover .tile { filter: url(#fx-refract); }
 }
 
