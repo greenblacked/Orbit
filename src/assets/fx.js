@@ -6,7 +6,8 @@ const motionOk = !!window.matchMedia && matchMedia("(prefers-reduced-motion: no-
 const reduce = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : null;
 const reduced = () => !!reduce && reduce.matches;
 
-// Reduce Motion turned on after the effects loaded: the refraction stops at once (the aurora watches the setting itself).
+// Reduce Motion turned on after the effects loaded: the refraction stops at once (the aurora
+// watches the setting itself).
 function onReduce(e) {
   if (!e.matches) return;
   root.classList.remove("fx-refract");

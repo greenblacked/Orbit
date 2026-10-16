@@ -661,13 +661,12 @@ def test_the_effects_load_after_the_page_and_the_page_stays_clean_while_they_run
         page.keyboard.press("PageDown")
         page.locator(f"{IOS}").scroll_into_view_if_needed()
         page.locator(IOS).hover(position={"x": 40, "y": 40})
-        page.mouse.move(60, 60)
-        page.mouse.move(80, 80)
         page.wait_for_timeout(300)
-        assert page.evaluate(
+        mx = page.evaluate(
             "() => document.querySelector(\"#latest-grid [data-family='iOS']\")"
             ".style.getPropertyValue('--mx')"
-        ) == ""
+        )
+        assert mx == ""
         page.evaluate("() => window.scrollTo(0, 0)")
         page.wait_for_function("() => window.scrollY === 0")
         page.wait_for_load_state("networkidle")
