@@ -650,9 +650,7 @@ def test_the_effects_load_after_the_page_and_the_page_stays_clean_while_they_run
             timeout=15000,
         )
         page.wait_for_function("() => document.documentElement.classList.contains('fx-refract')")
-        assert not page.evaluate(
-            "() => document.documentElement.classList.contains('fx-glass')"
-        )
+        assert not page.evaluate("() => document.documentElement.classList.contains('fx-glass')")
         # Use the page: a card, the hand, a hover, a scroll away and back.
         show_stage(page)
         page.locator("#orbit-dial .notch").first.focus()
