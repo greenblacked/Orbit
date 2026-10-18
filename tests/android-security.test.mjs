@@ -304,6 +304,8 @@ describe('parseBulletin: tables and sentences', () => {
       'This bulletin does not contain any security patch level.',
       'We do not publish security patches here.',
       'It does not have security fixes.',
+      'This bulletin does not include any more security patches.',
+      'This bulletin does not have any known security issues.',
     ]) {
       assert.equal(parseBulletin(page('2025-07-01', `<p>${text}</p>`)).noPatches, false, text);
     }

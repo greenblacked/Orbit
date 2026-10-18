@@ -50,7 +50,8 @@ const PATCH_SENTENCE_RE =
 // Android security patches in the July 2025 Android Security Bulletin" and "no security patches"
 // both match. The July and October 2025 wording is from public reports; no empty bulletin has
 // been probed, so only the CI snapshot run confirms it. "no longer", "no more", "no further",
-// "no known" and "no security patch level" do not match.
+// "no known" and "no security patch level" do not match. The "not" form below ("does not
+// contain any security patches") has the same noun list and the same exclusions.
 // A miss fails safe (unavailable). Linear: bounded, non-overlapping words.
 const NOUNS = '(?:patches|patch(?!\\s+levels?\\b)|fixes|updates|vulnerabilities|issues)\\b';
 const NO_PATCHES_RES = [
@@ -63,7 +64,7 @@ const NO_PATCHES_RES = [
   new RegExp(
     "\\b(?:(?:does|do|did)\\s+not|(?:doesn|don|didn)['\\u2019]t)\\s+" +
       '(?:contain|include|have|address|list|publish)\\s+any\\s+' +
-      '(?:[A-Za-z]+\\s+){0,2}security\\s+' +
+      '(?:(?!(?:longer|more|further|known)\\b)[A-Za-z]+\\s+){0,2}security\\s+' +
       NOUNS,
     'i',
   ),
@@ -353,10 +354,11 @@ export function bulletinNote(bulletin, source = SOURCE_ID) {
 // A bulletin counts as read only when the page looks like the AOSP bulletin of that month: a
 // title that starts with "Android Security Bulletin" (the Pixel page is another bulletin), a
 // publish date and a patch level in the month. It is then used only when it says something: CVE
-// rows, or an explicit "no (Android) security patches" with no CVE table. An empty bulletin may
-// lack the patch level sentence, so on that path alone a title that names the month and year
-// ("Android Security Bulletin—July 2025") stands in for it. Otherwise a changed or wrong page
-// would read as a bulletin with no CVEs, and a wrong "0" is worse than saying nothing.
+// rows, or an explicit "no (Android) security patches" with no CVE table and no CVE id in the
+// visible text. An empty bulletin may lack the patch level sentence, so on that path alone a
+// title that names the month and year ("Android Security Bulletin—July 2025") stands in for
+// it. Otherwise a changed or wrong page would read as a bulletin with no CVEs, and a wrong "0"
+// is worse than saying nothing.
 function isRead(bulletin, month) {
   if (!bulletin || bulletin.published === null) return false;
   if (typeof bulletin.title !== 'string' || !TITLE_RE.test(bulletin.title)) return false;
@@ -420,9 +422,9 @@ function entry(status, patchLevel, checkedAt, url = null, cves = []) {
  * - no patch level for the release: `not-found`, `patchLevel` null;
  * - patch level known but its bulletin not read: `unavailable`, `patchLevel` set;
  * - bulletin read with CVE rows: `listed`, the CVEs of that month's bulletin only;
- * - bulletin read, no CVE rows and the page says it has no security patches (and has the
- *   patch level or a title for the month): `no-cve-entries` (count 0); no CVE rows without
- *   that statement is not a read bulletin (`unavailable`).
+ * - bulletin read, no CVE rows, the page says it has no security patches and its visible text
+ *   names no CVE id (and it has the patch level or a title for the month): `no-cve-entries`
+ *   (count 0); no CVE rows without that is not a read bulletin (`unavailable`).
  *
  * Per ADR 0008 a row holds its own bulletin only, never a union over earlier months.
  */
