@@ -19,6 +19,7 @@
 //   neededPages  (releases, patchLevels) => the bulletin URLs to read
 //   parseBulletin (html) => a parsed bulletin; no parseNote
 //   match        (releases, patchLevels, bulletins, checkedAt) => { notes, releases }
+//   whyNotRead   optional (bulletin, month) => why a page is refused (parsed booleans only) or null
 //   family       the one family of `vendor` it describes; maxPages the most pages a run reads
 // Nothing here runs in the Worker: the payload is parsed offline (ADR 0008).
 
