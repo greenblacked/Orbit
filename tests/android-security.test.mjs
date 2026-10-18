@@ -21,6 +21,7 @@ import adapter, {
   pixelBulletinUrl,
   SOURCE_ID,
   validPatchLevel,
+  whyNotRead,
 } from '../deploy/security/android.js';
 
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
@@ -102,6 +103,7 @@ describe('parseBulletin: the AOSP bulletin of October 2026', () => {
   it('keeps no text but ids, labels, title and dates', () => {
     assert.deepEqual(Object.keys(bulletin), [
       'title',
+      'titleMonth',
       'published',
       'updated',
       'patchLevels',
@@ -111,6 +113,7 @@ describe('parseBulletin: the AOSP bulletin of October 2026', () => {
     ]);
     assert.equal(bulletin.cveTables, 2);
     assert.equal(bulletin.noPatches, false);
+    assert.equal(bulletin.titleMonth, '2026-10');
     for (const cve of bulletin.cves) assert.deepEqual(Object.keys(cve), ['id', 'severity']);
   });
 });
@@ -237,6 +240,7 @@ describe('parseBulletin: tables and sentences', () => {
   it('never throws and gives the empty shape for input that is not a bulletin', () => {
     const empty = {
       title: null,
+      titleMonth: null,
       published: null,
       updated: null,
       patchLevels: [],
@@ -266,9 +270,131 @@ describe('parseBulletin: tables and sentences', () => {
     assert.equal(parseBulletin(page('2026-10-01', cveTable([]))).cveTables, 1);
   });
 
+  it('reads "no Android security patches" and similar wording as no patches', () => {
+    for (const text of [
+      'There are no Android security patches in the July 2025 Android Security Bulletin.',
+      'This bulletin has no new security patches.',
+      'There are NO Android security fixes this month.',
+      'No security updates are listed.',
+      'There are no security vulnerabilities to report.',
+    ]) {
+      assert.equal(parseBulletin(page('2025-07-01', `<p>${text}</p>`)).noPatches, true, text);
+    }
+  });
+
+  it('does not read "no longer" or "no security patch level" text as no patches', () => {
+    for (const text of [
+      'Devices no longer receive security patches after support ends.',
+      'Devices with no security patch level set are not covered.',
+      'There is no longer any security patches note here.',
+      'No one has reported security problems.',
+      'This is not a security patches page.',
+    ]) {
+      assert.equal(parseBulletin(page('2025-07-01', `<p>${text}</p>`)).noPatches, false, text);
+    }
+  });
+
+  it('reads the month a title names, with any dash or spaces', () => {
+    const month = (title) =>
+      parseBulletin(`<title>${title} | Android Open Source Project</title>`).titleMonth;
+    assert.equal(month('Android Security Bulletin—July 2025'), '2025-07');
+    assert.equal(month('Android Security Bulletin - July 2025'), '2025-07');
+    assert.equal(month('Android Security Bulletin &#8211; December 2024'), '2024-12');
+    assert.equal(month('Android Security Bulletin July 2025'), '2025-07');
+    assert.equal(month('Android Security Bulletin—Octember 2025'), null);
+    assert.equal(month('Android Security Bulletin—Test'), null);
+    assert.equal(month('Pixel Update Bulletin—July 2025'), null);
+  });
+
   it('drops a CVE table that is never closed', () => {
     const open = cveTable([['CVE-2026-0001', 'High']]).replace('</table>', '');
     assert.deepEqual(parseBulletin(page('2026-10-01', open)).cves, []);
+  });
+});
+
+describe('an empty bulletin read by its title month', () => {
+  const JULY = bulletinUrl('2025-07-01');
+  // Synthetic: no patch level sentence, the title names the month.
+  const empty = (title = 'Android Security Bulletin—July 2025', body = '') =>
+    `<title>${title} | Android Open Source Project</title><em>Published July 7, 2025</em>` +
+    `<p>There are no Android security patches in the July 2025 Android Security Bulletin.</p>${body}`;
+  const rel = { id: 'r', vendor: 'google', family: 'Android', stage: 'release' };
+  const run = (html) =>
+    match([rel], new Map([['r', '2025-07-05']]), new Map([[JULY, parseBulletin(html)]]), CHECKED);
+
+  it('is no-cve-entries without the patch level sentence', () => {
+    const result = run(empty());
+    const entry = result.releases.r;
+    assert.equal(entry.status, 'no-cve-entries');
+    assert.equal(entry.count, 0);
+    assert.deepEqual(entry.notes, [JULY]);
+    assert.equal(result.notes[JULY].noCveEntries, true);
+  });
+
+  it('stays unavailable when the title names another month', () => {
+    const result = run(empty('Android Security Bulletin—June 2025'));
+    assert.equal(result.releases.r.status, 'unavailable');
+    assert.deepEqual(result.notes, {});
+  });
+
+  it('stays unavailable when the title names no month', () => {
+    assert.equal(run(empty('Android Security Bulletin—Test')).releases.r.status, 'unavailable');
+  });
+
+  it('stays unavailable when the page does not say it has no patches', () => {
+    const html = empty().replace('no Android security patches', 'nothing');
+    assert.equal(run(html).releases.r.status, 'unavailable');
+  });
+
+  it('still needs the patch level sentence when the page has a CVE table', () => {
+    const withTable = empty('Android Security Bulletin—July 2025', cveTable([['CVE-2025-0001', 'High']]));
+    assert.equal(run(withTable).releases.r.status, 'unavailable');
+    const noRows = empty('Android Security Bulletin—July 2025', cveTable([]));
+    assert.equal(run(noRows).releases.r.status, 'unavailable');
+    const withLevel = withTable.replace('<p>', '<p>Security patch levels of 2025-07-01 or higher. ');
+    assert.equal(run(withLevel).releases.r.status, 'listed');
+  });
+
+  it('keeps a CVE table with a no-patches sentence as before (unavailable without rows)', () => {
+    const html = page('2025-07-01', NO_PATCHES + cveTable([])).replace('October 5, 2026', 'July 7, 2025');
+    assert.equal(run(html).releases.r.status, 'unavailable');
+  });
+
+  it('does not change a full bulletin that says "no longer"', () => {
+    const full = AOSP.replace('</title>', '</title><p>Devices no longer receive security patches.</p>');
+    const bulletin = parseBulletin(full);
+    assert.equal(bulletin.noPatches, false);
+    assert.equal(bulletin.cves.length, 25);
+    assert.deepEqual(bulletin, { ...parseBulletin(AOSP), noPatches: false });
+  });
+});
+
+describe('whyNotRead', () => {
+  it('is null for a bulletin that is read', () => {
+    assert.equal(whyNotRead(parseBulletin(AOSP), '2026-10'), null);
+  });
+
+  it('lists parsed booleans and counts, never page text', () => {
+    const quiet = parseBulletin(page('2026-10-01'));
+    assert.equal(
+      whyNotRead(quiet, '2026-10'),
+      'title: yes; title month: no; published: yes; patch level for month: yes; ' +
+        'CVE tables: 0; CVE rows: 0; says no patches: no',
+    );
+    const other = parseBulletin('<p>Secret words, no CVE here.</p>');
+    const why = whyNotRead(other, '2026-10');
+    assert.match(why, /^title: no; title month: no; published: no; patch level for month: no; /);
+    assert.equal(why.includes('Secret'), false);
+  });
+
+  it('says so for a month the patch level does not name', () => {
+    const why = whyNotRead(parseBulletin(page('2026-09-01', NO_PATCHES)), '2026-10');
+    assert.match(why, /patch level for month: no; CVE tables: 0; CVE rows: 0; says no patches: yes$/);
+  });
+
+  it('is exposed on the adapter', () => {
+    assert.equal(adapter.whyNotRead, whyNotRead);
+    assert.equal(whyNotRead(undefined, '2026-10'), 'page not parsed');
   });
 });
 
