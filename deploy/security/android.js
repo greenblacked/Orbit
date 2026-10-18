@@ -39,14 +39,39 @@ export const MAX_BULLETINS = 200;
 const MAX_TITLE = 200;
 const MAX_SEVERITY = 40;
 
+const CVE_ANY_RE = /\bCVE-\d{4}-\d{4,}\b/gi;
 const CVE_RE = /^CVE-\d{4}-\d{4,}$/;
 const PATCH_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const SEVERITY_RE = /^[A-Za-z][A-Za-z /-]*$/;
 const PATCH_SENTENCE_RE =
   /security patch levels?\s+of\s+(\d{4}-\d{2}-\d{2})\s+or\s+(?:higher|later)/gi;
-// The only wording read as "this bulletin lists nothing". Not seen on a recorded page: an empty
-// bulletin has not been probed, so this is a guess that fails safe (no match gives unavailable).
-const NO_PATCHES_RE = /\bno\s+security\s+(?:patches|fixes|vulnerabilities)\b/i;
+// The wording read as "this bulletin lists nothing": "no", up to two words ("Android", "new")
+// and then "security" with patches, fixes, updates, vulnerabilities or issues, so "There are no
+// Android security patches in the July 2025 Android Security Bulletin" and "no security patches"
+// both match. The July and October 2025 wording is from public reports; no empty bulletin has
+// been probed, so only the CI snapshot run confirms it. "no longer", "no more", "no further",
+// "no known" and "no security patch level" do not match. The "not" form below ("does not
+// contain any security patches") has the same noun list and the same exclusions.
+// A miss fails safe: unavailable, unless the page meets the stricter wordless conditions in
+// isRead. Linear: bounded, non-overlapping words.
+const NOUNS = '(?:patches|patch(?!\\s+levels?\\b)|fixes|updates|vulnerabilities|issues)\\b';
+const NO_PATCHES_RES = [
+  new RegExp(
+    '\\bno\\s+(?:(?!(?:longer|more|further|known)\\b)[A-Za-z]+\\s+){0,2}security\\s+' + NOUNS,
+    'i',
+  ),
+  // The "not" form: "does not contain any security patches", "doesn't include any Android
+  // security fixes". Same noun list and exclusions; up to two words between "any" and "security".
+  new RegExp(
+    "\\b(?:(?:does|do|did)\\s+not|(?:doesn|don|didn)['\\u2019]t)\\s+" +
+      '(?:contain|include|have|address|list|publish)\\s+any\\s+' +
+      '(?:(?!(?:longer|more|further|known)\\b)[A-Za-z]+\\s+){0,2}security\\s+' +
+      NOUNS,
+    'i',
+  ),
+];
+// "Android Security Bulletin—July 2025": any dashes or spaces before the month name and year.
+const TITLE_MONTH_RE = /^Android Security Bulletin[\s\u2010-\u2015-]*([A-Za-z]+)\s+(\d{4})\b/;
 const TITLE_RE = /^Android Security Bulletin/;
 const DATE_RE = /\b(Published|Updated)\s+([A-Z][a-z]+)\s+(\d{1,2}),\s+(\d{4})\b/g;
 const MONTHS = [
@@ -143,6 +168,13 @@ function datesOf(text) {
   return { published: found.Published, updated: found.Updated };
 }
 
+/** The "YYYY-MM" an AOSP bulletin title names ("... Bulletin—July 2025"), else null. */
+function titleMonthOf(title) {
+  const m = TITLE_MONTH_RE.exec(typeof title === 'string' ? title : '');
+  const month = m ? MONTHS.indexOf(m[1]) + 1 : 0;
+  return month > 0 ? `${m[2]}-${String(month).padStart(2, '0')}` : null;
+}
+
 /** The sorted, unique patch levels named by the "security patch levels of ..." sentences. */
 function patchLevelsOf(text) {
   const levels = new Set();
@@ -154,6 +186,16 @@ function patchLevelsOf(text) {
   return [...levels].sort(byText);
 }
 
+/** How many distinct CVE ids the visible text names, at most MAX_CVES. */
+function cveIdsIn(text) {
+  const ids = new Set();
+  for (const m of text.matchAll(CVE_ANY_RE)) {
+    ids.add(m[0].toUpperCase());
+    if (ids.size >= MAX_CVES) break;
+  }
+  return ids.size;
+}
+
 /**
  * The CVE rows of every table that starts with CVE and has a Severity column, and how many such
  * tables there were. At most MAX_CVES ids are kept, whatever the page holds.
@@ -161,9 +203,11 @@ function patchLevelsOf(text) {
 function cvesOf(html) {
   const found = new Map();
   let cveTables = 0;
+  let cveHeaderTables = 0;
   scan: for (const rows of tables(html)) {
     if (rows.length === 0) continue;
     const header = rows[0].map((cell) => cell.toLowerCase());
+    if (header.includes('cve')) cveHeaderTables += 1;
     const severity = header.indexOf('severity');
     if (header[0] !== 'cve' || severity < 0) continue;
     cveTables += 1;
@@ -176,28 +220,39 @@ function cvesOf(html) {
       found.set(id, { id, severity: known ? label : null });
     }
   }
-  return { cveTables, cves: [...found.values()].sort((a, b) => byText(a.id, b.id)) };
+  const cves = [...found.values()].sort((a, b) => byText(a.id, b.id));
+  return { cveTables, cveHeaderTables, cves };
 }
 
 /**
- * One bulletin page as { title, published, updated, patchLevels, cveTables, noPatches, cves }.
- * Dates are YYYY-MM-DD or null. `cveTables` is how many CVE tables the page had and `noPatches`
- * whether it says outright that it has no security patches. `cves` come from the CVE tables only, with ids upper-cased, unique and
- * sorted as the payload contract sorts them, and the vendor's severity label as written (null
- * when the cell is empty or not a label). A row that is not a CVE id is skipped. It never
- * throws and keeps no description text.
+ * One bulletin page as
+ * { title, titleMonth, published, updated, patchLevels, cveTables, noPatches, cveIdsInText,
+ * cveHeaderTables, cves }.
+ * Dates are YYYY-MM-DD or null. `titleMonth` is the "YYYY-MM" the title names, or null.
+ * `cveTables` is how many CVE tables the page had and `noPatches` whether it says outright
+ * that it has no security patches. `cveIdsInText` is how many distinct CVE ids the visible text
+ * names and `cveHeaderTables` how many tables have a header cell "CVE" in any column (both gate
+ * the empty paths of isRead; whyNotRead reports them).
+ * `cves` come from the CVE tables only, with ids upper-cased,
+ * unique and sorted as the payload contract sorts them, and the vendor's severity label as
+ * written (null when the cell is empty or not a label). A row that is not a CVE id is skipped.
+ * It never throws and keeps no description text.
  */
 export function parseBulletin(html) {
   const text = visibleText(html);
   const { published, updated } = datesOf(text);
-  const { cveTables, cves } = cvesOf(html);
+  const { cveTables, cveHeaderTables, cves } = cvesOf(html);
+  const title = titleOf(html);
   return {
-    title: titleOf(html),
+    title,
+    titleMonth: titleMonthOf(title),
     published,
     updated,
     patchLevels: patchLevelsOf(text),
     cveTables,
-    noPatches: NO_PATCHES_RE.test(text),
+    noPatches: NO_PATCHES_RES.some((re) => re.test(text)),
+    cveIdsInText: cveIdsIn(text),
+    cveHeaderTables,
     cves,
   };
 }
@@ -299,16 +354,54 @@ export function bulletinNote(bulletin, source = SOURCE_ID) {
 }
 
 // A bulletin counts as read only when the page looks like the AOSP bulletin of that month: a
-// title that starts with "Android Security Bulletin" (the Pixel page is another bulletin), a
-// publish date and a patch level in the month. It is then used only when it says something: CVE
-// rows, or an explicit "no security patches" with no CVE table. Otherwise a changed or wrong
-// page would read as a bulletin with no CVEs, and a wrong "0" is worse than saying nothing.
+// title that starts with "Android Security Bulletin" (the Pixel page is another bulletin) and a
+// publish date. It is then used only when it says something, by one of three paths:
+//
+// - CVE rows, with a patch level sentence naming the month;
+// - an empty bulletin that says so: an explicit "no (Android) security patches", no CVE table
+//   and no CVE id in the visible text. Either the patch level sentence or a title that names the
+//   month and year ("Android Security Bulletin—July 2025") is enough on this path;
+// - an empty bulletin that says nothing (the live October 2025 page has no such sentence): no
+//   CVE rows, no CVE table, no table with a CVE column and no CVE id anywhere in the visible
+//   text, and BOTH the patch level sentence and the title name the month. A real bulletin with
+//   issues always names CVE ids, and two independent month signals have to agree, so a changed
+//   or wrong page, a stub or an error page does not pass as an empty month.
+//
+// Otherwise a changed or wrong page would read as a bulletin with no CVEs, and a wrong "0" is
+// worse than saying nothing.
 function isRead(bulletin, month) {
   if (!bulletin || bulletin.published === null) return false;
   if (typeof bulletin.title !== 'string' || !TITLE_RE.test(bulletin.title)) return false;
-  if (!bulletin.patchLevels.some((level) => level.slice(0, 7) === month)) return false;
-  if (bulletin.cves.length > 0) return true;
-  return bulletin.noPatches === true && bulletin.cveTables === 0;
+  const levelInMonth = bulletin.patchLevels.some((level) => level.slice(0, 7) === month);
+  if (levelInMonth && bulletin.cves.length > 0) return true;
+  if (bulletin.cves.length > 0 || bulletin.cveTables !== 0) return false;
+  // A page that names any CVE id is not empty, whatever else it says.
+  if (bulletin.cveIdsInText !== 0) return false;
+  if (bulletin.noPatches === true) return levelInMonth || bulletin.titleMonth === month;
+  // No wording: the stricter path.
+  return bulletin.cveHeaderTables === 0 && levelInMonth && bulletin.titleMonth === month;
+}
+
+/**
+ * Why a parsed bulletin is not read for `month` ("YYYY-MM"), as a short line made of parsed
+ * booleans and counts only, never page text; null when it is read. For the snapshot's report.
+ */
+export function whyNotRead(bulletin, month) {
+  if (isRead(bulletin, month)) return null;
+  if (!bulletin) return 'page not parsed';
+  const yn = (value) => (value ? 'yes' : 'no');
+  const title = typeof bulletin.title === 'string' && TITLE_RE.test(bulletin.title);
+  const level = Array.isArray(bulletin.patchLevels)
+    ? bulletin.patchLevels.some((item) => item.slice(0, 7) === month)
+    : false;
+  return (
+    `title: ${yn(title)}; title month: ${yn(bulletin.titleMonth === month)}; ` +
+    `published: ${yn(bulletin.published)}; patch level for month: ${yn(level)}; ` +
+    `CVE tables: ${Number(bulletin.cveTables) || 0}; CVE rows: ${bulletin.cves?.length ?? 0}; ` +
+    `says no patches: ${yn(bulletin.noPatches)}; ` +
+    `CVE ids in text: ${Number(bulletin.cveIdsInText) || 0}; ` +
+    `tables with a CVE column: ${Number(bulletin.cveHeaderTables) || 0}`
+  );
 }
 
 // The month ("YYYY-MM") of an AOSP bulletin URL, or null when the URL is not one we build.
@@ -339,8 +432,12 @@ function entry(status, patchLevel, checkedAt, url = null, cves = []) {
  * - no patch level for the release: `not-found`, `patchLevel` null;
  * - patch level known but its bulletin not read: `unavailable`, `patchLevel` set;
  * - bulletin read with CVE rows: `listed`, the CVEs of that month's bulletin only;
- * - bulletin read, no CVE rows and the page says it has no security patches: `no-cve-entries`
- *   (count 0); no CVE rows without that statement is not a read bulletin (`unavailable`).
+ * - bulletin read, no CVE rows, no CVE table and no CVE id in the visible text, and either the
+ *   page says it has no security patches (it has the patch level or a title for the month) or it
+ *   says nothing but has no table with a CVE column and both the patch level sentence and the
+ *   title name the month: `no-cve-entries` (count 0). Both paths are safe because a real
+ *   bulletin with issues always names CVE ids; the wordless one needs both month signals. No
+ *   CVE rows without that is not a read bulletin (`unavailable`).
  *
  * Per ADR 0008 a row holds its own bulletin only, never a union over earlier months.
  */
@@ -399,5 +496,6 @@ export default {
   neededPages: neededBulletins,
   parseBulletin,
   bulletinUrl,
+  whyNotRead,
   match,
 };

@@ -74,6 +74,13 @@ function noteOf(adapter, html, release) {
   };
 }
 
+// " (title: no; ...)" for a bulletin that was parsed and refused, from parsed booleans only.
+function reasonOf(adapter, bulletin, url) {
+  const month = /\/(\d{4}-\d{2})-01$/.exec(url)?.[1];
+  const why = bulletin && month && adapter.whyNotRead ? adapter.whyNotRead(bulletin, month) : null;
+  return why ? ` (${why})` : '';
+}
+
 // Fold one `bulletins` source (Android) into the payload. Fail closed like an index source: a
 // bulletin that was not read again keeps its previous note and the rows that point at it; a page
 // that was read and refused never does; a release that was listed and has lost its patch level
@@ -121,7 +128,8 @@ function applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases
           failures.push(`${adapter.id}: ${url} was not read again; the previous note is kept`);
         }
       } else {
-        failures.push(`${adapter.id}: no usable note for ${title} (${url})`);
+        const why = reasonOf(adapter, read.get(url), url);
+        failures.push(`${adapter.id}: no usable note for ${title} (${url})${why}`);
         outReleases[id] = value;
       }
     } else {
@@ -135,7 +143,7 @@ function applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases
     if (url in outNotes || failures.some((line) => line.includes(url))) continue;
     failures.push(
       pages?.has(url)
-        ? `${adapter.id}: no usable note for ${url}`
+        ? `${adapter.id}: no usable note for ${url}${reasonOf(adapter, read.get(url), url)}`
         : `${adapter.id}: ${url} was not read and has no previous note`,
     );
   }
