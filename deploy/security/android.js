@@ -39,6 +39,7 @@ export const MAX_BULLETINS = 200;
 const MAX_TITLE = 200;
 const MAX_SEVERITY = 40;
 
+const CVE_ANY_RE = /\bCVE-\d{4}-\d{4,}\b/gi;
 const CVE_RE = /^CVE-\d{4}-\d{4,}$/;
 const PATCH_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const SEVERITY_RE = /^[A-Za-z][A-Za-z /-]*$/;
@@ -51,11 +52,22 @@ const PATCH_SENTENCE_RE =
 // been probed, so only the CI snapshot run confirms it. "no longer", "no more", "no further",
 // "no known" and "no security patch level" do not match.
 // A miss fails safe (unavailable). Linear: bounded, non-overlapping words.
-const NO_PATCHES_RE = new RegExp(
-  '\\bno\\s+(?:(?!(?:longer|more|further|known)\\b)[A-Za-z]+\\s+){0,2}security\\s+' +
-    '(?:patches|patch(?!\\s+levels?\\b)|fixes|updates|vulnerabilities|issues)\\b',
-  'i',
-);
+const NOUNS = '(?:patches|patch(?!\\s+levels?\\b)|fixes|updates|vulnerabilities|issues)\\b';
+const NO_PATCHES_RES = [
+  new RegExp(
+    '\\bno\\s+(?:(?!(?:longer|more|further|known)\\b)[A-Za-z]+\\s+){0,2}security\\s+' + NOUNS,
+    'i',
+  ),
+  // The "not" form: "does not contain any security patches", "doesn't include any Android
+  // security fixes". Same noun list and exclusions; up to two words between "any" and "security".
+  new RegExp(
+    "\\b(?:(?:does|do|did)\\s+not|(?:doesn|don|didn)['\\u2019]t)\\s+" +
+      '(?:contain|include|have|address|list|publish)\\s+any\\s+' +
+      '(?:[A-Za-z]+\\s+){0,2}security\\s+' +
+      NOUNS,
+    'i',
+  ),
+];
 // "Android Security Bulletin—July 2025": any dashes or spaces before the month name and year.
 const TITLE_MONTH_RE = /^Android Security Bulletin[\s\u2010-\u2015-]*([A-Za-z]+)\s+(\d{4})\b/;
 const TITLE_RE = /^Android Security Bulletin/;
@@ -172,6 +184,16 @@ function patchLevelsOf(text) {
   return [...levels].sort(byText);
 }
 
+/** How many distinct CVE ids the visible text names, at most MAX_CVES. */
+function cveIdsIn(text) {
+  const ids = new Set();
+  for (const m of text.matchAll(CVE_ANY_RE)) {
+    ids.add(m[0].toUpperCase());
+    if (ids.size >= MAX_CVES) break;
+  }
+  return ids.size;
+}
+
 /**
  * The CVE rows of every table that starts with CVE and has a Severity column, and how many such
  * tables there were. At most MAX_CVES ids are kept, whatever the page holds.
@@ -179,9 +201,11 @@ function patchLevelsOf(text) {
 function cvesOf(html) {
   const found = new Map();
   let cveTables = 0;
+  let cveHeaderTables = 0;
   scan: for (const rows of tables(html)) {
     if (rows.length === 0) continue;
     const header = rows[0].map((cell) => cell.toLowerCase());
+    if (header.includes('cve')) cveHeaderTables += 1;
     const severity = header.indexOf('severity');
     if (header[0] !== 'cve' || severity < 0) continue;
     cveTables += 1;
@@ -194,15 +218,19 @@ function cvesOf(html) {
       found.set(id, { id, severity: known ? label : null });
     }
   }
-  return { cveTables, cves: [...found.values()].sort((a, b) => byText(a.id, b.id)) };
+  const cves = [...found.values()].sort((a, b) => byText(a.id, b.id));
+  return { cveTables, cveHeaderTables, cves };
 }
 
 /**
  * One bulletin page as
- * { title, titleMonth, published, updated, patchLevels, cveTables, noPatches, cves }.
+ * { title, titleMonth, published, updated, patchLevels, cveTables, noPatches, cveIdsInText,
+ * cveHeaderTables, cves }.
  * Dates are YYYY-MM-DD or null. `titleMonth` is the "YYYY-MM" the title names, or null.
  * `cveTables` is how many CVE tables the page had and `noPatches` whether it says outright
- * that it has no security patches. `cves` come from the CVE tables only, with ids upper-cased,
+ * that it has no security patches. `cveIdsInText` is how many distinct CVE ids the visible text
+ * names and `cveHeaderTables` how many tables have a header cell "CVE" in any column (counts for
+ * diagnosis only). `cves` come from the CVE tables only, with ids upper-cased,
  * unique and sorted as the payload contract sorts them, and the vendor's severity label as
  * written (null when the cell is empty or not a label). A row that is not a CVE id is skipped.
  * It never throws and keeps no description text.
@@ -210,7 +238,7 @@ function cvesOf(html) {
 export function parseBulletin(html) {
   const text = visibleText(html);
   const { published, updated } = datesOf(text);
-  const { cveTables, cves } = cvesOf(html);
+  const { cveTables, cveHeaderTables, cves } = cvesOf(html);
   const title = titleOf(html);
   return {
     title,
@@ -219,7 +247,9 @@ export function parseBulletin(html) {
     updated,
     patchLevels: patchLevelsOf(text),
     cveTables,
-    noPatches: NO_PATCHES_RE.test(text),
+    noPatches: NO_PATCHES_RES.some((re) => re.test(text)),
+    cveIdsInText: cveIdsIn(text),
+    cveHeaderTables,
     cves,
   };
 }
@@ -335,6 +365,8 @@ function isRead(bulletin, month) {
   if (bulletin.cves.length > 0 || bulletin.cveTables !== 0 || bulletin.noPatches !== true) {
     return false;
   }
+  // A page that names any CVE id is not empty, whatever else it says.
+  if (bulletin.cveIdsInText !== 0) return false;
   return levelInMonth || bulletin.titleMonth === month;
 }
 
@@ -354,7 +386,9 @@ export function whyNotRead(bulletin, month) {
     `title: ${yn(title)}; title month: ${yn(bulletin.titleMonth === month)}; ` +
     `published: ${yn(bulletin.published)}; patch level for month: ${yn(level)}; ` +
     `CVE tables: ${Number(bulletin.cveTables) || 0}; CVE rows: ${bulletin.cves?.length ?? 0}; ` +
-    `says no patches: ${yn(bulletin.noPatches)}`
+    `says no patches: ${yn(bulletin.noPatches)}; ` +
+    `CVE ids in text: ${Number(bulletin.cveIdsInText) || 0}; ` +
+    `tables with a CVE column: ${Number(bulletin.cveHeaderTables) || 0}`
   );
 }
 
