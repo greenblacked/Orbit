@@ -352,24 +352,32 @@ export function bulletinNote(bulletin, source = SOURCE_ID) {
 }
 
 // A bulletin counts as read only when the page looks like the AOSP bulletin of that month: a
-// title that starts with "Android Security Bulletin" (the Pixel page is another bulletin), a
-// publish date and a patch level in the month. It is then used only when it says something: CVE
-// rows, or an explicit "no (Android) security patches" with no CVE table and no CVE id in the
-// visible text. An empty bulletin may lack the patch level sentence, so on that path alone a
-// title that names the month and year ("Android Security Bulletin—July 2025") stands in for
-// it. Otherwise a changed or wrong page would read as a bulletin with no CVEs, and a wrong "0"
-// is worse than saying nothing.
+// title that starts with "Android Security Bulletin" (the Pixel page is another bulletin) and a
+// publish date. It is then used only when it says something, by one of three paths:
+//
+// - CVE rows, with a patch level sentence naming the month;
+// - an empty bulletin that says so: an explicit "no (Android) security patches", no CVE table
+//   and no CVE id in the visible text. Either the patch level sentence or a title that names the
+//   month and year ("Android Security Bulletin—July 2025") is enough on this path;
+// - an empty bulletin that says nothing (the live October 2025 page has no such sentence): no
+//   CVE rows, no CVE table, no table with a CVE column and no CVE id anywhere in the visible
+//   text, and BOTH the patch level sentence and the title name the month. A real bulletin with
+//   issues always names CVE ids, and two independent month signals have to agree, so a changed
+//   or wrong page, a stub or an error page does not pass as an empty month.
+//
+// Otherwise a changed or wrong page would read as a bulletin with no CVEs, and a wrong "0" is
+// worse than saying nothing.
 function isRead(bulletin, month) {
   if (!bulletin || bulletin.published === null) return false;
   if (typeof bulletin.title !== 'string' || !TITLE_RE.test(bulletin.title)) return false;
   const levelInMonth = bulletin.patchLevels.some((level) => level.slice(0, 7) === month);
   if (levelInMonth && bulletin.cves.length > 0) return true;
-  if (bulletin.cves.length > 0 || bulletin.cveTables !== 0 || bulletin.noPatches !== true) {
-    return false;
-  }
+  if (bulletin.cves.length > 0 || bulletin.cveTables !== 0) return false;
   // A page that names any CVE id is not empty, whatever else it says.
   if (bulletin.cveIdsInText !== 0) return false;
-  return levelInMonth || bulletin.titleMonth === month;
+  if (bulletin.noPatches === true) return levelInMonth || bulletin.titleMonth === month;
+  // No wording: the stricter path.
+  return bulletin.cveHeaderTables === 0 && levelInMonth && bulletin.titleMonth === month;
 }
 
 /**
@@ -422,9 +430,12 @@ function entry(status, patchLevel, checkedAt, url = null, cves = []) {
  * - no patch level for the release: `not-found`, `patchLevel` null;
  * - patch level known but its bulletin not read: `unavailable`, `patchLevel` set;
  * - bulletin read with CVE rows: `listed`, the CVEs of that month's bulletin only;
- * - bulletin read, no CVE rows, the page says it has no security patches and its visible text
- *   names no CVE id (and it has the patch level or a title for the month): `no-cve-entries`
- *   (count 0); no CVE rows without that is not a read bulletin (`unavailable`).
+ * - bulletin read, no CVE rows, no CVE table and no CVE id in the visible text, and either the
+ *   page says it has no security patches (it has the patch level or a title for the month) or it
+ *   says nothing but has no table with a CVE column and both the patch level sentence and the
+ *   title name the month: `no-cve-entries` (count 0). Both paths are safe because a real
+ *   bulletin with issues always names CVE ids; the wordless one needs both month signals. No
+ *   CVE rows without that is not a read bulletin (`unavailable`).
  *
  * Per ADR 0008 a row holds its own bulletin only, never a union over earlier months.
  */
