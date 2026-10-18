@@ -495,6 +495,19 @@ describe('an empty bulletin that does not say so', () => {
   it('stays unavailable when the page has a CVE table without rows', () => {
     assert.equal(run(wordless(undefined, cveTable([]))).releases.r.status, 'unavailable');
   });
+
+  it('stays unavailable for a full bulletin whose CVE headers drifted', () => {
+    const drift = AOSP.replaceAll('<th>CVE</th>', '<th>CVE ID</th>');
+    const bulletin = parseBulletin(drift);
+    assert.equal(bulletin.cves.length, 0);
+    assert.ok(bulletin.cveIdsInText > 0);
+    assert.notEqual(whyNotRead(bulletin, '2026-10'), null);
+  });
+
+  it('stays unavailable when the patch level sentence names another month', () => {
+    const html = wordless().replace('2025-07-01', '2025-06-01');
+    assert.notEqual(whyNotRead(parseBulletin(html), '2025-07'), null);
+  });
 });
 
 describe('whyNotRead', () => {
@@ -706,7 +719,7 @@ describe('match', () => {
     assert.equal(note.noCveEntries, false);
   });
 
-  it('is unavailable, never 0, for a page that passes but yields no CVEs without saying so', () => {
+  it('is unavailable, never 0, for a page with no CVEs that does not say so (no title month)', () => {
     const quiet = new Map([[AOSP_URL, parseBulletin(page('2026-10-01'))]]);
     const entry = match([releases[0]], new Map([['listed-a', '2026-10-05']]), quiet, CHECKED);
     assert.equal(entry.releases['listed-a'].status, 'unavailable');
@@ -720,7 +733,7 @@ describe('match', () => {
     assert.equal(bulletinUrl('2026-04-01') in result.notes, false);
   });
 
-  it('says no-cve-entries, count 0, only when the page says it has no security patches', () => {
+  it('says no-cve-entries, count 0, when the page says it has no security patches', () => {
     const entry = result.releases.empty;
     assert.equal(entry.status, 'no-cve-entries');
     assert.equal(entry.count, 0);

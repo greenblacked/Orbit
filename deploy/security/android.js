@@ -52,7 +52,8 @@ const PATCH_SENTENCE_RE =
 // been probed, so only the CI snapshot run confirms it. "no longer", "no more", "no further",
 // "no known" and "no security patch level" do not match. The "not" form below ("does not
 // contain any security patches") has the same noun list and the same exclusions.
-// A miss fails safe (unavailable). Linear: bounded, non-overlapping words.
+// A miss fails safe: unavailable, unless the page meets the stricter wordless conditions in
+// isRead. Linear: bounded, non-overlapping words.
 const NOUNS = '(?:patches|patch(?!\\s+levels?\\b)|fixes|updates|vulnerabilities|issues)\\b';
 const NO_PATCHES_RES = [
   new RegExp(
@@ -230,8 +231,9 @@ function cvesOf(html) {
  * Dates are YYYY-MM-DD or null. `titleMonth` is the "YYYY-MM" the title names, or null.
  * `cveTables` is how many CVE tables the page had and `noPatches` whether it says outright
  * that it has no security patches. `cveIdsInText` is how many distinct CVE ids the visible text
- * names and `cveHeaderTables` how many tables have a header cell "CVE" in any column (counts for
- * diagnosis only). `cves` come from the CVE tables only, with ids upper-cased,
+ * names and `cveHeaderTables` how many tables have a header cell "CVE" in any column (both gate
+ * the empty paths of isRead; whyNotRead reports them).
+ * `cves` come from the CVE tables only, with ids upper-cased,
  * unique and sorted as the payload contract sorts them, and the vendor's severity label as
  * written (null when the cell is empty or not a label). A row that is not a CVE id is skipped.
  * It never throws and keeps no description text.
