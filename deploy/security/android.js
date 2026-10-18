@@ -48,10 +48,11 @@ const PATCH_SENTENCE_RE =
 // and then "security" with patches, fixes, updates, vulnerabilities or issues, so "There are no
 // Android security patches in the July 2025 Android Security Bulletin" and "no security patches"
 // both match. The July and October 2025 wording is from public reports; no empty bulletin has
-// been probed, so only the CI snapshot run confirms it. "no longer" and "no security patch
-// level" do not match. A miss fails safe (unavailable). Linear: bounded, non-overlapping words.
+// been probed, so only the CI snapshot run confirms it. "no longer", "no more", "no further",
+// "no known" and "no security patch level" do not match.
+// A miss fails safe (unavailable). Linear: bounded, non-overlapping words.
 const NO_PATCHES_RE = new RegExp(
-  '\\bno\\s+(?:(?!longer\\b)[A-Za-z]+\\s+){0,2}security\\s+' +
+  '\\bno\\s+(?:(?!(?:longer|more|further|known)\\b)[A-Za-z]+\\s+){0,2}security\\s+' +
     '(?:patches|patch(?!\\s+levels?\\b)|fixes|updates|vulnerabilities|issues)\\b',
   'i',
 );
@@ -203,8 +204,8 @@ function cvesOf(html) {
  * `cveTables` is how many CVE tables the page had and `noPatches` whether it says outright
  * that it has no security patches. `cves` come from the CVE tables only, with ids upper-cased,
  * unique and sorted as the payload contract sorts them, and the vendor's severity label as
- * written (null when the cell is empty or not a label). A row that is not a CVE id is skipped. It never
- * throws and keeps no description text.
+ * written (null when the cell is empty or not a label). A row that is not a CVE id is skipped.
+ * It never throws and keeps no description text.
  */
 export function parseBulletin(html) {
   const text = visibleText(html);

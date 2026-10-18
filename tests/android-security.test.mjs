@@ -289,6 +289,9 @@ describe('parseBulletin: tables and sentences', () => {
       'There is no longer any security patches note here.',
       'No one has reported security problems.',
       'This is not a security patches page.',
+      'There will be no further security updates for this release.',
+      'We ship no more security patches for it.',
+      'There are no known security issues.',
     ]) {
       assert.equal(parseBulletin(page('2025-07-01', `<p>${text}</p>`)).noPatches, false, text);
     }
@@ -317,7 +320,8 @@ describe('an empty bulletin read by its title month', () => {
   // Synthetic: no patch level sentence, the title names the month.
   const empty = (title = 'Android Security Bulletin—July 2025', body = '') =>
     `<title>${title} | Android Open Source Project</title><em>Published July 7, 2025</em>` +
-    `<p>There are no Android security patches in the July 2025 Android Security Bulletin.</p>${body}`;
+    '<p>There are no Android security patches in the July 2025 Android Security Bulletin.</p>' +
+    body;
   const rel = { id: 'r', vendor: 'google', family: 'Android', stage: 'release' };
   const run = (html) =>
     match([rel], new Map([['r', '2025-07-05']]), new Map([[JULY, parseBulletin(html)]]), CHECKED);
@@ -347,25 +351,30 @@ describe('an empty bulletin read by its title month', () => {
   });
 
   it('still needs the patch level sentence when the page has a CVE table', () => {
-    const withTable = empty('Android Security Bulletin—July 2025', cveTable([['CVE-2025-0001', 'High']]));
+    const withTable = empty(
+      'Android Security Bulletin—July 2025',
+      cveTable([['CVE-2025-0001', 'High']]),
+    );
     assert.equal(run(withTable).releases.r.status, 'unavailable');
     const noRows = empty('Android Security Bulletin—July 2025', cveTable([]));
     assert.equal(run(noRows).releases.r.status, 'unavailable');
-    const withLevel = withTable.replace('<p>', '<p>Security patch levels of 2025-07-01 or higher. ');
+    const level = '<p>Security patch levels of 2025-07-01 or higher. ';
+    const withLevel = withTable.replace('<p>', level);
     assert.equal(run(withLevel).releases.r.status, 'listed');
   });
 
   it('keeps a CVE table with a no-patches sentence as before (unavailable without rows)', () => {
-    const html = page('2025-07-01', NO_PATCHES + cveTable([])).replace('October 5, 2026', 'July 7, 2025');
+    const html = page('2025-07-01', NO_PATCHES + cveTable([]));
     assert.equal(run(html).releases.r.status, 'unavailable');
   });
 
   it('does not change a full bulletin that says "no longer"', () => {
-    const full = AOSP.replace('</title>', '</title><p>Devices no longer receive security patches.</p>');
+    const note = '<p>Devices no longer receive security patches.</p>';
+    const full = AOSP.replace('</title>', `</title>${note}`);
     const bulletin = parseBulletin(full);
     assert.equal(bulletin.noPatches, false);
     assert.equal(bulletin.cves.length, 25);
-    assert.deepEqual(bulletin, { ...parseBulletin(AOSP), noPatches: false });
+    assert.deepEqual(bulletin, parseBulletin(AOSP));
   });
 });
 
@@ -389,7 +398,10 @@ describe('whyNotRead', () => {
 
   it('says so for a month the patch level does not name', () => {
     const why = whyNotRead(parseBulletin(page('2026-09-01', NO_PATCHES)), '2026-10');
-    assert.match(why, /patch level for month: no; CVE tables: 0; CVE rows: 0; says no patches: yes$/);
+    assert.match(
+      why,
+      /patch level for month: no; CVE tables: 0; CVE rows: 0; says no patches: yes$/,
+    );
   });
 
   it('is exposed on the adapter', () => {
