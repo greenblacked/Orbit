@@ -12,6 +12,12 @@ import { fileURLToPath } from 'node:url';
 import { FAMILIES } from '../deploy/families.js';
 import { MAX_RELEASES_PER_SOURCE, SUMMARY_MAX, cleanSummary } from '../deploy/releases.js';
 import { SOURCES } from '../deploy/sources/index.js';
+import {
+  DEFAULT_ACCEPT,
+  FETCH_TIMEOUT_MS,
+  MAX_BODY_BYTES,
+  fetchParts,
+} from '../deploy/worker.js';
 
 const script = fileURLToPath(new URL('../deploy/snapshot_releases.mjs', import.meta.url));
 const snapshotFile = fileURLToPath(new URL('../src/data/releases.json', import.meta.url));
@@ -39,10 +45,6 @@ describe('deploy/snapshot_releases.mjs', () => {
     assert.doesNotMatch(source, /developer\.apple\.com/);
   });
 
-  it('follows no redirect away from a source URL', () => {
-    assert.match(readFileSync(script, 'utf8'), /redirect: 'manual'/);
-  });
-
   it('starts from nothing only when there is no snapshot file, and aborts otherwise', () => {
     const source = readFileSync(script, 'utf8');
     assert.match(source, /error\.code !== 'ENOENT'/);
@@ -57,6 +59,99 @@ describe('deploy/snapshot_releases.mjs', () => {
     assert.match(source, /merged\.dropped/);
     assert.match(source, /merging would drop \$\{names\}/);
     assert.match(source, /failures\.push\(`\$\{source\.id\}: /);
+  });
+
+  it('fetches each source through fetchParts, with no fetch of its own', () => {
+    const source = readFileSync(script, 'utf8');
+    assert.match(source, /^import \{ fetchParts \} from '\.\/worker\.js';$/m);
+    assert.match(source, /await fetchParts\(source\)/);
+    assert.doesNotMatch(source, /(^|[^.\w])fetch\(/m);
+    assert.doesNotMatch(source, /AbortSignal\.timeout/);
+    assert.doesNotMatch(source, /redirect:/);
+  });
+});
+
+describe('the fetch the snapshot shares with the Worker', () => {
+  const URL_A = 'https://feed.example/a.xml';
+  const URL_B = 'https://feed.example/b.xml';
+  const make = (extra = {}) => ({
+    id: 'acme',
+    urls: [URL_A],
+    parse: (text, url) => [{ id: `${url}#${text}` }],
+    ...extra,
+  });
+  const ok = (body, headers = {}) => new Response(body, { status: 200, headers });
+
+  it('sends the adapter accept or the default, and follows no redirect', async () => {
+    const seen = [];
+    const fetchImpl = async (url, init) => {
+      seen.push({ url, init });
+      return ok('x');
+    };
+    await fetchParts(make(), fetchImpl);
+    await fetchParts(make({ accept: 'text/html' }), fetchImpl);
+    assert.equal(seen[0].init.headers.accept, DEFAULT_ACCEPT);
+    assert.equal(seen[1].init.headers.accept, 'text/html');
+    assert.match(seen[0].init.headers['user-agent'], /^orbit /);
+    assert.equal(seen[0].init.redirect, 'manual');
+    assert.ok(seen[0].init.signal instanceof AbortSignal);
+  });
+
+  it('refuses a non-200 answer, naming the source', async () => {
+    const fetchImpl = async () => new Response(null, { status: 302, headers: { location: '/x' } });
+    await assert.rejects(fetchParts(make(), fetchImpl), /acme answered 302$/);
+  });
+
+  it('refuses a body over the cap, by header and by stream', async () => {
+    const declared = async () => ok('x', { 'content-length': String(MAX_BODY_BYTES + 1) });
+    await assert.rejects(fetchParts(make(), declared), /too large/);
+    const chunk = new Uint8Array(MAX_BODY_BYTES / 2 + 1);
+    const streamed = async () =>
+      ok(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(chunk);
+            controller.enqueue(chunk);
+            controller.close();
+          },
+        }),
+      );
+    await assert.rejects(fetchParts(make(), streamed), /too large/);
+  });
+
+  it('reads a body of exactly the cap', async () => {
+    const parts = await fetchParts(make({ parse: (text) => [text.length] }), async () =>
+      ok('a'.repeat(MAX_BODY_BYTES)),
+    );
+    assert.deepEqual(parts, [[MAX_BODY_BYTES]]);
+  });
+
+  it('puts every URL of a source under one deadline, even if fetch ignores the abort', async () => {
+    assert.equal(FETCH_TIMEOUT_MS, 8000);
+    const hang = () => new Promise(() => {});
+    const started = Date.now();
+    // AbortSignal.timeout does not keep the event loop alive, so this test does.
+    const alive = setInterval(() => {}, 1000);
+    try {
+      await assert.rejects(
+        fetchParts(make({ urls: [URL_A, URL_B] }), hang, 50),
+        (error) => error.name === 'TimeoutError',
+      );
+    } finally {
+      clearInterval(alive);
+    }
+    assert.ok(Date.now() - started < 2000);
+  });
+
+  it('aborts the other URLs when one fails', async () => {
+    let signalB;
+    const fetchImpl = async (url, init) => {
+      if (url === URL_A) return new Response(null, { status: 500 });
+      signalB = init.signal;
+      return new Promise(() => {});
+    };
+    await assert.rejects(fetchParts(make({ urls: [URL_A, URL_B] }), fetchImpl), /answered 500/);
+    assert.equal(signalB.aborted, true);
   });
 });
 
