@@ -226,7 +226,7 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
   let outReleases = {};
   if (isObject(before.releases)) {
     for (const [id, value] of Object.entries(before.releases)) {
-      if (ids.has(id)) outReleases[id] = value;
+      if (ids.has(id) && isObject(value)) outReleases[id] = value;
     }
   }
 
@@ -316,7 +316,7 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
   }
 
   // A note that no release refers to any more is dropped.
-  const used = new Set(Object.values(outReleases).flatMap((value) => value.notes ?? []));
+  const used = new Set(Object.values(outReleases).flatMap((value) => value?.notes ?? []));
   for (const url of Object.keys(outNotes)) {
     if (!used.has(url) && !keepAll.has(outNotes[url]?.source)) delete outNotes[url];
   }

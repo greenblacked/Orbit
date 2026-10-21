@@ -185,8 +185,9 @@ export async function readPages(adapter, urls, cache, pages, options = {}) {
 /**
  * Read one source: its index, then the pages it needs. The index URL is held to the adapter's own
  * hosts (https only, no userinfo or port) before the first request, like every note URL. A source
- * that fails here, on any request or while choosing its pages comes back with `rows: null` and
- * whatever pages were read, and buildPayload records it as failed. `options` is as for fetchPage.
+ * that fails on its index request or while choosing its pages comes back with `rows: null` and
+ * whatever pages were read, and buildPayload records it as failed. A note page that fails is
+ * caught by readPages and does not fail the source. `options` is as for fetchPage.
  */
 export async function readSource(adapter, releases, cache, options = {}) {
   let rows = null;

@@ -351,7 +351,9 @@ describe('snapshot_security readSource', () => {
       throw new Error('no months');
     };
     const result = await run('https://good.example/idx', { kind: 'bulletins', neededPages });
+    assert.deepEqual(result.calls, ['https://good.example/idx']);
     assert.equal(result.rows, null);
+    assert.equal(result.pages.size, 0);
     assert.deepEqual(result.errors, ['failed: fake: no months']);
   });
 });
