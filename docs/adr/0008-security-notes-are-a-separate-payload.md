@@ -116,10 +116,10 @@ A read-only probe fetched the October 2026 AOSP and Pixel bulletins on 2026-10-1
 - **Deferred, not met.** The check that each note host is in the vendor's `security.hosts` (`source.android.com` is to be added to Google's list when that list lands), which the probe did not do.
 - **Terms of use.** The owner accepted the terms of use of source.android.com for automated reads on 2026-10-14.
 
-## Update: snapshot hardening (2026-10-21)
-
-The snapshot script holds each adapter's index URL to the adapter's own hosts (https only) before the first request; a source whose index fails that check is recorded as failed like any other source failure. The payload is validated before it is written (see the contract above).
-
 ## Update: one request per page (2026-10-13)
 
 The page asks `/api/security.json` once and reads `/data/security.json` only if that fails (the Worker serves the same bundled file, so asking for both was a second download of the same bytes), and it takes vendor names from the families config that `releases.js` already loaded instead of fetching `families.json` again. If the API answers 200 with JSON that the page rejects (wrong schema or a bad `generatedAt`), the page does not fall back: the Worker re-serves the same bytes as the snapshot, so the snapshot would be rejected too.
+
+## Update: snapshot hardening (2026-10-21)
+
+The snapshot script holds each adapter's index URL, every note URL and every redirect target to the adapter's own hosts with one check: https, no userinfo, no port, and a host that is exactly on the list. A source whose index fails that check, or that throws after its index was parsed, is recorded as failed like any other source failure, and the others still write. The payload is validated before it is written: `deploy/security/validate.js` checks the header, the notes map (https keys, a known source, sorted and unique CVE ids), and that each release's notes exist and its CVEs come from them; the rest of the contract (the join to `releases.json`, patch levels, stages) stays in `tests/support/security_contract.mjs`.

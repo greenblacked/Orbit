@@ -1,6 +1,8 @@
 // Runtime check of the security payload (schema 1, ADR 0008) before it is written. Pure: no I/O.
-// It holds the shape the page and the Worker rely on; the fuller contract (joins to releases.json,
-// sorted lists, notes that exist) stays in tests/support/security_contract.mjs.
+// It holds the shape the page and the Worker rely on: the header, the notes map, and each release's
+// status, counts, notes and CVEs against that map. The rest of the contract (the join to
+// releases.json, patch levels, per-release sources and stages) stays in
+// tests/support/security_contract.mjs, which the tests run on what the builder writes.
 
 // The statuses the builder emits.
 const STATUSES = new Set([
@@ -12,7 +14,41 @@ const STATUSES = new Set([
   'not-connected',
 ]);
 
+const CVE = /^CVE-\d{4}-\d{4,}$/;
+
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+const sortedUnique = (list) => list.every((item, i) => i === 0 || list[i - 1] < item);
+
+// A real https URL: the prefix alone would accept "https://" or "https://[bad".
+function isHttpsUrl(value) {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname !== '';
+  } catch {
+    return false;
+  }
+}
+
+// Every problem of the notes map: https keys, an object each, a known source, sorted CVE ids.
+function noteProblems(payload, found) {
+  for (const [url, note] of Object.entries(payload.notes)) {
+    if (!isHttpsUrl(url)) found.push(`note ${url} is not https`);
+    if (!isObject(note)) {
+      found.push(`note ${url} is not an object`);
+      continue;
+    }
+    if (typeof note.source !== 'string' || !Object.hasOwn(payload.sources, note.source)) {
+      found.push(`note ${url} names an unknown source`);
+    }
+    const ids = Array.isArray(note.cves) ? note.cves.map((cve) => cve?.id) : null;
+    if (!ids || !ids.every((id) => typeof id === 'string' && CVE.test(id))) {
+      found.push(`note ${url} has a bad CVE`);
+    } else if (!sortedUnique(ids)) {
+      found.push(`note ${url}: cves are not sorted and unique`);
+    }
+  }
+}
 
 /** Every way `payload` breaks the schema-1 shape; empty when it may be written. */
 export function payloadProblems(payload) {
@@ -23,10 +59,10 @@ export function payloadProblems(payload) {
   if (!Number.isFinite(stamp)) {
     found.push('generatedAt is not a date');
   }
-  for (const key of ['sources', 'notes', 'releases']) {
-    if (!isObject(payload[key])) found.push(`${key} is not an object`);
-  }
-  if (!isObject(payload.releases)) return found;
+  const missing = ['sources', 'notes', 'releases'].filter((key) => !isObject(payload[key]));
+  for (const key of missing) found.push(`${key} is not an object`);
+  if (missing.length > 0) return found;
+  noteProblems(payload, found);
   for (const [id, entry] of Object.entries(payload.releases)) {
     if (!isObject(entry)) {
       found.push(`${id} is not an object`);
@@ -41,6 +77,22 @@ export function payloadProblems(payload) {
       continue;
     }
     const { count, cves, notes } = entry;
+    // Every note a release names must exist, and every CVE it lists must come from those notes.
+    const known = new Set();
+    for (const url of notes) {
+      if (!isHttpsUrl(url)) found.push(`${id} names a note that is not https`);
+      if (!Object.hasOwn(payload.notes, url)) {
+        found.push(`${id} names a note that is missing: ${url}`);
+      } else if (Array.isArray(payload.notes[url]?.cves)) {
+        for (const cve of payload.notes[url].cves) known.add(cve?.id);
+      }
+    }
+    if (!sortedUnique(notes)) found.push(`${id}: notes are not sorted and unique`);
+    if (!sortedUnique(cves)) found.push(`${id}: cves are not sorted and unique`);
+    for (const cve of cves) {
+      if (typeof cve !== 'string' || !CVE.test(cve)) found.push(`${id} has a bad CVE ${cve}`);
+      else if (!known.has(cve)) found.push(`${id} lists ${cve} that its notes do not`);
+    }
     if (entry.status === 'listed') {
       if (!Number.isInteger(count) || count < 1) found.push(`${id} is listed with count ${count}`);
       if (notes.length === 0) found.push(`${id} is listed without notes`);

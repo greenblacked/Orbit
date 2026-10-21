@@ -8,7 +8,13 @@ import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { fetchPage, readPages, readSource, writePayload } from '../deploy/snapshot_security.mjs';
+import {
+  allowed,
+  fetchPage,
+  readPages,
+  readSource,
+  writePayload,
+} from '../deploy/snapshot_security.mjs';
 
 const HOSTS = ['source.android.com'];
 const START = 'https://source.android.com/docs/security/bulletin/2025-01-01';
@@ -245,23 +251,61 @@ describe('snapshot_security fetchPage', () => {
   });
 });
 
+describe('snapshot_security allowed', () => {
+  const hosts = ['good.example'];
+
+  it('accepts https on a listed host, with or without a path or query', () => {
+    for (const url of [
+      'https://good.example/',
+      'https://good.example/a/b?x=1#f',
+      'https://good.example:443/x',
+    ]) {
+      assert.equal(allowed(url, hosts), true, url);
+    }
+    assert.equal(allowed('https://b.example/x', ['a.example', 'b.example']), true);
+  });
+
+  it('refuses http, userinfo, a port, another host and what is not a URL', () => {
+    for (const url of [
+      'http://good.example/x',
+      'https://user:pw@good.example/x',
+      'https://user@good.example/x',
+      'https://:pw@good.example/x',
+      'https://good.example:8443/x',
+      'https://good.example./x',
+      'https://sub.good.example/x',
+      'https://good.example.evil.example/x',
+      'https://evil.example/x',
+      'ftp://good.example/x',
+      '//good.example/x',
+      'not a url',
+      '',
+    ]) {
+      assert.equal(allowed(url, hosts), false, url);
+    }
+    assert.equal(allowed('https://good.example/x', []), false);
+  });
+});
+
 describe('snapshot_security readSource', () => {
-  const adapter = (index) => ({
+  const adapter = (index, extra = {}) => ({
     id: 'fake',
     vendor: 'v',
     index,
     hosts: ['good.example'],
     parseIndex: () => [{}],
     match: () => [],
+    ...extra,
   });
-  const run = async (index) => {
+  const run = async (index, extra = {}) => {
     const calls = [];
     const options = OPTIONS({ 'https://good.example/idx': { html: '<p>x</p>' } }, calls, []);
     const originalError = console.error;
     const errors = [];
     console.error = (line) => errors.push(line);
     try {
-      return { ...(await readSource(adapter(index), [], new Map(), options)), calls, errors };
+      const source = adapter(index, extra);
+      return { ...(await readSource(source, [], new Map(), options)), calls, errors };
     } finally {
       console.error = originalError;
     }
@@ -279,6 +323,8 @@ describe('snapshot_security readSource', () => {
       'https://evil.example/idx',
       'http://good.example/idx',
       'https://good.example.evil.example/idx',
+      'https://user:pw@good.example/idx',
+      'https://good.example:8443/idx',
       'not a url',
     ]) {
       const result = await run(index);
@@ -287,6 +333,56 @@ describe('snapshot_security readSource', () => {
       assert.equal(result.pages.size, 0, index);
       assert.match(result.errors[0], /^failed: fake: .* is not on good\.example/, index);
     }
+  });
+
+  it('fails the source alone when match throws after the index was parsed', async () => {
+    const match = () => {
+      throw new Error('match blew up');
+    };
+    const result = await run('https://good.example/idx', { match });
+    assert.deepEqual(result.calls, ['https://good.example/idx']);
+    assert.equal(result.rows, null);
+    assert.equal(result.pages.size, 0);
+    assert.deepEqual(result.errors, ['failed: fake: match blew up']);
+  });
+
+  it('fails the source alone when a bulletins adapter cannot name its pages', async () => {
+    const neededPages = () => {
+      throw new Error('no months');
+    };
+    const result = await run('https://good.example/idx', { kind: 'bulletins', neededPages });
+    assert.equal(result.rows, null);
+    assert.deepEqual(result.errors, ['failed: fake: no months']);
+  });
+});
+
+describe('snapshot_security readPages', () => {
+  const adapter = { id: 'fake', hosts: ['good.example'] };
+  const GOOD = 'https://good.example/n';
+
+  it('reads only https note URLs on the host, without userinfo or a port', async () => {
+    const calls = [];
+    const pages = new Map();
+    const errors = [];
+    const originalError = console.error;
+    console.error = (line) => errors.push(line);
+    try {
+      const urls = [
+        'https://user:pw@good.example/n',
+        'https://good.example:8443/n',
+        'http://good.example/n',
+        'https://evil.example/n',
+        GOOD,
+      ];
+      const options = OPTIONS({ [GOOD]: { html: 'ok' } }, calls, []);
+      await readPages(adapter, urls, new Map(), pages, options);
+    } finally {
+      console.error = originalError;
+    }
+    assert.deepEqual(calls, [GOOD]);
+    assert.deepEqual([...pages.keys()], [GOOD]);
+    assert.equal(errors.length, 4);
+    for (const line of errors) assert.match(line, /^failed: fake: .* is not on good\.example/);
   });
 });
 

@@ -452,13 +452,22 @@ describe('payloadProblems', () => {
   const entry = (status, extra = {}) => ({
     status, notes: [], cves: [], count: null, patchLevel: null, checkedAt: NOW, ...extra,
   });
+  const A = 'https://x.example/a';
+  const B = 'https://x.example/b';
+  const note = (...ids) => ({
+    source: 'src',
+    title: 't',
+    published: null,
+    cves: ids.map((id) => ({ id, severity: null })),
+    noCveEntries: false,
+  });
   const valid = () => ({
     schema: 1,
     generatedAt: NOW,
-    sources: {},
-    notes: {},
+    sources: { src: { status: 'ok', checkedAt: NOW, index: 'https://x.example/' } },
+    notes: { [A]: note('CVE-2026-0001') },
     releases: {
-      a: entry('listed', { notes: ['https://x.example/a'], cves: ['CVE-2026-0001'], count: 1 }),
+      a: entry('listed', { notes: [A], cves: ['CVE-2026-0001'], count: 1 }),
       b: entry('no-cve-entries', { count: 0 }),
       c: entry('not-found'),
       d: entry('not-applicable'),
@@ -467,6 +476,11 @@ describe('payloadProblems', () => {
     },
   });
   const withRelease = (key, value) => ({ ...valid(), releases: { [key]: value } });
+  const withNotes = (notes) => ({ ...valid(), notes });
+  const refuses = (payload, text) => {
+    const found = payloadProblems(payload);
+    assert.ok(found.some((line) => line.includes(text)), `${text} in ${JSON.stringify(found)}`);
+  };
 
   it('accepts what the builder writes', () => {
     assert.deepEqual(payloadProblems(valid()), []);
@@ -513,5 +527,98 @@ describe('payloadProblems', () => {
     for (const value of bad) {
       assert.notDeepEqual(payloadProblems(withRelease('x', value)), [], JSON.stringify(value));
     }
+  });
+
+  it('accepts a release that draws its CVEs from several notes', () => {
+    const payload = {
+      ...valid(),
+      notes: { [A]: note('CVE-2026-0001'), [B]: note('CVE-2026-0002', 'CVE-2026-0003') },
+      releases: {
+        x: entry('listed', {
+          notes: [A, B],
+          cves: ['CVE-2026-0001', 'CVE-2026-0002', 'CVE-2026-0003'],
+          count: 3,
+        }),
+      },
+    };
+    assert.deepEqual(payloadProblems(payload), []);
+  });
+
+  it('refuses a bad notes map', () => {
+    const extra = (key) => withNotes({ ...valid().notes, [key]: note('CVE-2026-0001') });
+    refuses(extra('http://x.example/a'), 'not https');
+    refuses(extra('https://'), 'not https');
+    for (const value of ['text', null, [], 5]) {
+      refuses(withNotes({ [A]: value }), 'is not an object');
+    }
+    for (const source of ['other', 'toString', undefined, 5]) {
+      refuses(withNotes({ [A]: { ...note('CVE-2026-0001'), source } }), 'names an unknown source');
+    }
+    const badCves = [
+      [{ id: 'CVE-26-1' }],
+      [{ id: 'CVE-2026-001' }],
+      [{ id: 'cve-2026-0001' }],
+      [{ id: 5 }],
+      [{}],
+      [null],
+      'CVE-2026-0001',
+      undefined,
+    ];
+    for (const cves of badCves) {
+      refuses(withNotes({ [A]: { ...note(), cves } }), 'has a bad CVE');
+    }
+  });
+
+  it('refuses note CVEs that are not sorted and unique', () => {
+    const wrong = [
+      note('CVE-2026-0002', 'CVE-2026-0001'),
+      note('CVE-2026-0001', 'CVE-2026-0001'),
+      note('CVE-2026-0010', 'CVE-2026-0009', 'CVE-2026-0011'),
+    ];
+    for (const value of wrong) {
+      refuses(withNotes({ [A]: value }), 'cves are not sorted and unique');
+    }
+  });
+
+  it('refuses a release note that is missing or not https', () => {
+    const missing = entry('listed', { notes: [B], cves: ['CVE-2026-0001'], count: 1 });
+    refuses(withRelease('x', missing), `names a note that is missing: ${B}`);
+    const plain = entry('listed', { notes: ['http://x.example/a'], cves: [], count: 1 });
+    refuses({ ...withRelease('x', plain), notes: { 'http://x.example/a': note() } }, 'not https');
+    refuses(withRelease('x', entry('listed', { notes: [null], cves: [], count: 1 })), 'not https');
+    const proto = entry('listed', { notes: ['__proto__'], cves: [], count: 1 });
+    refuses(withRelease('x', proto), 'names a note that is missing');
+  });
+
+  it('refuses release notes that are not sorted and unique', () => {
+    const both = { ...valid().notes, [B]: note('CVE-2026-0002') };
+    const cves = ['CVE-2026-0001', 'CVE-2026-0002'];
+    for (const notes of [[B, A], [A, A]]) {
+      const release = withRelease('x', entry('listed', { notes, cves, count: 2 }));
+      refuses({ ...release, notes: both }, 'notes are not sorted and unique');
+    }
+  });
+
+  it('refuses a release CVE that is malformed, unsorted or not in its notes', () => {
+    const both = { [A]: note('CVE-2026-0001', 'CVE-2026-0002') };
+    const listed = (cves) => ({
+      ...withRelease('x', entry('listed', { notes: [A], cves, count: cves.length })),
+      notes: both,
+    });
+    refuses(listed(['CVE-26-1']), 'has a bad CVE');
+    refuses(listed([5]), 'has a bad CVE');
+    refuses(listed(['CVE-2026-0009']), 'lists CVE-2026-0009 that its notes do not');
+    refuses(listed(['CVE-2026-0002', 'CVE-2026-0001']), 'cves are not sorted and unique');
+    refuses(listed(['CVE-2026-0001', 'CVE-2026-0001']), 'cves are not sorted and unique');
+    assert.deepEqual(payloadProblems(listed(['CVE-2026-0001', 'CVE-2026-0002'])), []);
+  });
+
+  it('refuses a CVE that only a note the release does not name lists', () => {
+    const payload = {
+      ...valid(),
+      notes: { [A]: note('CVE-2026-0001'), [B]: note('CVE-2026-0002') },
+      releases: { x: entry('listed', { notes: [A], cves: ['CVE-2026-0002'], count: 1 }) },
+    };
+    refuses(payload, 'lists CVE-2026-0002 that its notes do not');
   });
 });

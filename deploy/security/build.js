@@ -236,7 +236,7 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
   );
   // The notes the payload would hold now: those a release points at and a `bulletins` source's.
   const heldNotes = () => {
-    const used = new Set(Object.values(outReleases).flatMap((value) => value.notes ?? []));
+    const used = new Set(Object.values(outReleases).flatMap((value) => value?.notes ?? []));
     return Object.keys(outNotes).filter(
       (url) => used.has(url) || keepAll.has(outNotes[url]?.source),
     ).length;
