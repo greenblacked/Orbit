@@ -76,6 +76,12 @@ jobs:
         run: |
           set -Eeuo pipefail
           python scripts/check_results.py
+      - name: Warn when the data snapshots are getting old
+        # Annotation only: scripts/stale_data.py exits 0 whatever it finds, so a stale
+        # snapshot is a nudge on the run, never a red build.
+        run: |
+          set -Eeuo pipefail
+          python scripts/stale_data.py
       - name: Run the build tests
         run: |
           set -Eeuo pipefail
