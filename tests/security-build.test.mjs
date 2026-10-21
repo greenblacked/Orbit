@@ -621,4 +621,13 @@ describe('payloadProblems', () => {
     };
     refuses(payload, 'lists CVE-2026-0002 that its notes do not');
   });
+
+  it('refuses a listed release that omits a CVE its notes list', () => {
+    const payload = {
+      ...valid(),
+      notes: { [A]: note('CVE-2026-0001', 'CVE-2026-0002') },
+      releases: { x: entry('listed', { notes: [A], cves: ['CVE-2026-0001'], count: 1 }) },
+    };
+    refuses(payload, 'x omits 1 cves its notes list');
+  });
 });

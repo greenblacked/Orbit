@@ -77,7 +77,8 @@ export function payloadProblems(payload) {
       continue;
     }
     const { count, cves, notes } = entry;
-    // Every note a release names must exist, and every CVE it lists must come from those notes.
+    // Every note a release names must exist, and a listed release's CVEs must be exactly those
+    // its notes list: none it invents, none it drops.
     const known = new Set();
     for (const url of notes) {
       if (!isHttpsUrl(url)) found.push(`${id} names a note that is not https`);
@@ -99,6 +100,8 @@ export function payloadProblems(payload) {
       if (count !== cves.length) {
         found.push(`${id}: count ${count} does not match ${cves.length} cves`);
       }
+      const omitted = [...known].filter((cve) => !cves.includes(cve)).length;
+      if (omitted > 0) found.push(`${id} omits ${omitted} cves its notes list`);
     } else if (entry.status === 'no-cve-entries') {
       if (count !== 0 || cves.length > 0) found.push(`${id} must have count 0 and no cves`);
     } else if (count !== null || cves.length > 0 || notes.length > 0) {
