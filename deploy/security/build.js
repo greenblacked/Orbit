@@ -84,8 +84,10 @@ function reasonOf(adapter, bulletin, url) {
 
 // Fold one `bulletins` source (Android) into the payload. Fail closed like an index source: a
 // bulletin that was not read again keeps its previous note and the rows that point at it; a page
-// that was read and refused never does; a release that was listed and has lost its patch level
-// keeps its old row and is reported (markup drift looks like that).
+// that was read and refused never does; a release that was listed/no-cve-entries and has lost its
+// patch level keeps its old row and is reported (markup drift looks like that), and its old note
+// is restored only if that page was not fetched this run. At the end every kept row is derived
+// again from the notes it names, or becomes unavailable when a note is no longer held.
 function applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases, failures }) {
   const read = new Map();
   for (const [url, html] of pages ?? []) {
@@ -155,7 +157,9 @@ function applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases
 
 // Fold one index-and-notes source (Apple) into the payload, failing closed per release: a page
 // that was read and refused is never replaced by the previous note; one that was not read falls
-// back to it and is reported; a release that had a note and no longer matches keeps its row.
+// back to it and is reported; a release that had a note and no longer matches its index row keeps
+// its old row and is reported, its old note restored only if that page was not fetched this run
+// (the final pass derives every kept row again from the notes it names).
 function applyIndexSource(args) {
   const { adapter, releases, mine, rows, pages, now, outNotes, outReleases, failures } = args;
   const kept = { ...outNotes };
