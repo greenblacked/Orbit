@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T22:06:46Z",
+  "generatedAt": "2026-10-21T19:22:19Z",
   "sources": {
     "android-security-bulletin": {
       "status": "ok",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "index": "https://source.android.com/docs/setup/reference/build-numbers"
     },
     "apple-security-releases": {
       "status": "ok",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "index": "https://support.apple.com/en-us/100100"
     }
   },
@@ -4781,6 +4781,10 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-84582",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-84583",
           "severity": null
         },
@@ -4814,6 +4818,10 @@
         },
         {
           "id": "CVE-2026-84612",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-84613",
           "severity": null
         },
         {
@@ -4890,6 +4898,30 @@
         },
         {
           "id": "CVE-2026-86903",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86913",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86918",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86953",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86957",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86962",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86975",
           "severity": null
         }
       ],
@@ -5137,6 +5169,10 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-84582",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-84583",
           "severity": null
         },
@@ -5178,6 +5214,10 @@
         },
         {
           "id": "CVE-2026-84612",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-84613",
           "severity": null
         },
         {
@@ -5229,6 +5269,10 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-86872",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-86876",
           "severity": null
         },
@@ -5270,6 +5314,30 @@
         },
         {
           "id": "CVE-2026-86904",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86913",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86918",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86953",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86957",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86962",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86975",
           "severity": null
         }
       ],
@@ -5517,6 +5585,10 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-84613",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-84615",
           "severity": null
         },
@@ -5605,7 +5677,39 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-86913",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86919",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86921",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-86924",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86944",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86957",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86959",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86962",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-86963",
           "severity": null
         }
       ],
@@ -5675,7 +5779,7 @@
       ],
       "count": 41,
       "patchLevel": "2025-03-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r21": {
@@ -5728,7 +5832,7 @@
       ],
       "count": 41,
       "patchLevel": "2025-03-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r22": {
@@ -5781,7 +5885,7 @@
       ],
       "count": 41,
       "patchLevel": "2025-03-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r23": {
@@ -5834,7 +5938,7 @@
       ],
       "count": 41,
       "patchLevel": "2025-03-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r24": {
@@ -5880,7 +5984,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-01-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r25": {
@@ -5938,7 +6042,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-02-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r26": {
@@ -6005,7 +6109,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r27": {
@@ -6072,7 +6176,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r28": {
@@ -6139,7 +6243,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r29": {
@@ -6206,7 +6310,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r30": {
@@ -6273,7 +6377,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r31": {
@@ -6331,7 +6435,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r32": {
@@ -6389,7 +6493,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r33": {
@@ -6447,7 +6551,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r34": {
@@ -6505,7 +6609,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r35": {
@@ -6563,7 +6667,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r36": {
@@ -6621,7 +6725,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-16.0.0_r1": {
@@ -6667,7 +6771,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-06-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-16.0.0_r2": {
@@ -6713,7 +6817,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-06-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-16.0.0_r3": {
@@ -6833,7 +6937,7 @@
       ],
       "count": 108,
       "patchLevel": "2025-09-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-16.0.0_r4": {
@@ -6944,7 +7048,7 @@
       ],
       "count": 99,
       "patchLevel": "2025-12-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "android-17.0.0_r1": {
@@ -7070,7 +7174,7 @@
       ],
       "count": 114,
       "patchLevel": "2026-06-05",
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "android-security-bulletin"
     },
     "https://developer.apple.com/news/releases/?id=05112026i": {
@@ -7083,7 +7187,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=05112026j": {
@@ -7096,7 +7200,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=05112026k": {
@@ -7109,7 +7213,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=05112026l": {
@@ -7122,7 +7226,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=05112026m": {
@@ -7135,7 +7239,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=07272026d": {
@@ -7253,7 +7357,7 @@
       ],
       "count": 106,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=07272026f": {
@@ -7371,7 +7475,7 @@
       ],
       "count": 106,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=08172026i": {
@@ -7385,7 +7489,7 @@
       ],
       "count": 2,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=08172026j": {
@@ -7431,7 +7535,7 @@
       ],
       "count": 34,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=08172026k": {
@@ -7574,7 +7678,7 @@
       ],
       "count": 131,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=08172026l": {
@@ -7717,7 +7821,7 @@
       ],
       "count": 131,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09082026a": {
@@ -7726,7 +7830,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09082026b": {
@@ -7735,7 +7839,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09092026g": {
@@ -7803,6 +7907,7 @@
         "CVE-2026-84607",
         "CVE-2026-84611",
         "CVE-2026-84612",
+        "CVE-2026-84613",
         "CVE-2026-84615",
         "CVE-2026-84616",
         "CVE-2026-84617",
@@ -7825,11 +7930,19 @@
         "CVE-2026-86892",
         "CVE-2026-86897",
         "CVE-2026-86904",
-        "CVE-2026-86924"
+        "CVE-2026-86913",
+        "CVE-2026-86919",
+        "CVE-2026-86921",
+        "CVE-2026-86924",
+        "CVE-2026-86944",
+        "CVE-2026-86957",
+        "CVE-2026-86959",
+        "CVE-2026-86962",
+        "CVE-2026-86963"
       ],
-      "count": 82,
+      "count": 91,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09142026d": {
@@ -7899,6 +8012,7 @@
         "CVE-2026-84564",
         "CVE-2026-84571",
         "CVE-2026-84575",
+        "CVE-2026-84582",
         "CVE-2026-84583",
         "CVE-2026-84596",
         "CVE-2026-84597",
@@ -7908,6 +8022,7 @@
         "CVE-2026-84609",
         "CVE-2026-84611",
         "CVE-2026-84612",
+        "CVE-2026-84613",
         "CVE-2026-84615",
         "CVE-2026-84616",
         "CVE-2026-84617",
@@ -7926,11 +8041,17 @@
         "CVE-2026-86888",
         "CVE-2026-86893",
         "CVE-2026-86895",
-        "CVE-2026-86903"
+        "CVE-2026-86903",
+        "CVE-2026-86913",
+        "CVE-2026-86918",
+        "CVE-2026-86953",
+        "CVE-2026-86957",
+        "CVE-2026-86962",
+        "CVE-2026-86975"
       ],
-      "count": 89,
+      "count": 97,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09142026f": {
@@ -7998,6 +8119,7 @@
         "CVE-2026-84564",
         "CVE-2026-84571",
         "CVE-2026-84575",
+        "CVE-2026-84582",
         "CVE-2026-84583",
         "CVE-2026-84586",
         "CVE-2026-84596",
@@ -8009,6 +8131,7 @@
         "CVE-2026-84609",
         "CVE-2026-84611",
         "CVE-2026-84612",
+        "CVE-2026-84613",
         "CVE-2026-84616",
         "CVE-2026-84620",
         "CVE-2026-84622",
@@ -8021,6 +8144,7 @@
         "CVE-2026-84635",
         "CVE-2026-84636",
         "CVE-2026-86870",
+        "CVE-2026-86872",
         "CVE-2026-86876",
         "CVE-2026-86881",
         "CVE-2026-86882",
@@ -8031,11 +8155,17 @@
         "CVE-2026-86893",
         "CVE-2026-86895",
         "CVE-2026-86903",
-        "CVE-2026-86904"
+        "CVE-2026-86904",
+        "CVE-2026-86913",
+        "CVE-2026-86918",
+        "CVE-2026-86953",
+        "CVE-2026-86957",
+        "CVE-2026-86962",
+        "CVE-2026-86975"
       ],
-      "count": 93,
+      "count": 102,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026a": {
@@ -8044,7 +8174,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026b": {
@@ -8053,7 +8183,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026c": {
@@ -8062,7 +8192,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026d": {
@@ -8071,7 +8201,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026e": {
@@ -8080,7 +8210,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026f": {
@@ -8093,7 +8223,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z",
+      "checkedAt": "2026-10-21T19:22:19Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10052026a": {
@@ -8102,7 +8232,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z"
+      "checkedAt": "2026-10-21T19:22:19Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026b": {
       "status": "not-applicable",
@@ -8110,7 +8240,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z"
+      "checkedAt": "2026-10-21T19:22:19Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026c": {
       "status": "not-applicable",
@@ -8118,7 +8248,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z"
+      "checkedAt": "2026-10-21T19:22:19Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026d": {
       "status": "not-applicable",
@@ -8126,7 +8256,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z"
+      "checkedAt": "2026-10-21T19:22:19Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026e": {
       "status": "not-applicable",
@@ -8134,7 +8264,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z"
+      "checkedAt": "2026-10-21T19:22:19Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026f": {
       "status": "not-applicable",
@@ -8142,7 +8272,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-10-18T22:06:46Z"
+      "checkedAt": "2026-10-21T19:22:19Z"
     },
     "https://learn.microsoft.com/en-us/windows/release-health/release-information#22h2-19045.7727": {
       "status": "not-connected",
