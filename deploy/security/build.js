@@ -118,7 +118,10 @@ function applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases
     const was = outReleases[id];
     const title = mine.find((release) => release.id === id)?.title ?? id;
     if (value.status === 'not-found' && keepsEntry(was)) {
-      for (const url of was.notes) restore(url);
+      // A page read this run and refused is not put back (ADR 0008); the row is settled below.
+      for (const url of was.notes) {
+        if (!pages?.has(url)) restore(url);
+      }
       failures.push(`${adapter.id}: ${title} was ${was.status} and no longer has a patch level`);
     } else if (value.status === 'unavailable') {
       const url = adapter.bulletinUrl(value.patchLevel);
@@ -170,9 +173,10 @@ function applyIndexSource(args) {
       if (was === 'listed' || was === 'no-cve-entries') {
         // Markup drift looks like this: a release with a note before has none now.
         const title = release.title ?? found.id;
-        // Its note was dropped above with the rest of the source's; put it back (as Android does).
+        // Its note was dropped above with the rest of the source's; put it back (as Android does),
+        // unless the page was read this run and refused: that is never replaced by the old note.
         for (const url of outReleases[found.id].notes ?? []) {
-          if (!(url in outNotes) && kept[url]) outNotes[url] = kept[url];
+          if (!(url in outNotes) && kept[url] && !pages?.has(url)) outNotes[url] = kept[url];
         }
         failures.push(`${adapter.id}: ${title} was ${was} and no longer matches`);
       } else {
@@ -320,17 +324,28 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
   }
 
   // A row kept on drift (a release that lost its patch level or its index row) can name a note
-  // that was read again this run with other CVEs. Every listed row lists exactly the CVEs of the
-  // notes it names (ADR 0008), so derive them again; checkedAt stays. A note that is still missing
-  // is not invented: the row is left as it is and validation reports it.
+  // that was read again this run with other CVEs, or a page that was read and refused and so was
+  // not put back. Every row that names notes agrees with them (ADR 0008): one whose note is no
+  // longer held is unavailable; any other lists exactly the union of its notes' CVEs, `listed`
+  // when there are some and `no-cve-entries` when there are none. checkedAt, patchLevel and the
+  // rest stay. Rows built from their own notes this run, and rows with no notes, are untouched.
+  const titles = new Map(releases.map((release) => [release.id, release.title ?? release.id]));
   for (const [id, value] of Object.entries(outReleases)) {
-    if (value?.status !== 'listed' || !Array.isArray(value.notes)) continue;
-    if (!value.notes.every((url) => Array.isArray(outNotes[url]?.cves))) continue;
+    if (!keepsEntry(value) || !Array.isArray(value.notes) || value.notes.length === 0) continue;
+    if (!value.notes.every((url) => Array.isArray(outNotes[url]?.cves))) {
+      const source = 'source' in value ? { source: value.source } : {};
+      outReleases[id] = { ...entry('unavailable', now), ...source };
+      failures.push(
+        `${value.source ?? 'security'}: ${titles.get(id) ?? id} names a note that is no longer held; it is unavailable`,
+      );
+      continue;
+    }
     const ids = value.notes.flatMap((url) => outNotes[url].cves.map((cve) => cve?.id));
     const cves = [...new Set(ids.filter((cve) => typeof cve === 'string'))].sort(compare);
+    const status = cves.length > 0 ? 'listed' : 'no-cve-entries';
     const same = cves.length === value.cves?.length && cves.every((cve, i) => cve === value.cves[i]);
-    if (cves.length > 0 && !(same && value.count === cves.length)) {
-      outReleases[id] = { ...value, cves, count: cves.length };
+    if (!(status === value.status && same && value.count === cves.length)) {
+      outReleases[id] = { ...value, status, cves, count: cves.length };
     }
   }
 

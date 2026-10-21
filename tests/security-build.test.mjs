@@ -295,6 +295,46 @@ describe('Android pages that were not read', () => {
   });
 });
 
+describe('Android rows kept when a release lost its patch level', () => {
+  // Synthetic: a sibling release shares the October bulletin with 'droid', which then loses its
+  // patch level, so its old row is kept while the sibling still needs the month.
+  const sibling = [...releases, row('droid-b', 'google', 'Android', '17', 'release', '2026-10-01T00:00:00Z')];
+  const withLevels = () => levels().set('droid-b', '2026-10-01');
+  const first = () => build([appleSource(), androidSource({ rows: withLevels() })], { releases: sibling }).payload;
+  const lost = () => {
+    const rows = withLevels();
+    rows.delete('droid');
+    return rows;
+  };
+
+  it('makes a kept listed row unavailable when its shared bulletin was read and refused', () => {
+    const before = first();
+    assert.equal(before.releases.droid.status, 'listed');
+    const pages = new Map([
+      [AOSP_URL, '<html><h1>Not a bulletin</h1></html>'],
+      [SEP_URL, SEP],
+    ]);
+    const { payload, failures } = build([appleSource(), androidSource({ rows: lost(), pages })], {
+      releases: sibling,
+      previous: before,
+      now: LATER,
+    });
+    assert.equal(AOSP_URL in payload.notes, false);
+    for (const id of ['droid', 'droid-b']) {
+      const value = payload.releases[id];
+      assert.equal(value.status, 'unavailable', id);
+      assert.deepEqual([value.notes, value.cves, value.count], [[], [], null], id);
+      assert.equal(value.checkedAt, LATER, id);
+      assert.equal(value.source, android.id, id);
+    }
+    assert.ok(failures.some((line) => line.includes('no longer has a patch level')));
+    assert.ok(failures.some((line) => line.includes('no usable note for Android 17')));
+    assert.ok(failures.some((line) => line.includes(`${android.id}: Android 17 names a note that is no longer held`)));
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, sibling), []);
+  });
+});
+
 describe('families without an adapter', () => {
   const more = [
     ...releases,

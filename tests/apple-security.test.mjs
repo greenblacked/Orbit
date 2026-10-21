@@ -449,6 +449,37 @@ describe('buildPayload', () => {
     assert.deepEqual(problems(payload, releases), []);
   });
 
+  it('never puts a refused page back for a kept row, and makes both rows unavailable', () => {
+    const { payload: before } = build();
+    // The iPadOS release still matches; the iOS one no longer does (its row names iPadOS only).
+    const drifted = rows.map((r) =>
+      r.note === NOTE_URL ? { ...r, products: r.products.filter((p) => p.family === 'iPadOS') } : r,
+    );
+    // The shared page is fetched this run and is not the releases' security content.
+    const wrong = NOTE.replace(/iOS 26\.7\.1 and iPadOS 26\.7\.1/g, 'macOS Tahoe 26.7.1');
+    const later = '2026-10-13T10:00:00Z';
+    const { payload, failures } = build({
+      previous: before,
+      now: later,
+      sources: [{ adapter: apple, rows: drifted, pages: new Map([[NOTE_URL, wrong]]) }],
+    });
+    assert.equal(NOTE_URL in payload.notes, false);
+    assert.deepEqual(payload.notes, {});
+    for (const id of ['ios', 'ipad']) {
+      const value = payload.releases[id];
+      assert.equal(value.status, 'unavailable', id);
+      assert.deepEqual([value.notes, value.cves, value.count], [[], [], null], id);
+      assert.equal(value.checkedAt, later, id);
+      assert.equal(value.source, apple.id, id);
+    }
+    const has = (pattern) => failures.some((failure) => pattern.test(failure));
+    assert.ok(has(/iOS 26\.7\.1 was listed and no longer matches/));
+    assert.ok(has(/iOS 26\.7\.1 names a note that is no longer held; it is unavailable/));
+    assert.ok(has(/no usable note for iPadOS 26\.7\.1/));
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, releases), []);
+  });
+
   it('refuses a page with more CVEs than the cap', () => {
     const many = Array.from(
       { length: MAX_CVES_PER_NOTE + 1 },
