@@ -108,6 +108,8 @@ export function problems(payload, rows) {
       if (omitted > 0) found.push(`${id} omits ${omitted} cves its notes list`);
     } else if (entry.status === 'no-cve-entries') {
       if (entry.cves.length > 0 || entry.count !== 0) found.push(`${id} must have no cves and count 0`);
+      // ADR 0008: a no-cve-entries row's notes hold no CVEs either.
+      if (known.size > 0) found.push(`${id} is no-cve-entries but its notes list ${known.size} cves`);
     } else if (entry.notes.length > 0 || entry.cves.length > 0 || entry.count !== null) {
       found.push(`${id} must have no notes or cves and count null`);
     }

@@ -307,6 +307,45 @@ describe('Android rows kept when a release lost its patch level', () => {
     return rows;
   };
 
+  it('lists the union on a kept no-cve-entries row whose bulletin is read again with CVEs', () => {
+    // The October bulletin was empty last time: rewrite the rows and the note to say so.
+    const before = first();
+    before.notes[AOSP_URL] = { ...before.notes[AOSP_URL], cves: [], noCveEntries: true };
+    for (const id of ['droid', 'droid-b']) {
+      before.releases[id] = { ...before.releases[id], status: 'no-cve-entries', cves: [], count: 0 };
+    }
+    assert.deepEqual(payloadProblems(before), []);
+    assert.deepEqual(problems(before, sibling), []);
+
+    const { payload, failures } = build([appleSource(), androidSource({ rows: lost() })], {
+      releases: sibling,
+      previous: before,
+      now: LATER,
+    });
+    const union = parseBulletin(AOSP).cves.map((cve) => cve.id);
+    assert.ok(union.length > 0);
+    assert.ok(failures.some((line) => line.includes('no longer has a patch level')));
+    for (const id of ['droid', 'droid-b']) {
+      assert.equal(payload.releases[id].status, 'listed', id);
+      assert.deepEqual(payload.releases[id].cves, union, id);
+      assert.equal(payload.releases[id].count, union.length, id);
+      assert.deepEqual(payload.releases[id].notes, [AOSP_URL], id);
+    }
+    // The kept row keeps its patch level and time; only its status and list follow the note.
+    assert.equal(payload.releases.droid.patchLevel, '2026-10-05');
+    assert.equal(payload.releases.droid.checkedAt, NOW);
+    assert.equal(payload.releases['droid-b'].checkedAt, LATER);
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, sibling), []);
+
+    // Both checks refuse the stale row this run would otherwise have written.
+    const stale = structuredClone(payload);
+    stale.releases.droid = { ...stale.releases.droid, status: 'no-cve-entries', cves: [], count: 0 };
+    const line = 'droid is no-cve-entries but its notes list';
+    assert.ok(payloadProblems(stale).some((found) => found.includes(line)));
+    assert.ok(problems(stale, sibling).some((found) => found.includes(line)));
+  });
+
   it('makes a kept listed row unavailable when its shared bulletin was read and refused', () => {
     const before = first();
     assert.equal(before.releases.droid.status, 'listed');
@@ -699,6 +738,13 @@ describe('payloadProblems', () => {
       releases: { x: entry('listed', { notes: [A], cves: ['CVE-2026-0002'], count: 1 }) },
     };
     refuses(payload, 'lists CVE-2026-0002 that its notes do not');
+  });
+
+  it('refuses a no-cve-entries release whose note lists a CVE', () => {
+    const listing = withRelease('x', entry('no-cve-entries', { notes: [A], count: 0 }));
+    refuses(listing, 'x is no-cve-entries but its notes list 1 cves');
+    const empty = { ...listing, notes: { [A]: note() } };
+    assert.deepEqual(payloadProblems(empty), []);
   });
 
   it('refuses a listed release that omits a CVE its notes list', () => {

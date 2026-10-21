@@ -104,6 +104,8 @@ export function payloadProblems(payload) {
       if (omitted > 0) found.push(`${id} omits ${omitted} cves its notes list`);
     } else if (entry.status === 'no-cve-entries') {
       if (count !== 0 || cves.length > 0) found.push(`${id} must have count 0 and no cves`);
+      // A row that says "no CVEs" may not name a note that lists some.
+      if (known.size > 0) found.push(`${id} is no-cve-entries but its notes list ${known.size} cves`);
     } else if (count !== null || cves.length > 0 || notes.length > 0) {
       found.push(`${id} is ${entry.status} and must have count null and no notes or cves`);
     }
