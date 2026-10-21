@@ -71,7 +71,11 @@ for (const source of SOURCES) {
     }
     releases = merged.releases;
   } catch (error) {
-    failures.push(`${source.id}: ${error.message}`);
+    // The Worker's message starts with the source id already; the URLs are the allowlist.
+    const reason = error.message.startsWith(`${source.id} `)
+      ? error.message.slice(source.id.length + 1)
+      : error.message;
+    failures.push(`${source.id}: ${reason} (${source.urls.join(', ')})`);
   }
 }
 if (failures.length === SOURCES.length) {

@@ -209,7 +209,7 @@ async function readSecurity(env, request) {
 }
 
 // The body as text, refusing to read past MAX_BODY_BYTES whatever the headers claim.
-export async function readCapped(res) {
+async function readCapped(res) {
   const declared = Number(res.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
     await res.body?.cancel();
@@ -251,7 +251,7 @@ async function fetchOne(source, url, signal, fetchImpl) {
   });
   if (res.status !== 200) {
     await res.body?.cancel();
-    throw new Error(`${source.id} answered ${res.status} for ${url}`);
+    throw new Error(`${source.id} answered ${res.status}`);
   }
   return source.parse(await readCapped(res), url);
 }

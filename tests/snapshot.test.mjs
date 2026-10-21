@@ -60,6 +60,15 @@ describe('deploy/snapshot_releases.mjs', () => {
     assert.match(source, /merging would drop \$\{names\}/);
     assert.match(source, /failures\.push\(`\$\{source\.id\}: /);
   });
+
+  it('fetches each source through fetchParts, with no fetch of its own', () => {
+    const source = readFileSync(script, 'utf8');
+    assert.match(source, /^import \{ fetchParts \} from '\.\/worker\.js';$/m);
+    assert.match(source, /await fetchParts\(source\)/);
+    assert.doesNotMatch(source, /(^|[^.\w])fetch\(/m);
+    assert.doesNotMatch(source, /AbortSignal\.timeout/);
+    assert.doesNotMatch(source, /redirect:/);
+  });
 });
 
 describe('the fetch the snapshot shares with the Worker', () => {
@@ -90,7 +99,7 @@ describe('the fetch the snapshot shares with the Worker', () => {
 
   it('refuses a non-200 answer, naming the source', async () => {
     const fetchImpl = async () => new Response(null, { status: 302, headers: { location: '/x' } });
-    await assert.rejects(fetchParts(make(), fetchImpl), /acme answered 302 for https:\/\/feed\.example\/a\.xml/);
+    await assert.rejects(fetchParts(make(), fetchImpl), /acme answered 302$/);
   });
 
   it('refuses a body over the cap, by header and by stream', async () => {
