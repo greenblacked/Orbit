@@ -1,230 +1,238 @@
 [
   {
-    "id": "apple-developer-releases-rss",
-    "vendor": "Apple",
+    "id": "ubuntu-wiki-releases",
+    "vendor": "Canonical",
     "kind": "release",
-    "url": "https://developer.apple.com/news/releases/rss/releases.rss"
+    "url": "https://wiki.ubuntu.com/Releases"
   },
   {
-    "id": "apple-security-releases-index",
-    "vendor": "Apple",
+    "id": "ubuntu-meta-release-lts",
+    "vendor": "Canonical",
+    "kind": "release",
+    "url": "https://changelogs.ubuntu.com/meta-release-lts"
+  },
+  {
+    "id": "ubuntu-launchpad-series",
+    "vendor": "Canonical",
+    "kind": "release",
+    "url": "https://api.launchpad.net/devel/ubuntu/series",
+    "accept": "application/json"
+  },
+  {
+    "id": "ubuntu-cloud-images-released",
+    "vendor": "Canonical",
+    "kind": "release",
+    "url": "https://cloud-images.ubuntu.com/query/released.latest.txt"
+  },
+  {
+    "id": "debian-stable-release",
+    "vendor": "Debian",
+    "kind": "release",
+    "url": "https://deb.debian.org/debian/dists/stable/Release"
+  },
+  {
+    "id": "debian-distro-info-csv",
+    "vendor": "Debian",
+    "kind": "release",
+    "url": "https://salsa.debian.org/debian/distro-info-data/-/raw/main/debian.csv"
+  },
+  {
+    "id": "debian-wiki-point-releases",
+    "vendor": "Debian",
+    "kind": "release",
+    "url": "https://wiki.debian.org/DebianReleases/PointReleases"
+  },
+  {
+    "id": "alpine-releases-json",
+    "vendor": "Alpine",
+    "kind": "release",
+    "url": "https://alpinelinux.org/releases.json"
+  },
+  {
+    "id": "alpine-secdb-main",
+    "vendor": "Alpine",
     "kind": "security",
-    "url": "https://support.apple.com/en-us/100100",
-    "raw_slice": {"start": "<table", "chars": 30000}
+    "url": "https://secdb.alpinelinux.org/v3.22/main.json",
+    "max_bytes": 8388608
   },
   {
-    "id": "apple-security-note-ios-26-7-1",
-    "vendor": "Apple",
-    "kind": "security",
-    "url": "https://support.apple.com/en-us/149226",
-    "raw_slice": [
-      {"start": "<h1", "chars": 27000},
-      {"start": "Published Date", "chars": 3000}
-    ]
-  },
-  {
-    "id": "mikrotik-current-rss",
-    "vendor": "MikroTik",
+    "id": "kernel-releases-json",
+    "vendor": "kernel.org",
     "kind": "release",
-    "url": "https://mikrotik.com/current.rss"
+    "url": "https://www.kernel.org/releases.json"
   },
   {
-    "id": "mikrotik-latest-stable-long-term-rss",
-    "vendor": "MikroTik",
-    "kind": "release",
-    "url": "https://download.mikrotik.com/routeros/latest-stable-and-long-term.rss"
-  },
-  {
-    "id": "mikrotik-newest7-stable",
-    "vendor": "MikroTik",
-    "kind": "release",
-    "url": "https://upgrade.mikrotik.com/routeros/NEWEST7.stable"
-  },
-  {
-    "id": "mikrotik-newest7-long-term",
-    "vendor": "MikroTik",
-    "kind": "release",
-    "url": "https://upgrade.mikrotik.com/routeros/NEWEST7.long-term"
-  },
-  {
-    "id": "mikrotik-newest7-testing",
-    "vendor": "MikroTik",
-    "kind": "release",
-    "url": "https://upgrade.mikrotik.com/routeros/NEWEST7.testing"
-  },
-  {
-    "id": "mikrotik-newest7a-stable",
-    "vendor": "MikroTik",
-    "kind": "release",
-    "url": "https://upgrade.mikrotik.com/routeros/NEWEST7a.stable"
-  },
-  {
-    "id": "mikrotik-newesta7-stable",
-    "vendor": "MikroTik",
-    "kind": "release",
-    "url": "https://upgrade.mikrotik.com/routeros/NEWESTa7.stable"
-  },
-  {
-    "id": "mikrotik-newesta7-long-term",
-    "vendor": "MikroTik",
-    "kind": "release",
-    "url": "https://upgrade.mikrotik.com/routeros/NEWESTa7.long-term"
-  },
-  {
-    "id": "mikrotik-newesta7-testing",
-    "vendor": "MikroTik",
-    "kind": "release",
-    "url": "https://upgrade.mikrotik.com/routeros/NEWESTa7.testing"
-  },
-  {
-    "id": "mikrotik-changelogs",
-    "vendor": "MikroTik",
-    "kind": "release",
-    "url": "https://mikrotik.com/download/changelogs"
-  },
-  {
-    "id": "mikrotik-supportsec",
-    "vendor": "MikroTik",
-    "kind": "security",
-    "url": "https://mikrotik.com/supportsec"
-  },
-  {
-    "id": "android-build-numbers",
-    "vendor": "Android",
-    "kind": "release",
-    "url": "https://source.android.com/docs/setup/reference/build-numbers",
-    "raw_tables": 3
-  },
-  {
-    "id": "android-security-bulletin-index",
-    "vendor": "Android",
-    "kind": "security",
-    "url": "https://source.android.com/docs/security/bulletin",
-    "raw_slice": {"start": "<table", "chars": 20000}
-  },
-  {
-    "id": "android-security-bulletin-2026-10",
-    "vendor": "Android",
-    "kind": "security",
-    "url": "https://source.android.com/docs/security/bulletin/2026/2026-10-01",
-    "raw_tables": 6,
-    "raw_slice": {"start": "<h1", "chars": 4000}
-  },
-  {
-    "id": "android-pixel-bulletin-index",
-    "vendor": "Android",
-    "kind": "security",
-    "url": "https://source.android.com/docs/security/bulletin/pixel"
-  },
-  {
-    "id": "android-pixel-bulletin-2026-10",
-    "vendor": "Android",
-    "kind": "security",
-    "url": "https://source.android.com/docs/security/bulletin/pixel/2026/2026-10-01",
-    "raw_tables": 6,
-    "raw_slice": {"start": "<h1", "chars": 4000}
-  },
-  {
-    "id": "android-versions",
-    "vendor": "Android",
+    "id": "android-versions-index",
+    "vendor": "Google",
     "kind": "release",
     "url": "https://developer.android.com/about/versions"
   },
   {
-    "id": "android-pixel-factory-images",
-    "vendor": "Android",
-    "kind": "release",
-    "url": "https://developers.google.com/android/images",
-    "raw_tables": 2
-  },
-  {
-    "id": "android-pixel-update-schedule",
-    "vendor": "Android",
-    "kind": "release",
-    "url": "https://support.google.com/pixelphone/answer/4457705"
-  },
-  {
-    "id": "windows-release-health-11",
+    "id": "windows11-release-information",
     "vendor": "Microsoft",
     "kind": "release",
     "url": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information",
-    "raw_tables": 3
+    "max_bytes": 8388608
   },
   {
-    "id": "windows-release-health-10",
+    "id": "windows-server-release-info",
     "vendor": "Microsoft",
     "kind": "release",
-    "url": "https://learn.microsoft.com/en-us/windows/release-health/release-information",
-    "raw_tables": 2
+    "url": "https://learn.microsoft.com/en-us/windows/release-health/windows-server-release-info",
+    "max_bytes": 8388608
   },
   {
-    "id": "windows-release-health-status-11-25h2",
+    "id": "windows-insider-feed",
     "vendor": "Microsoft",
     "kind": "release",
-    "url": "https://learn.microsoft.com/en-us/windows/release-health/status-windows-11-25h2"
+    "url": "https://blogs.windows.com/windows-insider/feed/"
   },
   {
-    "id": "windows-update-history",
-    "vendor": "Microsoft",
+    "id": "chromeos-dash-stable",
+    "vendor": "Google",
     "kind": "release",
-    "url": "https://support.microsoft.com/en-us/help/4043454"
+    "url": "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=ChromeOS&num=5",
+    "accept": "application/json"
   },
   {
-    "id": "msrc-cvrf-updates",
-    "vendor": "Microsoft",
+    "id": "chromeos-recovery-json",
+    "vendor": "Google",
+    "kind": "release",
+    "url": "https://dl.google.com/dl/edgedl/chromeos/recovery/recovery.json",
+    "max_bytes": 8388608
+  },
+  {
+    "id": "chrome-dash-windows-stable",
+    "vendor": "Google",
+    "kind": "release",
+    "url": "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=5",
+    "accept": "application/json"
+  },
+  {
+    "id": "openwrt-versions-json",
+    "vendor": "OpenWrt",
+    "kind": "release",
+    "url": "https://downloads.openwrt.org/.versions.json"
+  },
+  {
+    "id": "openwrt-tags-atom",
+    "vendor": "OpenWrt",
+    "kind": "release",
+    "url": "https://github.com/openwrt/openwrt/tags.atom"
+  },
+  {
+    "id": "rhel-lifecycle-api",
+    "vendor": "Red Hat",
+    "kind": "release",
+    "url": "https://access.redhat.com/product-life-cycles/api/v1/products?name=Red%20Hat%20Enterprise%20Linux",
+    "accept": "application/json"
+  },
+  {
+    "id": "rhel-release-dates",
+    "vendor": "Red Hat",
+    "kind": "release",
+    "url": "https://access.redhat.com/articles/3078"
+  },
+  {
+    "id": "suse-csaf-provider",
+    "vendor": "SUSE",
     "kind": "security",
-    "url": "https://api.msrc.microsoft.com/cvrf/v3.0/updates"
+    "url": "https://www.suse.com/.well-known/csaf/provider-metadata.json",
+    "accept": "application/json"
   },
   {
-    "id": "msrc-cvrf-2026-sep",
-    "vendor": "Microsoft",
+    "id": "almalinux-errata-9",
+    "vendor": "AlmaLinux",
     "kind": "security",
-    "url": "https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Sep",
-    "max_bytes": 16777216
+    "url": "https://errata.almalinux.org/9/errata.json",
+    "max_bytes": 8388608
   },
   {
-    "id": "msrc-cvrf-2026-sep-json",
-    "vendor": "Microsoft",
+    "id": "rocky-wiki-versions",
+    "vendor": "Rocky Linux",
+    "kind": "release",
+    "url": "https://wiki.rockylinux.org/rocky/version/"
+  },
+  {
+    "id": "fedora-releases-json",
+    "vendor": "Fedora",
+    "kind": "release",
+    "url": "https://fedoraproject.org/releases.json"
+  },
+  {
+    "id": "arch-releng-json",
+    "vendor": "Arch Linux",
+    "kind": "release",
+    "url": "https://archlinux.org/releng/releases/json/"
+  },
+  {
+    "id": "firefox-versions-json",
+    "vendor": "Mozilla",
+    "kind": "release",
+    "url": "https://product-details.mozilla.org/1.0/firefox_versions.json"
+  },
+  {
+    "id": "kubernetes-cve-feed",
+    "vendor": "Kubernetes",
     "kind": "security",
-    "url": "https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Sep",
-    "accept": "application/json",
-    "max_bytes": 16777216
+    "url": "https://kubernetes.io/docs/reference/issues-security/official-cve-feed/index.json",
+    "accept": "application/json"
   },
   {
-    "id": "steamos-news-rss-1675200",
-    "vendor": "Valve",
+    "id": "kubernetes-stable-txt",
+    "vendor": "Kubernetes",
     "kind": "release",
-    "url": "https://store.steampowered.com/feeds/news/app/1675200"
+    "url": "https://dl.k8s.io/release/stable.txt"
   },
   {
-    "id": "steamos-getnewsforapp-1675200",
-    "vendor": "Valve",
+    "id": "node-dist-index",
+    "vendor": "Node.js",
     "kind": "release",
-    "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1675200&count=5&maxlength=300"
+    "url": "https://nodejs.org/dist/index.json",
+    "max_bytes": 8388608
   },
   {
-    "id": "steamos-getnewsforapp-1675200-100",
-    "vendor": "Valve",
+    "id": "dotnet-releases-index",
+    "vendor": "Microsoft",
     "kind": "release",
-    "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1675200&count=100&maxlength=1",
-    "match_titles": "SteamOS"
+    "url": "https://builds.dotnet.microsoft.com/dotnet/release-metadata/releases-index.json"
   },
   {
-    "id": "cisa-kev-json",
+    "id": "cisco-psirt-rss",
+    "vendor": "Cisco",
+    "kind": "security",
+    "url": "https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml"
+  },
+  {
+    "id": "cisco-csaf-provider",
+    "vendor": "Cisco",
+    "kind": "security",
+    "url": "https://www.cisco.com/.well-known/csaf/provider-metadata.json",
+    "accept": "application/json"
+  },
+  {
+    "id": "cisa-kev-github",
     "vendor": "CISA",
     "kind": "enrichment",
-    "url": "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
+    "url": "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json",
+    "max_bytes": 8388608
   },
   {
-    "id": "first-epss-cve-2024-3400",
-    "vendor": "FIRST",
+    "id": "endoflife-ubuntu",
+    "vendor": "endoflife.date",
     "kind": "enrichment",
-    "url": "https://api.first.org/data/v1/epss?cve=CVE-2024-3400"
+    "url": "https://endoflife.date/api/ubuntu.json"
   },
   {
-    "id": "nvd-cve-2024-3400",
-    "vendor": "NIST",
+    "id": "endoflife-windows",
+    "vendor": "endoflife.date",
     "kind": "enrichment",
-    "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2024-3400"
+    "url": "https://endoflife.date/api/windows.json"
+  },
+  {
+    "id": "xcode-release-notes",
+    "vendor": "Apple",
+    "kind": "release",
+    "url": "https://developer.apple.com/documentation/xcode-release-notes"
   }
 ]
