@@ -19,6 +19,7 @@ import apple, {
   parseRowDate,
 } from '../deploy/security/apple.js';
 import { isSecuritySource, SECURITY_SOURCES } from '../deploy/security/index.js';
+import { payloadProblems } from '../deploy/security/validate.js';
 import { problems } from './support/security_contract.mjs';
 
 const fixture = (name) =>
@@ -417,6 +418,35 @@ describe('buildPayload', () => {
     });
     assert.deepEqual(payload.releases.ios, before.releases.ios);
     assert.ok(failures.some((failure) => /no longer matches/.test(failure)));
+    // The kept row still names its note, so the note is kept too and the payload is valid.
+    assert.deepEqual(payload.notes, before.notes);
+    assert.deepEqual(payloadProblems(payload), []);
+  });
+
+  it('lists a kept row\'s full notes when a shared note is read again with another CVE', () => {
+    const { payload: before } = build();
+    const more = `${NOTE}<p class="gb-paragraph">CVE-2026-86951: Test credit</p>`;
+    // The iPadOS release still matches; the iOS one no longer does (its row names iPadOS only).
+    const drifted = rows.map((r) =>
+      r.note === NOTE_URL ? { ...r, products: r.products.filter((p) => p.family === 'iPadOS') } : r,
+    );
+    const { payload, failures } = build({
+      previous: before,
+      now: '2026-10-13T10:00:00Z',
+      sources: [{ adapter: apple, rows: drifted, pages: new Map([[NOTE_URL, more]]) }],
+    });
+    assert.ok(failures.some((failure) => /iOS 26\.7\.1 was listed and no longer matches/.test(failure)));
+    const union = ['CVE-2026-86950', 'CVE-2026-86951'];
+    assert.deepEqual(payload.notes[NOTE_URL].cves.map((cve) => cve.id), union);
+    for (const id of ['ios', 'ipad']) {
+      assert.deepEqual(payload.releases[id].cves, union, id);
+      assert.equal(payload.releases[id].count, 2, id);
+    }
+    // The kept row keeps its time; only its list is brought in line with the note.
+    assert.equal(payload.releases.ios.checkedAt, NOW);
+    assert.equal(payload.releases.ipad.checkedAt, '2026-10-13T10:00:00Z');
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, releases), []);
   });
 
   it('refuses a page with more CVEs than the cap', () => {

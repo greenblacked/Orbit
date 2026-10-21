@@ -170,6 +170,10 @@ function applyIndexSource(args) {
       if (was === 'listed' || was === 'no-cve-entries') {
         // Markup drift looks like this: a release with a note before has none now.
         const title = release.title ?? found.id;
+        // Its note was dropped above with the rest of the source's; put it back (as Android does).
+        for (const url of outReleases[found.id].notes ?? []) {
+          if (!(url in outNotes) && kept[url]) outNotes[url] = kept[url];
+        }
         failures.push(`${adapter.id}: ${title} was ${was} and no longer matches`);
       } else {
         outReleases[found.id] = entry('not-found', now);
@@ -313,6 +317,21 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
     const status = release.stage === 'release' ? 'not-connected' : 'not-applicable';
     const old = outReleases[release.id];
     outReleases[release.id] = entry(status, old?.status === status && old.checkedAt ? old.checkedAt : now);
+  }
+
+  // A row kept on drift (a release that lost its patch level or its index row) can name a note
+  // that was read again this run with other CVEs. Every listed row lists exactly the CVEs of the
+  // notes it names (ADR 0008), so derive them again; checkedAt stays. A note that is still missing
+  // is not invented: the row is left as it is and validation reports it.
+  for (const [id, value] of Object.entries(outReleases)) {
+    if (value?.status !== 'listed' || !Array.isArray(value.notes)) continue;
+    if (!value.notes.every((url) => Array.isArray(outNotes[url]?.cves))) continue;
+    const ids = value.notes.flatMap((url) => outNotes[url].cves.map((cve) => cve?.id));
+    const cves = [...new Set(ids.filter((cve) => typeof cve === 'string'))].sort(compare);
+    const same = cves.length === value.cves?.length && cves.every((cve, i) => cve === value.cves[i]);
+    if (cves.length > 0 && !(same && value.count === cves.length)) {
+      outReleases[id] = { ...value, cves, count: cves.length };
+    }
   }
 
   // A note that no release refers to any more is dropped.

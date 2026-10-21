@@ -103,6 +103,9 @@ export function problems(payload, rows) {
       if (entry.notes.length === 0) found.push(`${id} is listed without notes`);
       if (entry.cves.length === 0) found.push(`${id} is listed without cves`);
       if (entry.count !== entry.cves.length) found.push(`${id}: count does not match cves`);
+      // ADR 0008: a listed release's cves are the union of its notes' CVEs, none left out.
+      const omitted = [...known].filter((cve) => !entry.cves.includes(cve)).length;
+      if (omitted > 0) found.push(`${id} omits ${omitted} cves its notes list`);
     } else if (entry.status === 'no-cve-entries') {
       if (entry.cves.length > 0 || entry.count !== 0) found.push(`${id} must have no cves and count 0`);
     } else if (entry.notes.length > 0 || entry.cves.length > 0 || entry.count !== null) {

@@ -254,6 +254,45 @@ describe('Android pages that were not read', () => {
     assert.deepEqual(payload.releases.droid, before.releases.droid);
     assert.ok(failures.some((line) => line.includes('no longer has a patch level')));
   });
+
+  it('lists the full CVEs on a kept row when its bulletin was read again with another', () => {
+    // Synthetic: a sibling release still points at the October bulletin, which is read again
+    // with one more CVE (a made-up row in the first table) after 'droid' lost its patch level.
+    const sibling = [...releases, row('droid-b', 'google', 'Android', '17', 'release', '2026-10-01T00:00:00Z')];
+    const withLevels = () => levels().set('droid-b', '2026-10-01');
+    const more = AOSP.replace(
+      '</tbody>',
+      '<tr><td>\n CVE-2026-99999\n</td><td>A-1</td><td>EoP</td><td>Low</td><td>17</td></tr></tbody>',
+    );
+    const before = build([appleSource(), androidSource({ rows: withLevels() })], { releases: sibling }).payload;
+    assert.equal(before.releases.droid.count, 25);
+
+    const rows = withLevels();
+    rows.delete('droid');
+    const pages = new Map([
+      [AOSP_URL, more],
+      [SEP_URL, SEP],
+    ]);
+    const { payload, failures } = build([appleSource(), androidSource({ rows, pages })], {
+      releases: sibling,
+      previous: before,
+      now: LATER,
+    });
+    const union = parseBulletin(more).cves.map((cve) => cve.id);
+    assert.equal(union.length, 26);
+    assert.ok(failures.some((line) => line.includes('no longer has a patch level')));
+    for (const id of ['droid', 'droid-b']) {
+      assert.deepEqual(payload.releases[id].cves, union, id);
+      assert.equal(payload.releases[id].count, 26, id);
+      assert.deepEqual(payload.releases[id].notes, [AOSP_URL], id);
+    }
+    // The kept row keeps its patch level and time; only its list follows the note.
+    assert.equal(payload.releases.droid.patchLevel, '2026-10-05');
+    assert.equal(payload.releases.droid.checkedAt, NOW);
+    assert.equal(payload.releases['droid-b'].checkedAt, LATER);
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, sibling), []);
+  });
 });
 
 describe('families without an adapter', () => {
