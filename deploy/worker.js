@@ -51,14 +51,14 @@ const RETRY_MS = 5 * 60 * 1000;
 const STORE_MS = 7 * 24 * 60 * 60 * 1000;
 // One deadline for a whole source: its URLs are fetched together and share one signal, so a
 // source with several URLs waits as long as one, not the sum.
-const FETCH_TIMEOUT_MS = 8000;
+export const FETCH_TIMEOUT_MS = 8000;
 // A shared fetch older than this is treated as lost and replaced (see fetchAndStore).
 const INFLIGHT_MAX_MS = FETCH_TIMEOUT_MS + 2000;
 // What a source is asked for unless its adapter says otherwise: feeds first, then JSON and the
 // plain text of MikroTik's NEWEST files. An HTML source sets its own `accept` (see android.js).
 export const DEFAULT_ACCEPT =
   'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, application/json;q=0.7, text/plain;q=0.6, */*;q=0.1';
-const MAX_BODY_BYTES = 2 * 1024 * 1024;
+export const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
 // _headers does not apply to a Worker's own responses, so they carry the same set here.
 // tests/worker.test.mjs keeps the policy identical to src/_headers.
@@ -209,7 +209,7 @@ async function readSecurity(env, request) {
 }
 
 // The body as text, refusing to read past MAX_BODY_BYTES whatever the headers claim.
-async function readCapped(res) {
+export async function readCapped(res) {
   const declared = Number(res.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
     await res.body?.cancel();
@@ -239,8 +239,8 @@ async function readCapped(res) {
 }
 
 // Fetch one URL of a source and parse it.
-async function fetchOne(source, url, signal) {
-  const res = await fetch(url, {
+async function fetchOne(source, url, signal, fetchImpl) {
+  const res = await fetchImpl(url, {
     // The allowlist covers the URL itself: a redirect would leave it, so none is followed.
     redirect: 'manual',
     signal,
@@ -251,7 +251,7 @@ async function fetchOne(source, url, signal) {
   });
   if (res.status !== 200) {
     await res.body?.cancel();
-    throw new Error(`${source.id} answered ${res.status}`);
+    throw new Error(`${source.id} answered ${res.status} for ${url}`);
   }
   return source.parse(await readCapped(res), url);
 }
@@ -259,22 +259,27 @@ async function fetchOne(source, url, signal) {
 // Fetch every URL on the source's allowlist at once, under one deadline, and parse them.
 // One URL failing fails the source and aborts the others. The work is raced against the
 // signal itself, so the deadline holds even for a fetch or a body read that ignores the abort.
-async function fetchLive(source, env, request, cached) {
+// The snapshot script calls this too, so both fetch a source the same way; `fetchImpl`
+// replaces fetch in tests.
+export async function fetchParts(source, fetchImpl = fetch, timeoutMs = FETCH_TIMEOUT_MS) {
   const stop = new AbortController();
-  const signal = AbortSignal.any([AbortSignal.timeout(FETCH_TIMEOUT_MS), stop.signal]);
+  const signal = AbortSignal.any([AbortSignal.timeout(timeoutMs), stop.signal]);
   const deadline = new Promise((_resolve, reject) => {
     signal.addEventListener('abort', () => reject(signal.reason), { once: true });
   });
-  let parts;
   try {
-    parts = await Promise.race([
-      Promise.all(source.urls.map((url) => fetchOne(source, url, signal))),
+    return await Promise.race([
+      Promise.all(source.urls.map((url) => fetchOne(source, url, signal, fetchImpl))),
       deadline,
     ]);
   } catch (error) {
     stop.abort();
     throw error;
   }
+}
+
+async function fetchLive(source, env, request, cached) {
+  const parts = await fetchParts(source);
   const found = parts.flat();
   // Whatever an adapter says, a release belongs to the source and vendor that produced it.
   const live = found.map((release) => ({ ...release, vendor: source.vendor, source: source.id }));
