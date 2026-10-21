@@ -19,6 +19,7 @@ import apple, {
   parseRowDate,
 } from '../deploy/security/apple.js';
 import { isSecuritySource, SECURITY_SOURCES } from '../deploy/security/index.js';
+import { payloadProblems } from '../deploy/security/validate.js';
 import { problems } from './support/security_contract.mjs';
 
 const fixture = (name) =>
@@ -417,6 +418,66 @@ describe('buildPayload', () => {
     });
     assert.deepEqual(payload.releases.ios, before.releases.ios);
     assert.ok(failures.some((failure) => /no longer matches/.test(failure)));
+    // The kept row still names its note, so the note is kept too and the payload is valid.
+    assert.deepEqual(payload.notes, before.notes);
+    assert.deepEqual(payloadProblems(payload), []);
+  });
+
+  it('lists a kept row\'s full notes when a shared note is read again with another CVE', () => {
+    const { payload: before } = build();
+    const more = `${NOTE}<p class="gb-paragraph">CVE-2026-86951: Test credit</p>`;
+    // The iPadOS release still matches; the iOS one no longer does (its row names iPadOS only).
+    const drifted = rows.map((r) =>
+      r.note === NOTE_URL ? { ...r, products: r.products.filter((p) => p.family === 'iPadOS') } : r,
+    );
+    const { payload, failures } = build({
+      previous: before,
+      now: '2026-10-13T10:00:00Z',
+      sources: [{ adapter: apple, rows: drifted, pages: new Map([[NOTE_URL, more]]) }],
+    });
+    assert.ok(failures.some((failure) => /iOS 26\.7\.1 was listed and no longer matches/.test(failure)));
+    const union = ['CVE-2026-86950', 'CVE-2026-86951'];
+    assert.deepEqual(payload.notes[NOTE_URL].cves.map((cve) => cve.id), union);
+    for (const id of ['ios', 'ipad']) {
+      assert.deepEqual(payload.releases[id].cves, union, id);
+      assert.equal(payload.releases[id].count, 2, id);
+    }
+    // The kept row keeps its time; only its list is brought in line with the note.
+    assert.equal(payload.releases.ios.checkedAt, NOW);
+    assert.equal(payload.releases.ipad.checkedAt, '2026-10-13T10:00:00Z');
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, releases), []);
+  });
+
+  it('never puts a refused page back for a kept row, and makes both rows unavailable', () => {
+    const { payload: before } = build();
+    // The iPadOS release still matches; the iOS one no longer does (its row names iPadOS only).
+    const drifted = rows.map((r) =>
+      r.note === NOTE_URL ? { ...r, products: r.products.filter((p) => p.family === 'iPadOS') } : r,
+    );
+    // The shared page is fetched this run and is not the releases' security content.
+    const wrong = NOTE.replace(/iOS 26\.7\.1 and iPadOS 26\.7\.1/g, 'macOS Tahoe 26.7.1');
+    const later = '2026-10-13T10:00:00Z';
+    const { payload, failures } = build({
+      previous: before,
+      now: later,
+      sources: [{ adapter: apple, rows: drifted, pages: new Map([[NOTE_URL, wrong]]) }],
+    });
+    assert.equal(NOTE_URL in payload.notes, false);
+    assert.deepEqual(payload.notes, {});
+    for (const id of ['ios', 'ipad']) {
+      const value = payload.releases[id];
+      assert.equal(value.status, 'unavailable', id);
+      assert.deepEqual([value.notes, value.cves, value.count], [[], [], null], id);
+      assert.equal(value.checkedAt, later, id);
+      assert.equal(value.source, apple.id, id);
+    }
+    const has = (pattern) => failures.some((failure) => pattern.test(failure));
+    assert.ok(has(/iOS 26\.7\.1 was listed and no longer matches/));
+    assert.ok(has(/iOS 26\.7\.1 names a note that is no longer held; it is unavailable/));
+    assert.ok(has(/no usable note for iPadOS 26\.7\.1/));
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, releases), []);
   });
 
   it('refuses a page with more CVEs than the cap', () => {
@@ -430,7 +491,7 @@ describe('buildPayload', () => {
     assert.ok(failures.length > 0);
   });
 
-  it('throws instead of writing a payload over the byte or note cap', () => {
+  it('throws over the byte cap and fails a source over the note cap', () => {
     assert.throws(() => build({ maxBytes: 100 }), /over 100/);
     const fake = {
       id: 'fake',
@@ -448,16 +509,15 @@ describe('buildPayload', () => {
       row(`r${i}`, 'X', '1', 'release', '2026-09-28T00:00:00Z', 'fake'),
     );
     const pages = new Map(many.map((r) => [`https://example.com/${r.id}`, '<h1>t</h1>']));
-    assert.throws(
-      () =>
-        buildPayload({
-          previous: null,
-          releases: many,
-          sources: [{ adapter: fake, rows: [{}], pages }],
-          now: NOW,
-        }),
-      /more than/,
-    );
+    const { payload, failures } = buildPayload({
+      previous: null,
+      releases: many,
+      sources: [{ adapter: fake, rows: [{}], pages }],
+      now: NOW,
+    });
+    assert.equal(payload.sources.fake.status, 'failed');
+    assert.deepEqual(Object.keys(payload.notes), []);
+    assert.ok(failures.some((line) => line.includes('cap of 400')));
   });
 
   it('fails closed per source: keeps the old data, marks it failed, reports it', () => {

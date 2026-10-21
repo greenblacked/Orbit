@@ -18,6 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { buildPayload, MAX_PAGES, neededPages, pagesFor } from './security/build.js';
 import { SECURITY_SOURCES } from './security/index.js';
+import { payloadProblems } from './security/validate.js';
 
 export { buildPayload, neededPages, pagesFor };
 
@@ -76,7 +77,7 @@ export async function fetchPage(url, hosts, options = {}) {
     } catch {
       throw new Error(`${url} answered ${res.status} with an unreadable Location`);
     }
-    if (!onHosts(next.href, hosts) || next.username || next.password || next.port) {
+    if (!allowed(next.href, hosts)) {
       throw new Error(
         `${url} answered ${res.status} to ${next.protocol}//${next.host}, which is not allowed (https only, no userinfo or port, on ${hosts.join(', ')})`,
       );
@@ -129,11 +130,20 @@ function withLang(url, lang) {
   return parsed.href;
 }
 
-/** True when `url` is https on one of `hosts`: a page is never read from anywhere else. */
-function onHosts(url, hosts) {
+/**
+ * True when `url` is https, has no userinfo and no port, and its host is exactly one of `hosts`:
+ * a page, an index or a redirect target is never read from anywhere else.
+ */
+export function allowed(url, hosts) {
   try {
     const parsed = new URL(url);
-    return parsed.protocol === 'https:' && hosts.includes(parsed.hostname);
+    return (
+      parsed.protocol === 'https:' &&
+      !parsed.username &&
+      !parsed.password &&
+      !parsed.port &&
+      hosts.includes(parsed.hostname)
+    );
   } catch {
     return false;
   }
@@ -163,13 +173,51 @@ function readJson(path, required) {
 export async function readPages(adapter, urls, cache, pages, options = {}) {
   for (const url of urls) {
     try {
-      if (!onHosts(url, adapter.hosts)) throw new Error(`${url} is not on ${adapter.hosts.join(', ')}`);
+      if (!allowed(url, adapter.hosts)) throw new Error(`${url} is not on ${adapter.hosts.join(', ')}`);
       if (!cache.has(url)) cache.set(url, await fetchPage(url, adapter.hosts, { ...options, lang: adapter.lang }));
       pages.set(url, cache.get(url));
     } catch (error) {
       console.error(`failed: ${adapter.id}: ${error.message}`);
     }
   }
+}
+
+/**
+ * Read one source: its index, then the pages it needs. The index URL is held to the adapter's own
+ * hosts (https only, no userinfo or port) before the first request, like every note URL. A source
+ * that fails on its index request or while choosing its pages comes back with `rows: null` and
+ * whatever pages were read, and buildPayload records it as failed. A note page that fails is
+ * caught by readPages and does not fail the source. `options` is as for fetchPage.
+ */
+export async function readSource(adapter, releases, cache, options = {}) {
+  let rows = null;
+  const pages = new Map();
+  try {
+    if (!allowed(adapter.index, adapter.hosts)) {
+      throw new Error(`${adapter.index} is not on ${adapter.hosts.join(', ')}`);
+    }
+    const index = await fetchPage(adapter.index, adapter.hosts, { ...options, lang: adapter.lang });
+    rows = adapter.parseIndex(index);
+    await readPages(adapter, pagesFor(adapter, releases, rows, MAX_PAGES), cache, pages, options);
+  } catch (error) {
+    rows = null; // a failure after the index was parsed still fails this source alone
+    console.error(`failed: ${adapter.id}: ${error.message}`);
+  }
+  return { adapter, rows, pages };
+}
+
+/**
+ * Write `payload` to `target` unless it breaks the schema-1 shape (see security/validate.js); then
+ * nothing is written and the error lists every problem.
+ */
+export function writePayload(target, payload) {
+  const problems = payloadProblems(payload);
+  if (problems.length > 0) {
+    const list = problems.join('\n  ');
+    throw new Error(`refusing to write ${target}; the payload is invalid:\n  ${list}`);
+  }
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
 async function main() {
@@ -184,22 +232,16 @@ async function main() {
 
   const cache = new Map();
   const sources = [];
-  for (const adapter of SECURITY_SOURCES) {
-    let rows = null;
-    const pages = new Map();
-    try {
-      rows = adapter.parseIndex(await fetchPage(adapter.index, adapter.hosts, { lang: adapter.lang }));
-      await readPages(adapter, pagesFor(adapter, releases, rows, MAX_PAGES), cache, pages);
-    } catch (error) {
-      console.error(`failed: ${adapter.id}: ${error.message}`);
-    }
-    sources.push({ adapter, rows, pages });
-  }
+  for (const adapter of SECURITY_SOURCES) sources.push(await readSource(adapter, releases, cache));
 
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
   const { payload, failures } = buildPayload({ previous, releases, sources, now });
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, `${JSON.stringify(payload, null, 2)}\n`);
+  try {
+    writePayload(target, payload);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
 
   const counts = {};
   for (const value of Object.values(payload.releases)) {

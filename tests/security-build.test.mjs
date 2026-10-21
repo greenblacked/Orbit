@@ -10,8 +10,9 @@ import { fileURLToPath } from 'node:url';
 
 import android, { bulletinUrl, parseBulletin } from '../deploy/security/android.js';
 import apple, { parseIndex } from '../deploy/security/apple.js';
-import { buildPayload, pagesFor } from '../deploy/security/build.js';
+import { buildPayload, MAX_NOTES, pagesFor } from '../deploy/security/build.js';
 import { isSecuritySource, SECURITY_SOURCES } from '../deploy/security/index.js';
+import { payloadProblems } from '../deploy/security/validate.js';
 import { problems } from './support/security_contract.mjs';
 
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
@@ -253,6 +254,124 @@ describe('Android pages that were not read', () => {
     assert.deepEqual(payload.releases.droid, before.releases.droid);
     assert.ok(failures.some((line) => line.includes('no longer has a patch level')));
   });
+
+  it('lists the full CVEs on a kept row when its bulletin was read again with another', () => {
+    // Synthetic: a sibling release still points at the October bulletin, which is read again
+    // with one more CVE (a made-up row in the first table) after 'droid' lost its patch level.
+    const sibling = [...releases, row('droid-b', 'google', 'Android', '17', 'release', '2026-10-01T00:00:00Z')];
+    const withLevels = () => levels().set('droid-b', '2026-10-01');
+    const more = AOSP.replace(
+      '</tbody>',
+      '<tr><td>\n CVE-2026-99999\n</td><td>A-1</td><td>EoP</td><td>Low</td><td>17</td></tr></tbody>',
+    );
+    const before = build([appleSource(), androidSource({ rows: withLevels() })], { releases: sibling }).payload;
+    assert.equal(before.releases.droid.count, 25);
+
+    const rows = withLevels();
+    rows.delete('droid');
+    const pages = new Map([
+      [AOSP_URL, more],
+      [SEP_URL, SEP],
+    ]);
+    const { payload, failures } = build([appleSource(), androidSource({ rows, pages })], {
+      releases: sibling,
+      previous: before,
+      now: LATER,
+    });
+    const union = parseBulletin(more).cves.map((cve) => cve.id);
+    assert.equal(union.length, 26);
+    assert.ok(failures.some((line) => line.includes('no longer has a patch level')));
+    for (const id of ['droid', 'droid-b']) {
+      assert.deepEqual(payload.releases[id].cves, union, id);
+      assert.equal(payload.releases[id].count, 26, id);
+      assert.deepEqual(payload.releases[id].notes, [AOSP_URL], id);
+    }
+    // The kept row keeps its patch level and time; only its list follows the note.
+    assert.equal(payload.releases.droid.patchLevel, '2026-10-05');
+    assert.equal(payload.releases.droid.checkedAt, NOW);
+    assert.equal(payload.releases['droid-b'].checkedAt, LATER);
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, sibling), []);
+  });
+});
+
+describe('Android rows kept when a release lost its patch level', () => {
+  // Synthetic: a sibling release shares the October bulletin with 'droid', which then loses its
+  // patch level, so its old row is kept while the sibling still needs the month.
+  const sibling = [...releases, row('droid-b', 'google', 'Android', '17', 'release', '2026-10-01T00:00:00Z')];
+  const withLevels = () => levels().set('droid-b', '2026-10-01');
+  const first = () => build([appleSource(), androidSource({ rows: withLevels() })], { releases: sibling }).payload;
+  const lost = () => {
+    const rows = withLevels();
+    rows.delete('droid');
+    return rows;
+  };
+
+  it('lists the union on a kept no-cve-entries row whose bulletin is read again with CVEs', () => {
+    // The October bulletin was empty last time: rewrite the rows and the note to say so.
+    const before = first();
+    before.notes[AOSP_URL] = { ...before.notes[AOSP_URL], cves: [], noCveEntries: true };
+    for (const id of ['droid', 'droid-b']) {
+      before.releases[id] = { ...before.releases[id], status: 'no-cve-entries', cves: [], count: 0 };
+    }
+    assert.deepEqual(payloadProblems(before), []);
+    assert.deepEqual(problems(before, sibling), []);
+
+    const { payload, failures } = build([appleSource(), androidSource({ rows: lost() })], {
+      releases: sibling,
+      previous: before,
+      now: LATER,
+    });
+    const union = parseBulletin(AOSP).cves.map((cve) => cve.id);
+    assert.ok(union.length > 0);
+    assert.ok(failures.some((line) => line.includes('no longer has a patch level')));
+    for (const id of ['droid', 'droid-b']) {
+      assert.equal(payload.releases[id].status, 'listed', id);
+      assert.deepEqual(payload.releases[id].cves, union, id);
+      assert.equal(payload.releases[id].count, union.length, id);
+      assert.deepEqual(payload.releases[id].notes, [AOSP_URL], id);
+    }
+    // The kept row keeps its patch level and time; only its status and list follow the note.
+    assert.equal(payload.releases.droid.patchLevel, '2026-10-05');
+    assert.equal(payload.releases.droid.checkedAt, NOW);
+    assert.equal(payload.releases['droid-b'].checkedAt, LATER);
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, sibling), []);
+
+    // Both checks refuse the stale row this run would otherwise have written.
+    const stale = structuredClone(payload);
+    stale.releases.droid = { ...stale.releases.droid, status: 'no-cve-entries', cves: [], count: 0 };
+    const line = 'droid is no-cve-entries but its notes list';
+    assert.ok(payloadProblems(stale).some((found) => found.includes(line)));
+    assert.ok(problems(stale, sibling).some((found) => found.includes(line)));
+  });
+
+  it('makes a kept listed row unavailable when its shared bulletin was read and refused', () => {
+    const before = first();
+    assert.equal(before.releases.droid.status, 'listed');
+    const pages = new Map([
+      [AOSP_URL, '<html><h1>Not a bulletin</h1></html>'],
+      [SEP_URL, SEP],
+    ]);
+    const { payload, failures } = build([appleSource(), androidSource({ rows: lost(), pages })], {
+      releases: sibling,
+      previous: before,
+      now: LATER,
+    });
+    assert.equal(AOSP_URL in payload.notes, false);
+    for (const id of ['droid', 'droid-b']) {
+      const value = payload.releases[id];
+      assert.equal(value.status, 'unavailable', id);
+      assert.deepEqual([value.notes, value.cves, value.count], [[], [], null], id);
+      assert.equal(value.checkedAt, LATER, id);
+      assert.equal(value.source, android.id, id);
+    }
+    assert.ok(failures.some((line) => line.includes('no longer has a patch level')));
+    assert.ok(failures.some((line) => line.includes('no usable note for Android 17')));
+    assert.ok(failures.some((line) => line.includes(`${android.id}: Android 17 names a note that is no longer held`)));
+    assert.deepEqual(payloadProblems(payload), []);
+    assert.deepEqual(problems(payload, sibling), []);
+  });
 });
 
 describe('families without an adapter', () => {
@@ -346,5 +465,294 @@ describe('a row with no note whose source later fails', () => {
     const odd = structuredClone(payload);
     odd.releases.ios.source = 3;
     assert.ok(problems(odd, only).some((line) => line.includes('unknown source')));
+  });
+});
+
+// Two fake index sources, one release per note, to cap the shared notes.
+const fake = (id, vendor) => ({
+  id,
+  vendor,
+  index: `https://${id}.example/`,
+  hosts: [`${id}.example`],
+  parseIndex: () => [{}],
+  parseNote: () => ({ title: 't', released: null, cves: ['CVE-2026-0001'] }),
+  match: (list) =>
+    list
+      .filter((release) => release.vendor === vendor)
+      .map((release) => ({
+        id: release.id,
+        status: 'matched',
+        row: { note: `https://${id}.example/${release.id}`, noCveEntries: false },
+      })),
+});
+const many = (vendor, count) =>
+  Array.from({ length: count }, (_, i) =>
+    row(`${vendor}${i}`, vendor, 'F', '1', 'release', '2026-09-28T00:00:00Z'),
+  );
+const fakeSource = (adapter, list) => ({
+  adapter,
+  rows: [{}],
+  pages: new Map(list.map((r) => [`https://${adapter.id}.example/${r.id}`, '<h1>t</h1>'])),
+});
+
+describe('the shared note cap', () => {
+  const small = fake('small', 'S');
+  const big = fake('big', 'B');
+  const smallRows = many('S', 1);
+
+  it('fails only the source that passes the cap; the other still writes', () => {
+    const bigRows = many('B', MAX_NOTES);
+    const { payload, failures } = buildPayload({
+      previous: null,
+      releases: [...smallRows, ...bigRows],
+      sources: [fakeSource(small, smallRows), fakeSource(big, bigRows)],
+      now: NOW,
+    });
+    assert.equal(payload.sources.small.status, 'ok');
+    assert.equal(payload.sources.big.status, 'failed');
+    assert.equal(payload.releases.S0.status, 'listed');
+    assert.deepEqual(Object.keys(payload.notes), ['https://small.example/S0']);
+    assert.equal(payload.releases.B0.status, 'unavailable');
+    assert.ok(failures.some((line) => line.startsWith('big:') && line.includes('cap of 400')));
+    assert.deepEqual(payloadProblems(payload), []);
+  });
+
+  it('keeps the failed source\'s previous notes and rows', () => {
+    const first = buildPayload({
+      previous: null,
+      releases: [...smallRows, ...many('B', 1)],
+      sources: [fakeSource(small, smallRows), fakeSource(big, many('B', 1))],
+      now: NOW,
+    }).payload;
+    const bigRows = many('B', MAX_NOTES);
+    const { payload } = buildPayload({
+      previous: first,
+      releases: [...smallRows, ...bigRows],
+      sources: [fakeSource(small, smallRows), fakeSource(big, bigRows)],
+      now: LATER,
+    });
+    assert.equal(payload.sources.big.status, 'failed');
+    assert.equal(payload.sources.big.checkedAt, NOW);
+    assert.equal(payload.releases.B0.status, 'listed');
+    assert.equal(payload.releases.B0.checkedAt, NOW);
+    assert.ok('https://big.example/B0' in payload.notes);
+    assert.equal(payload.releases.S0.checkedAt, LATER);
+    assert.equal(payload.sources.small.status, 'ok');
+  });
+
+  it('charges the overflow to the later source whichever one is big', () => {
+    const bigRows = many('B', MAX_NOTES);
+    const { payload } = buildPayload({
+      previous: null,
+      releases: [...bigRows, ...smallRows],
+      sources: [fakeSource(big, bigRows), fakeSource(small, smallRows)],
+      now: NOW,
+    });
+    assert.equal(payload.sources.big.status, 'ok');
+    assert.equal(payload.sources.small.status, 'failed');
+    assert.equal(Object.keys(payload.notes).length, MAX_NOTES);
+  });
+
+  it('writes both sources when together they fit', () => {
+    const bigRows = many('B', MAX_NOTES - 1);
+    const { payload } = buildPayload({
+      previous: null,
+      releases: [...smallRows, ...bigRows],
+      sources: [fakeSource(small, smallRows), fakeSource(big, bigRows)],
+      now: NOW,
+    });
+    assert.equal(payload.sources.big.status, 'ok');
+    assert.equal(Object.keys(payload.notes).length, MAX_NOTES);
+  });
+});
+
+describe('payloadProblems', () => {
+  const entry = (status, extra = {}) => ({
+    status, notes: [], cves: [], count: null, patchLevel: null, checkedAt: NOW, ...extra,
+  });
+  const A = 'https://x.example/a';
+  const B = 'https://x.example/b';
+  const note = (...ids) => ({
+    source: 'src',
+    title: 't',
+    published: null,
+    cves: ids.map((id) => ({ id, severity: null })),
+    noCveEntries: false,
+  });
+  const valid = () => ({
+    schema: 1,
+    generatedAt: NOW,
+    sources: { src: { status: 'ok', checkedAt: NOW, index: 'https://x.example/' } },
+    notes: { [A]: note('CVE-2026-0001') },
+    releases: {
+      a: entry('listed', { notes: [A], cves: ['CVE-2026-0001'], count: 1 }),
+      b: entry('no-cve-entries', { count: 0 }),
+      c: entry('not-found'),
+      d: entry('not-applicable'),
+      e: entry('unavailable'),
+      f: entry('not-connected'),
+    },
+  });
+  const withRelease = (key, value) => ({ ...valid(), releases: { [key]: value } });
+  const withNotes = (notes) => ({ ...valid(), notes });
+  const refuses = (payload, text) => {
+    const found = payloadProblems(payload);
+    assert.ok(found.some((line) => line.includes(text)), `${text} in ${JSON.stringify(found)}`);
+  };
+
+  it('accepts what the builder writes', () => {
+    assert.deepEqual(payloadProblems(valid()), []);
+    const { payload } = build([appleSource(), androidSource()]);
+    assert.deepEqual(payloadProblems(payload), []);
+  });
+
+  it('refuses a bad header', () => {
+    assert.notDeepEqual(payloadProblems(null), []);
+    assert.notDeepEqual(payloadProblems({ ...valid(), schema: 2 }), []);
+    assert.notDeepEqual(payloadProblems({ ...valid(), generatedAt: 'soon' }), []);
+    assert.notDeepEqual(payloadProblems({ ...valid(), generatedAt: 5 }), []);
+    for (const key of ['sources', 'notes', 'releases']) {
+      assert.notDeepEqual(payloadProblems({ ...valid(), [key]: [] }), [], key);
+      assert.notDeepEqual(payloadProblems({ ...valid(), [key]: null }), [], key);
+    }
+  });
+
+  it('refuses a status the builder does not emit', () => {
+    for (const status of ['linked', 'ok', undefined]) {
+      assert.notDeepEqual(payloadProblems(withRelease('x', entry(status))), [], String(status));
+    }
+    assert.notDeepEqual(payloadProblems(withRelease('x', 'listed')), []);
+  });
+
+  it('refuses a wrong shape for each status', () => {
+    const note = ['https://x.example/a'];
+    const cve = ['CVE-2026-0001'];
+    const bad = [
+      entry('listed', { notes: note, cves: cve, count: 2 }),
+      entry('listed', { notes: note, cves: [], count: 0 }),
+      entry('listed', { notes: [], cves: cve, count: 1 }),
+      entry('listed', { notes: note, cves: cve, count: null }),
+      entry('no-cve-entries', { count: null }),
+      entry('no-cve-entries', { count: 1 }),
+      entry('no-cve-entries', { count: 0, cves: cve }),
+      entry('not-found', { count: 0 }),
+      entry('not-found', { notes: note }),
+      entry('unavailable', { cves: cve }),
+      entry('not-applicable', { count: 1 }),
+      entry('not-connected', { notes: note }),
+      { ...entry('unavailable'), notes: null },
+    ];
+    for (const value of bad) {
+      assert.notDeepEqual(payloadProblems(withRelease('x', value)), [], JSON.stringify(value));
+    }
+  });
+
+  it('accepts a release that draws its CVEs from several notes', () => {
+    const payload = {
+      ...valid(),
+      notes: { [A]: note('CVE-2026-0001'), [B]: note('CVE-2026-0002', 'CVE-2026-0003') },
+      releases: {
+        x: entry('listed', {
+          notes: [A, B],
+          cves: ['CVE-2026-0001', 'CVE-2026-0002', 'CVE-2026-0003'],
+          count: 3,
+        }),
+      },
+    };
+    assert.deepEqual(payloadProblems(payload), []);
+  });
+
+  it('refuses a bad notes map', () => {
+    const extra = (key) => withNotes({ ...valid().notes, [key]: note('CVE-2026-0001') });
+    refuses(extra('http://x.example/a'), 'not https');
+    refuses(extra('https://'), 'not https');
+    for (const value of ['text', null, [], 5]) {
+      refuses(withNotes({ [A]: value }), 'is not an object');
+    }
+    for (const source of ['other', 'toString', undefined, 5]) {
+      refuses(withNotes({ [A]: { ...note('CVE-2026-0001'), source } }), 'names an unknown source');
+    }
+    const badCves = [
+      [{ id: 'CVE-26-1' }],
+      [{ id: 'CVE-2026-001' }],
+      [{ id: 'cve-2026-0001' }],
+      [{ id: 5 }],
+      [{}],
+      [null],
+      'CVE-2026-0001',
+      undefined,
+    ];
+    for (const cves of badCves) {
+      refuses(withNotes({ [A]: { ...note(), cves } }), 'has a bad CVE');
+    }
+  });
+
+  it('refuses note CVEs that are not sorted and unique', () => {
+    const wrong = [
+      note('CVE-2026-0002', 'CVE-2026-0001'),
+      note('CVE-2026-0001', 'CVE-2026-0001'),
+      note('CVE-2026-0010', 'CVE-2026-0009', 'CVE-2026-0011'),
+    ];
+    for (const value of wrong) {
+      refuses(withNotes({ [A]: value }), 'cves are not sorted and unique');
+    }
+  });
+
+  it('refuses a release note that is missing or not https', () => {
+    const missing = entry('listed', { notes: [B], cves: ['CVE-2026-0001'], count: 1 });
+    refuses(withRelease('x', missing), `names a note that is missing: ${B}`);
+    const plain = entry('listed', { notes: ['http://x.example/a'], cves: [], count: 1 });
+    refuses({ ...withRelease('x', plain), notes: { 'http://x.example/a': note() } }, 'not https');
+    refuses(withRelease('x', entry('listed', { notes: [null], cves: [], count: 1 })), 'not https');
+    const proto = entry('listed', { notes: ['__proto__'], cves: [], count: 1 });
+    refuses(withRelease('x', proto), 'names a note that is missing');
+  });
+
+  it('refuses release notes that are not sorted and unique', () => {
+    const both = { ...valid().notes, [B]: note('CVE-2026-0002') };
+    const cves = ['CVE-2026-0001', 'CVE-2026-0002'];
+    for (const notes of [[B, A], [A, A]]) {
+      const release = withRelease('x', entry('listed', { notes, cves, count: 2 }));
+      refuses({ ...release, notes: both }, 'notes are not sorted and unique');
+    }
+  });
+
+  it('refuses a release CVE that is malformed, unsorted or not in its notes', () => {
+    const both = { [A]: note('CVE-2026-0001', 'CVE-2026-0002') };
+    const listed = (cves) => ({
+      ...withRelease('x', entry('listed', { notes: [A], cves, count: cves.length })),
+      notes: both,
+    });
+    refuses(listed(['CVE-26-1']), 'has a bad CVE');
+    refuses(listed([5]), 'has a bad CVE');
+    refuses(listed(['CVE-2026-0009']), 'lists CVE-2026-0009 that its notes do not');
+    refuses(listed(['CVE-2026-0002', 'CVE-2026-0001']), 'cves are not sorted and unique');
+    refuses(listed(['CVE-2026-0001', 'CVE-2026-0001']), 'cves are not sorted and unique');
+    assert.deepEqual(payloadProblems(listed(['CVE-2026-0001', 'CVE-2026-0002'])), []);
+  });
+
+  it('refuses a CVE that only a note the release does not name lists', () => {
+    const payload = {
+      ...valid(),
+      notes: { [A]: note('CVE-2026-0001'), [B]: note('CVE-2026-0002') },
+      releases: { x: entry('listed', { notes: [A], cves: ['CVE-2026-0002'], count: 1 }) },
+    };
+    refuses(payload, 'lists CVE-2026-0002 that its notes do not');
+  });
+
+  it('refuses a no-cve-entries release whose note lists a CVE', () => {
+    const listing = withRelease('x', entry('no-cve-entries', { notes: [A], count: 0 }));
+    refuses(listing, 'x is no-cve-entries but its notes list 1 cves');
+    const empty = { ...listing, notes: { [A]: note() } };
+    assert.deepEqual(payloadProblems(empty), []);
+  });
+
+  it('refuses a listed release that omits a CVE its notes list', () => {
+    const payload = {
+      ...valid(),
+      notes: { [A]: note('CVE-2026-0001', 'CVE-2026-0002') },
+      releases: { x: entry('listed', { notes: [A], cves: ['CVE-2026-0001'], count: 1 }) },
+    };
+    refuses(payload, 'x omits 1 cves its notes list');
   });
 });
