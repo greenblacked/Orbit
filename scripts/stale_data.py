@@ -11,9 +11,11 @@ not a check of every row.
     python scripts/stale_data.py
     python scripts/stale_data.py --security PATH --releases PATH
 
-A stale, missing or unreadable value prints a GitHub ``::warning::`` annotation, and a
-summary line always follows. The exit status is 0 whatever the data says: this is a nudge
-to refresh, not a gate.
+A stale, missing or unreadable value prints a GitHub ``::warning::`` annotation that says how
+to refresh it, and a summary line always follows. The exit status is 0 whatever the data says
+and whatever goes wrong while running: this is a nudge to refresh, not a gate. That covers
+runtime errors only. A bad command-line argument still exits 2 through argparse, which is
+fine because CI passes no arguments.
 """
 
 from __future__ import annotations
@@ -27,11 +29,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SECURITY_MAX_AGE = timedelta(days=21)
 RELEASES_MAX_AGE = timedelta(days=14)
-# (label, field, maximum age)
+# (label, field, maximum age, how to refresh)
 CHECKS = (
-    ("security", "generatedAt", SECURITY_MAX_AGE),
-    ("releases", "fetchedAt", RELEASES_MAX_AGE),
+    (
+        "security",
+        "generatedAt",
+        SECURITY_MAX_AGE,
+        "run the Security snapshot workflow (Actions, Run workflow)",
+    ),
+    ("releases", "fetchedAt", RELEASES_MAX_AGE, "run `node deploy/snapshot_releases.mjs`"),
 )
+MINUTE = timedelta(minutes=1)
 
 
 def parse_time(value: object) -> datetime | None:
@@ -59,6 +67,15 @@ def read_field(path: Path, field: str) -> object:
     return doc.get(field) if isinstance(doc, dict) else None
 
 
+def describe_age(age: timedelta, limit: timedelta) -> str:
+    """``21d 0h 30m`` for an age: whole minutes, rounded up when over ``limit`` so that an age
+    just past the limit never reads as exactly the limit."""
+    minutes = -(-age // MINUTE) if age > limit else age // MINUTE
+    days, rest = divmod(minutes, 24 * 60)
+    hours, minutes = divmod(rest, 60)
+    return f"{days}d {hours}h {minutes}m"
+
+
 def annotation(title: str, message: str) -> str:
     """A workflow-command warning; ``%`` and line breaks are escaped as the runner expects."""
     escaped = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
@@ -69,7 +86,7 @@ def assess(paths: dict[str, Path], now: datetime) -> tuple[list[str], list[str]]
     """(warnings, summaries) for each snapshot, judged against ``now``."""
     warnings: list[str] = []
     summaries: list[str] = []
-    for label, field, limit in CHECKS:
+    for label, field, limit, refresh in CHECKS:
         path = paths[label]
         stamp = parse_time(read_field(path, field))
         if stamp is None:
@@ -77,12 +94,13 @@ def assess(paths: dict[str, Path], now: datetime) -> tuple[list[str], list[str]]
             summaries.append(f"{label}: age unknown ({field} missing or invalid)")
             continue
         age = max(now - stamp, timedelta(0))
-        old = f"{age.days}d {age.seconds // 3600}h old"
+        old = f"{describe_age(age, limit)} old"
         if age > limit:
             warnings.append(
                 annotation(
                     f"{label} data is stale",
-                    f"{path.name} {field} is {old}, over the {limit.days}-day limit; refresh it",
+                    f"{path.name} {field} is {old}, over the {limit.days}-day limit; "
+                    f"refresh it: {refresh}",
                 )
             )
             summaries.append(f"{label}: {old}, over the {limit.days}-day limit")

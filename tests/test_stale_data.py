@@ -37,8 +37,8 @@ def test_fresh_data_prints_a_summary_and_no_warning(tmp_path, capsys):
     )
     assert code == 0
     assert "::warning" not in out
-    assert "security: 12d 12h old, within the 21-day limit" in out
-    assert "releases: 7d 12h old, within the 14-day limit" in out
+    assert "security: 12d 12h 0m old, within the 21-day limit" in out
+    assert "releases: 7d 12h 0m old, within the 14-day limit" in out
 
 
 def test_security_older_than_21_days_warns(tmp_path, capsys):
@@ -52,7 +52,8 @@ def test_security_older_than_21_days_warns(tmp_path, capsys):
     assert out.count("::warning") == 1
     assert (
         "::warning title=security data is stale::"
-        "security.json generatedAt is 22d 12h old, over the 21-day limit"
+        "security.json generatedAt is 22d 12h 0m old, over the 21-day limit; "
+        "refresh it: run the Security snapshot workflow (Actions, Run workflow)"
     ) in out
 
 
@@ -67,7 +68,8 @@ def test_releases_older_than_14_days_warns(tmp_path, capsys):
     assert out.count("::warning") == 1
     assert (
         "::warning title=releases data is stale::"
-        "releases.json fetchedAt is 16d 12h old, over the 14-day limit"
+        "releases.json fetchedAt is 16d 12h 0m old, over the 14-day limit; "
+        "refresh it: run `node deploy/snapshot_releases.mjs`"
     ) in out
 
 
@@ -103,7 +105,7 @@ def test_a_future_timestamp_is_not_stale(tmp_path, capsys):
     )
     assert code == 0
     assert "::warning" not in out
-    assert "0d 0h old" in out
+    assert "0d 0h 0m old" in out
 
 
 @pytest.mark.parametrize(
@@ -162,7 +164,40 @@ def test_just_over_the_limit_does_not_say_the_limit_or_less(tmp_path, capsys):
         {"generatedAt": "2026-10-11T11:00:00Z"},
         {"fetchedAt": "2026-10-31T00:00:00Z"},
     )
-    assert "generatedAt is 21d 1h old, over the 21-day limit" in out
+    assert "generatedAt is 21d 1h 0m old, over the 21-day limit" in out
+
+
+def test_half_an_hour_over_the_limit_shows_the_minutes(tmp_path, capsys):
+    _, out = run(
+        tmp_path,
+        capsys,
+        {"generatedAt": "2026-10-11T11:30:00Z"},
+        {"fetchedAt": "2026-10-31T00:00:00Z"},
+    )
+    assert "generatedAt is 21d 0h 30m old, over the 21-day limit" in out
+    assert "security: 21d 0h 30m old, over the 21-day limit" in out
+
+
+def test_a_second_over_the_limit_rounds_up_to_a_minute(tmp_path, capsys):
+    _, out = run(
+        tmp_path,
+        capsys,
+        {"generatedAt": "2026-10-11T11:59:59Z"},
+        {"fetchedAt": "2026-10-31T00:00:00Z"},
+    )
+    assert "security: 21d 0h 1m old, over the 21-day limit" in out
+
+
+def test_each_warning_says_how_to_refresh(tmp_path, capsys):
+    _, out = run(
+        tmp_path,
+        capsys,
+        {"generatedAt": "2026-08-01T00:00:00Z"},
+        {"fetchedAt": "2026-08-01T00:00:00Z"},
+    )
+    lines = [line for line in out.splitlines() if line.startswith("::warning")]
+    assert "Security snapshot workflow" in lines[0]
+    assert "node deploy/snapshot_releases.mjs" in lines[1]
 
 
 @pytest.mark.parametrize("stamp", ["0001-01-01T00:00:00+01:00", "9999-12-31T23:59:59-01:00"])
