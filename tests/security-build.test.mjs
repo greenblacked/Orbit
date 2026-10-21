@@ -10,8 +10,9 @@ import { fileURLToPath } from 'node:url';
 
 import android, { bulletinUrl, parseBulletin } from '../deploy/security/android.js';
 import apple, { parseIndex } from '../deploy/security/apple.js';
-import { buildPayload, pagesFor } from '../deploy/security/build.js';
+import { buildPayload, MAX_NOTES, pagesFor } from '../deploy/security/build.js';
 import { isSecuritySource, SECURITY_SOURCES } from '../deploy/security/index.js';
+import { payloadProblems } from '../deploy/security/validate.js';
 import { problems } from './support/security_contract.mjs';
 
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
@@ -346,5 +347,171 @@ describe('a row with no note whose source later fails', () => {
     const odd = structuredClone(payload);
     odd.releases.ios.source = 3;
     assert.ok(problems(odd, only).some((line) => line.includes('unknown source')));
+  });
+});
+
+// Two fake index sources, one release per note, to cap the shared notes.
+const fake = (id, vendor) => ({
+  id,
+  vendor,
+  index: `https://${id}.example/`,
+  hosts: [`${id}.example`],
+  parseIndex: () => [{}],
+  parseNote: () => ({ title: 't', released: null, cves: ['CVE-2026-0001'] }),
+  match: (list) =>
+    list
+      .filter((release) => release.vendor === vendor)
+      .map((release) => ({
+        id: release.id,
+        status: 'matched',
+        row: { note: `https://${id}.example/${release.id}`, noCveEntries: false },
+      })),
+});
+const many = (vendor, count) =>
+  Array.from({ length: count }, (_, i) =>
+    row(`${vendor}${i}`, vendor, 'F', '1', 'release', '2026-09-28T00:00:00Z'),
+  );
+const fakeSource = (adapter, list) => ({
+  adapter,
+  rows: [{}],
+  pages: new Map(list.map((r) => [`https://${adapter.id}.example/${r.id}`, '<h1>t</h1>'])),
+});
+
+describe('the shared note cap', () => {
+  const small = fake('small', 'S');
+  const big = fake('big', 'B');
+  const smallRows = many('S', 1);
+
+  it('fails only the source that passes the cap; the other still writes', () => {
+    const bigRows = many('B', MAX_NOTES);
+    const { payload, failures } = buildPayload({
+      previous: null,
+      releases: [...smallRows, ...bigRows],
+      sources: [fakeSource(small, smallRows), fakeSource(big, bigRows)],
+      now: NOW,
+    });
+    assert.equal(payload.sources.small.status, 'ok');
+    assert.equal(payload.sources.big.status, 'failed');
+    assert.equal(payload.releases.S0.status, 'listed');
+    assert.deepEqual(Object.keys(payload.notes), ['https://small.example/S0']);
+    assert.equal(payload.releases.B0.status, 'unavailable');
+    assert.ok(failures.some((line) => line.startsWith('big:') && line.includes('cap of 400')));
+    assert.deepEqual(payloadProblems(payload), []);
+  });
+
+  it('keeps the failed source\'s previous notes and rows', () => {
+    const first = buildPayload({
+      previous: null,
+      releases: [...smallRows, ...many('B', 1)],
+      sources: [fakeSource(small, smallRows), fakeSource(big, many('B', 1))],
+      now: NOW,
+    }).payload;
+    const bigRows = many('B', MAX_NOTES);
+    const { payload } = buildPayload({
+      previous: first,
+      releases: [...smallRows, ...bigRows],
+      sources: [fakeSource(small, smallRows), fakeSource(big, bigRows)],
+      now: LATER,
+    });
+    assert.equal(payload.sources.big.status, 'failed');
+    assert.equal(payload.sources.big.checkedAt, NOW);
+    assert.equal(payload.releases.B0.status, 'listed');
+    assert.equal(payload.releases.B0.checkedAt, NOW);
+    assert.ok('https://big.example/B0' in payload.notes);
+    assert.equal(payload.releases.S0.checkedAt, LATER);
+    assert.equal(payload.sources.small.status, 'ok');
+  });
+
+  it('charges the overflow to the later source whichever one is big', () => {
+    const bigRows = many('B', MAX_NOTES);
+    const { payload } = buildPayload({
+      previous: null,
+      releases: [...bigRows, ...smallRows],
+      sources: [fakeSource(big, bigRows), fakeSource(small, smallRows)],
+      now: NOW,
+    });
+    assert.equal(payload.sources.big.status, 'ok');
+    assert.equal(payload.sources.small.status, 'failed');
+    assert.equal(Object.keys(payload.notes).length, MAX_NOTES);
+  });
+
+  it('writes both sources when together they fit', () => {
+    const bigRows = many('B', MAX_NOTES - 1);
+    const { payload } = buildPayload({
+      previous: null,
+      releases: [...smallRows, ...bigRows],
+      sources: [fakeSource(small, smallRows), fakeSource(big, bigRows)],
+      now: NOW,
+    });
+    assert.equal(payload.sources.big.status, 'ok');
+    assert.equal(Object.keys(payload.notes).length, MAX_NOTES);
+  });
+});
+
+describe('payloadProblems', () => {
+  const entry = (status, extra = {}) => ({
+    status, notes: [], cves: [], count: null, patchLevel: null, checkedAt: NOW, ...extra,
+  });
+  const valid = () => ({
+    schema: 1,
+    generatedAt: NOW,
+    sources: {},
+    notes: {},
+    releases: {
+      a: entry('listed', { notes: ['https://x.example/a'], cves: ['CVE-2026-0001'], count: 1 }),
+      b: entry('no-cve-entries', { count: 0 }),
+      c: entry('not-found'),
+      d: entry('not-applicable'),
+      e: entry('unavailable'),
+      f: entry('not-connected'),
+    },
+  });
+  const withRelease = (key, value) => ({ ...valid(), releases: { [key]: value } });
+
+  it('accepts what the builder writes', () => {
+    assert.deepEqual(payloadProblems(valid()), []);
+    const { payload } = build([appleSource(), androidSource()]);
+    assert.deepEqual(payloadProblems(payload), []);
+  });
+
+  it('refuses a bad header', () => {
+    assert.notDeepEqual(payloadProblems(null), []);
+    assert.notDeepEqual(payloadProblems({ ...valid(), schema: 2 }), []);
+    assert.notDeepEqual(payloadProblems({ ...valid(), generatedAt: 'soon' }), []);
+    assert.notDeepEqual(payloadProblems({ ...valid(), generatedAt: 5 }), []);
+    for (const key of ['sources', 'notes', 'releases']) {
+      assert.notDeepEqual(payloadProblems({ ...valid(), [key]: [] }), [], key);
+      assert.notDeepEqual(payloadProblems({ ...valid(), [key]: null }), [], key);
+    }
+  });
+
+  it('refuses a status the builder does not emit', () => {
+    for (const status of ['linked', 'ok', undefined]) {
+      assert.notDeepEqual(payloadProblems(withRelease('x', entry(status))), [], String(status));
+    }
+    assert.notDeepEqual(payloadProblems(withRelease('x', 'listed')), []);
+  });
+
+  it('refuses a wrong shape for each status', () => {
+    const note = ['https://x.example/a'];
+    const cve = ['CVE-2026-0001'];
+    const bad = [
+      entry('listed', { notes: note, cves: cve, count: 2 }),
+      entry('listed', { notes: note, cves: [], count: 0 }),
+      entry('listed', { notes: [], cves: cve, count: 1 }),
+      entry('listed', { notes: note, cves: cve, count: null }),
+      entry('no-cve-entries', { count: null }),
+      entry('no-cve-entries', { count: 1 }),
+      entry('no-cve-entries', { count: 0, cves: cve }),
+      entry('not-found', { count: 0 }),
+      entry('not-found', { notes: note }),
+      entry('unavailable', { cves: cve }),
+      entry('not-applicable', { count: 1 }),
+      entry('not-connected', { notes: note }),
+      { ...entry('unavailable'), notes: null },
+    ];
+    for (const value of bad) {
+      assert.notDeepEqual(payloadProblems(withRelease('x', value)), [], JSON.stringify(value));
+    }
   });
 });

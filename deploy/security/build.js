@@ -6,7 +6,8 @@
 
 // Caps, set well above the recorded fixtures (one note with one CVE; fifty index rows) and to be
 // tightened from the first real refresh. A page over the CVE cap is refused (its release is
-// `unavailable`); a payload over the notes or byte cap is not written at all. The note cap holds
+// `unavailable`); a source whose notes would take the payload over the notes cap fails alone
+// (the others still write); a payload over the byte cap is not written at all. The note cap holds
 // Apple's pages (at most MAX_PAGES) and an Android bulletin for every month back to the oldest
 // patch level (at most 200), because Compare needs the months between two builds.
 export const MAX_PAGES = 40;
@@ -149,6 +150,58 @@ function applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases
   }
 }
 
+// Fold one index-and-notes source (Apple) into the payload, failing closed per release: a page
+// that was read and refused is never replaced by the previous note; one that was not read falls
+// back to it and is reported; a release that had a note and no longer matches keeps its row.
+function applyIndexSource(args) {
+  const { adapter, releases, mine, rows, pages, now, outNotes, outReleases, failures } = args;
+  const kept = { ...outNotes };
+  const unread = new Set();
+  for (const [url, note] of Object.entries(outNotes)) {
+    if (note?.source === adapter.id) delete outNotes[url];
+  }
+  const byId = new Map(mine.map((release) => [release.id, release]));
+  for (const found of adapter.match(releases, rows)) {
+    const release = byId.get(found.id);
+    if (found.status === 'not-applicable') {
+      outReleases[found.id] = entry('not-applicable', now);
+    } else if (found.status === 'not-found') {
+      const was = outReleases[found.id]?.status;
+      if (was === 'listed' || was === 'no-cve-entries') {
+        // Markup drift looks like this: a release with a note before has none now.
+        const title = release.title ?? found.id;
+        failures.push(`${adapter.id}: ${title} was ${was} and no longer matches`);
+      } else {
+        outReleases[found.id] = entry('not-found', now);
+      }
+    } else if (found.row.noCveEntries) {
+      outReleases[found.id] = entry('no-cve-entries', now, [], [], 0);
+    } else {
+      const url = found.row.note;
+      const html = pages?.get(url);
+      const fetched = typeof html === 'string';
+      // A page that was read and refused is never replaced by the previous note; only a page
+      // that was not read at all falls back to it, and that is reported.
+      const reused = fetched ? null : (outNotes[url] ?? kept[url]);
+      const note = fetched ? noteOf(adapter, html, release) : reused;
+      const usable = note && note.source === adapter.id && note.cves.length > 0;
+      if (usable) {
+        outNotes[url] = note;
+        const cves = note.cves.map((cve) => cve.id);
+        const checkedAt = reused ? (outReleases[found.id]?.checkedAt ?? now) : now;
+        outReleases[found.id] = entry('listed', checkedAt, [url], cves, cves.length);
+        if (reused && !unread.has(url)) {
+          unread.add(url);
+          failures.push(`${adapter.id}: ${url} was not read again; the previous note is kept`);
+        }
+      } else {
+        failures.push(`${adapter.id}: no usable note for ${release.title ?? found.id} (${url})`);
+        outReleases[found.id] = entry('unavailable', now);
+      }
+    }
+  }
+}
+
 /**
  * The payload for `releases` (the rows of releases.json).
  *
@@ -160,16 +213,17 @@ function applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases
  *   maxBytes  the size the written file may not pass
  *
  * Returns { payload, failures }: `failures` lists every source and page that could not be read or
- * was refused, and every release that lost its note. Throws when the payload is over the notes or
- * byte cap, so nothing oversized is written.
+ * was refused, and every release that lost its note. A source whose notes would take the payload
+ * over MAX_NOTES fails alone, like an unreadable index. Throws when the payload is over the byte
+ * cap (or already over the notes cap when it was read back), so nothing oversized is written.
  */
 export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_PAYLOAD_BYTES }) {
   const before = isObject(previous) && previous.schema === 1 ? previous : {};
   const ids = new Set(releases.map((release) => release.id));
   const failures = [];
   const outSources = isObject(before.sources) ? { ...before.sources } : {};
-  const outNotes = isObject(before.notes) ? { ...before.notes } : {};
-  const outReleases = {};
+  let outNotes = isObject(before.notes) ? { ...before.notes } : {};
+  let outReleases = {};
   if (isObject(before.releases)) {
     for (const [id, value] of Object.entries(before.releases)) {
       if (ids.has(id)) outReleases[id] = value;
@@ -177,15 +231,45 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
   }
 
   // Notes of a `bulletins` source are kept whether or not a release points at them (Compare).
-  const keepAll = new Set();
+  const keepAll = new Set(
+    sources.filter(({ adapter }) => adapter.kind === 'bulletins').map(({ adapter }) => adapter.id),
+  );
+  // The notes the payload would hold now: those a release points at and a `bulletins` source's.
+  const heldNotes = () => {
+    const used = new Set(Object.values(outReleases).flatMap((value) => value.notes ?? []));
+    return Object.keys(outNotes).filter(
+      (url) => used.has(url) || keepAll.has(outNotes[url]?.source),
+    ).length;
+  };
 
   for (const { adapter, rows, pages } of sources) {
     const mine = releasesOf(adapter, releases);
     const bulletins = adapter.kind === 'bulletins';
-    if (bulletins) keepAll.add(adapter.id);
-    const failed = bulletins ? !(rows instanceof Map) || rows.size === 0 : !Array.isArray(rows) || rows.length === 0;
+    let failed = bulletins
+      ? !(rows instanceof Map) || rows.size === 0
+      : !Array.isArray(rows) || rows.length === 0;
     if (failed) failures.push(`${adapter.id}: the index could not be read`);
     const old = outSources[adapter.id];
+    const saved = { notes: { ...outNotes }, releases: { ...outReleases }, seen: failures.length };
+
+    if (!failed) {
+      if (bulletins) {
+        applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases, failures });
+      } else {
+        const args = { adapter, releases, mine, rows, pages, now, outNotes, outReleases, failures };
+        applyIndexSource(args);
+      }
+      if (heldNotes() > MAX_NOTES) {
+        // This source alone is over the cap: undo it and treat it as failed, so the others write.
+        outNotes = saved.notes;
+        outReleases = saved.releases;
+        failures.length = saved.seen;
+        failures.push(
+          `${adapter.id}: its notes would pass the cap of ${MAX_NOTES}; kept as it was`,
+        );
+        failed = true;
+      }
+    }
     outSources[adapter.id] = failed
       ? { status: 'failed', checkedAt: old?.checkedAt ?? now, index: adapter.index }
       : { status: 'ok', checkedAt: now, index: adapter.index };
@@ -196,58 +280,6 @@ export function buildPayload({ previous, releases, sources, now, maxBytes = MAX_
         if (release.stage !== 'release') outReleases[release.id] = entry('not-applicable', now);
         else if (!outReleases[release.id] || outReleases[release.id].status === 'not-connected') {
           outReleases[release.id] = entry('unavailable', now);
-        }
-      }
-      continue;
-    }
-
-    if (bulletins) {
-      applyBulletins({ adapter, mine, rows, pages, now, outNotes, outReleases, failures });
-      continue;
-    }
-
-    const kept = { ...outNotes };
-    const unread = new Set();
-    for (const [url, note] of Object.entries(outNotes)) {
-      if (note?.source === adapter.id) delete outNotes[url];
-    }
-    const byId = new Map(mine.map((release) => [release.id, release]));
-    for (const found of adapter.match(releases, rows)) {
-      const release = byId.get(found.id);
-      if (found.status === 'not-applicable') {
-        outReleases[found.id] = entry('not-applicable', now);
-      } else if (found.status === 'not-found') {
-        const was = outReleases[found.id]?.status;
-        if (was === 'listed' || was === 'no-cve-entries') {
-          // Markup drift looks like this: a release with a note before has none now.
-          const title = release.title ?? found.id;
-          failures.push(`${adapter.id}: ${title} was ${was} and no longer matches`);
-        } else {
-          outReleases[found.id] = entry('not-found', now);
-        }
-      } else if (found.row.noCveEntries) {
-        outReleases[found.id] = entry('no-cve-entries', now, [], [], 0);
-      } else {
-        const url = found.row.note;
-        const html = pages?.get(url);
-        const fetched = typeof html === 'string';
-        // A page that was read and refused is never replaced by the previous note; only a page
-        // that was not read at all falls back to it, and that is reported.
-        const reused = fetched ? null : (outNotes[url] ?? kept[url]);
-        const note = fetched ? noteOf(adapter, html, release) : reused;
-        const usable = note && note.source === adapter.id && note.cves.length > 0;
-        if (usable) {
-          outNotes[url] = note;
-          const cves = note.cves.map((cve) => cve.id);
-          const checkedAt = reused ? (outReleases[found.id]?.checkedAt ?? now) : now;
-          outReleases[found.id] = entry('listed', checkedAt, [url], cves, cves.length);
-          if (reused && !unread.has(url)) {
-            unread.add(url);
-            failures.push(`${adapter.id}: ${url} was not read again; the previous note is kept`);
-          }
-        } else {
-          failures.push(`${adapter.id}: no usable note for ${release.title ?? found.id} (${url})`);
-          outReleases[found.id] = entry('unavailable', now);
         }
       }
     }

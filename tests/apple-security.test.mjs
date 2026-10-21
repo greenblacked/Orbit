@@ -430,7 +430,7 @@ describe('buildPayload', () => {
     assert.ok(failures.length > 0);
   });
 
-  it('throws instead of writing a payload over the byte or note cap', () => {
+  it('throws over the byte cap and fails a source over the note cap', () => {
     assert.throws(() => build({ maxBytes: 100 }), /over 100/);
     const fake = {
       id: 'fake',
@@ -448,16 +448,15 @@ describe('buildPayload', () => {
       row(`r${i}`, 'X', '1', 'release', '2026-09-28T00:00:00Z', 'fake'),
     );
     const pages = new Map(many.map((r) => [`https://example.com/${r.id}`, '<h1>t</h1>']));
-    assert.throws(
-      () =>
-        buildPayload({
-          previous: null,
-          releases: many,
-          sources: [{ adapter: fake, rows: [{}], pages }],
-          now: NOW,
-        }),
-      /more than/,
-    );
+    const { payload, failures } = buildPayload({
+      previous: null,
+      releases: many,
+      sources: [{ adapter: fake, rows: [{}], pages }],
+      now: NOW,
+    });
+    assert.equal(payload.sources.fake.status, 'failed');
+    assert.deepEqual(Object.keys(payload.notes), []);
+    assert.ok(failures.some((line) => line.includes('cap of 400')));
   });
 
   it('fails closed per source: keeps the old data, marks it failed, reports it', () => {

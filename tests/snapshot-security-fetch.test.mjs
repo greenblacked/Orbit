@@ -4,7 +4,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { fetchPage, readPages } from '../deploy/snapshot_security.mjs';
+import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { fetchPage, readPages, readSource, writePayload } from '../deploy/snapshot_security.mjs';
 
 const HOSTS = ['source.android.com'];
 const START = 'https://source.android.com/docs/security/bulletin/2025-01-01';
@@ -237,6 +241,87 @@ describe('snapshot_security fetchPage', () => {
         if (adapter.vendor === 'google') assert.deepEqual(adapter.lang, LANG);
         else assert.equal(adapter.lang, undefined);
       }
+    });
+  });
+});
+
+describe('snapshot_security readSource', () => {
+  const adapter = (index) => ({
+    id: 'fake',
+    vendor: 'v',
+    index,
+    hosts: ['good.example'],
+    parseIndex: () => [{}],
+    match: () => [],
+  });
+  const run = async (index) => {
+    const calls = [];
+    const options = OPTIONS({ 'https://good.example/idx': { html: '<p>x</p>' } }, calls, []);
+    const originalError = console.error;
+    const errors = [];
+    console.error = (line) => errors.push(line);
+    try {
+      return { ...(await readSource(adapter(index), [], new Map(), options)), calls, errors };
+    } finally {
+      console.error = originalError;
+    }
+  };
+
+  it('reads an index on the adapter\'s host', async () => {
+    const result = await run('https://good.example/idx');
+    assert.deepEqual(result.calls, ['https://good.example/idx']);
+    assert.deepEqual(result.rows, [{}]);
+    assert.deepEqual(result.errors, []);
+  });
+
+  it('fails the source without a request when the index is off-host or not https', async () => {
+    for (const index of [
+      'https://evil.example/idx',
+      'http://good.example/idx',
+      'https://good.example.evil.example/idx',
+      'not a url',
+    ]) {
+      const result = await run(index);
+      assert.deepEqual(result.calls, [], index);
+      assert.equal(result.rows, null, index);
+      assert.equal(result.pages.size, 0, index);
+      assert.match(result.errors[0], /^failed: fake: .* is not on good\.example/, index);
+    }
+  });
+});
+
+describe('snapshot_security writePayload', () => {
+  const payload = {
+    schema: 1,
+    generatedAt: '2026-10-12T09:00:00Z',
+    sources: {},
+    notes: {},
+    releases: {},
+  };
+  const inTemp = (run) => {
+    const dir = mkdtempSync(join(tmpdir(), 'security-'));
+    try {
+      run(join(dir, 'data', 'security.json'));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it('writes a valid payload', () => {
+    inTemp((target) => {
+      writePayload(target, payload);
+      assert.deepEqual(JSON.parse(readFileSync(target, 'utf8')), payload);
+    });
+  });
+
+  it('refuses an invalid payload, names the problem and leaves no file', () => {
+    inTemp((target) => {
+      const bad = {
+        ...payload,
+        releases: { x: { status: 'listed', notes: [], cves: [], count: 0 } },
+      };
+      assert.throws(() => writePayload(target, bad), /refusing to write.*x is listed/s);
+      assert.equal(existsSync(target), false);
     });
   });
 });
