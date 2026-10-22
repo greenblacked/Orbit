@@ -226,3 +226,47 @@ describe('behind', () => {
     assert.equal(Lookup.behind(LIST, 'nope', 'iOS'), null);
   });
 });
+
+describe('options', () => {
+  it('lists the family releases in the list order, as build (else version) and label', () => {
+    const o = Lookup.options(LIST, 'iOS');
+    assert.deepEqual(o.map((x) => x.value), ['24B5099f', '24B80', '24B5001', '24A446', '24A340', '23G90']);
+    assert.equal(o[1].label, '27.1 · 24B80');
+    assert.equal(o[5].label, '26.6.2 · 23G90');
+  });
+
+  it('marks a pre-release with its stage', () => {
+    const list = [
+      rel('7.25', '7.25rc1', 'rc', 2, 'RouterOS'),
+      rel('27.2', '24B5099f', 'beta', 1),
+      rel('7.24.5', '7.24.5', 'release', 0, 'RouterOS'),
+    ];
+    assert.equal(Lookup.options(list, 'iOS')[0].label, '27.2 · 24B5099f (beta)');
+    const ros = Lookup.options(list, 'RouterOS');
+    assert.equal(ros[0].label, '7.25 · 7.25rc1 (rc)');
+    assert.equal(ros[1].label, '7.24.5');
+  });
+
+  it('uses the version as the value and the whole label when there is no build, or it is the version', () => {
+    const list = [rel('3.9.2', '', 'beta', 2, 'SteamOS'), rel('3.9.1', '3.9.1', 'release', 1, 'SteamOS')];
+    assert.deepEqual(Lookup.options(list, 'SteamOS'), [
+      { value: '3.9.2', label: '3.9.2 (beta)' },
+      { value: '3.9.1', label: '3.9.1' },
+    ]);
+  });
+
+  it('gives values that find() matches back to the same release', () => {
+    Lookup.options(LIST, 'iOS').forEach((x, i) => assert.equal(Lookup.find(LIST, x.value, 'iOS'), LIST[i]));
+  });
+
+  it('keeps the first of two releases that share a value', () => {
+    const list = [rel('26100.2', '26100', 'release', 3, 'Windows'), rel('26100.1', '26100', 'release', 1, 'Windows')];
+    assert.deepEqual(Lookup.options(list, 'Windows'), [{ value: '26100', label: '26100.2 · 26100' }]);
+  });
+
+  it('leaves out other platforms and gives nothing for an empty family or list', () => {
+    assert.deepEqual(Lookup.options(LIST, 'macOS'), []);
+    assert.deepEqual(Lookup.options([], 'iOS'), []);
+    assert.equal(Lookup.options([...LIST, rel('15.0', 'SP1A', 'release', 1, 'Android')], 'iOS').length, 6);
+  });
+});

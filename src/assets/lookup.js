@@ -4,8 +4,9 @@
    feature update; else the major version), a
    pre-release, a version not in the data placed against its line, or how far behind the newest it
    is, counted as Compare counts, with the CVE count where window.Sec is loaded. The query is kept
-   as ?platform= and ?build=. find and judge are exported for the Node tests; the rest runs in a
-   browser. */
+   as ?platform= and ?build=. A second field lists the platform's known builds to pick from
+   instead of typing. find, judge, behind and options are exported for the Node tests; the rest
+   runs in a browser. */
 (function (root) {
   "use strict";
   var DAY = 864e5;
@@ -112,7 +113,26 @@
     };
   }
 
-  var api = { find: find, judge: judge, behind: behind };
+  // The choices for the "Pick a build" list: one per release of `family`, in the list order (newest
+  // first), as { value, label }. The value is the build, else the version, which find() matches
+  // either way; the label is the version, the build when it differs, and the stage of a release
+  // that is not public ("27.2 · 24B5099f (beta)"). A value already offered is skipped.
+  function options(list, family) {
+    var seen = [], out = [];
+    list.forEach(function (r) {
+      if (r.family !== family) return;
+      var value = String(r.build || r.version || "");
+      if (!value || seen.indexOf(value) >= 0) return;
+      seen.push(value);
+      var label = String(r.version);
+      if (r.build && String(r.build) !== label) label += " · " + r.build;
+      if (r.stage && r.stage !== "release") label += " (" + r.stage + ")";
+      out.push({ value: value, label: label });
+    });
+    return out;
+  }
+
+  var api = { find: find, judge: judge, behind: behind, options: options };
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
   root.Lookup = api;
 
@@ -121,10 +141,12 @@
   if (!RO || !form) return;
   var selFamily = doc.getElementById("lk-family");
   var input = doc.getElementById("lk-build");
+  var pick = doc.getElementById("lk-pick");
   var out = doc.getElementById("lk-result");
   var all = [];
   var asked = false;
   var shown = null;
+  var choices = [];
 
   try {
     var params = new URLSearchParams(root.location.search);
@@ -202,6 +224,25 @@
     return { rows: rows, link: link };
   }
 
+  // The "Pick a build" list for the selected platform: a first empty choice, then its builds. It
+  // shows the build in the input when that is one of them, else the empty choice, so a refill
+  // after a data poll or a platform change keeps what was picked.
+  function syncPick() {
+    var text = input.value.trim(), now = "";
+    choices.forEach(function (c) { if (c.value === text) now = c.value; });
+    pick.value = now;
+  }
+  function fillPick() {
+    var next = options(all, selFamily.value);
+    // A data poll with the same builds leaves the list alone, so an open list is not closed.
+    if (pick.options.length && JSON.stringify(next) === JSON.stringify(choices)) { syncPick(); return; }
+    choices = next;
+    pick.textContent = "";
+    pick.appendChild(RO.h("option", "", "Choose a build…", { value: "" }));
+    choices.forEach(function (c) { pick.appendChild(RO.h("option", "", c.label, { value: c.value })); });
+    syncPick();
+  }
+
   // A data poll must not re-announce the same answer; Check clears `shown`, so it always redraws.
   function show() {
     if (!all.length) return;
@@ -240,12 +281,24 @@
     asked = false;
     shown = null;
     out.textContent = "";
+    fillPick();
     remember(true);
   });
+  pick.addEventListener("change", function () {
+    if (!pick.value) return;
+    input.value = pick.value;
+    asked = true;
+    shown = null;
+    show();
+    remember();
+  });
+  // Typing something that is not one of the builds empties the pick.
+  input.addEventListener("input", syncPick);
 
   RO.on(function (data) {
     if (!data) return;
     all = data.releases;
+    fillPick();
     form.hidden = false;
     doc.getElementById("lk-help").hidden = false;
     if (asked) show();
