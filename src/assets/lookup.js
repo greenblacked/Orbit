@@ -147,6 +147,8 @@
   var asked = false;
   var shown = null;
   var choices = [];
+  var stale = false;
+  var timer = null;
 
   try {
     var params = new URLSearchParams(root.location.search);
@@ -225,11 +227,16 @@
   }
 
   // The "Pick a build" list for the selected platform: a first empty choice, then its builds. It
-  // shows the build in the input when that is one of them, else the empty choice, so a refill
-  // after a data poll or a platform change keeps what was picked.
+  // shows the release the input names (as find() reads it: a version, a prefixed name, any case),
+  // else the empty choice, so a refill after a data poll keeps what was picked. After a platform
+  // change the input text is stale, so the list stays empty until the visitor types or picks.
   function syncPick() {
-    var text = input.value.trim(), now = "";
-    choices.forEach(function (c) { if (c.value === text) now = c.value; });
+    var now = "";
+    if (!stale) {
+      var hit = find(all.filter(function (r) { return r.family === selFamily.value; }), input.value, selFamily.value);
+      var value = hit ? String(hit.build || hit.version || "") : "";
+      choices.forEach(function (c) { if (c.value === value) now = c.value; });
+    }
     pick.value = now;
   }
   function fillPick() {
@@ -270,30 +277,49 @@
     } catch (e) { /* no shareable address */ }
   }
 
+  function cancel() {
+    if (timer !== null) { root.clearTimeout(timer); timer = null; }
+  }
+
   form.addEventListener("submit", function (e) {
     e.preventDefault();
+    cancel();
     asked = true;
+    stale = false;
     shown = null;
     show();
     remember();
+    syncPick();
   });
   selFamily.addEventListener("change", function () {
+    cancel();
     asked = false;
+    stale = true;
     shown = null;
     out.textContent = "";
     fillPick();
     remember(true);
   });
+  // Up and Down on a closed list fire change at every step, so the answer waits until the picking
+  // stops; the input is filled at once.
   pick.addEventListener("change", function () {
     if (!pick.value) return;
     input.value = pick.value;
+    stale = false;
     asked = true;
-    shown = null;
-    show();
-    remember();
+    cancel();
+    timer = root.setTimeout(function () {
+      timer = null;
+      shown = null;
+      show();
+      remember();
+    }, 300);
   });
-  // Typing something that is not one of the builds empties the pick.
-  input.addEventListener("input", syncPick);
+  // Typing a version or build of the platform picks that release; anything else empties the pick.
+  input.addEventListener("input", function () {
+    stale = false;
+    syncPick();
+  });
 
   RO.on(function (data) {
     if (!data) return;

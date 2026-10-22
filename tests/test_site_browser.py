@@ -794,12 +794,38 @@ def test_check_my_version_offers_the_known_builds_to_pick(page, base_url, path):
     assert page.input_value("#lk-pick") == ios[0]["build"]
     page.fill("#lk-build", "not-a-build-9")
     assert page.input_value("#lk-pick") == ""
+    # A version, in any case and with the platform's name, picks the release it names.
+    page.fill("#lk-build", "26.6.2")
+    assert page.input_value("#lk-pick") == "23G90"
+    page.fill("#lk-build", "iOS 26.6.2")
+    assert page.input_value("#lk-pick") == "23G90"
+    page.fill("#lk-build", "23g90")
+    assert page.input_value("#lk-pick") == "23G90"
     # A new platform refills the list with its own builds and clears the answer.
     page.fill("#lk-build", ios[0]["build"])
     page.select_option("#lk-family", "macOS")
     assert set(offered()[1:]) == builds("macOS") and offered()[0] == ""
     assert ios[1]["build"] not in offered()
     assert page.locator("#lk-result p").count() == 0
+    # iPadOS shares builds with iOS, yet the picker stays empty after a platform change while the
+    # input keeps its text, with no answer drawn.
+    page.select_option("#lk-family", "iOS")
+    page.fill("#lk-build", "23G90")
+    assert page.input_value("#lk-pick") == "23G90"
+    page.select_option("#lk-family", "iPadOS")
+    assert "23G90" in offered()
+    assert page.input_value("#lk-pick") == "" and page.input_value("#lk-build") == "23G90"
+    assert page.locator("#lk-result p").count() == 0
+    # Quick picks (Up and Down on the list) settle on the last one, and that one is answered.
+    page.select_option("#lk-family", "iOS")
+    page.select_option("#lk-pick", ios[0]["build"])
+    page.select_option("#lk-pick", ios[2]["build"])
+    page.select_option("#lk-pick", ios[1]["build"])
+    assert page.input_value("#lk-build") == ios[1]["build"]
+    page.wait_for_selector("#lk-result .lk-hit")
+    assert page.inner_text("#lk-result .lk-hit").startswith(
+        f"iOS {ios[1]['version']} · {ios[1]['build']}"
+    )
     # An address with ?build= comes up with that build chosen.
     lookup_ready(page, base_url, path, f"?platform=iOS&build={ios[1]['build']}")
     assert page.input_value("#lk-pick") == ios[1]["build"]
