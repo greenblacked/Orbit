@@ -207,6 +207,13 @@ def test_ci_checks_the_validation_results_in_the_test_job_before_the_tests():
     assert block.index("check_results.py") < block.index("python -m pytest")
 
 
+def test_ci_warns_about_stale_data_in_the_test_job_without_failing_it():
+    block = job_block(workflow("ci.yml"), "build")
+    assert "python scripts/stale_data.py" in block
+    assert block.index("stale_data.py") < block.index("python -m pytest")
+    assert "stale_data.py ||" not in block and "continue-on-error" not in block
+
+
 def test_the_worker_serves_a_404_page_and_keeps_workers_dev():
     config = json.loads((REPO / "deploy" / "wrangler.json").read_text(encoding="utf-8"))
     assert config["assets"]["not_found_handling"] == "404-page"
