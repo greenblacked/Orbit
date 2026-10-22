@@ -310,7 +310,6 @@
     timer = root.setTimeout(function () {
       timer = null;
       asked = true;
-      shown = null;
       show();
       remember();
     }, 300);
