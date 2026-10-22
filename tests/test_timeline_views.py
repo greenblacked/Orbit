@@ -251,15 +251,24 @@ def test_a_month_bar_stays_in_view_below_the_header_while_its_rows_scroll(opened
     bar = page.locator(".month-bar").first
     assert bar.evaluate("e => getComputedStyle(e).position") == "sticky"
     top = bar.evaluate("e => e.getBoundingClientRect().top + window.scrollY")
-    page.evaluate(f"() => window.scrollTo(0, {top} + 420)")
-    page.wait_for_function("() => window.scrollY > 0")
-    box = bar.bounding_box()
-    assert 0 < box["y"] < 140, box
-    covering = page.evaluate(
-        "([x, y]) => !!document.elementFromPoint(x, y).closest('.month-bar')",
-        [box["x"] + 20, box["y"] + box["height"] / 2],
+    page.evaluate(f"() => window.scrollTo({{ top: {top} + 420, behavior: 'instant' }})")
+    # scrollY moves at once, but the header slides away from a scroll event that fires a frame
+    # later, and the bar's sticky offset follows it (7.875rem -> 3.8125rem). Measure only after
+    # that has happened, and read the box and the hit test in one evaluation so no frame can
+    # land between them.
+    page.wait_for_function("() => document.getElementById('banner').classList.contains('away')")
+    seen = page.evaluate(
+        """() => new Promise((resolve) => {
+            const bar = document.querySelector('.month-bar');
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                const r = bar.getBoundingClientRect();
+                const hit = document.elementFromPoint(r.left + 20, r.top + r.height / 2);
+                resolve({ y: r.top, covering: !!(hit && hit.closest('.month-bar')) });
+            }));
+        })"""
     )
-    assert covering
+    assert 0 < seen["y"] < 140, seen
+    assert seen["covering"], seen
 
 
 def test_a_row_focused_from_below_is_not_left_under_the_month_bar(opened):
