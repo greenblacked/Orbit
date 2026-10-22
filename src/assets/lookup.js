@@ -4,8 +4,9 @@
    feature update; else the major version), a
    pre-release, a version not in the data placed against its line, or how far behind the newest it
    is, counted as Compare counts, with the CVE count where window.Sec is loaded. The query is kept
-   as ?platform= and ?build=. find and judge are exported for the Node tests; the rest runs in a
-   browser. */
+   as ?platform= and ?build=. A second field lists the platform's known builds to pick from
+   instead of typing. find, judge, behind and options are exported for the Node tests; the rest
+   runs in a browser. */
 (function (root) {
   "use strict";
   var DAY = 864e5;
@@ -112,7 +113,28 @@
     };
   }
 
-  var api = { find: find, judge: judge, behind: behind };
+  // The choices for the "Pick a build" list: one per value of `family`, in list order (newest
+  // first), as { value, label }. The value is the build, else the version, which find() matches
+  // either way; the label is the version, the build when it differs, and the stage of a release
+  // that is not public ("27.2 · 24B5099f (beta)"). A shared value keeps its first place, labelled
+  // by the release find() picks.
+  function options(list, family) {
+    var seen = [], rows = [];
+    list.forEach(function (r) {
+      var v = String(r.build || r.version || ""), at = seen.indexOf(v);
+      if (r.family !== family || !v) return;
+      if (at < 0) { seen.push(v); rows.push(r); }
+      else if (r.stage === "release" && rows[at].stage !== "release") rows[at] = r;
+    });
+    return seen.map(function (value, i) {
+      var r = rows[i], label = String(r.version);
+      if (r.build && String(r.build) !== label) label += " · " + r.build;
+      if (r.stage && r.stage !== "release") label += " (" + r.stage + ")";
+      return { value: value, label: label };
+    });
+  }
+
+  var api = { find: find, judge: judge, behind: behind, options: options };
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
   root.Lookup = api;
 
@@ -121,10 +143,14 @@
   if (!RO || !form) return;
   var selFamily = doc.getElementById("lk-family");
   var input = doc.getElementById("lk-build");
+  var pick = doc.getElementById("lk-pick");
   var out = doc.getElementById("lk-result");
   var all = [];
   var asked = false;
   var shown = null;
+  var choices = [];
+  var stale = false;
+  var timer = null;
 
   try {
     var params = new URLSearchParams(root.location.search);
@@ -202,6 +228,30 @@
     return { rows: rows, link: link };
   }
 
+  // The "Pick a build" list for the selected platform: a first empty choice, then its builds. It
+  // shows the release the input names (as find() reads it: a version, a prefixed name, any case),
+  // else the empty choice, so a refill after a data poll keeps what was picked. After a platform
+  // change the input text is stale, so the list stays empty until the visitor types or picks.
+  function syncPick() {
+    var now = "";
+    if (!stale) {
+      var hit = find(all.filter(function (r) { return r.family === selFamily.value; }), input.value, selFamily.value);
+      var value = hit ? String(hit.build || hit.version || "") : "";
+      choices.forEach(function (c) { if (c.value === value) now = c.value; });
+    }
+    pick.value = now;
+  }
+  function fillPick() {
+    var next = options(all, selFamily.value);
+    // A data poll with the same builds leaves the list alone, so an open list is not closed.
+    if (pick.options.length && JSON.stringify(next) === JSON.stringify(choices)) { syncPick(); return; }
+    choices = next;
+    pick.textContent = "";
+    pick.appendChild(RO.h("option", "", "Choose a build…", { value: "" }));
+    choices.forEach(function (c) { pick.appendChild(RO.h("option", "", c.label, { value: c.value })); });
+    syncPick();
+  }
+
   // A data poll must not re-announce the same answer; Check clears `shown`, so it always redraws.
   function show() {
     if (!all.length) return;
@@ -229,23 +279,54 @@
     } catch (e) { /* no shareable address */ }
   }
 
+  function cancel() {
+    if (timer !== null) { root.clearTimeout(timer); timer = null; }
+  }
+
   form.addEventListener("submit", function (e) {
     e.preventDefault();
+    cancel();
     asked = true;
+    stale = false;
     shown = null;
     show();
     remember();
+    syncPick();
   });
   selFamily.addEventListener("change", function () {
+    cancel();
     asked = false;
+    stale = true;
     shown = null;
     out.textContent = "";
+    fillPick();
     remember(true);
+  });
+  // Up and Down on a closed list fire change at every step, so the answer waits until the picking
+  // stops; the input is filled at once. Typing or choosing nothing drops a pending answer.
+  pick.addEventListener("change", function () {
+    cancel();
+    if (!pick.value) return;
+    input.value = pick.value;
+    stale = false;
+    timer = root.setTimeout(function () {
+      timer = null;
+      asked = true;
+      show();
+      remember();
+    }, 300);
+  });
+  // Typing a version or build of the platform picks that release; anything else empties the pick.
+  input.addEventListener("input", function () {
+    cancel();
+    stale = false;
+    syncPick();
   });
 
   RO.on(function (data) {
     if (!data) return;
     all = data.releases;
+    fillPick();
     form.hidden = false;
     doc.getElementById("lk-help").hidden = false;
     if (asked) show();
