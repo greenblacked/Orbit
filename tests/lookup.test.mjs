@@ -264,6 +264,13 @@ describe('options', () => {
     assert.deepEqual(Lookup.options(list, 'Windows'), [{ value: '26100', label: '26100.2 · 26100' }]);
   });
 
+  it('labels a shared value by the release find() answers for, at its first position', () => {
+    const beta = rel('3.9.2', '', 'beta', 2, 'SteamOS'), release = rel('3.9.2', '', 'release', 1, 'SteamOS');
+    const list = [beta, release];
+    assert.deepEqual(Lookup.options(list, 'SteamOS'), [{ value: '3.9.2', label: '3.9.2' }]);
+    assert.equal(Lookup.find(list, '3.9.2', 'SteamOS'), release);
+  });
+
   it('leaves out other platforms and gives nothing for an empty family or list', () => {
     assert.deepEqual(Lookup.options(LIST, 'macOS'), []);
     assert.deepEqual(Lookup.options([], 'iOS'), []);

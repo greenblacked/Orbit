@@ -113,23 +113,25 @@
     };
   }
 
-  // The choices for the "Pick a build" list: one per release of `family`, in the list order (newest
+  // The choices for the "Pick a build" list: one per value of `family`, in list order (newest
   // first), as { value, label }. The value is the build, else the version, which find() matches
   // either way; the label is the version, the build when it differs, and the stage of a release
-  // that is not public ("27.2 · 24B5099f (beta)"). A value already offered is skipped.
+  // that is not public ("27.2 · 24B5099f (beta)"). A shared value keeps its first place, labelled
+  // by the release find() picks.
   function options(list, family) {
-    var seen = [], out = [];
+    var seen = [], rows = [];
     list.forEach(function (r) {
-      if (r.family !== family) return;
-      var value = String(r.build || r.version || "");
-      if (!value || seen.indexOf(value) >= 0) return;
-      seen.push(value);
-      var label = String(r.version);
+      var v = String(r.build || r.version || ""), at = seen.indexOf(v);
+      if (r.family !== family || !v) return;
+      if (at < 0) { seen.push(v); rows.push(r); }
+      else if (r.stage === "release" && rows[at].stage !== "release") rows[at] = r;
+    });
+    return seen.map(function (value, i) {
+      var r = rows[i], label = String(r.version);
       if (r.build && String(r.build) !== label) label += " · " + r.build;
       if (r.stage && r.stage !== "release") label += " (" + r.stage + ")";
-      out.push({ value: value, label: label });
+      return { value: value, label: label };
     });
-    return out;
   }
 
   var api = { find: find, judge: judge, behind: behind, options: options };
