@@ -771,9 +771,7 @@ def test_check_my_version_offers_the_known_builds_to_pick(page, base_url, path):
         return page.eval_on_selector_all("#lk-pick option", "els => els.map(e => e.value)")
 
     def builds(family: str) -> set[str]:
-        return {
-            r["build"] or r["version"] for r in SNAPSHOT["releases"] if r["family"] == family
-        }
+        return {r["build"] or r["version"] for r in SNAPSHOT["releases"] if r["family"] == family}
 
     # An empty first choice, then every iOS release (a beta too), by build.
     values = offered()
