@@ -822,10 +822,13 @@ def test_check_my_version_offers_the_known_builds_to_pick(page, base_url, path):
     page.select_option("#lk-pick", ios[2]["build"])
     page.select_option("#lk-pick", ios[1]["build"])
     assert page.input_value("#lk-build") == ios[1]["build"]
-    page.wait_for_selector("#lk-result .lk-hit")
-    assert page.inner_text("#lk-result .lk-hit").startswith(
-        f"iOS {ios[1]['version']} · {ios[1]['build']}"
+    expected = f"iOS {ios[1]['version']} · {ios[1]['build']}"
+    page.wait_for_function(
+        "(text) => { const hit = document.querySelector('#lk-result .lk-hit');"
+        " return !!hit && hit.textContent.includes(text); }",
+        arg=expected,
     )
+    assert page.inner_text("#lk-result .lk-hit").startswith(expected)
     # An address with ?build= comes up with that build chosen.
     lookup_ready(page, base_url, path, f"?platform=iOS&build={ios[1]['build']}")
     assert page.input_value("#lk-pick") == ios[1]["build"]

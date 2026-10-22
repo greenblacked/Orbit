@@ -301,15 +301,15 @@
     remember(true);
   });
   // Up and Down on a closed list fire change at every step, so the answer waits until the picking
-  // stops; the input is filled at once.
+  // stops; the input is filled at once. Typing or choosing nothing drops a pending answer.
   pick.addEventListener("change", function () {
+    cancel();
     if (!pick.value) return;
     input.value = pick.value;
     stale = false;
-    asked = true;
-    cancel();
     timer = root.setTimeout(function () {
       timer = null;
+      asked = true;
       shown = null;
       show();
       remember();
@@ -317,6 +317,7 @@
   });
   // Typing a version or build of the platform picks that release; anything else empties the pick.
   input.addEventListener("input", function () {
+    cancel();
     stale = false;
     syncPick();
   });
