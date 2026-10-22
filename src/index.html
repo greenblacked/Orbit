@@ -228,13 +228,14 @@
 </section>
 <section class="wrap lookup" aria-labelledby="lk-h">
 <h2 id="lk-h" class="title">Check my version</h2>
-<p class="small">Is your build the newest? Pick a platform and type a version or build number from Settings or About.</p>
+<p class="small">Is your build the newest? Pick a platform, then choose a build or type a version or build number from Settings or About.</p>
 <form class="lk-form" id="lk-form" hidden>
 <div class="field"><label for="lk-family">Platform</label><select id="lk-family" name="platform"><option value="iOS">iOS</option><option value="iPadOS">iPadOS</option><option value="macOS">macOS</option><option value="watchOS">watchOS</option><option value="tvOS">tvOS</option><option value="visionOS">visionOS</option><option value="RouterOS">RouterOS</option><option value="Android">Android</option><option value="Windows">Windows</option><option value="SteamOS">SteamOS</option></select></div>
+<div class="field"><label for="lk-pick">Pick a build</label><select id="lk-pick"></select></div>
 <div class="field"><label for="lk-build">Version or build</label><input class="lk-input" id="lk-build" name="build" type="text" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="lk-help"></div>
 <button class="lk-go" type="submit">Check</button>
 </form>
-<p class="small lk-help" id="lk-help" hidden>Type the version or build number shown in Settings, About or System information.</p>
+<p class="small lk-help" id="lk-help" hidden>Pick a build from the list, or type the version or build number shown in Settings, About or System information.</p>
 <div class="lk-result" id="lk-result" role="status" aria-live="polite" aria-atomic="true"></div>
 </section>
 <section id="ios" class="fam fam-ios" data-family="iOS" aria-labelledby="ios-h">
