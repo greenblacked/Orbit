@@ -1,8 +1,11 @@
 # Validation results
 
 One JSON file per tested build, at `results/<vendor>/<family>/<build>.json`, for example
-`results/apple/iOS/24B91.json`. The build copies them into the site as
-`/data/results/<vendor>/<family>/<build>.json`.
+`results/apple/iOS/24B91.json`, or one per tested build and device, at
+`results/<vendor>/<family>/<build>/<device-slug>.json`, for example
+`results/apple/iOS/24B91/iphone-18-pro.json`. The build copies them into the site as
+`/data/results/<vendor>/<family>/<build>.json` (or `.../<build>/<device-slug>.json`) and lists
+them in `/data/results/index.json`.
 
 ## Only publicly released builds
 
@@ -37,7 +40,7 @@ for a beta or an RC cannot reach the repository or the site:
 
 | Field | Rule |
 | --- | --- |
-| `vendor`, `family`, `build` | Must equal the directory names and the file name (without `.json`). A build is letters, digits, `.`, `_` and `-`. |
+| `vendor`, `family`, `build` | Must equal the directory names and the file name (without `.json`); per device, the build is the build directory. A build is letters, digits, `.`, `_` and `-`. |
 | `version` | The release version, a non-empty string. |
 | `stage` | `release`. |
 | `status` | `pass`, `warn`, `fail` or `untested`. |
@@ -45,8 +48,48 @@ for a beta or an RC cannot reach the repository or the site:
 | `testedAt` | UTC, `YYYY-MM-DDTHH:MM:SSZ`. |
 | `runner` | Who or what ran the checks, a non-empty string. |
 
-No other keys are allowed, and no other files than this README and the result files.
+No other keys are allowed (a per-device file adds `device`, below), and no other files than this README and the result files.
+
+## Results per device
+
+A result for one device goes in `results/<vendor>/<family>/<build>/<device-slug>.json`. It has
+every field above and one more:
+
+| Field | Rule |
+| --- | --- |
+| `device` | The device's name exactly as listed in `src/data/devices.json` for the family and the build's major. |
+
+- The major is the leading number of `version`: `27.1` is major 27.
+- The file name is the slug of `device`: the name lower-cased, every run of characters
+  outside `a-z0-9` replaced by one `-`, and leading and trailing `-` removed. `iPhone 18 Pro` is
+  `iphone-18-pro` and `iPad Pro 11-inch (M5)` is `ipad-pro-11-inch-m5`.
+- A per-build file (`<build>.json`) must not carry `device`.
+- A build uses one layout: a `<build>.json` file and a `<build>/` directory may not both exist.
+- A family or major with no list in `devices.json` takes no per-device result. Apple lists
+  devices only for iOS 27 and iPadOS 27; for any other OS there is no official list, and a
+  result stays per build.
+
+`src/data/devices.json` is the official device list Apple publishes for each OS major:
+
+```json
+{
+  "schema": 1,
+  "checkedAt": "2026-10-26",
+  "families": {
+    "iOS": {
+      "27": { "source": "https://www.apple.com/os/ios/", "default": "iPhone 18 Pro", "devices": ["iPhone 18 Pro"] }
+    }
+  }
+}
+```
+
+`devices` keeps Apple's order and names, `default` is one of them and `source` is the Apple page
+the list came from. `tests/test_devices.py` checks the file and `scripts/check_results.py` reads
+it. The build writes `/data/results/index.json`, `{"schema": 1, "results": [...]}`, with one
+`{vendor, family, build, device, status, path}` per result (`device` is `null` for a per-build
+file) sorted by vendor, family, build and device, so a page can tell what exists without
+requesting a missing file.
 
 ```bash
-python scripts/check_results.py            # results/ against src/data/releases.json
+python scripts/check_results.py            # results/ against releases.json, families.json and devices.json
 ```
