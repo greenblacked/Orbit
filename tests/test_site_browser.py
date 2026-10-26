@@ -776,7 +776,8 @@ def test_check_by_enter_keeps_focus_in_the_field(page, base_url, path):
 
 
 @pytest.mark.parametrize("path", ["/", "/compare/"])
-def test_enter_after_a_click_on_check_keeps_focus_in_the_field(page, base_url, path):
+# Enter fires a click with detail 0, so focus stays even right after a pointer Check.
+def test_enter_after_a_click_on_check_still_keeps_focus(page, base_url, path):
     ios = public("iOS")
     lookup_ready(page, base_url, path)
     page.select_option("#lk-family", "iOS")
