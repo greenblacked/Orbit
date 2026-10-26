@@ -12,11 +12,13 @@ has no sitemap), and to refuse to overwrite a directory that is not a previous b
 
 The validation results under ``results/`` are copied to ``data/results/`` in the build, after
 ``check_results.py`` has accepted them: a result for a beta or an RC fails the build.
+``data/results/index.json`` lists them (vendor, family, build, device or null, status, path).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -113,18 +115,35 @@ def sitemap(urls: list[str], domain: str = DOMAIN) -> str:
 def copy_results(results: Path, output: Path) -> int:
     """Copy the validated result files to ``output/data/results``; return how many.
 
-    The directory is always made, so the page that reads it finds an empty one rather than
-    a missing path. Call it only after ``check_results`` has accepted the files.
+    The directory is always made, with an ``index.json`` listing what it holds, so the page
+    that reads it finds an empty index rather than a missing path. Call it only after
+    ``check_results`` has accepted the files.
     """
     target = output / "data" / "results"
     target.mkdir(parents=True, exist_ok=True)
-    count = 0
+    entries = []
     for path in sorted(results.rglob("*.json")) if results.is_dir() else []:
-        destination = target / path.relative_to(results)
+        relative = path.relative_to(results)
+        destination = target / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, destination)
-        count += 1
-    return count
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        entries.append(
+            {
+                "vendor": doc["vendor"],
+                "family": doc["family"],
+                "build": doc["build"],
+                "device": doc.get("device"),
+                "status": doc["status"],
+                "path": f"/data/results/{relative.as_posix()}",
+            }
+        )
+    entries.sort(key=lambda e: (e["vendor"], e["family"], e["build"], e["device"] or ""))
+    index = {"schema": 1, "results": entries}
+    (target / "index.json").write_text(
+        json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    return len(entries)
 
 
 def build(
@@ -167,7 +186,10 @@ def build(
     if results is not None:
         # Before anything is deleted, so a refused result leaves the previous build alone.
         bad_results = result_problems(
-            results, source / "data" / "releases.json", source / "data" / "families.json"
+            results,
+            source / "data" / "releases.json",
+            source / "data" / "families.json",
+            source / "data" / "devices.json",
         )
         if bad_results:
             raise SystemExit("refusing result file(s):\n" + "\n".join(bad_results))
