@@ -761,9 +761,10 @@ def test_check_my_version_works_from_the_keyboard(page, base_url):
         assert box(page, selector)["height"] >= TARGET, selector
 
 
-def test_check_by_enter_keeps_focus_in_the_field(page, base_url):
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_check_by_enter_keeps_focus_in_the_field(page, base_url, path):
     ios = public("iOS")
-    lookup_ready(page, base_url)
+    lookup_ready(page, base_url, path)
     page.focus("#lk-build")
     page.keyboard.type(ios[0]["build"])
     page.keyboard.press("Enter")
@@ -772,6 +773,18 @@ def test_check_by_enter_keeps_focus_in_the_field(page, base_url):
     assert page.evaluate(
         "() => document.getElementById('lk-result').classList.contains('lk-flash')"
     )
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_enter_after_a_click_on_check_keeps_focus_in_the_field(page, base_url, path):
+    ios = public("iOS")
+    lookup_ready(page, base_url, path)
+    page.select_option("#lk-family", "iOS")
+    page.fill("#lk-build", ios[0]["build"])
+    page.click(".lk-go")
+    page.focus("#lk-build")
+    page.keyboard.press("Enter")
+    assert page.evaluate("() => document.activeElement.id") == "lk-build"
 
 
 @pytest.mark.parametrize("path", ["/", "/compare/"])

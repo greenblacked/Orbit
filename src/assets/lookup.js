@@ -291,18 +291,19 @@
     if (timer !== null) { root.clearTimeout(timer); timer = null; }
   }
 
-  // A pointer press on Check has a click count; Enter or Space does not, and keeps focus put.
+  // Only a tap or click (click count > 0) moves focus.
   var pointed = false;
   form.querySelector(".lk-go").addEventListener("click", function (e) { pointed = e.detail > 0; });
   form.addEventListener("submit", function (e) {
     e.preventDefault();
+    var p = pointed;
+    pointed = false;
     cancel();
     asked = true;
     stale = false;
     shown = null;
     show();
-    reveal(pointed);
-    pointed = false;
+    reveal(p);
     remember();
     syncPick();
   });
