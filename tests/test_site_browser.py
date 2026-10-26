@@ -25,6 +25,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import pytest
+from helpers import SITE_DATA
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -537,7 +538,7 @@ def test_a_half_year_version_orders_h2_above_h1_on_the_same_day(page, base_url):
 
 # --- Check my version ----------------------------------------------------------------------
 
-SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
+SNAPSHOT = json.loads((SITE_DATA / "releases.json").read_text(encoding="utf-8"))
 DAY_MS = 86_400_000
 
 

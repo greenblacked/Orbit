@@ -7,6 +7,7 @@ from each other (``site_pages``), exactly as ``python scripts/<name>.py`` does.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import threading
 from pathlib import Path
@@ -15,14 +16,22 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from helpers import REPO, load_script  # noqa: E402  (after the path is set)
+from helpers import REPO, SITE_DATA, load_script  # noqa: E402  (after the path is set)
 
 
 @pytest.fixture(scope="session")
 def built(tmp_path_factory) -> Path:
-    """The site built once for the session, at version ``v0``."""
+    """The site built once for the session, at version ``v0``, with the frozen data.
+
+    The build copies ``src/data`` as it is and derives nothing from the releases (the sitemap
+    lists pages only), so swapping the two files after the build pins every reader: the pages,
+    the local server's ``/api/*`` answers and the preview bundle. That keeps the content tests
+    independent of the production snapshot (see ``tests/fixtures/site-data/README.md``).
+    """
     output = tmp_path_factory.mktemp("browser") / "site"
     load_script("build_site").build(REPO / "src", output, "v0")
+    for name in ("releases.json", "security.json"):
+        shutil.copyfile(SITE_DATA / name, output / "data" / name)
     return output
 
 
