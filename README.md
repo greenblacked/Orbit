@@ -86,9 +86,9 @@ A release is `{ id, vendor, family, version, major, stage, beta, build, title, d
 
 ### Validation results
 
-`results/<vendor>/<family>/<build>.json` holds the outcome of testing one build. The schema is in [results/README.md](results/README.md) and `python scripts/check_results.py` enforces it.
+`results/<vendor>/<family>/<build>.json`, or `results/<vendor>/<family>/<build>/<device-slug>.json` for one device, holds the outcome of testing one build. The schema is in [results/README.md](results/README.md) and `python scripts/check_results.py` enforces it.
 
-Only results for publicly released builds (stage `release`) are committed or published, and the dial shows a `status` only on a released build. The validated files are copied to `/data/results/`; joining them to the releases on the dial is not wired yet, so no verdict is shown on the dial or card until a result is published. A result for a beta or a release candidate is refused by the check, by CI and by the site build, so pre-release findings never reach the repository or the site. The reasoning is in [ADR 0005](docs/adr/0005-public-results-only-for-released-builds.md).
+Only results for publicly released builds (stage `release`) are committed or published, and the dial shows a `status` only on a released build. The validated files are copied to `/data/results/`, listed in `/data/results/index.json`; joining them to the releases on the dial is not wired yet, so no verdict is shown on the dial or card until a result is published. A result for a beta or a release candidate is refused by the check, by CI and by the site build, so pre-release findings never reach the repository or the site. The reasoning is in [ADR 0005](docs/adr/0005-public-results-only-for-released-builds.md).
 
 ### Build sigils
 
@@ -162,7 +162,7 @@ The preferred rollback is a new patch release with the change reverted. The one-
 │   │                      timeline.js, compare.js, sigil.js, orbit.js,
 │   │                      sigil-generic.js, below.js, cadence.js, fx.js, aurora.js,
 │   │                      security.js, lookup.js, lanes.js
-│   └── data/              releases.json (snapshot), notes.json, security.json, families.json, features.json
+│   └── data/              releases.json (snapshot), notes.json, security.json, families.json, features.json, devices.json
 ├── deploy/                the Worker (worker.js, feeds.js, releases.js, families.js,
 │   ├── sources/           one adapter per feed), wrangler.json, snapshot_releases.mjs,
 │   │                      snapshot_security.mjs
