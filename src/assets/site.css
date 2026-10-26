@@ -1864,10 +1864,10 @@ html[data-theme="reactor"] select { border-radius: 0; }
   text-align: center;
 }
 .lk-go:hover { opacity: 0.8; }
-.lk-result { margin-top: 1.25rem; }
+.lk-result { margin-top: 1.25rem; border-radius: 0.5rem; }
 .lk-result p + p { margin-top: 0.5rem; }
-.lk-result { border-radius: 0.5rem; }
-.lk-result:focus { outline: 2px solid var(--ink); outline-offset: 6px; }
+/* :focus, not :focus-visible: a script moves focus here after a click or tap. */
+.lk-result:focus { outline: 2px solid var(--ink); outline-offset: 3px; }
 /* Check flashes the answer: a tint of the ink colour that fades out, in every theme. */
 @keyframes lk-flash {
   from { background-color: color-mix(in srgb, var(--ink) 14%, transparent); box-shadow: 0 0 0 0.5rem color-mix(in srgb, var(--ink) 14%, transparent); }
@@ -1878,7 +1878,7 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .lk-say { font-weight: 500; overflow-wrap: anywhere; }
 .lk-hit, .lk-cve { color: var(--muted); font-size: 0.875rem; overflow-wrap: anywhere; }
 .lk-link a { display: inline-flex; min-height: 2.75rem; align-items: center; text-decoration: underline; text-underline-offset: 4px; }
-html[data-theme="reactor"] .lk-input, html[data-theme="reactor"] .lk-go { border-radius: 0; }
+html[data-theme="reactor"] .lk-input, html[data-theme="reactor"] .lk-go, html[data-theme="reactor"] .lk-result { border-radius: 0; }
 .cmp-result { margin-top: 2rem; }
 .cmp-cards { display: grid; gap: 1rem; }
 @media (min-width: 40rem) { .cmp-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

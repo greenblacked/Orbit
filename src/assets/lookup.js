@@ -268,14 +268,12 @@
     }
   }
 
-  // After Check: flash, focus and show the answer.
   function reveal() {
     var c = out.classList;
     c.remove("lk-flash"); void out.offsetWidth; c.add("lk-flash");
     out.focus({ preventScroll: true });
-    try {
-      out.scrollIntoView({ block: "nearest", behavior: root.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-    } catch (e) { /* no matchMedia */ }
+    var calm = root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    out.scrollIntoView({ block: "nearest", behavior: calm ? "auto" : "smooth" });
   }
 
   function remember(clear) {

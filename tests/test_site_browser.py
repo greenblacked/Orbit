@@ -916,6 +916,10 @@ def test_check_focuses_and_flashes_a_typed_answer_on_a_phone(browser, devices, b
         page.fill("#lk-build", public("iOS")[0]["build"])
         press_check(page, True)
         assert_checked_visibly(page)
+        name = page.evaluate(
+            "() => getComputedStyle(document.getElementById('lk-result')).animationName"
+        )
+        assert name == "lk-flash"
         assert page.locator("#lk-result .lk-say").count() == 1
     finally:
         context.close()
