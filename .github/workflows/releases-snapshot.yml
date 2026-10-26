@@ -1,0 +1,85 @@
+---
+# Why this exists: the bundled release snapshot (src/data/releases.json) is read from the
+# vendors' own feeds, and the people building the site cannot reach those sites from where
+# they work. This runs deploy/snapshot_releases.mjs on a GitHub runner, which can, and
+# prints the refreshed file into the job log, base64-encoded between two marker lines with
+# its size and SHA-256. The payload is copied from that log into a pull request, where it
+# is reviewed like any other change; nothing here puts it in the repository.
+#
+# It commits nothing, pushes nothing, uploads nothing and holds no secret or token: the job
+# can read the repository and nothing else, and the checkout keeps no credential. Run it
+# by hand only (workflow_dispatch). Same pinned actions as ci.yml and security-snapshot.yml.
+# Run the Security snapshot after a refreshed releases.json is merged, because its payload
+# is joined to that file.
+name: Releases snapshot
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    name: refresh the release snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: '22.23.3'
+          # Nothing is installed: the script has no dependencies.
+          package-manager-cache: false
+      - name: Take the snapshot and print it
+        # The script exits non-zero when a source could not be read; it has then usually still
+        # written the file (a failed source keeps its old rows). So the exit code is kept, a
+        # partial refresh is printed with a warning, and the step then fails with that code so
+        # the run shows red. No payload is printed in two cases: the file is missing or
+        # unreadable, or the script failed and the file is unchanged. Every real write changes
+        # fetchedAt, so unchanged plus failure means nothing was written (no source answered,
+        # or the existing file was unreadable or invalid). The script's own output is fenced
+        # with stop-commands, so no text it logs can be read as a workflow command. Base64
+        # has no `::`, so nothing in the payload can be read as a workflow command.
+        run: |
+          set -Eeuo pipefail
+          file=src/data/releases.json
+          before=$(sha256sum "$file" 2>/dev/null | cut -d' ' -f1 || true)
+          status=0
+          token=$(uuidgen)
+          echo "::stop-commands::${token}"
+          node deploy/snapshot_releases.mjs || status=$?
+          echo "::${token}::"
+          echo "snapshot exit code: $status"
+          if ! { [ -f "$file" ] && [ -r "$file" ]; }; then
+            echo "the snapshot file is missing or unreadable; no payload is printed"
+            exit "$((status == 0 ? 1 : status))"
+          fi
+          after=$(sha256sum "$file" | cut -d' ' -f1)
+          if [ "$before" = "$after" ]; then
+            echo "file changed: no"
+          else
+            echo "file changed: yes"
+          fi
+          if [ "$status" -ne 0 ] && [ "$before" = "$after" ]; then
+            echo "nothing was refreshed; no payload is printed"
+            exit "$status"
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo "::warning::The refresh was partial: one or more sources failed and kept" \
+              "their old rows. Check which sources failed in the log above before using" \
+              "the payload."
+          fi
+          echo "sha256: $after"
+          echo "bytes: $(wc -c < "$file" | tr -d ' ')"
+          echo "-----BEGIN RELEASES JSON BASE64-----"
+          base64 "$file"
+          echo "-----END RELEASES JSON BASE64-----"
+          exit "$status"
