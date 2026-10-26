@@ -17,7 +17,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, urlencode, urlsplit
 
 import pytest
-from helpers import REPO
+from helpers import SITE_DATA
 
 pytestmark = pytest.mark.browser
 
@@ -28,7 +28,7 @@ except ImportError:
         raise
     pytest.skip("playwright is not installed", allow_module_level=True)
 
-SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
+SNAPSHOT = json.loads((SITE_DATA / "releases.json").read_text(encoding="utf-8"))
 AUDIT = (Path(__file__).parent / "audit.js").read_text(encoding="utf-8")
 FAMILIES = ["iOS", "iPadOS", "macOS", "watchOS", "tvOS", "visionOS"]
 # A family with no release in the data says so. Every shipped family has snapshot rows now, so the

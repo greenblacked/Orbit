@@ -12,7 +12,7 @@ import os
 import re
 
 import pytest
-from helpers import REPO
+from helpers import SITE_DATA
 
 pytestmark = pytest.mark.browser
 
@@ -23,7 +23,7 @@ except ImportError:
         raise
     pytest.skip("playwright is not installed", allow_module_level=True)
 
-SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
+SNAPSHOT = json.loads((SITE_DATA / "releases.json").read_text(encoding="utf-8"))
 CLOCK = "(() => { const t = Date.parse('2026-10-12T12:00:00Z'); Date.now = () => t; })();"
 RECORD = """
 window.__csp = [];

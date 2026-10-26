@@ -14,7 +14,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from helpers import REPO
+from helpers import SITE_DATA
 
 pytestmark = pytest.mark.browser
 
@@ -28,7 +28,7 @@ except ImportError:
         allow_module_level=True,
     )
 
-SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
+SNAPSHOT = json.loads((SITE_DATA / "releases.json").read_text(encoding="utf-8"))
 FAMILIES = [
     "iOS",
     "iPadOS",

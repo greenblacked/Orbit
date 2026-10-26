@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+# A frozen copy of the data the content tests assert on; see its README. Never the live snapshot.
+SITE_DATA = REPO / "tests" / "fixtures" / "site-data"
 # The scripts import each other by bare name, as they do when run as files.
 if str(REPO / "scripts") not in sys.path:
     sys.path.insert(0, str(REPO / "scripts"))
