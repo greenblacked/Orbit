@@ -38,19 +38,30 @@ def base_url(built):
 
 
 @pytest.fixture(scope="session")
-def browser():
+def playwright_instance():
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
         if os.environ.get("REQUIRE_BROWSER") == "1":
             raise
         pytest.skip("playwright is not installed; CI's site-browser job runs these")
+    with sync_playwright() as playwright:
+        yield playwright
+
+
+@pytest.fixture(scope="session")
+def devices(playwright_instance):
+    """Playwright's device descriptors, e.g. ``devices["iPhone 13"]``."""
+    return playwright_instance.devices
+
+
+@pytest.fixture(scope="session")
+def browser(playwright_instance):
     options = {}
     if os.environ.get("BROWSER_CHANNEL"):
         options["channel"] = os.environ["BROWSER_CHANNEL"]
     if os.environ.get("BROWSER_EXECUTABLE"):
         options["executable_path"] = os.environ["BROWSER_EXECUTABLE"]
-    with sync_playwright() as playwright:
-        launched = playwright.chromium.launch(**options)
-        yield launched
-        launched.close()
+    launched = playwright_instance.chromium.launch(**options)
+    yield launched
+    launched.close()

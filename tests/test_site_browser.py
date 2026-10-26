@@ -762,6 +762,33 @@ def test_check_my_version_works_from_the_keyboard(page, base_url):
 
 
 @pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_check_by_enter_keeps_focus_in_the_field(page, base_url, path):
+    ios = public("iOS")
+    lookup_ready(page, base_url, path)
+    page.focus("#lk-build")
+    page.keyboard.type(ios[0]["build"])
+    page.keyboard.press("Enter")
+    assert answer(page).startswith("Current for iOS")
+    assert page.evaluate("() => document.activeElement.id") == "lk-build"
+    assert page.evaluate(
+        "() => document.getElementById('lk-result').classList.contains('lk-flash')"
+    )
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+# Enter fires a click with detail 0, so focus stays even right after a pointer Check.
+def test_enter_after_a_click_on_check_still_keeps_focus(page, base_url, path):
+    ios = public("iOS")
+    lookup_ready(page, base_url, path)
+    page.select_option("#lk-family", "iOS")
+    page.fill("#lk-build", ios[0]["build"])
+    page.click(".lk-go")
+    page.focus("#lk-build")
+    page.keyboard.press("Enter")
+    assert page.evaluate("() => document.activeElement.id") == "lk-build"
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
 def test_check_my_version_offers_the_known_builds_to_pick(page, base_url, path):
     ios = public("iOS")
     lookup_ready(page, base_url, path)
@@ -850,3 +877,106 @@ def test_check_my_version_does_not_scroll_sideways_at_360px(browser, base_url, p
                     assert size["right"] <= 360 and size["left"] >= 0, (selector, size)
     finally:
         context.close()
+
+
+# --- Check my version: Check answers visibly --------------------------------------------------
+
+
+def phone_context(browser, devices, base_url: str, reduced_motion: str = "no-preference"):
+    """An iPhone 13 profile (touch, small screen) on the same Chromium, as CI runs it."""
+    device = dict(devices["iPhone 13"])
+    device.pop("default_browser_type", None)
+    made = browser.new_context(**device, reduced_motion=reduced_motion)
+    made.route(re.compile("^(?!" + re.escape(base_url) + "/)"), lambda route: route.abort())
+    return made
+
+
+def press_check(page, tap: bool) -> None:
+    if tap:
+        page.locator("#lk-form button").tap()
+    else:
+        page.click("#lk-form button")
+
+
+def assert_checked_visibly(page) -> None:
+    """The answer holds focus, carries the flash and is on screen."""
+    page.wait_for_function("() => document.activeElement === document.getElementById('lk-result')")
+    assert page.evaluate(
+        "() => document.getElementById('lk-result').classList.contains('lk-flash')"
+    )
+    page.wait_for_function(
+        "() => { const r = document.getElementById('lk-result').getBoundingClientRect();"
+        " return r.top >= 0 && r.bottom <= innerHeight; }"
+    )
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+@pytest.mark.parametrize("tap", [True, False], ids=["tap", "click"])
+def test_check_redraws_focuses_and_flashes_an_answer_the_pick_already_showed(
+    browser, devices, base_url, path, tap
+):
+    build = public("iOS")[0]["build"]
+    context = phone_context(browser, devices, base_url) if tap else new_context(browser, base_url)
+    try:
+        page = context.new_page()
+        lookup_ready(page, base_url, path)
+        page.select_option("#lk-family", "iOS")
+        page.select_option("#lk-pick", build)
+        page.wait_for_selector("#lk-result .lk-say")
+        assert page.evaluate("() => document.activeElement.id") != "lk-result"
+        page.evaluate("() => { window.firstDraw = document.querySelector('#lk-result p'); }")
+        press_check(page, tap)
+        assert_checked_visibly(page)
+        assert page.evaluate("() => !window.firstDraw.isConnected")
+        assert page.locator("#lk-result .lk-say").count() == 1
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_check_focuses_and_flashes_a_typed_answer_on_a_phone(browser, devices, base_url, path):
+    context = phone_context(browser, devices, base_url)
+    try:
+        page = context.new_page()
+        lookup_ready(page, base_url, path)
+        page.select_option("#lk-family", "iOS")
+        page.fill("#lk-build", public("iOS")[0]["build"])
+        press_check(page, True)
+        assert_checked_visibly(page)
+        name = page.evaluate(
+            "() => getComputedStyle(document.getElementById('lk-result')).animationName"
+        )
+        assert name == "lk-flash"
+        assert page.locator("#lk-result .lk-say").count() == 1
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_check_does_not_animate_the_flash_when_motion_is_reduced(browser, devices, base_url, path):
+    context = phone_context(browser, devices, base_url, reduced_motion="reduce")
+    try:
+        page = context.new_page()
+        lookup_ready(page, base_url, path)
+        page.select_option("#lk-family", "iOS")
+        page.fill("#lk-build", public("iOS")[0]["build"])
+        press_check(page, True)
+        assert_checked_visibly(page)
+        name = page.evaluate(
+            "() => getComputedStyle(document.getElementById('lk-result')).animationName"
+        )
+        assert name == "none"
+    finally:
+        context.close()
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_picking_a_build_answers_without_moving_focus_or_flashing(page, base_url, path):
+    lookup_ready(page, base_url, path)
+    page.select_option("#lk-family", "iOS")
+    page.select_option("#lk-pick", public("iOS")[0]["build"])
+    page.wait_for_selector("#lk-result .lk-say")
+    assert page.evaluate("() => document.activeElement.id") != "lk-result"
+    assert not page.evaluate(
+        "() => document.getElementById('lk-result').classList.contains('lk-flash')"
+    )
