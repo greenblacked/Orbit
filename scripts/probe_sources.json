@@ -1,20 +1,43 @@
 [
   {
-    "id": "apple-identify-ipad",
+    "id": "apple-identify-ipad-air",
     "vendor": "Apple",
     "kind": "enrichment",
-    "url": "https://support.apple.com/en-us/108043",
+    "url": "https://support.apple.com/en-us/108043?orbit=air",
     "raw_slice": [
-      {"start": ">iPad Air", "chars": 10000},
-      {"start": ">iPad (", "chars": 10000},
-      {"start": ">iPad mini", "chars": 10000}
+      {"start": ">iPad Air 13-inch", "chars": 15000},
+      {"start": ">iPad Air (5th generation)", "chars": 15000}
     ]
   },
   {
-    "id": "apple-identify-iphone-older",
+    "id": "apple-identify-ipad-mini",
     "vendor": "Apple",
     "kind": "enrichment",
-    "url": "https://support.apple.com/en-us/108044",
-    "raw_slice": [{"start": ">iPhone 16 Pro<", "chars": 30000}]
+    "url": "https://support.apple.com/en-us/108043?orbit=mini",
+    "raw_slice": [
+      {"start": ">iPad mini (A17 Pro)", "chars": 15000},
+      {"start": ">iPad mini (6th generation)", "chars": 15000}
+    ]
+  },
+  {
+    "id": "apple-identify-iphone-14-down",
+    "vendor": "Apple",
+    "kind": "enrichment",
+    "url": "https://support.apple.com/en-us/108044?orbit=older1",
+    "raw_slice": [{"start": ">iPhone 14<", "chars": 30000}]
+  },
+  {
+    "id": "apple-identify-iphone-12-down",
+    "vendor": "Apple",
+    "kind": "enrichment",
+    "url": "https://support.apple.com/en-us/108044?orbit=older2",
+    "raw_slice": [{"start": ">iPhone 12<", "chars": 30000}]
+  },
+  {
+    "id": "apple-identify-iphone-16-pro-max",
+    "vendor": "Apple",
+    "kind": "enrichment",
+    "url": "https://support.apple.com/en-us/108044?orbit=promax",
+    "raw_slice": [{"start": ">iPhone 16 Pro Max<", "chars": 6000}]
   }
 ]
