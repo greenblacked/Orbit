@@ -1873,8 +1873,9 @@ html[data-theme="reactor"] select { border-radius: 0; }
   from { background-color: color-mix(in srgb, var(--ink) 14%, transparent); box-shadow: 0 0 0 0.5rem color-mix(in srgb, var(--ink) 14%, transparent); }
   to { background-color: transparent; box-shadow: 0 0 0 0.5rem transparent; }
 }
-.lk-result.lk-flash { animation: lk-flash 600ms ease-out; }
-@media (prefers-reduced-motion: reduce) { .lk-result.lk-flash { animation: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .lk-result.lk-flash { animation: lk-flash 600ms ease-out; }
+}
 .lk-say { font-weight: 500; overflow-wrap: anywhere; }
 .lk-hit, .lk-cve { color: var(--muted); font-size: 0.875rem; overflow-wrap: anywhere; }
 .lk-link a { display: inline-flex; min-height: 2.75rem; align-items: center; text-decoration: underline; text-underline-offset: 4px; }
