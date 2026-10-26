@@ -268,6 +268,14 @@
     }
   }
 
+  function reveal(pointer) {
+    var c = out.classList;
+    c.remove("lk-flash"); void out.offsetWidth; c.add("lk-flash");
+    if (pointer) out.focus({ preventScroll: true });
+    var calm = root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    out.scrollIntoView({ block: "nearest", behavior: calm ? "auto" : "smooth" });
+  }
+
   function remember(clear) {
     var keep = root.location.search.replace(/^\?/, "").split("&").filter(function (pair) {
       return pair && !/^(platform|build)(=|$)/.test(pair);
@@ -283,13 +291,19 @@
     if (timer !== null) { root.clearTimeout(timer); timer = null; }
   }
 
+  // Only a tap or click (click count > 0) moves focus.
+  var pointed = false;
+  form.querySelector(".lk-go").addEventListener("click", function (e) { pointed = e.detail > 0; });
   form.addEventListener("submit", function (e) {
     e.preventDefault();
+    var p = pointed;
+    pointed = false;
     cancel();
     asked = true;
     stale = false;
     shown = null;
     show();
+    reveal(p);
     remember();
     syncPick();
   });

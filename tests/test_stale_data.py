@@ -69,7 +69,8 @@ def test_releases_older_than_14_days_warns(tmp_path, capsys):
     assert (
         "::warning title=releases data is stale::"
         "releases.json fetchedAt is 16d 12h 0m old, over the 14-day limit; "
-        "refresh it: run `node deploy/snapshot_releases.mjs`"
+        "refresh it: run the Releases snapshot workflow (Actions, Run workflow) "
+        "or `node deploy/snapshot_releases.mjs`"
     ) in out
 
 
@@ -197,6 +198,7 @@ def test_each_warning_says_how_to_refresh(tmp_path, capsys):
     )
     lines = [line for line in out.splitlines() if line.startswith("::warning")]
     assert "Security snapshot workflow" in lines[0]
+    assert "Releases snapshot workflow" in lines[1]
     assert "node deploy/snapshot_releases.mjs" in lines[1]
 
 

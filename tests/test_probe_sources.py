@@ -455,6 +455,27 @@ def test_the_security_snapshot_workflow_is_manual_read_only_and_pinned_like_ci()
     assert len(re.findall(r"^\s*- uses:", text, flags=re.MULTILINE)) == 2
 
 
+def test_the_releases_snapshot_workflow_is_manual_read_only_and_pinned_like_ci():
+    text = (REPO / ".github" / "workflows" / "releases-snapshot.yml").read_text(encoding="utf-8")
+    ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    head = text.split("\njobs:\n", 1)[0]
+    assert re.search(r"^on:\n  workflow_dispatch:\n\npermissions:", head, flags=re.MULTILINE)
+    assert re.search(r"^permissions: \{\}$", text, flags=re.MULTILINE)
+    assert "contents: read" in text and "timeout-minutes:" in text
+    assert "secrets." not in text and "upload-artifact" not in text
+    assert "github.token" not in text and "GH_TOKEN" not in text
+    assert "node deploy/snapshot_releases.mjs" in text
+    assert "-----BEGIN RELEASES JSON BASE64-----" in text
+    assert "-----END RELEASES JSON BASE64-----" in text
+    assert "::warning::" in text and 'exit "$status"' in text
+    assert 'echo "the snapshot file is missing or unreadable; no payload is printed"' in text
+    assert 'echo "nothing was refreshed; no payload is printed"' in text
+    assert text.count("persist-credentials: false") == 1
+    for action in re.findall(r"uses: (actions/[a-z-]+@[0-9a-f]{40}  # v[0-9.]+)", text):
+        assert action in ci, action
+    assert len(re.findall(r"^\s*- uses:", text, flags=re.MULTILINE)) == 2
+
+
 NEWS = json.dumps(
     {
         "appnews": {
