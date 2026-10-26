@@ -1,72 +1,20 @@
 [
   {
-    "id": "apple-ios-27-page",
-    "vendor": "Apple",
-    "kind": "enrichment",
-    "url": "https://www.apple.com/ios/ios-27/",
-    "raw_slice": [{"start": "compatible", "chars": 12000}, {"start": "Compatible", "chars": 12000}]
-  },
-  {
-    "id": "apple-ios-26-page",
-    "vendor": "Apple",
-    "kind": "enrichment",
-    "url": "https://www.apple.com/ios/ios-26/",
-    "raw_slice": [{"start": "compatible", "chars": 12000}, {"start": "Compatible", "chars": 12000}]
-  },
-  {
-    "id": "apple-ios-18-page",
-    "vendor": "Apple",
-    "kind": "enrichment",
-    "url": "https://www.apple.com/ios/ios-18/",
-    "raw_slice": [{"start": "compatible", "chars": 12000}, {"start": "Compatible", "chars": 12000}]
-  },
-  {
-    "id": "apple-ios-current-page",
-    "vendor": "Apple",
-    "kind": "enrichment",
-    "url": "https://www.apple.com/ios/",
-    "raw_slice": [{"start": "compatible", "chars": 12000}, {"start": "Compatible", "chars": 12000}]
-  },
-  {
-    "id": "apple-ipados-27-page",
-    "vendor": "Apple",
-    "kind": "enrichment",
-    "url": "https://www.apple.com/ipados/ipados-27/",
-    "raw_slice": [{"start": "compatible", "chars": 12000}, {"start": "Compatible", "chars": 12000}]
-  },
-  {
-    "id": "apple-ipados-26-page",
-    "vendor": "Apple",
-    "kind": "enrichment",
-    "url": "https://www.apple.com/ipados/ipados-26/",
-    "raw_slice": [{"start": "compatible", "chars": 12000}, {"start": "Compatible", "chars": 12000}]
-  },
-  {
-    "id": "apple-ipados-18-page",
-    "vendor": "Apple",
-    "kind": "enrichment",
-    "url": "https://www.apple.com/ipados/ipados-18/",
-    "raw_slice": [{"start": "compatible", "chars": 12000}, {"start": "Compatible", "chars": 12000}]
-  },
-  {
-    "id": "apple-ipados-current-page",
-    "vendor": "Apple",
-    "kind": "enrichment",
-    "url": "https://www.apple.com/ipados/",
-    "raw_slice": [{"start": "compatible", "chars": 12000}, {"start": "Compatible", "chars": 12000}]
-  },
-  {
-    "id": "apple-identify-iphone",
-    "vendor": "Apple",
-    "kind": "enrichment",
-    "url": "https://support.apple.com/en-us/108044",
-    "raw_slice": [{"start": "<h1", "chars": 30000}]
-  },
-  {
     "id": "apple-identify-ipad",
     "vendor": "Apple",
     "kind": "enrichment",
     "url": "https://support.apple.com/en-us/108043",
-    "raw_slice": [{"start": "<h1", "chars": 30000}]
+    "raw_slice": [
+      {"start": ">iPad Air", "chars": 10000},
+      {"start": ">iPad (", "chars": 10000},
+      {"start": ">iPad mini", "chars": 10000}
+    ]
+  },
+  {
+    "id": "apple-identify-iphone-older",
+    "vendor": "Apple",
+    "kind": "enrichment",
+    "url": "https://support.apple.com/en-us/108044",
+    "raw_slice": [{"start": ">iPhone 16 Pro<", "chars": 30000}]
   }
 ]
