@@ -65,9 +65,9 @@ every field above and one more:
   `iphone-18-pro` and `iPad Pro 11-inch (M5)` is `ipad-pro-11-inch-m5`.
 - A per-build file (`<build>.json`) must not carry `device`.
 - A build uses one layout: a `<build>.json` file and a `<build>/` directory may not both exist.
-- A family or major with no list in `devices.json` takes no per-device result. Apple lists
-  devices only for iOS 27 and iPadOS 27; for any other OS there is no official list, and a
-  result stays per build.
+- A family or major with no list in `devices.json` takes no per-device result. This
+  repository keeps device lists only for iOS 27 and iPadOS 27; a family or major without a
+  list takes no per-device result, and a result stays per build.
 
 `src/data/devices.json` is the official device list Apple publishes for each OS major:
 

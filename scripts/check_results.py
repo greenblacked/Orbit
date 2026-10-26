@@ -88,9 +88,9 @@ def known_devices(devices: Path | None) -> dict[str, dict[str, list[str]]]:
 
 def device_problems(doc: dict, family: str, slug: str, devices: dict) -> list[str]:
     """Why the ``device`` of a per-device result is wrong for ``family`` and its file name."""
-    device = doc.get("device")
     if "device" not in doc:
         return []
+    device = doc.get("device")
     if not text(device):
         return ["device must be a non-empty string"]
     found: list[str] = []
