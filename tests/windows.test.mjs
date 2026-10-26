@@ -404,8 +404,12 @@ describe('the helpers', () => {
 
 describe('the bundled snapshot', () => {
   it('holds exactly the rows the recorded tables give', () => {
+    // The frozen copy in tests/fixtures/site-data, not the production snapshot, which moves.
     const snapshot = JSON.parse(
-      readFileSync(fileURLToPath(new URL('../src/data/releases.json', import.meta.url)), 'utf8'),
+      readFileSync(
+        fileURLToPath(new URL('./fixtures/site-data/releases.json', import.meta.url)),
+        'utf8',
+      ),
     );
     const mine = snapshot.releases.filter((r) => r.source === ID);
     assert.deepEqual(mine, mergeReleases([], [...parsePage(WIN11), ...parsePage(WIN10)]));

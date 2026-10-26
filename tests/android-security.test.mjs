@@ -28,7 +28,8 @@ const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)
 const AOSP = read('./fixtures/android-security/aosp-2026-10.html');
 const PIXEL = read('./fixtures/android-security/pixel-2026-10.html');
 const BUILDS = read('./fixtures/google/build-numbers.html');
-const RELEASES = JSON.parse(read('../src/data/releases.json')).releases;
+// A frozen copy, so refreshing src/data/releases.json does not change these expectations.
+const RELEASES = JSON.parse(read('./fixtures/site-data/releases.json')).releases;
 
 const AOSP_URL = 'https://source.android.com/docs/security/bulletin/2026/2026-10-01';
 const PIXEL_URL = 'https://source.android.com/docs/security/bulletin/pixel/2026/2026-10-01';

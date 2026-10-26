@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote
 
 import pytest
-from helpers import REPO
+from helpers import REPO, SITE_DATA
 
 pytestmark = pytest.mark.browser
 
@@ -28,7 +28,7 @@ except ImportError:
         raise
     pytest.skip("playwright is not installed", allow_module_level=True)
 
-SNAPSHOT = json.loads((REPO / "src" / "data" / "releases.json").read_text(encoding="utf-8"))
+SNAPSHOT = json.loads((SITE_DATA / "releases.json").read_text(encoding="utf-8"))
 FAMILIES = sorted({r["family"] for r in SNAPSHOT["releases"]})
 FIRST = next(r for r in SNAPSHOT["releases"] if r["vendor"] == "apple")
 TARGET = 43.5
