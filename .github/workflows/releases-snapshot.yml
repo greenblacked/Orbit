@@ -1,3 +1,4 @@
+---
 # Why this exists: the bundled release snapshot (src/data/releases.json) is read from the
 # vendors' own feeds, and the people building the site cannot reach those sites from where
 # they work. This runs deploy/snapshot_releases.mjs on a GitHub runner, which can, and
