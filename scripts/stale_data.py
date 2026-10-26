@@ -37,7 +37,13 @@ CHECKS = (
         SECURITY_MAX_AGE,
         "run the Security snapshot workflow (Actions, Run workflow)",
     ),
-    ("releases", "fetchedAt", RELEASES_MAX_AGE, "run `node deploy/snapshot_releases.mjs`"),
+    (
+        "releases",
+        "fetchedAt",
+        RELEASES_MAX_AGE,
+        "run the Releases snapshot workflow (Actions, Run workflow) "
+        "or `node deploy/snapshot_releases.mjs`",
+    ),
 )
 MINUTE = timedelta(minutes=1)
 
