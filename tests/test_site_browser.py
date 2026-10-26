@@ -21,13 +21,11 @@ import json
 import os
 import re
 from datetime import datetime
-from pathlib import Path
 from urllib.parse import quote
 
 import pytest
 from helpers import SITE_DATA
 
-REPO = Path(__file__).resolve().parent.parent
 
 pytestmark = pytest.mark.browser
 

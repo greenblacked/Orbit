@@ -14,7 +14,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from helpers import REPO, SITE_DATA
+from helpers import SITE_DATA
 
 pytestmark = pytest.mark.browser
 
