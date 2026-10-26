@@ -410,7 +410,7 @@ def test_a_device_listed_for_a_different_major_is_refused(root, tmp_path):
     devices = devices_file(tmp_path, lists)
     put_device(root, valid_device(version="27.1"))
     assert problems(root, devices=devices) == []
-    put_device(root, valid_device(version="26.4"), build="T0002")
+    put_device(root, valid_device(version="26.4", build="T0002"), build="T0002")
     found = problems(root, devices=devices)
     assert len(found) == 1
     assert "T0002/iphone-18-pro.json" in found[0]
