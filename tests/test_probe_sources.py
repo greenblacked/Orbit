@@ -467,6 +467,8 @@ def test_the_releases_snapshot_workflow_is_manual_read_only_and_pinned_like_ci()
     assert "node deploy/snapshot_releases.mjs" in text
     assert "-----BEGIN RELEASES JSON BASE64-----" in text
     assert "-----END RELEASES JSON BASE64-----" in text
+    assert "::warning::" in text and 'exit "$status"' in text
+    assert "no payload is printed" in text
     assert text.count("persist-credentials: false") == 1
     for action in re.findall(r"uses: (actions/[a-z-]+@[0-9a-f]{40}  # v[0-9.]+)", text):
         assert action in ci, action

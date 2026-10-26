@@ -39,27 +39,42 @@ jobs:
           # Nothing is installed: the script has no dependencies.
           package-manager-cache: false
       - name: Take the snapshot and print it
-        # The script exits non-zero when a source could not be read (it then has usually
-        # still written the file, keeping that source's old rows) or when none answered.
-        # Either way the job fails and no payload is printed: a refresh with a failed
-        # source is not committed. The script's own output is fenced with stop-commands, so
-        # no text it logs can be read as a workflow command. Base64 has no `::`, so nothing
-        # in the payload can be read as a workflow command.
+        # The script exits non-zero when a source could not be read; it has then usually still
+        # written the file (a failed source keeps its old rows), and "file changed: no" shows
+        # when it has not (no source answered). So the exit code is kept, the result is
+        # printed either way, a partial refresh is flagged with a warning, and the step then
+        # fails with that code so the run shows red. If the file is missing or unreadable, no
+        # payload is printed. The script's own output is fenced with stop-commands, so no
+        # text it logs can be read as a workflow command. Base64 has no `::`, so nothing in
+        # the payload can be read as a workflow command.
         run: |
           set -Eeuo pipefail
           file=src/data/releases.json
+          before=$(sha256sum "$file" 2>/dev/null | cut -d' ' -f1 || true)
           status=0
           token=$(uuidgen)
           echo "::stop-commands::${token}"
           node deploy/snapshot_releases.mjs || status=$?
           echo "::${token}::"
           echo "snapshot exit code: $status"
-          if [ "$status" -ne 0 ]; then
-            echo "the snapshot did not finish cleanly; no payload is printed"
-            exit "$status"
+          if [ ! -r "$file" ]; then
+            echo "the snapshot file is missing or unreadable; no payload is printed"
+            exit "$((status == 0 ? 1 : status))"
           fi
-          echo "sha256: $(sha256sum "$file" | cut -d' ' -f1)"
+          after=$(sha256sum "$file" | cut -d' ' -f1)
+          if [ "$before" = "$after" ]; then
+            echo "file changed: no"
+          else
+            echo "file changed: yes"
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo "::warning::The refresh was partial: one or more sources failed and kept" \
+              "their old rows. Check which sources failed in the log above before using" \
+              "the payload."
+          fi
+          echo "sha256: $after"
           echo "bytes: $(wc -c < "$file" | tr -d ' ')"
           echo "-----BEGIN RELEASES JSON BASE64-----"
           base64 "$file"
           echo "-----END RELEASES JSON BASE64-----"
+          exit "$status"
