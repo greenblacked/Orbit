@@ -485,6 +485,11 @@ def test_a_missing_or_unreadable_devices_config_refuses_per_device_results_only(
     assert "devices config is not readable" in problems(root, devices=bad)[0]
     bad.write_text(json.dumps({"families": {"iOS": []}}), encoding="utf-8")
     assert "devices config is not readable" in problems(root, devices=bad)[0]
+    bad.write_text(
+        json.dumps({"families": {"iOS": {"27": {"devices": "iPhone 18 Pro"}}}}),
+        encoding="utf-8",
+    )
+    assert "must be a list of strings" in problems(root, devices=bad)[0]
 
 
 def test_main_takes_the_devices_config(root, tmp_path, capsys):

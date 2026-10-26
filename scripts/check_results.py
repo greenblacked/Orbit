@@ -73,10 +73,15 @@ def known_devices(devices: Path | None) -> dict[str, dict[str, list[str]]]:
         raise ValueError(f"the devices config is missing ({devices})")
     try:
         families = json.loads(devices.read_text(encoding="utf-8"))["families"]
-        return {
-            family: {major: list(entry["devices"]) for major, entry in majors.items()}
-            for family, majors in families.items()
-        }
+        lists: dict[str, dict[str, list[str]]] = {}
+        for family, majors in families.items():
+            lists[family] = {}
+            for major, entry in majors.items():
+                names = entry["devices"]
+                if not isinstance(names, list) or not all(isinstance(n, str) for n in names):
+                    raise ValueError(f"{family} {major} devices must be a list of strings")
+                lists[family][major] = names
+        return lists
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise ValueError(f"the devices config is not readable ({devices}: {error})") from None
 
