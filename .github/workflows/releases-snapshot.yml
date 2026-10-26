@@ -40,13 +40,14 @@ jobs:
           package-manager-cache: false
       - name: Take the snapshot and print it
         # The script exits non-zero when a source could not be read; it has then usually still
-        # written the file (a failed source keeps its old rows), and "file changed: no" shows
-        # when it has not (no source answered). So the exit code is kept, the result is
-        # printed either way, a partial refresh is flagged with a warning, and the step then
-        # fails with that code so the run shows red. If the file is missing or unreadable, no
-        # payload is printed. The script's own output is fenced with stop-commands, so no
-        # text it logs can be read as a workflow command. Base64 has no `::`, so nothing in
-        # the payload can be read as a workflow command.
+        # written the file (a failed source keeps its old rows). So the exit code is kept, a
+        # partial refresh is printed with a warning, and the step then fails with that code so
+        # the run shows red. No payload is printed in two cases: the file is missing or
+        # unreadable, or the script failed and the file is unchanged. Every real write changes
+        # fetchedAt, so unchanged plus failure means nothing was written (no source answered,
+        # or the existing file was unreadable or invalid). The script's own output is fenced
+        # with stop-commands, so no text it logs can be read as a workflow command. Base64
+        # has no `::`, so nothing in the payload can be read as a workflow command.
         run: |
           set -Eeuo pipefail
           file=src/data/releases.json
@@ -57,7 +58,7 @@ jobs:
           node deploy/snapshot_releases.mjs || status=$?
           echo "::${token}::"
           echo "snapshot exit code: $status"
-          if [ ! -r "$file" ]; then
+          if ! { [ -f "$file" ] && [ -r "$file" ]; }; then
             echo "the snapshot file is missing or unreadable; no payload is printed"
             exit "$((status == 0 ? 1 : status))"
           fi
@@ -66,6 +67,10 @@ jobs:
             echo "file changed: no"
           else
             echo "file changed: yes"
+          fi
+          if [ "$status" -ne 0 ] && [ "$before" = "$after" ]; then
+            echo "nothing was refreshed; no payload is printed"
+            exit "$status"
           fi
           if [ "$status" -ne 0 ]; then
             echo "::warning::The refresh was partial: one or more sources failed and kept" \
