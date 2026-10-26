@@ -268,10 +268,10 @@
     }
   }
 
-  function reveal() {
+  function reveal(pointer) {
     var c = out.classList;
     c.remove("lk-flash"); void out.offsetWidth; c.add("lk-flash");
-    out.focus({ preventScroll: true });
+    if (pointer) out.focus({ preventScroll: true });
     var calm = root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches;
     out.scrollIntoView({ block: "nearest", behavior: calm ? "auto" : "smooth" });
   }
@@ -291,6 +291,9 @@
     if (timer !== null) { root.clearTimeout(timer); timer = null; }
   }
 
+  // A pointer press on Check has a click count; Enter or Space does not, and keeps focus put.
+  var pointed = false;
+  form.querySelector(".lk-go").addEventListener("click", function (e) { pointed = e.detail > 0; });
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     cancel();
@@ -298,7 +301,8 @@
     stale = false;
     shown = null;
     show();
-    reveal();
+    reveal(pointed);
+    pointed = false;
     remember();
     syncPick();
   });

@@ -761,6 +761,19 @@ def test_check_my_version_works_from_the_keyboard(page, base_url):
         assert box(page, selector)["height"] >= TARGET, selector
 
 
+def test_check_by_enter_keeps_focus_in_the_field(page, base_url):
+    ios = public("iOS")
+    lookup_ready(page, base_url)
+    page.focus("#lk-build")
+    page.keyboard.type(ios[0]["build"])
+    page.keyboard.press("Enter")
+    assert answer(page).startswith("Current for iOS")
+    assert page.evaluate("() => document.activeElement.id") == "lk-build"
+    assert page.evaluate(
+        "() => document.getElementById('lk-result').classList.contains('lk-flash')"
+    )
+
+
 @pytest.mark.parametrize("path", ["/", "/compare/"])
 def test_check_my_version_offers_the_known_builds_to_pick(page, base_url, path):
     ios = public("iOS")
