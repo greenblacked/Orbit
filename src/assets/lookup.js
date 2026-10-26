@@ -268,6 +268,16 @@
     }
   }
 
+  // After Check: flash, focus and show the answer.
+  function reveal() {
+    var c = out.classList;
+    c.remove("lk-flash"); void out.offsetWidth; c.add("lk-flash");
+    out.focus({ preventScroll: true });
+    try {
+      out.scrollIntoView({ block: "nearest", behavior: root.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    } catch (e) { /* no matchMedia */ }
+  }
+
   function remember(clear) {
     var keep = root.location.search.replace(/^\?/, "").split("&").filter(function (pair) {
       return pair && !/^(platform|build)(=|$)/.test(pair);
@@ -290,6 +300,7 @@
     stale = false;
     shown = null;
     show();
+    reveal();
     remember();
     syncPick();
   });

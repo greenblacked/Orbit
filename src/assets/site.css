@@ -1866,6 +1866,15 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .lk-go:hover { opacity: 0.8; }
 .lk-result { margin-top: 1.25rem; }
 .lk-result p + p { margin-top: 0.5rem; }
+.lk-result { border-radius: 0.5rem; }
+.lk-result:focus { outline: 2px solid var(--ink); outline-offset: 6px; }
+/* Check flashes the answer: a tint of the ink colour that fades out, in every theme. */
+@keyframes lk-flash {
+  from { background-color: color-mix(in srgb, var(--ink) 14%, transparent); box-shadow: 0 0 0 0.5rem color-mix(in srgb, var(--ink) 14%, transparent); }
+  to { background-color: transparent; box-shadow: 0 0 0 0.5rem transparent; }
+}
+.lk-result.lk-flash { animation: lk-flash 600ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .lk-result.lk-flash { animation: none; } }
 .lk-say { font-weight: 500; overflow-wrap: anywhere; }
 .lk-hit, .lk-cve { color: var(--muted); font-size: 0.875rem; overflow-wrap: anywhere; }
 .lk-link a { display: inline-flex; min-height: 2.75rem; align-items: center; text-decoration: underline; text-underline-offset: 4px; }
