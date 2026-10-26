@@ -1,8 +1,8 @@
 # Frozen site data
 
-`releases.json` and `security.json` here are exact copies of `src/data/releases.json` and
-`src/data/security.json` as of the 2026-10-12 snapshot (78 releases). They are for the tests
-only.
+`releases.json`, `security.json` and `notes.json` here are exact copies of the files of the
+same name in `src/data/` as of the 2026-10-12 snapshot (78 releases, no notes). They are for
+the tests only.
 
 Tests that assert what the site shows for particular releases (a current version, a build
 number, a filter count, the cadence view) read these files, and the browser tests are served

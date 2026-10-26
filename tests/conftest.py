@@ -24,13 +24,13 @@ def built(tmp_path_factory) -> Path:
     """The site built once for the session, at version ``v0``, with the frozen data.
 
     The build copies ``src/data`` as it is and derives nothing from the releases (the sitemap
-    lists pages only), so swapping the two files after the build pins every reader: the pages,
+    lists pages only), so swapping the three files after the build pins every reader: the pages,
     the local server's ``/api/*`` answers and the preview bundle. That keeps the content tests
     independent of the production snapshot (see ``tests/fixtures/site-data/README.md``).
     """
     output = tmp_path_factory.mktemp("browser") / "site"
     load_script("build_site").build(REPO / "src", output, "v0")
-    for name in ("releases.json", "security.json"):
+    for name in ("releases.json", "security.json", "notes.json"):
         shutil.copyfile(SITE_DATA / name, output / "data" / name)
     return output
 

@@ -26,7 +26,6 @@ from urllib.parse import quote
 import pytest
 from helpers import SITE_DATA
 
-
 pytestmark = pytest.mark.browser
 
 try:
