@@ -6,7 +6,7 @@ import json
 import os
 
 import pytest
-from helpers import REPO, load_script
+from helpers import REPO, SITE_DATA, load_script
 
 check = load_script("check_results")
 site = load_script("build_site")
@@ -280,7 +280,7 @@ def test_main_exits_zero_or_one_and_reports(root, tmp_path, capsys):
 
 
 def test_a_real_beta_build_in_the_snapshot_is_refused(root):
-    snap = REPO / "src" / "data" / "releases.json"
+    snap = SITE_DATA / "releases.json"
     releases = json.loads(snap.read_text(encoding="utf-8"))["releases"]
     released = {(r["vendor"], r["family"], r["build"]) for r in releases if r["stage"] == "release"}
     betas = [
