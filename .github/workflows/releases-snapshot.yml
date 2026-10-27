@@ -2,9 +2,10 @@
 # Why this exists: the bundled release snapshot (src/data/releases.json) is read from the
 # vendors' own feeds, and the people building the site cannot reach those sites from where
 # they work. This runs deploy/snapshot_releases.mjs on a GitHub runner, which can, and
-# prints the refreshed file into the job log, base64-encoded between two marker lines with
-# its size and SHA-256. The payload is copied from that log into a pull request, where it
-# is reviewed like any other change; nothing here puts it in the repository.
+# prints the refreshed file into the job log, gzip-compressed and base64-encoded between two
+# marker lines, with its size and SHA-256. The payload is copied from that log into a
+# pull request, where it is reviewed like any other change; nothing here puts it in the
+# repository.
 #
 # It commits nothing, pushes nothing, uploads nothing and holds no secret or token: the job
 # can read the repository and nothing else, and the checkout keeps no credential. Run it
@@ -46,8 +47,13 @@ jobs:
         # unreadable, or the script failed and the file is unchanged. Every real write changes
         # fetchedAt, so unchanged plus failure means nothing was written (no source answered,
         # or the existing file was unreadable or invalid). The script's own output is fenced
-        # with stop-commands, so no text it logs can be read as a workflow command. Base64
-        # has no `::`, so nothing in the payload can be read as a workflow command.
+        # with stop-commands, so no text it logs can be read as a workflow command.
+        # The payload is gzipped before it is base64-encoded, and the summary is printed again
+        # after it: a reader that can only fetch the last 5,000 lines of a job log (the API
+        # log tail) must still get the whole payload, the script's own report and the result in
+        # that tail. The markers name the format (GZIP BASE64) so the old plain-base64 recipe cannot decode
+        # gzip bytes into a corrupt file. gzip -n keeps the output deterministic. Base64 has no
+        # `::`, so nothing in the payload can be read as a workflow command.
         run: |
           set -Eeuo pipefail
           file=src/data/releases.json
@@ -64,10 +70,11 @@ jobs:
           fi
           after=$(sha256sum "$file" | cut -d' ' -f1)
           if [ "$before" = "$after" ]; then
-            echo "file changed: no"
+            changed=no
           else
-            echo "file changed: yes"
+            changed=yes
           fi
+          echo "file changed: $changed"
           if [ "$status" -ne 0 ] && [ "$before" = "$after" ]; then
             echo "nothing was refreshed; no payload is printed"
             exit "$status"
@@ -78,8 +85,13 @@ jobs:
               "the payload."
           fi
           echo "sha256: $after"
-          echo "bytes: $(wc -c < "$file" | tr -d ' ')"
-          echo "-----BEGIN RELEASES JSON BASE64-----"
-          base64 "$file"
-          echo "-----END RELEASES JSON BASE64-----"
+          bytes=$(wc -c < "$file" | tr -d ' ')
+          echo "bytes: $bytes"
+          echo "-----BEGIN RELEASES JSON GZIP BASE64-----"
+          gzip -9 -n -c "$file" | base64
+          echo "-----END RELEASES JSON GZIP BASE64-----"
+          echo "snapshot exit code: $status"
+          echo "file changed: $changed"
+          echo "sha256: $after"
+          echo "bytes: $bytes"
           exit "$status"

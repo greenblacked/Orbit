@@ -439,6 +439,26 @@ def test_the_workflow_is_read_only_and_pinned_like_ci():
     assert "- .github/workflows/source-probe.yml" in text
 
 
+def assert_gzip_payload(text, name):
+    begin = f"-----BEGIN {name} JSON GZIP BASE64-----"
+    end = f"-----END {name} JSON GZIP BASE64-----"
+    assert text.count(begin) == 1 and text.count(end) == 1
+    assert f"{name} JSON BASE64-----" not in text
+    before, after = text.split(end, 1)
+    payload = before.split(begin, 1)[1]
+    assert payload.count('gzip -9 -n -c "$file" | base64') == 1
+    # The summary is repeated after the payload, so a log tail always ends with the result.
+    for line in (
+        'echo "snapshot exit code: $status"',
+        'echo "file changed: $changed"',
+        'echo "sha256: $after"',
+        'echo "bytes: $bytes"',
+    ):
+        assert line in before and line in after, line
+    assert after.index("snapshot exit code") < after.index("sha256:") < after.index("bytes:")
+    assert after.rstrip().endswith('exit "$status"')
+
+
 def test_the_security_snapshot_workflow_is_manual_read_only_and_pinned_like_ci():
     text = (REPO / ".github" / "workflows" / "security-snapshot.yml").read_text(encoding="utf-8")
     ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
@@ -449,6 +469,7 @@ def test_the_security_snapshot_workflow_is_manual_read_only_and_pinned_like_ci()
     assert "secrets." not in text and "upload-artifact" not in text
     assert "github.token" not in text and "GH_TOKEN" not in text
     assert "node deploy/snapshot_security.mjs" in text
+    assert_gzip_payload(text, "SECURITY")
     assert text.count("persist-credentials: false") == 1
     for action in re.findall(r"uses: (actions/[a-z-]+@[0-9a-f]{40}  # v[0-9.]+)", text):
         assert action in ci, action
@@ -465,8 +486,7 @@ def test_the_releases_snapshot_workflow_is_manual_read_only_and_pinned_like_ci()
     assert "secrets." not in text and "upload-artifact" not in text
     assert "github.token" not in text and "GH_TOKEN" not in text
     assert "node deploy/snapshot_releases.mjs" in text
-    assert "-----BEGIN RELEASES JSON BASE64-----" in text
-    assert "-----END RELEASES JSON BASE64-----" in text
+    assert_gzip_payload(text, "RELEASES")
     assert "::warning::" in text and 'exit "$status"' in text
     assert 'echo "the snapshot file is missing or unreadable; no payload is printed"' in text
     assert 'echo "nothing was refreshed; no payload is printed"' in text
