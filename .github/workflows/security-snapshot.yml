@@ -2,9 +2,10 @@
 # Why this exists: the security notes (src/data/security.json, ADR 0008) are read from the
 # vendors' own security pages, and the people building the site cannot reach those sites
 # from where they work. This runs deploy/snapshot_security.mjs on a GitHub runner, which
-# can, and prints the refreshed file into the job log, base64-encoded between two marker
-# lines with its size and SHA-256. The payload is copied from that log into a pull request,
-# where it is reviewed like any other change; nothing here puts it in the repository.
+# can, and prints the refreshed file into the job log, gzip-compressed and base64-encoded
+# between two marker lines, with its size and SHA-256. The payload is copied from that
+# log into a pull request, where it is reviewed like any other change; nothing here puts
+# it in the repository.
 #
 # It commits nothing, pushes nothing, uploads nothing and holds no secret or token: the job
 # can read the repository and nothing else, and the checkout keeps no credential. Run it
@@ -45,7 +46,13 @@ jobs:
         # and the step then fails with that code. A run that hits the timeout prints nothing,
         # because the file is only written at the end. The script's own output is fenced with
         # stop-commands, so no text it logs can be read as a workflow command.
-        # Base64 has no `::`, so nothing in the payload can be read as a workflow command.
+        # The payload is gzipped before it is base64-encoded, and the summary is printed again
+        # after it: a reader that can only fetch the last 5,000 lines of a job log (the API log
+        # tail) must still get the whole payload, the script's own report and the result in
+        # that tail, and the plain payload had grown past it. The markers name the format
+        # (GZIP BASE64) so the old plain-base64 recipe cannot decode gzip bytes into a corrupt
+        # file. gzip -n keeps the output deterministic. Base64 has no `::`, so nothing in the
+        # payload can be read as a workflow command.
         run: |
           set -Eeuo pipefail
           file=src/data/security.json
@@ -58,10 +65,11 @@ jobs:
           after=$(sha256sum "$file" | cut -d' ' -f1)
           echo "snapshot exit code: $status"
           if [ "$before" = "$after" ]; then
-            echo "file changed: no"
+            changed=no
           else
-            echo "file changed: yes"
+            changed=yes
           fi
+          echo "file changed: $changed"
           # Counts only, from a fixed list of status names; no vendor text reaches the log here.
           node -e '
             const known = ["listed", "no-cve-entries", "not-found", "not-applicable", "unavailable", "not-connected"];
@@ -76,8 +84,13 @@ jobs:
             console.log("notes: " + Object.keys(data.notes ?? {}).length);
           ' "$file" || echo "summary: unavailable"
           echo "sha256: $after"
-          echo "bytes: $(wc -c < "$file" | tr -d ' ')"
-          echo "-----BEGIN SECURITY JSON BASE64-----"
-          base64 "$file"
-          echo "-----END SECURITY JSON BASE64-----"
+          bytes=$(wc -c < "$file" | tr -d ' ')
+          echo "bytes: $bytes"
+          echo "-----BEGIN SECURITY JSON GZIP BASE64-----"
+          gzip -9 -n -c "$file" | base64
+          echo "-----END SECURITY JSON GZIP BASE64-----"
+          echo "snapshot exit code: $status"
+          echo "file changed: $changed"
+          echo "sha256: $after"
+          echo "bytes: $bytes"
           exit "$status"
