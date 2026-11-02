@@ -227,50 +227,55 @@ function closeTagEnd(lower, name, from) {
   return -1;
 }
 
-// Drops each `<name ...> ... </name>` element, or the rest of the page when it is never closed.
-// The opening tag needs the name followed by whitespace, ">" or "/" ("<styles" is not "<style").
-function dropElements(text, name) {
-  const lower = asciiLower(text);
-  const needle = `<${name}`;
-  let out = '';
-  let at = 0;
-  let from = 0;
-  for (;;) {
-    const start = lower.indexOf(needle, from);
-    if (start < 0) return out + text.slice(at);
-    const next = lower[start + needle.length];
-    if (!(next === '>' || next === '/' || (next !== undefined && isSpace(next)))) {
-      from = start + needle.length;
-      continue;
-    }
-    out += text.slice(at, start);
-    const end = closeTagEnd(lower, name, start + needle.length);
-    if (end < 0) return out;
-    at = end;
-    from = end;
-  }
-}
+// Openers of what a reader never sees. An element opener needs the name followed by whitespace,
+// ">" or "/" ("<styles" is not "<style"); a comment opener needs nothing more.
+const HIDDEN = [
+  { open: '<!--', name: null },
+  { open: '<script', name: 'script' },
+  { open: '<style', name: 'style' },
+  { open: '<noscript', name: 'noscript' },
+];
 
-// Drops each `<!-- ... -->` comment, or the rest of the page when it is never closed.
-function dropComments(text) {
-  let out = '';
-  let at = 0;
-  for (;;) {
-    const start = text.indexOf('<!--', at);
-    if (start < 0) return out + text.slice(at);
-    out += text.slice(at, start);
-    const end = text.indexOf('-->', start + 4);
-    if (end < 0) return out;
-    at = end + 3;
-  }
-}
-
-// The page text a reader sees: no script, style, noscript or comment content, no tags. Elements
-// go first, as a browser parses them: a "<!--" inside a script does not hide the rest of the page.
+// The page text a reader sees: no script, style, noscript or comment content, no tags. One
+// left-to-right pass, as a browser parses it: whatever opens first decides what is skipped, so a
+// "<!--" inside a script, or a "<script" inside a comment, hides nothing else. An unclosed
+// comment or element drops the rest of the page.
 function visibleText(html) {
-  let text = String(html);
-  for (const name of ['script', 'style', 'noscript']) text = dropElements(text, name);
-  return textOf(dropComments(text));
+  const text = String(html);
+  const lower = asciiLower(text);
+  // Next opener index at or after the cursor per kind: -2 not looked up yet, -1 none left.
+  const next = HIDDEN.map(() => -2);
+  const opens = ({ open, name }, at) => {
+    if (name === null) return true;
+    const c = lower[at + open.length];
+    return c === '>' || c === '/' || (c !== undefined && isSpace(c));
+  };
+  let out = '';
+  let cursor = 0;
+  for (;;) {
+    let kind = -1;
+    for (let k = 0; k < HIDDEN.length; k++) {
+      if (next[k] === -1) continue;
+      if (next[k] < cursor) {
+        const { open } = HIDDEN[k];
+        let at = lower.indexOf(open, cursor);
+        while (at >= 0 && !opens(HIDDEN[k], at)) at = lower.indexOf(open, at + open.length);
+        next[k] = at;
+        if (at < 0) continue;
+      }
+      if (kind < 0 || next[k] < next[kind]) kind = k;
+    }
+    if (kind < 0) return textOf(out + text.slice(cursor));
+    const start = next[kind];
+    const { open, name } = HIDDEN[kind];
+    out += text.slice(cursor, start);
+    const end =
+      name === null
+        ? lower.indexOf('-->', start + open.length)
+        : closeTagEnd(lower, name, start + open.length);
+    if (end < 0) return textOf(out);
+    cursor = name === null ? end + 3 : end;
+  }
 }
 
 /**

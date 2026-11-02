@@ -643,7 +643,25 @@ describe('whyNotUsable', () => {
   it('keeps indices true after a dotted capital I before a script', () => {
     const html =
       `<h1>${head} iOS 26.7.1</h1><p>\u0130</p><script>var a = 'CVE-2026-0002';</script>` +
-      '<div>CVE-2026-0001</div>';
+      'CVE-2026-0001';
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('does not let a script opener inside a comment hide the page', () => {
+    const html = `<h1>${head} iOS 26.7.1</h1><!-- <script> --><div>CVE-2026-0001</div><script>x</script>`;
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('does not let a script opener inside a style hide the page', () => {
+    const html = `<h1>${head} iOS 26.7.1</h1><style>/* <script> */</style><div>CVE-2026-0001</div><script>x</script>`;
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
       'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
