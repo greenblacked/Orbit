@@ -197,6 +197,87 @@ export function parsePublished(html) {
   return m ? parseLongDate(textOf(m[1])) : null;
 }
 
+/** The sorted, unique CVE ids that start a paragraph ("CVE-2026-86950: credit"), heading or not. */
+export function cveParagraphIds(html) {
+  const text = String(html);
+  const ids = new Set();
+  const paragraphs = /<p\b[^>]*>([\s\S]*?)<\/p>/g;
+  for (let m = paragraphs.exec(text); m !== null; m = paragraphs.exec(text)) {
+    const line = textOf(m[1]);
+    const head = line.split(':')[0].trim();
+    if (CVE_HEAD.test(head)) for (const id of head.match(CVE_ID)) ids.add(id);
+  }
+  return [...ids].sort();
+}
+
+// Lowercases ASCII letters only, so every index still points into the original string
+// (toLowerCase() changes the length of e.g. a dotted capital I).
+const asciiLower = (text) => text.replace(/[A-Z]/g, (c) => c.toLowerCase());
+
+const isSpace = (c) => c === ' ' || c === '\t' || c === '\n' || c === '\r' || c === '\f';
+
+// The end of the `</name  >` closing tag that starts at or after `from`, or -1. indexOf only.
+function closeTagEnd(lower, name, from) {
+  const needle = `</${name}`;
+  for (let at = lower.indexOf(needle, from); at >= 0; at = lower.indexOf(needle, at + needle.length)) {
+    let i = at + needle.length;
+    while (i < lower.length && isSpace(lower[i])) i++;
+    if (lower[i] === '>') return i + 1;
+  }
+  return -1;
+}
+
+// Openers of what a reader never sees. An element opener needs the name followed by whitespace,
+// ">" or "/" ("<styles" is not "<style"); a comment opener needs nothing more.
+const HIDDEN = [
+  { open: '<!--', name: null },
+  { open: '<script', name: 'script' },
+  { open: '<style', name: 'style' },
+  { open: '<noscript', name: 'noscript' },
+];
+
+// The page text a reader sees: no script, style, noscript or comment content, no tags. One
+// left-to-right pass, as a browser parses it: whatever opens first decides what is skipped, so a
+// "<!--" inside a script, or a "<script" inside a comment, hides nothing else. An unclosed
+// comment or element drops the rest of the page.
+function visibleText(html) {
+  const text = String(html);
+  const lower = asciiLower(text);
+  // Next opener index at or after the cursor per kind: -2 not looked up yet, -1 none left.
+  const next = HIDDEN.map(() => -2);
+  const opens = ({ open, name }, at) => {
+    if (name === null) return true;
+    const c = lower[at + open.length];
+    return c === '>' || c === '/' || (c !== undefined && isSpace(c));
+  };
+  let out = '';
+  let cursor = 0;
+  for (;;) {
+    let kind = -1;
+    for (let k = 0; k < HIDDEN.length; k++) {
+      if (next[k] === -1) continue;
+      if (next[k] < cursor) {
+        const { open } = HIDDEN[k];
+        let at = lower.indexOf(open, cursor);
+        while (at >= 0 && !opens(HIDDEN[k], at)) at = lower.indexOf(open, at + open.length);
+        next[k] = at;
+        if (at < 0) continue;
+      }
+      if (kind < 0 || next[k] < next[kind]) kind = k;
+    }
+    if (kind < 0) return textOf(out + text.slice(cursor));
+    const start = next[kind];
+    const { open, name } = HIDDEN[kind];
+    out += text.slice(cursor, start);
+    const end =
+      name === null
+        ? lower.indexOf('-->', start + open.length)
+        : closeTagEnd(lower, name, start + open.length);
+    if (end < 0) return textOf(out);
+    cursor = name === null ? end + 3 : end;
+  }
+}
+
 /**
  * One security content page as { title, products, released, cves }, or null when it has no `h1`.
  * `title` is the page heading without "About the security content of". `released` is the
@@ -210,18 +291,11 @@ export function parseNote(html) {
   let title = textOf(h1[1]);
   if (title.startsWith(TITLE_PREFIX)) title = title.slice(TITLE_PREFIX.length);
   const released = /<p\b[^>]*>\s*Released ([A-Za-z]{3,9} \d{1,2}, \d{4})\s*<\/p>/.exec(text);
-  const ids = new Set();
-  const paragraphs = /<p\b[^>]*>([\s\S]*?)<\/p>/g;
-  for (let m = paragraphs.exec(text); m !== null; m = paragraphs.exec(text)) {
-    const line = textOf(m[1]);
-    const head = line.split(':')[0].trim();
-    if (CVE_HEAD.test(head)) for (const id of head.match(CVE_ID)) ids.add(id);
-  }
   return {
     title,
     products: parseProducts(title),
     released: (released && parseLongDate(released[1])) ?? parsePublished(text),
-    cves: [...ids].sort(),
+    cves: cveParagraphIds(text),
   };
 }
 
@@ -239,6 +313,31 @@ export function covers(page, release) {
   return (
     Array.isArray(page?.products) &&
     page.products.some((p) => p.family === release.family && normalise(p.version) === version)
+  );
+}
+
+/**
+ * Why a fetched note page is not accepted for `release`, as a short line made of fixed labels,
+ * yes/no and integers only, never any text of the page (no title, product name or URL); null when
+ * the page is accepted. The rule is the build's own: it parses, has 1 to `maxCves` leading CVE
+ * paragraphs, and covers the release. "CVE ids anywhere in text" counts the distinct ids in the
+ * visible text whether or not they start a paragraph, so a layout change (ids moved into a table
+ * or list) reads as paragraphs 0 and ids anywhere above 0. For the snapshot's report.
+ */
+export function whyNotUsable(html, release, maxCves) {
+  const text = String(html);
+  const page = parseNote(text);
+  const count = cveParagraphIds(text).length;
+  if (page && count > 0 && count <= maxCves && covers(page, release)) return null;
+  const yn = (value) => (value ? 'yes' : 'no');
+  const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(text);
+  const anywhere = new Set(visibleText(text).match(CVE_ID) ?? []).size;
+  return (
+    `h1: ${yn(h1)}; title prefix: ${yn(h1 && textOf(h1[1]).startsWith(TITLE_PREFIX))}; ` +
+    `products recognised: ${page ? page.products.length : 0}; ` +
+    `covers release: ${yn(page && covers(page, release))}; CVE paragraphs: ${count}; ` +
+    `CVE ids anywhere in text: ${anywhere}; over CVE cap: ${yn(count > maxCves)}; ` +
+    `bytes: ${new TextEncoder().encode(text).length}`
   );
 }
 
@@ -287,4 +386,5 @@ export default {
   parseNote,
   match,
   covers,
+  whyNotUsable,
 };
