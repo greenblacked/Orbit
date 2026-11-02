@@ -243,6 +243,31 @@ export function covers(page, release) {
 }
 
 /**
+ * Why a fetched note page is not accepted for `release`, as a short line made of fixed labels,
+ * yes/no and integers only, never any text of the page (no title, product name or URL); null when
+ * the page is accepted. The rule is the build's own: it parses, has 1 to `maxCves` leading CVE
+ * paragraphs, and covers the release. "CVE ids anywhere in text" counts the distinct ids in the
+ * visible text whether or not they start a paragraph, so a layout change (ids moved into a table
+ * or list) reads as paragraphs 0 and ids anywhere above 0. For the snapshot's report.
+ */
+export function whyNotUsable(html, release, maxCves) {
+  const text = String(html);
+  const page = parseNote(text);
+  const count = page ? page.cves.length : 0;
+  if (page && count > 0 && count <= maxCves && covers(page, release)) return null;
+  const yn = (value) => (value ? 'yes' : 'no');
+  const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(text);
+  const anywhere = new Set(textOf(text).match(CVE_ID) ?? []).size;
+  return (
+    `h1: ${yn(h1)}; title prefix: ${yn(h1 && textOf(h1[1]).startsWith(TITLE_PREFIX))}; ` +
+    `products recognised: ${page ? page.products.length : 0}; ` +
+    `covers release: ${yn(page && covers(page, release))}; CVE paragraphs: ${count}; ` +
+    `CVE ids anywhere in text: ${anywhere}; over CVE cap: ${yn(count > maxCves)}; ` +
+    `bytes: ${new TextEncoder().encode(text).length}`
+  );
+}
+
+/**
  * What to do for each release of this vendor, as [{ id, status, row }]. A build that is not a
  * `release` is `not-applicable` (vendors publish security pages only for released builds). A
  * release is `matched` to the row with its family and version number, dated less than 7 days (`DATE_SLACK_DAYS`, UTC dates) from
@@ -287,4 +312,5 @@ export default {
   parseNote,
   match,
   covers,
+  whyNotUsable,
 };
