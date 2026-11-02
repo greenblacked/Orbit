@@ -585,6 +585,18 @@ describe('whyNotUsable', () => {
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
       'h1: no; title prefix: no; products recognised: 0; covers release: no; ' +
+        `CVE paragraphs: 1; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('counts only visible text for ids anywhere', () => {
+    const html =
+      `<h1>${head} iOS 26.7.1</h1><script>var a = 'CVE-2026-0001';</script>` +
+      '<style>/* CVE-2026-0002 */</style><noscript>CVE-2026-0003</noscript>' +
+      '<!-- CVE-2026-0004 --><div>CVE-2026-0005</div>';
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });

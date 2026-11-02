@@ -197,6 +197,42 @@ export function parsePublished(html) {
   return m ? parseLongDate(textOf(m[1])) : null;
 }
 
+/** The sorted, unique CVE ids that start a paragraph ("CVE-2026-86950: credit"), heading or not. */
+export function cveParagraphIds(html) {
+  const text = String(html);
+  const ids = new Set();
+  const paragraphs = /<p\b[^>]*>([\s\S]*?)<\/p>/g;
+  for (let m = paragraphs.exec(text); m !== null; m = paragraphs.exec(text)) {
+    const line = textOf(m[1]);
+    const head = line.split(':')[0].trim();
+    if (CVE_HEAD.test(head)) for (const id of head.match(CVE_ID)) ids.add(id);
+  }
+  return [...ids].sort();
+}
+
+// Drops each `open ... close` span (case-insensitive), or the rest of the page when it is never
+// closed. indexOf only, one pass: no backtracking.
+function dropSpans(text, open, close) {
+  const lower = text.toLowerCase();
+  let out = '';
+  let at = 0;
+  for (;;) {
+    const start = lower.indexOf(open, at);
+    if (start < 0) return out + text.slice(at);
+    out += text.slice(at, start);
+    const end = lower.indexOf(close, start + open.length);
+    if (end < 0) return out;
+    at = end + close.length;
+  }
+}
+
+// The page text a reader sees: no script, style, noscript or comment content, no tags.
+function visibleText(html) {
+  let text = dropSpans(String(html), '<!--', '-->');
+  for (const tag of ['script', 'style', 'noscript']) text = dropSpans(text, `<${tag}`, `</${tag}>`);
+  return textOf(text);
+}
+
 /**
  * One security content page as { title, products, released, cves }, or null when it has no `h1`.
  * `title` is the page heading without "About the security content of". `released` is the
@@ -210,18 +246,11 @@ export function parseNote(html) {
   let title = textOf(h1[1]);
   if (title.startsWith(TITLE_PREFIX)) title = title.slice(TITLE_PREFIX.length);
   const released = /<p\b[^>]*>\s*Released ([A-Za-z]{3,9} \d{1,2}, \d{4})\s*<\/p>/.exec(text);
-  const ids = new Set();
-  const paragraphs = /<p\b[^>]*>([\s\S]*?)<\/p>/g;
-  for (let m = paragraphs.exec(text); m !== null; m = paragraphs.exec(text)) {
-    const line = textOf(m[1]);
-    const head = line.split(':')[0].trim();
-    if (CVE_HEAD.test(head)) for (const id of head.match(CVE_ID)) ids.add(id);
-  }
   return {
     title,
     products: parseProducts(title),
     released: (released && parseLongDate(released[1])) ?? parsePublished(text),
-    cves: [...ids].sort(),
+    cves: cveParagraphIds(text),
   };
 }
 
@@ -253,11 +282,11 @@ export function covers(page, release) {
 export function whyNotUsable(html, release, maxCves) {
   const text = String(html);
   const page = parseNote(text);
-  const count = page ? page.cves.length : 0;
+  const count = cveParagraphIds(text).length;
   if (page && count > 0 && count <= maxCves && covers(page, release)) return null;
   const yn = (value) => (value ? 'yes' : 'no');
   const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(text);
-  const anywhere = new Set(textOf(text).match(CVE_ID) ?? []).size;
+  const anywhere = new Set(visibleText(text).match(CVE_ID) ?? []).size;
   return (
     `h1: ${yn(h1)}; title prefix: ${yn(h1 && textOf(h1[1]).startsWith(TITLE_PREFIX))}; ` +
     `products recognised: ${page ? page.products.length : 0}; ` +
