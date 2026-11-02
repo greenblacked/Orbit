@@ -210,27 +210,67 @@ export function cveParagraphIds(html) {
   return [...ids].sort();
 }
 
-// Drops each `open ... close` span (case-insensitive), or the rest of the page when it is never
-// closed. indexOf only, one pass: no backtracking.
-function dropSpans(text, open, close) {
-  const lower = text.toLowerCase();
+// Lowercases ASCII letters only, so every index still points into the original string
+// (toLowerCase() changes the length of e.g. a dotted capital I).
+const asciiLower = (text) => text.replace(/[A-Z]/g, (c) => c.toLowerCase());
+
+const isSpace = (c) => c === ' ' || c === '\t' || c === '\n' || c === '\r' || c === '\f';
+
+// The end of the `</name  >` closing tag that starts at or after `from`, or -1. indexOf only.
+function closeTagEnd(lower, name, from) {
+  const needle = `</${name}`;
+  for (let at = lower.indexOf(needle, from); at >= 0; at = lower.indexOf(needle, at + needle.length)) {
+    let i = at + needle.length;
+    while (i < lower.length && isSpace(lower[i])) i++;
+    if (lower[i] === '>') return i + 1;
+  }
+  return -1;
+}
+
+// Drops each `<name ...> ... </name>` element, or the rest of the page when it is never closed.
+// The opening tag needs the name followed by whitespace, ">" or "/" ("<styles" is not "<style").
+function dropElements(text, name) {
+  const lower = asciiLower(text);
+  const needle = `<${name}`;
   let out = '';
   let at = 0;
+  let from = 0;
   for (;;) {
-    const start = lower.indexOf(open, at);
+    const start = lower.indexOf(needle, from);
     if (start < 0) return out + text.slice(at);
+    const next = lower[start + needle.length];
+    if (!(next === '>' || next === '/' || (next !== undefined && isSpace(next)))) {
+      from = start + needle.length;
+      continue;
+    }
     out += text.slice(at, start);
-    const end = lower.indexOf(close, start + open.length);
+    const end = closeTagEnd(lower, name, start + needle.length);
     if (end < 0) return out;
-    at = end + close.length;
+    at = end;
+    from = end;
   }
 }
 
-// The page text a reader sees: no script, style, noscript or comment content, no tags.
+// Drops each `<!-- ... -->` comment, or the rest of the page when it is never closed.
+function dropComments(text) {
+  let out = '';
+  let at = 0;
+  for (;;) {
+    const start = text.indexOf('<!--', at);
+    if (start < 0) return out + text.slice(at);
+    out += text.slice(at, start);
+    const end = text.indexOf('-->', start + 4);
+    if (end < 0) return out;
+    at = end + 3;
+  }
+}
+
+// The page text a reader sees: no script, style, noscript or comment content, no tags. Elements
+// go first, as a browser parses them: a "<!--" inside a script does not hide the rest of the page.
 function visibleText(html) {
-  let text = dropSpans(String(html), '<!--', '-->');
-  for (const tag of ['script', 'style', 'noscript']) text = dropSpans(text, `<${tag}`, `</${tag}>`);
-  return textOf(text);
+  let text = String(html);
+  for (const name of ['script', 'style', 'noscript']) text = dropElements(text, name);
+  return textOf(dropComments(text));
 }
 
 /**
