@@ -376,6 +376,42 @@ def test_the_filters_apply_in_cadence_and_the_count_line_follows(opened):
     assert page.url.endswith("?family=iOS")
 
 
+def test_the_feed_links_follow_the_platform_and_stage_and_never_the_line(opened):
+    page, errors = opened("/timeline/")
+    page.wait_for_selector(".tl-item")
+
+    def links():
+        return [
+            (
+                page.get_attribute(f"#{i}", "href"),
+                page.locator(f"#{i}").evaluate("a => a.textContent"),
+            )
+            for i in ("feed-atom", "feed-json")
+        ]
+
+    (atom, atom_name), (feed, feed_name) = links()
+    assert (atom, feed) == ("/api/feed.atom", "/api/feed.json")
+    assert "newest releases" in atom_name and "newest releases" in feed_name
+    page.click("#chips-family [data-v=iOS]")
+    page.click("#chips-stage [data-v=beta]")
+    (atom, atom_name), (feed, feed_name) = links()
+    assert atom == "/api/feed.atom?family=iOS&stage=beta"
+    assert feed == "/api/feed.json?family=iOS&stage=beta"
+    assert atom_name.startswith("Subscribe via Atom") and "newest iOS beta releases" in atom_name
+    assert feed_name.startswith("JSON Feed") and "newest iOS beta releases" in feed_name
+    page.click("#chips-stage [data-v=all]")
+    assert page.get_attribute("#feed-atom", "href") == "/api/feed.atom?family=iOS"
+    page.click("#chips-family [data-v=all]")
+    assert page.get_attribute("#feed-atom", "href") == "/api/feed.atom"
+    assert page.get_attribute("#feed-json", "href") == "/api/feed.json"
+    # An address that opens filtered gives filtered links on first load, and the Line is left out.
+    page, errors = opened("/timeline/?family=RouterOS&stage=release&line=stable")
+    page.wait_for_selector(".tl-item")
+    assert page.get_attribute("#feed-atom", "href") == "/api/feed.atom?family=RouterOS&stage=release"
+    assert page.get_attribute("#feed-json", "href") == "/api/feed.json?family=RouterOS&stage=release"
+    assert not errors
+
+
 # --- the lanes ---------------------------------------------------------------------------
 
 

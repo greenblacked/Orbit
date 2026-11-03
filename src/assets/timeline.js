@@ -321,7 +321,26 @@
       chips[i].setAttribute("aria-pressed", String(chips[i].getAttribute("data-v") === value));
     }
   }
+  // The Subscribe links follow the filters. Only a platform and a stage the feeds accept are
+  // passed (the Line filter and the view are not feed filters), so the link can never be a 400.
+  var FEED_STAGES = { release: "stable", beta: "beta", rc: "RC" };
+  function feedLinks() {
+    var q = [];
+    var what = "";
+    if (state.family !== "all") { q.push("family=" + encodeURIComponent(state.family)); what += state.family + " "; }
+    if (FEED_STAGES.hasOwnProperty(state.stage)) { q.push("stage=" + encodeURIComponent(state.stage)); what += FEED_STAGES[state.stage] + " "; }
+    var qs = q.length ? "?" + q.join("&") : "";
+    var ids = ["feed-atom", "feed-json"];
+    for (var i = 0; i < ids.length; i++) {
+      var a = document.getElementById(ids[i]);
+      if (!a) continue;
+      a.setAttribute("href", "/api/feed." + (i ? "json" : "atom") + qs);
+      var note = a.querySelector(".sr-only");
+      if (note) note.textContent = " (feed of the newest " + what + "releases)";
+    }
+  }
   function remember() {
+    feedLinks();
     var q = [];
     if (state.family !== "all") q.push("family=" + encodeURIComponent(state.family));
     if (state.stage !== "all") q.push("stage=" + encodeURIComponent(state.stage));
@@ -359,6 +378,7 @@
   press("chips-family", state.family);
   press("chips-stage", state.stage);
   showView();
+  feedLinks();
 
   // "Show in list" in the Cadence readout switches views here, without a page load: a plain click
   // only. The link keeps its address for a new tab, no script, and the bundled preview, whose
