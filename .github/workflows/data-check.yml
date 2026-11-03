@@ -1,0 +1,187 @@
+---
+# Why this exists: the live release list already follows the vendors within about ten
+# minutes through the Worker, but the CVE data (src/data/security.json) and the bundled
+# fallback snapshot (src/data/releases.json) change only when someone refreshes them. This
+# runs both snapshot scripts once a week on a GitHub runner, compares each refreshed file
+# with the committed one (ignoring the timestamp fields) and turns red when the bundled data
+# is behind the vendors or a source could not be read. It only alerts: GitHub emails the
+# failure of a scheduled run to the account that last changed the cron line, and that is the
+# owner's cue to refresh by hand. The manual Releases snapshot and Security snapshot
+# workflows plus a reviewed pull request stay the only way the data changes.
+#
+# It commits nothing, pushes nothing, opens nothing and holds no secret or token: the job can
+# read the repository and nothing else, the checkout keeps no credential, and the refreshed
+# files stay on the runner. The log carries fixed labels and counts only, never a payload.
+# Same pinned actions as security-snapshot.yml. GitHub disables scheduled workflows after 60
+# days without repository activity; a merge or a manual run switches it back on.
+name: Data check
+
+on:
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check that the bundled data is current
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: '22.23.3'
+          # Nothing is installed: the scripts have no dependencies.
+          package-manager-cache: false
+      - name: Refresh both files on the runner and compare them with the committed ones
+        # The security script reads the refreshed releases.json, so a new release without
+        # CVE rows shows as a difference. Each script's own output is fenced with
+        # stop-commands, so no text it logs can be read as a workflow command; its exit code
+        # is kept and the step goes on. The comparison prints fixed labels and integers only
+        # (vendors are counted by the ids in src/data/families.json, never named from the
+        # data), and the step then fails with one fixed message per problem.
+        run: |
+          set -Eeuo pipefail
+          releases=src/data/releases.json
+          security=src/data/security.json
+          cp "$releases" "$RUNNER_TEMP/releases.committed.json"
+          cp "$security" "$RUNNER_TEMP/security.committed.json"
+
+          releases_status=0
+          token=$(uuidgen)
+          echo "::stop-commands::${token}"
+          node deploy/snapshot_releases.mjs || releases_status=$?
+          echo "::${token}::"
+
+          security_status=0
+          token=$(uuidgen)
+          echo "::stop-commands::${token}"
+          node deploy/snapshot_security.mjs || security_status=$?
+          echo "::${token}::"
+
+          echo "releases snapshot exit code: $releases_status"
+          echo "security snapshot exit code: $security_status"
+
+          compare='
+            const fs = require("node:fs");
+            const [kind, committedPath, refreshedPath] = process.argv.slice(1);
+            const volatile = new Set(["fetchedAt", "generatedAt", "checkedAt"]);
+            const strip = (value) => {
+              if (Array.isArray(value)) return value.map(strip);
+              if (value && typeof value === "object") {
+                const out = {};
+                for (const key of Object.keys(value).sort()) {
+                  if (!volatile.has(key)) out[key] = strip(value[key]);
+                }
+                return out;
+              }
+              return value;
+            };
+            const load = (path) => strip(JSON.parse(fs.readFileSync(path, "utf8")));
+            const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+            try {
+              const before = load(committedPath);
+              const after = load(refreshedPath);
+              if (kind === "releases") {
+                const vendors = JSON.parse(fs.readFileSync("src/data/families.json", "utf8")).vendors.map((v) => v.id);
+                const index = (doc) => new Map((doc.releases ?? []).map((r) => [r.id, r]));
+                const was = index(before);
+                const now = index(after);
+                const counts = Object.fromEntries(vendors.map((v) => [v, { added: 0, removed: 0, changed: 0 }]));
+                counts.other = { added: 0, removed: 0, changed: 0 };
+                const bucket = (row) => counts[vendors.includes(row.vendor) ? row.vendor : "other"];
+                let added = 0;
+                let removed = 0;
+                let changed = 0;
+                for (const [id, row] of now) {
+                  if (!was.has(id)) { added += 1; bucket(row).added += 1; }
+                  else if (!same(was.get(id), row)) { changed += 1; bucket(row).changed += 1; }
+                }
+                for (const [id, row] of was) {
+                  if (!now.has(id)) { removed += 1; bucket(row).removed += 1; }
+                }
+                const rest = { ...before, releases: [] };
+                const restNow = { ...after, releases: [] };
+                const otherFields = same(rest, restNow) ? 0 : 1;
+                console.log("releases added: " + added);
+                console.log("releases removed: " + removed);
+                console.log("releases changed: " + changed);
+                for (const [vendor, c] of Object.entries(counts)) {
+                  console.log("vendor " + vendor + ": added " + c.added + ", removed " + c.removed + ", changed " + c.changed);
+                }
+                console.log("other fields changed: " + otherFields);
+                process.exit(added + removed + changed + otherFields === 0 ? 0 : 3);
+              }
+              const rowsWas = before.releases ?? {};
+              const rowsNow = after.releases ?? {};
+              const notesWas = before.notes ?? {};
+              const notesNow = after.notes ?? {};
+              let rowsAdded = 0;
+              let rowsRemoved = 0;
+              let rowsChanged = 0;
+              let rowsOther = 0;
+              for (const [id, row] of Object.entries(rowsNow)) {
+                const old = rowsWas[id];
+                if (old === undefined) rowsAdded += 1;
+                else if (old.status !== row.status || !same(old.cves, row.cves)) rowsChanged += 1;
+                else if (!same(old, row)) rowsOther += 1;
+              }
+              for (const id of Object.keys(rowsWas)) {
+                if (!(id in rowsNow)) rowsRemoved += 1;
+              }
+              const notesAdded = Object.keys(notesNow).filter((k) => !(k in notesWas)).length;
+              const notesRemoved = Object.keys(notesWas).filter((k) => !(k in notesNow)).length;
+              const notesChanged = Object.keys(notesNow).filter((k) => k in notesWas && !same(notesWas[k], notesNow[k])).length;
+              const topWas = { ...before, releases: {}, notes: {} };
+              const topNow = { ...after, releases: {}, notes: {} };
+              const otherFields = same(topWas, topNow) ? 0 : 1;
+              console.log("security rows added: " + rowsAdded);
+              console.log("security rows removed: " + rowsRemoved);
+              console.log("security rows with status or cves changed: " + rowsChanged);
+              console.log("security rows with other changes: " + rowsOther);
+              console.log("security notes added: " + notesAdded);
+              console.log("security notes removed: " + notesRemoved);
+              console.log("security notes changed: " + notesChanged);
+              console.log("other fields changed: " + otherFields);
+              const total = rowsAdded + rowsRemoved + rowsChanged + rowsOther + notesAdded + notesRemoved + notesChanged + otherFields;
+              process.exit(total === 0 ? 0 : 3);
+            } catch (error) {
+              console.log("comparison failed: a file could not be read or parsed");
+              process.exit(2);
+            }
+          '
+
+          releases_diff=0
+          node -e "$compare" releases "$RUNNER_TEMP/releases.committed.json" "$releases" || releases_diff=$?
+          security_diff=0
+          node -e "$compare" security "$RUNNER_TEMP/security.committed.json" "$security" || security_diff=$?
+          echo "releases comparison exit code: $releases_diff"
+          echo "security comparison exit code: $security_diff"
+
+          failed=0
+          if [ "$releases_status" -ne 0 ] || [ "$security_status" -ne 0 ]; then
+            echo "::error::A source could not be read: open the log, then run the Releases snapshot and the Security snapshot workflows by hand."
+            failed=1
+          fi
+          if [ "$releases_diff" -ne 0 ]; then
+            echo "::error::The bundled release data is behind the vendors: run the Releases snapshot workflow and open the data pull request; then the Security snapshot."
+            failed=1
+          fi
+          if [ "$security_diff" -ne 0 ]; then
+            echo "::error::The bundled security data is behind the vendors: run the Security snapshot workflow and open the data pull request."
+            failed=1
+          fi
+          if [ "$failed" -eq 0 ]; then
+            echo "the bundled data matches the vendors"
+          fi
+          exit "$failed"
