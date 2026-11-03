@@ -17,6 +17,7 @@ import apple, {
   parseProducts,
   parsePublished,
   parseRowDate,
+  whyNotUsable,
 } from '../deploy/security/apple.js';
 import { isSecuritySource, SECURITY_SOURCES } from '../deploy/security/index.js';
 import { payloadProblems } from '../deploy/security/validate.js';
@@ -491,6 +492,18 @@ describe('buildPayload', () => {
     assert.ok(failures.length > 0);
   });
 
+  it('ends the failure line of a fetched, refused page with the reason, and only then', () => {
+    const wrong = NOTE.replace(/iOS 26\.7\.1 and iPadOS 26\.7\.1/g, 'macOS Tahoe 26.7.1');
+    const line = (pages) =>
+      build({ sources: [{ adapter: apple, rows, pages }] }).failures.find((failure) =>
+        failure.includes('no usable note for iPadOS 26.7.1'),
+      );
+    const why = whyNotUsable(wrong, releases[1], MAX_CVES_PER_NOTE);
+    assert.ok(why.includes('covers release: no'));
+    assert.ok(line(new Map([[NOTE_URL, wrong]])).endsWith(`(${NOTE_URL}) (${why})`));
+    assert.ok(line(new Map()).endsWith(`(${NOTE_URL})`));
+  });
+
   it('throws over the byte cap and fails a source over the note cap', () => {
     assert.throws(() => build({ maxBytes: 100 }), /over 100/);
     const fake = {
@@ -554,6 +567,144 @@ describe('buildPayload', () => {
     const { payload } = build({ previous: before, releases: releases.filter((r) => r.id !== 'ios') });
     assert.equal('ios' in payload.releases, false);
     assert.equal(payload.releases.ipad.status, 'listed');
+  });
+});
+
+describe('whyNotUsable', () => {
+  const release = { family: 'iOS', version: '26.7.1' };
+  const bytes = (html) => Buffer.byteLength(html);
+  const head = 'About the security content of';
+  const para = (id) => `<p class="gb-paragraph">${id}: Quokka Researcher</p>`;
+
+  it('is null for a page the build accepts', () => {
+    assert.equal(whyNotUsable(NOTE, release, MAX_CVES_PER_NOTE), null);
+  });
+
+  it('says there is no heading', () => {
+    const html = para('CVE-2026-0001');
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: no; title prefix: no; products recognised: 0; covers release: no; ' +
+        `CVE paragraphs: 1; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('counts only visible text for ids anywhere', () => {
+    const html =
+      `<h1>${head} iOS 26.7.1</h1><script>var a = 'CVE-2026-0001';</script>` +
+      '<style>/* CVE-2026-0002 */</style><noscript>CVE-2026-0003</noscript>' +
+      '<!-- CVE-2026-0004 --><div>CVE-2026-0005</div>';
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('drops an unclosed comment and what follows without throwing', () => {
+    const html = `<h1>${head} iOS 26.7.1</h1><div>CVE-2026-0001</div><!-- CVE-2026-0002 <div>CVE-2026-0003</div>`;
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('does not let a comment opener inside a script hide the page', () => {
+    const html =
+      `<h1>${head} iOS 26.7.1</h1><script>var a = '<!--';</script><div>CVE-2026-0001</div>` +
+      '<script>var b = "-->";</script>';
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('closes a script on </script > with whitespace', () => {
+    const html =
+      `<h1>${head} iOS 26.7.1</h1><script>var a = 'CVE-2026-0002';</script ><div>CVE-2026-0001</div>`;
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('does not take <styles for a style element', () => {
+    const html = `<h1>${head} iOS 26.7.1</h1><styles>CVE-2026-0001</styles><div>CVE-2026-0002</div>`;
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 2; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('keeps indices true after a dotted capital I before a script', () => {
+    const html =
+      `<h1>${head} iOS 26.7.1</h1><p>\u0130</p><script>var a = 'CVE-2026-0002';</script>` +
+      'CVE-2026-0001';
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('does not let a script opener inside a comment hide the page', () => {
+    const html = `<h1>${head} iOS 26.7.1</h1><!-- <script> --><div>CVE-2026-0001</div><script>x</script>`;
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('does not let a script opener inside a style hide the page', () => {
+    const html = `<h1>${head} iOS 26.7.1</h1><style>/* <script> */</style><div>CVE-2026-0001</div><script>x</script>`;
+    assert.equal(
+      whyNotUsable(html, release, MAX_CVES_PER_NOTE),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('says a heading for another product does not cover the release', () => {
+    const html = `<h1>${head} macOS Tahoe 26.7.1</h1>${para('CVE-2026-0001')}`;
+    const why = whyNotUsable(html, release, MAX_CVES_PER_NOTE);
+    assert.equal(
+      why,
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: no; ' +
+        `CVE paragraphs: 1; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+    for (const word of ['Tahoe', 'macOS', 'Quokka', 'support.apple.com']) assert.ok(!why.includes(word), word);
+  });
+
+  it('tells ids kept in a table from leading paragraphs', () => {
+    const cells = ['CVE-2026-0001', 'CVE-2026-0002', 'CVE-2026-0002', 'CVE-2026-0003']
+      .map((id) => `<tr><td>${id}</td><td>Quokka</td></tr>`)
+      .join('');
+    const html = `<h1>${head} iOS 26.7.1</h1><table>${cells}</table>`;
+    const why = whyNotUsable(html, release, MAX_CVES_PER_NOTE);
+    assert.equal(
+      why,
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 0; CVE ids anywhere in text: 3; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+    assert.ok(!why.includes('Quokka'));
+  });
+
+  it('says a page is over the cap', () => {
+    const html = `<h1>${head} iOS 26.7.1</h1>${para('CVE-2026-0001')}${para('CVE-2026-0002')}`;
+    assert.equal(
+      whyNotUsable(html, release, 1),
+      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+        `CVE paragraphs: 2; CVE ids anywhere in text: 2; over CVE cap: yes; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('is on the adapter', () => {
+    assert.equal(apple.whyNotUsable, whyNotUsable);
   });
 });
 

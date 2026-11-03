@@ -207,7 +207,14 @@ function applyIndexSource(args) {
           failures.push(`${adapter.id}: ${url} was not read again; the previous note is kept`);
         }
       } else {
-        failures.push(`${adapter.id}: no usable note for ${release.title ?? found.id} (${url})`);
+        const why =
+          fetched && typeof adapter.whyNotUsable === 'function'
+            ? adapter.whyNotUsable(html, release, MAX_CVES_PER_NOTE)
+            : null;
+        const reason = why ? ` (${why})` : '';
+        failures.push(
+          `${adapter.id}: no usable note for ${release.title ?? found.id} (${url})${reason}`,
+        );
         outReleases[found.id] = entry('unavailable', now);
       }
     }
