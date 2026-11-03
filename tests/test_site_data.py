@@ -381,7 +381,7 @@ def test_the_timeline_offers_subscribe_links_near_its_filters():
     html = page("timeline/index.html")
     for ident, href in (("feed-atom", "/api/feed.atom"), ("feed-json", "/api/feed.json")):
         link = re.search(
-            r'<a class="chip-link" id="%s" href="%s"[^>]*>Subscribe' % (ident, re.escape(href)),
+            rf'<a class="chip-link" id="{ident}" href="{re.escape(href)}"[^>]*>Subscribe',
             html,
         )
         assert link, ident

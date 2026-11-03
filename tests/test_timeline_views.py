@@ -392,27 +392,33 @@ def test_the_feed_links_follow_the_platform_and_stage_and_never_the_line(opened)
 
     (atom, atom_name), (feed, feed_name) = links()
     assert (atom, feed) == ("/api/feed.atom", "/api/feed.json")
-    assert atom_name.startswith("Subscribe via Atom") and feed_name.startswith("Subscribe via JSON Feed")
+    assert atom_name.startswith("Subscribe via Atom")
+    assert feed_name.startswith("Subscribe via JSON Feed")
     assert "newest releases" in atom_name and "newest releases" in feed_name
     page.click("#chips-family [data-v=iOS]")
     page.click("#chips-stage [data-v=beta]")
     (atom, atom_name), (feed, feed_name) = links()
     assert atom == "/api/feed.atom?family=iOS&stage=beta"
     assert feed == "/api/feed.json?family=iOS&stage=beta"
-    assert atom_name.startswith("Subscribe via Atom") and "newest releases for iOS, stage Beta" in atom_name
-    assert feed_name.startswith("Subscribe via JSON Feed") and "newest releases for iOS, stage Beta" in feed_name
+    scope = "newest releases for iOS, stage Beta"
+    assert atom_name.startswith("Subscribe via Atom")
+    assert scope in atom_name
+    assert feed_name.startswith("Subscribe via JSON Feed")
+    assert scope in feed_name
     page.click("#chips-stage [data-v=all]")
     assert page.get_attribute("#feed-atom", "href") == "/api/feed.atom?family=iOS"
     page.click("#chips-family [data-v=all]")
     assert page.get_attribute("#feed-atom", "href") == "/api/feed.atom"
     assert page.get_attribute("#feed-json", "href") == "/api/feed.json"
-    assert page.locator("#feed-json").evaluate("a => a.textContent").endswith("(feed of the newest releases)")
+    json_name = page.locator("#feed-json").evaluate("a => a.textContent")
+    assert json_name.endswith("(feed of the newest releases)")
     assert not errors
     # An address that opens filtered gives filtered links on first load, and the Line is left out.
     page, errors2 = opened("/timeline/?family=RouterOS&stage=release&line=stable")
     page.wait_for_selector(".tl-item")
-    assert page.get_attribute("#feed-atom", "href") == "/api/feed.atom?family=RouterOS&stage=release"
-    assert page.get_attribute("#feed-json", "href") == "/api/feed.json?family=RouterOS&stage=release"
+    query = "?family=RouterOS&stage=release"
+    assert page.get_attribute("#feed-atom", "href") == "/api/feed.atom" + query
+    assert page.get_attribute("#feed-json", "href") == "/api/feed.json" + query
     name = page.locator("#feed-atom").evaluate("a => a.textContent")
     assert name.endswith("(feed of the newest releases for RouterOS, stage Release)")
     assert not errors2
