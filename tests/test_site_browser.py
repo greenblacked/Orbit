@@ -1084,9 +1084,7 @@ def test_check_my_version_survives_a_missing_results_index(page, base_url):
     # The 404 the test itself forces is logged by the browser; anything else is a real error.
     page.on(
         "console",
-        lambda m: problems.append(m.text)
-        if m.type == "error" and "404" not in m.text
-        else None,
+        lambda m: problems.append(m.text) if m.type == "error" and "404" not in m.text else None,
     )
     page.route("**/data/results/index.json", lambda route: route.fulfill(status=404, body=""))
     lookup_ready(page, base_url)
@@ -1138,7 +1136,7 @@ def test_check_my_version_falls_back_to_the_first_device_for_a_bad_default(page,
     page.wait_for_selector("#lk-result .lk-dv")
     first = DEVICES["families"]["iOS"]["27"]["devices"][0]
     assert page.input_value("#lk-device") == first
-    assert page.inner_text("#lk-result .lk-dv").startswith(first)
+    assert page.inner_text("#lk-result .lk-dv") == f"Not tested yet on {first}."
     assert problems == []
 
 
