@@ -13,7 +13,7 @@
   var STAGES = ["release", "beta", "rc"];
   // Only a released build may carry a verdict (docs/adr/0005).
   var VERDICTS = ["pass", "warn", "fail"];
-  // A release's optional line (RouterOS channel, Windows feature update): a short token.
+  // A release's optional line (RouterOS channel, Windows feature update, SteamOS minor): a short token.
   var LINE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,15}$/;
   // Used when the families config cannot be read.
   var FALLBACK = { name: "Apple Developer Releases", url: "https://developer.apple.com/news/releases/", hosts: ["developer.apple.com"] };
@@ -113,6 +113,10 @@
       } else if (r.family === "Windows" && /^\d\dH\d$/.test(r.version)) {
         // Likewise a Windows feature update is its own line, named by its version.
         entry.line = r.version;
+      } else if (r.family === "SteamOS") {
+        // And a SteamOS release's line is its major.minor ("3.7").
+        var minor = /^(\d+)\.(\d+)(?:\.|$)/.exec(String(r.version));
+        if (minor) entry.line = minor[1] + "." + minor[2];
       }
       list.push(entry);
     });
@@ -295,7 +299,7 @@
     return { main: main, pre: pre, lines: lines(list, family, main) };
   }
   // The newest public release of each line the family has (RouterOS channels, Windows feature
-  // updates), as [{ line, release }], the headlined release's line first and then by version.
+  // updates, SteamOS minors), as [{ line, release }], the headlined release's line first and then by version.
   // A family whose headline has no line, or whose headline is not a public release, has none.
   function lines(list, family, main) {
     if (!main || main.stage !== "release" || !main.line) return [];
@@ -310,7 +314,7 @@
     });
     return order.map(function (name) { return { line: name, release: best[name] }; });
   }
-  // A line named for people: "long-term" is "Long-term", "24H2" stays.
+  // A line named for people: "long-term" is "Long-term", "24H2" and "3.7" stay.
   function lineLabel(name) { return name.charAt(0).toUpperCase() + name.slice(1); }
   function when(t) {
     var el = h("time", "when", ago(t), { datetime: new Date(t).toISOString() });

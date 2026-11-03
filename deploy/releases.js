@@ -17,8 +17,9 @@
 //   `summary`: a short plain-text line (see cleanSummary), at most SUMMARY_MAX characters,
 //     never markup.
 //   `line`: for a family with several supported lines at once, the RouterOS channel
-//     ("stable", "long-term", "testing") or the Windows feature update ("24H2"). A family with
-//     one line (Apple, Android, SteamOS) has no `line` key at all.
+//     ("stable", "long-term", "testing"), the Windows feature update ("24H2") or the SteamOS
+//     minor version ("3.7", "3.8"). A family with one line (Apple, Android) has no `line` key
+//     at all.
 // When both are set, an adapter adds `line` first and `summary` after it.
 
 // Each source keeps its newest MAX_RELEASES_PER_SOURCE releases, so a large source cannot
@@ -46,6 +47,14 @@ export function withLine(release, line) {
   return isLine(line) ? { ...release, line } : release;
 }
 
+const MINOR_RE = /^(\d+)\.(\d+)(?:\.|$)/;
+
+/** "3.7" from the version "3.7.13": its major.minor, or '' when the version has no minor. */
+export function minorLine(version) {
+  const m = MINOR_RE.exec(String(version ?? ''));
+  return m ? `${m[1]}.${m[2]}` : '';
+}
+
 const ROUTEROS_CHANNEL_RE = /-(stable|long-term|testing)$/;
 const WINDOWS_UPDATE_RE = /^\d\dH\d$/;
 
@@ -53,7 +62,7 @@ const WINDOWS_UPDATE_RE = /^\d\dH\d$/;
  * The release with `line` derived when it has none: a row cached before lines existed.
  * The same rules as the adapters and as normalise() in src/assets/releases.js: a RouterOS
  * row's channel is the end of its id, a Windows row's feature update is its version
- * (26H2). A line already there is never changed, and no other family gets one.
+ * (26H2), a SteamOS row's minor line is the major.minor of its version (3.7). A line already there is never changed, and no other family gets one.
  */
 export function backfillLine(release) {
   if (!release || typeof release !== 'object' || (release.line !== undefined && release.line !== null)) {
@@ -65,6 +74,9 @@ export function backfillLine(release) {
   }
   if (release.family === 'Windows' && WINDOWS_UPDATE_RE.test(String(release.version))) {
     return withLine(release, release.version);
+  }
+  if (release.family === 'SteamOS') {
+    return withLine(release, minorLine(release.version));
   }
   return release;
 }

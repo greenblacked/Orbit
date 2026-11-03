@@ -170,7 +170,7 @@ describe('parseNews', () => {
     );
     for (const r of releases) {
       assert.deepEqual(Object.keys(r).sort(), [
-        'beta', 'build', 'date', 'family', 'id', 'major', 'source', 'stage', 'title', 'url',
+        'beta', 'build', 'date', 'family', 'id', 'line', 'major', 'source', 'stage', 'title', 'url',
         'vendor', 'version',
       ]);
       assert.equal(r.vendor, 'valve');
@@ -192,6 +192,40 @@ describe('parseNews', () => {
       NOW,
     );
     assert.equal(rss.summary, 'Deck update');
+  });
+
+  it('gives every release its major.minor as the line, stable, beta and preview alike', () => {
+    const releases = news(TITLES);
+    for (const r of releases) {
+      assert.match(r.line, /^\d+\.\d+$/, r.id);
+      assert.equal(r.line, r.version.split('.').slice(0, 2).join('.'), r.id);
+    }
+    const line = Object.fromEntries(releases.map((r) => [r.title, r.line]));
+    assert.equal(line['SteamOS 3.8.28'], '3.8'); // a stable build
+    assert.equal(line['SteamOS 3.9.1 Preview'], '3.9'); // a preview build
+    assert.equal(releases.find((r) => r.stage === 'beta').line.split('.').length, 2);
+    // Two minors side by side: 3.7 Stable while 3.8 is in Preview.
+    const pair = news(
+      doc(
+        post({ title: 'SteamOS 3.7.15 Stable: Deck update', tags: ['stablechannel'] }),
+        post({ title: 'SteamOS 3.8.1 Preview (20250522.1)', tags: ['previewchannel'], date: 1760000000 }),
+      ),
+    );
+    assert.deepEqual(pair.map((r) => [r.version, r.stage, r.line]).sort(), [
+      ['3.7.15', 'release', '3.7'],
+      ['3.8.1', 'beta', '3.8'],
+    ]);
+    // `line` comes before `summary`.
+    const withSummary = pair.find((r) => r.version === '3.7.15');
+    const keys = Object.keys(withSummary);
+    assert.ok(keys.indexOf('line') < keys.indexOf('summary'));
+    // The RSS form carries it too.
+    const [rss] = parseFeed(
+      '<rss><channel><item><title>SteamOS 3.7.15 Stable</title>' +
+        '<pubDate>Fri, 09 Oct 2026 10:00:00 GMT</pubDate></item></channel></rss>',
+      NOW,
+    );
+    assert.equal(rss.line, '3.7');
   });
 
   it('maps the real channel tags: stable wins, beta and preview are betas', () => {
