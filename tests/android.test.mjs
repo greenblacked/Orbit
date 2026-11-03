@@ -18,6 +18,7 @@ import android, {
   MAX_CELLS,
   MAX_INPUT,
   MAX_ROWS,
+  FETCH_URL,
   PAGE_URL,
   parsePage,
   parseRow,
@@ -67,7 +68,8 @@ describe('the Android adapter', () => {
     assert.equal(ID, android.id);
     assert.equal(android.vendor, 'google');
     assert.equal(VENDOR, 'google');
-    assert.deepEqual(android.urls, [PAGE_URL]);
+    assert.deepEqual(android.urls, [FETCH_URL]);
+    assert.equal(FETCH_URL, `${PAGE_URL}?hl=en`);
     assert.equal(PAGE_URL, 'https://source.android.com/docs/setup/reference/build-numbers');
     assert.equal(typeof android.parse, 'function');
     assert.notEqual(android.parse, parsePage, 'the url the Worker passes must not reach `now`');
@@ -375,6 +377,7 @@ describe('the bounds on what is emitted', () => {
 
   it('ignores the url the Worker passes as the second argument', () => {
     assert.deepEqual(android.parse(PAGE, PAGE_URL, NOW), android.parse(PAGE, undefined, NOW));
+    assert.deepEqual(android.parse(PAGE, FETCH_URL, NOW), android.parse(PAGE, PAGE_URL, NOW));
     const future = page(row('CP2A.260605.016', 'android-17.0.0_r1'), row('CP2A.990605.016', 'android-18.0.0_r1', ''));
     assert.deepEqual(android.parse(future, PAGE_URL, NOW).map((r) => r.id), ['android-17.0.0_r1']);
   });
@@ -556,7 +559,7 @@ describe('the Android adapter behind the Worker', () => {
     assert.equal(body.stale, false);
     assert.equal(body.releases.length, parseAll(PAGE).length);
     assert.ok(body.releases.every((r) => r.vendor === 'google' && r.source === ID));
-    assert.deepEqual(state.upstream.calls.map((c) => c.url), [PAGE_URL]);
+    assert.deepEqual(state.upstream.calls.map((c) => c.url), [FETCH_URL]);
     assert.equal(state.upstream.calls[0].init.redirect, 'manual');
     assert.match(state.upstream.calls[0].init.headers.accept, /text\/html/);
   });
