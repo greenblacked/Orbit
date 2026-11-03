@@ -391,3 +391,15 @@ def test_the_pointer_highlight_on_cards_is_gone():
         assert name not in fx, name
     for name in ("fx-glass", "--mx", "--my"):
         assert name not in CSS, name
+
+
+@pytest.mark.parametrize("name", ["index.html", "compare/index.html"])
+def test_the_device_field_of_check_my_version_is_labelled_hidden_and_free_of_inline_style(name):
+    text = page(name)
+    field = re.search(r'<div class="field lk-dev" id="lk-dev" hidden>.*?</div>', text, re.S)
+    assert field, name
+    assert '<label for="lk-device">Device</label><select id="lk-device"' in field.group(0)
+    assert "style=" not in field.group(0)
+    assert text.count('id="lk-device"') == 1
+    script = (ASSETS / "lookup.js").read_text(encoding="utf-8")
+    assert "/data/devices.json" in script and "/data/results/index.json" in script

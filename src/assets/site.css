@@ -1864,6 +1864,8 @@ html[data-theme="reactor"] select { border-radius: 0; }
   text-align: center;
 }
 .lk-go:hover { opacity: 0.8; }
+/* The device list sits on a row of its own below the others, two columns wide where there are several. */
+@media (min-width: 40rem) { .lk-form .lk-dev { grid-column: 1 / span 2; } }
 .lk-result { margin-top: 1.25rem; border-radius: 0.5rem; }
 .lk-result p + p { margin-top: 0.5rem; }
 /* :focus, not :focus-visible: a script moves focus here after a click or tap. */
@@ -1877,6 +1879,7 @@ html[data-theme="reactor"] select { border-radius: 0; }
   .lk-result.lk-flash { animation: lk-flash 600ms ease-out; }
 }
 .lk-say { font-weight: 500; overflow-wrap: anywhere; }
+.lk-dv { overflow-wrap: anywhere; }
 .lk-hit, .lk-cve { color: var(--muted); font-size: 0.875rem; overflow-wrap: anywhere; }
 .lk-link a { display: inline-flex; min-height: 2.75rem; align-items: center; text-decoration: underline; text-underline-offset: 4px; }
 html[data-theme="reactor"] .lk-input, html[data-theme="reactor"] .lk-go, html[data-theme="reactor"] .lk-result { border-radius: 0; }

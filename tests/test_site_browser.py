@@ -24,7 +24,7 @@ from datetime import datetime
 from urllib.parse import quote
 
 import pytest
-from helpers import SITE_DATA
+from helpers import REPO, SITE_DATA
 
 pytestmark = pytest.mark.browser
 
@@ -978,3 +978,96 @@ def test_picking_a_build_answers_without_moving_focus_or_flashing(page, base_url
     assert not page.evaluate(
         "() => document.getElementById('lk-result').classList.contains('lk-flash')"
     )
+
+
+# --- Check my version: the device line -------------------------------------------------------
+
+DEVICES = json.loads((REPO / "src" / "data" / "devices.json").read_text(encoding="utf-8"))
+RESULT_BUILD = "24A446"
+
+
+def device_names(page) -> list[str]:
+    return page.eval_on_selector_all("#lk-device option", "els => els.map(e => e.value)")
+
+
+@pytest.mark.parametrize(
+    ("family", "default"),
+    [("iOS", "iPhone 18 Pro"), ("iPadOS", "iPad Pro 11-inch (M5)")],
+)
+def test_check_my_version_offers_the_official_devices_with_the_default_selected(
+    page, base_url, family, default
+):
+    lookup_ready(page, base_url)
+    assert not page.is_visible("#lk-device")
+    lookup_ask(page, family, RESULT_BUILD)
+    page.wait_for_selector("#lk-dev:not([hidden])")
+    assert page.input_value("#lk-device") == default
+    assert device_names(page) == DEVICES["families"][family]["27"]["devices"]
+    assert page.locator("label[for=lk-device]").inner_text().strip().lower() == "device"
+    assert page.locator("#lk-device").bounding_box()["height"] >= 44
+
+
+def test_check_my_version_hides_the_device_list_without_an_official_list(page, base_url):
+    lookup_ready(page, base_url)
+    lookup_ask(page, "iOS", RESULT_BUILD)
+    page.wait_for_selector("#lk-dev:not([hidden])")
+    lookup_ask(page, "Android", public("Android")[0]["build"])
+    answer(page)
+    page.wait_for_selector("#lk-dev", state="hidden")
+    assert page.locator("#lk-result .lk-dv").count() == 0
+    # Hidden again when the platform changes, until the next Check.
+    lookup_ask(page, "iOS", RESULT_BUILD)
+    page.wait_for_selector("#lk-dev:not([hidden])")
+    page.select_option("#lk-family", "macOS")
+    assert not page.is_visible("#lk-dev")
+
+
+def test_check_my_version_shows_a_device_result_and_updates_it_on_change(page, base_url):
+    lookup_ready(page, base_url)
+    lookup_ask(page, "iOS", RESULT_BUILD)
+    page.wait_for_selector("#lk-result .lk-dv")
+    page.wait_for_function(
+        "() => document.querySelector('#lk-result .lk-dv').textContent.includes('tested')"
+    )
+    assert page.inner_text("#lk-result .lk-dv") == "iPhone 18 Pro: pass, tested 2026-10-20"
+    page.select_option("#lk-device", "iPhone 17")
+    page.wait_for_function(
+        "() => document.querySelector('#lk-result .lk-dv').textContent.includes('warn')"
+    )
+    page.wait_for_function(
+        "() => document.querySelector('#lk-result .lk-dv').textContent.includes('2026-10-22')"
+    )
+    assert page.inner_text("#lk-result .lk-dv") == "iPhone 17: warn, tested 2026-10-22"
+    page.select_option("#lk-device", "iPhone 16")
+    page.wait_for_function(
+        "() => document.querySelector('#lk-result .lk-dv').textContent.startsWith('Not tested')"
+    )
+    assert page.inner_text("#lk-result .lk-dv") == "Not tested yet on iPhone 16."
+    # The answer above the device line is untouched, and the region stays polite and atomic.
+    assert page.inner_text("#lk-result .lk-say").startswith("Current for iOS")
+    assert page.get_attribute("#lk-result", "aria-live") == "polite"
+    # A second Check keeps the chosen device.
+    page.click("#lk-form button")
+    page.wait_for_selector("#lk-result .lk-dv")
+    assert page.input_value("#lk-device") == "iPhone 16"
+
+
+def test_check_my_version_says_not_tested_with_an_empty_results_index(page, base_url):
+    page.route(
+        "**/data/results/index.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body='{"schema": 1, "results": []}'
+        ),
+    )
+    lookup_ready(page, base_url)
+    lookup_ask(page, "iPadOS", RESULT_BUILD)
+    page.wait_for_selector("#lk-result .lk-dv")
+    assert page.inner_text("#lk-result .lk-dv") == "Not tested yet on iPad Pro 11-inch (M5)."
+
+
+def test_check_my_version_survives_a_missing_results_index(page, base_url):
+    page.route("**/data/results/index.json", lambda route: route.fulfill(status=404, body=""))
+    lookup_ready(page, base_url)
+    lookup_ask(page, "iOS", RESULT_BUILD)
+    page.wait_for_selector("#lk-result .lk-dv")
+    assert page.inner_text("#lk-result .lk-dv") == "Not tested yet on iPhone 18 Pro."

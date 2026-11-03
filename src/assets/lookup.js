@@ -145,6 +145,11 @@
   var input = doc.getElementById("lk-build");
   var pick = doc.getElementById("lk-pick");
   var out = doc.getElementById("lk-result");
+  var devBox = doc.getElementById("lk-dev");
+  var selDev = doc.getElementById("lk-device");
+  var extra = null;
+  var hitNow = null;
+  var devKey = "";
   var all = [];
   var asked = false;
   var shown = null;
@@ -225,7 +230,42 @@
         encodeURIComponent(j.newest.id) + "&platform=" + encodeURIComponent(family) + "&build=" +
         encodeURIComponent(hit.build || hit.version)
     } : null;
-    return { rows: rows, link: link };
+    return { rows: rows, link: link, hit: hit };
+  }
+
+  // The device list and the results index, loaded once; a missing file reads as empty.
+  function more() {
+    return extra || (extra = Promise.all(["/data/devices.json", "/data/results/index.json"].map(function (u) {
+      return RO.loadJson(u).catch(function () { return {}; });
+    })));
+  }
+
+  // The "Device" list for the build shown, and the line under the answer: that device's result for
+  // the build, or "Not tested yet". Shown only where devices.json lists the build's major version.
+  function device() {
+    var hit = hitNow;
+    if (!hit) { devBox.hidden = true; return; }
+    more().then(function (m) {
+      var list = ((m[0].families || {})[hit.family] || {})[hit.major];
+      devBox.hidden = hit !== hitNow || !(list && list.devices);
+      if (devBox.hidden) return;
+      var key = hit.family + hit.major;
+      if (key !== devKey) {
+        devKey = key;
+        selDev.textContent = "";
+        list.devices.forEach(function (d) { selDev.appendChild(RO.h("option", "", d, { value: d })); });
+        selDev.value = list.default;
+      }
+      var dev = selDev.value, p = out.querySelector(".lk-dv") || out.appendChild(RO.h("p", "lk-dv"));
+      var row = (m[1].results || []).filter(function (r) {
+        return r.family === hit.family && r.build === String(hit.build || hit.version) && r.device === dev;
+      })[0];
+      var say = row ? dev + ": " + row.status : "Not tested yet on " + dev + ".";
+      p.textContent = say;
+      if (row) RO.loadJson(row.path).then(function (d) {
+        if (hit === hitNow && selDev.value === dev && d.testedAt) p.textContent = say + ", tested " + String(d.testedAt).slice(0, 10);
+      }, function () {});
+    });
   }
 
   // The "Pick a build" list for the selected platform: a first empty choice, then its builds. It
@@ -259,6 +299,7 @@
     var key = JSON.stringify(result);
     if (key === shown) return;
     shown = key;
+    hitNow = result.hit || null;
     out.textContent = "";
     result.rows.forEach(function (row) { out.appendChild(RO.h("p", row[0], row[1])); });
     if (result.link) {
@@ -266,6 +307,7 @@
       p.appendChild(RO.h("a", "lk-compare", result.link.text, { href: result.link.href }));
       out.appendChild(p);
     }
+    device();
   }
 
   function reveal(pointer) {
@@ -312,6 +354,8 @@
     asked = false;
     stale = true;
     shown = null;
+    hitNow = null;
+    devBox.hidden = true;
     out.textContent = "";
     fillPick();
     remember(true);
@@ -330,6 +374,7 @@
       remember();
     }, 300);
   });
+  selDev.addEventListener("change", device);
   // Typing a version or build of the platform picks that release; anything else empties the pick.
   input.addEventListener("input", function () {
     cancel();
