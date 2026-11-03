@@ -1732,8 +1732,14 @@ def test_the_line_chips_appear_only_for_a_platform_with_lines(page, base_url):
     assert page.locator("#chips-line .chip").all_inner_texts()[0] == "All"
     assert "line=" not in page.url
     assert page.locator(".tl-item").count() == len(releases("Windows"))
+    # SteamOS minors are lines for this filter only, newest first.
     page.click("#chips-family [data-v=SteamOS]")
-    assert page.locator("#filter-line").is_hidden()
+    assert page.locator("#filter-line").is_visible()
+    assert page.locator("#chips-line .chip").all_inner_texts() == ["All", "3.9", "3.8"]
+    page.click("#chips-line [data-v='3.8']")
+    older = [r for r in releases("SteamOS") if r["version"].startswith("3.8.")]
+    assert page.locator(".tl-item").count() == len(older)
+    assert page.url.endswith("?family=SteamOS&line=3.8")
 
 
 def test_the_line_chips_are_real_buttons_of_at_least_44px(page, base_url):
