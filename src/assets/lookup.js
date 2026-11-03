@@ -1,7 +1,7 @@
 /* "Check my version" on the front page and Compare: a platform and a version or build, matched
    against the loaded releases. The answer is "current" (the newest public release by version, as
    the cards pick it), the newest of its line (the release's `line`: a RouterOS channel or a Windows
-   feature update; else the major version), a
+   feature update; else the major version, which is also all SteamOS has), a
    pre-release, a version not in the data placed against its line, or how far behind the newest it
    is, counted as Compare counts, with the CVE count where window.Sec is loaded. The query is kept
    as ?platform= and ?build=. A second field lists the platform's known builds to pick from
@@ -17,8 +17,10 @@
   // years), so each feature update (25H2, 26H1) is its own.
   function seriesOf(r) { return r.family === "Windows" ? String(r.version) : String(r.major); }
   // A line is what the data says (`line`: a RouterOS channel, a Windows feature update), else the
-  // series, which is what an older copy of the data without lines still gets.
-  function lineOf(r) { return r.line ? String(r.line) : seriesOf(r); }
+  // series, which is what an older copy of the data without lines still gets. SteamOS rows carry
+  // a minor-version `line` for the timeline filter, but only one minor is stable at a time, so an
+  // older minor is superseded, not a line of its own: SteamOS stays on its major version.
+  function lineOf(r) { return r.line && r.family !== "SteamOS" ? String(r.line) : seriesOf(r); }
 
   function cmp(a, b) {
     var x = String(a).split("."), y = String(b).split(".");

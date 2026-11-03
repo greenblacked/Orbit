@@ -194,6 +194,18 @@ describe('judge by line', () => {
     assert.equal(j.line, '25H2');
   });
 
+  it('keeps SteamOS on its major version: an older minor is superseded, not a line', () => {
+    const list = [
+      rel('3.9.1', '', 'release', 30, 'SteamOS', '3.9'),
+      rel('3.8.28', '', 'release', 20, 'SteamOS', '3.8'),
+      rel('3.7.20', '', 'release', 10, 'SteamOS', '3.7'),
+    ];
+    const ctx = { newest: list[0], higher: (a, b) => versionOrder(a.version, b.version) > 0 };
+    assert.equal(Lookup.judge(list, list[1], ctx).kind, 'superseded');
+    assert.equal(Lookup.judge(list, list[2], ctx).kind, 'superseded');
+    assert.equal(Lookup.judge(list, list[0], ctx).kind, 'current');
+  });
+
   it('names the newest of its own line for a release that is superseded', () => {
     const list = [rel('27.1', 'a', 'release', 30), rel('26.7.1', 'b', 'release', 20), rel('26.7', 'c', 'release', 10)];
     const j = Lookup.judge(list, list[2]);

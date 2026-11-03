@@ -289,6 +289,25 @@ def test_a_family_without_lines_and_a_card_with_one_line_list_nothing_extra(page
         assert lines.is_hidden() and lines.locator("li").count() == 0, family
 
 
+def test_a_steamos_card_with_several_minors_lists_no_other_lines(page, base_url):
+    # SteamOS minors are timeline filter lines, not simultaneously supported lines: an older
+    # stable minor must not show on the card, with or without `line` in the data.
+    data = copy.deepcopy(SNAPSHOT)
+    steam = [r for r in data["releases"] if r["family"] == "SteamOS" and r["stage"] == "release"]
+    older = copy.deepcopy(steam[0])
+    older.update(id=older["id"] + "-old", version="3.7.20", title="SteamOS 3.7.20", line="3.7")
+    older["date"] = "2020-01-01T00:00:00Z"
+    data["releases"].append(older)
+    for r in data["releases"]:
+        if r["family"] == "SteamOS" and r is not older:
+            r.pop("line", None)
+    serve_json(page, "**/api/releases.json", json.dumps(data))
+    page.goto(base_url + "/")
+    cards_ready(page)
+    lines = page.locator('#latest-grid [data-family="SteamOS"] [data-f=lines]')
+    assert lines.is_hidden() and lines.locator("li").count() == 0
+
+
 def test_a_line_that_is_not_a_plain_token_is_dropped_by_the_page(page, base_url):
     data = copy.deepcopy(SNAPSHOT)
     for r in data["releases"]:

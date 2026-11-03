@@ -62,7 +62,8 @@ const WINDOWS_UPDATE_RE = /^\d\dH\d$/;
  * The release with `line` derived when it has none: a row cached before lines existed.
  * The same rules as the adapters and as normalise() in src/assets/releases.js: a RouterOS
  * row's channel is the end of its id, a Windows row's feature update is its version
- * (26H2), a SteamOS row's minor line is the major.minor of its version (3.7). A line already there is never changed, and no other family gets one.
+ * (26H2), a SteamOS row's minor line is the major.minor of its version (3.7). A line already
+ * there is never changed, and no other family gets one.
  */
 export function backfillLine(release) {
   if (!release || typeof release !== 'object' || (release.line !== undefined && release.line !== null)) {
