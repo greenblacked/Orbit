@@ -233,39 +233,41 @@
     return { rows: rows, link: link, hit: hit };
   }
 
-  // The device list and the results index, loaded once; a missing file reads as empty.
+  // Device list and results index, loaded once; a missing file reads as empty.
   function more() {
     return extra || (extra = Promise.all(["/data/devices.json", "/data/results/index.json"].map(function (u) {
       return RO.loadJson(u).catch(function () { return {}; });
     })));
   }
 
-  // The "Device" list for the build shown, and the line under the answer: that device's result for
-  // the build, or "Not tested yet". Shown only where devices.json lists the build's major version.
+  // The Device list (only where devices.json lists the build's major) and the line under the answer.
+  var SAY = { pass: "passed", warn: "passed with warnings", fail: "failed" };
   function device() {
     var hit = hitNow;
     if (!hit) { devBox.hidden = true; return; }
     more().then(function (m) {
-      var list = ((m[0].families || {})[hit.family] || {})[hit.major];
-      devBox.hidden = hit !== hitNow || !(list && list.devices);
+      var list = ((m[0].families || {})[hit.family] || {})[hit.major], devs = list && list.devices;
+      devBox.hidden = hit !== hitNow || !Array.isArray(devs) || !devs.length;
       if (devBox.hidden) return;
-      var key = hit.family + hit.major;
-      if (key !== devKey) {
-        devKey = key;
+      if (hit.family + hit.major !== devKey) {
+        devKey = hit.family + hit.major;
         selDev.textContent = "";
-        list.devices.forEach(function (d) { selDev.appendChild(RO.h("option", "", d, { value: d })); });
+        devs.forEach(function (d) { selDev.appendChild(RO.h("option", "", d, { value: d })); });
         selDev.value = list.default;
+        if (!selDev.value) selDev.selectedIndex = 0;
       }
-      var dev = selDev.value, p = out.querySelector(".lk-dv") || out.appendChild(RO.h("p", "lk-dv"));
-      var row = (m[1].results || []).filter(function (r) {
-        return r.family === hit.family && r.build === String(hit.build || hit.version) && r.device === dev;
+      var dev = selDev.value, rs = m[1].results, row = (Array.isArray(rs) ? rs : []).filter(function (r) {
+        return r.family === hit.family && r.build === String(hit.build || hit.version) && r.device === dev && SAY[r.status];
       })[0];
-      var say = row ? dev + ": " + row.status : "Not tested yet on " + dev + ".";
-      p.textContent = say;
-      if (row) RO.loadJson(row.path).then(function (d) {
-        if (hit === hitNow && selDev.value === dev && d.testedAt) p.textContent = say + ", tested " + String(d.testedAt).slice(0, 10);
-      }, function () {});
-    });
+      function put(date) {
+        if (hit !== hitNow || selDev.value !== dev) return;
+        var p = out.querySelector(".lk-dv") || out.appendChild(RO.h("p", "lk-dv"));
+        p.textContent = !row ? "Not tested yet on " + dev + "." :
+          dev + ": " + SAY[row.status] + (date ? ", tested " + String(date).slice(0, 10) : "");
+      }
+      if (row) RO.loadJson(row.path).then(function (d) { put(d.testedAt); }, function () { put(); });
+      else put();
+    }).catch(function () { devBox.hidden = true; });
   }
 
   // The "Pick a build" list for the selected platform: a first empty choice, then its builds. It

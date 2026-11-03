@@ -1007,8 +1007,9 @@ def test_check_my_version_offers_the_official_devices_with_the_default_selected(
     assert page.locator("#lk-device").bounding_box()["height"] >= 44
 
 
-def test_check_my_version_hides_the_device_list_without_an_official_list(page, base_url):
-    lookup_ready(page, base_url)
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_check_my_version_hides_the_device_list_without_an_official_list(page, base_url, path):
+    lookup_ready(page, base_url, path)
     lookup_ask(page, "iOS", RESULT_BUILD)
     page.wait_for_selector("#lk-dev:not([hidden])")
     lookup_ask(page, "Android", public("Android")[0]["build"])
@@ -1022,22 +1023,34 @@ def test_check_my_version_hides_the_device_list_without_an_official_list(page, b
     assert not page.is_visible("#lk-dev")
 
 
-def test_check_my_version_shows_a_device_result_and_updates_it_on_change(page, base_url):
+def test_check_my_version_hides_the_device_list_for_a_major_without_a_list(page, base_url):
+    old = next(r for r in public("iOS") if r["version"].startswith("26"))
     lookup_ready(page, base_url)
+    lookup_ask(page, "iOS", old["build"])
+    answer(page)
+    page.wait_for_function("() => !document.querySelector('#lk-result .lk-dv')")
+    assert not page.is_visible("#lk-dev")
+    assert page.locator("#lk-result .lk-dv").count() == 0
+
+
+@pytest.mark.parametrize("path", ["/", "/compare/"])
+def test_check_my_version_shows_a_device_result_and_updates_it_on_change(page, base_url, path):
+    lookup_ready(page, base_url, path)
     lookup_ask(page, "iOS", RESULT_BUILD)
     page.wait_for_selector("#lk-result .lk-dv")
     page.wait_for_function(
         "() => document.querySelector('#lk-result .lk-dv').textContent.includes('tested')"
     )
-    assert page.inner_text("#lk-result .lk-dv") == "iPhone 18 Pro: pass, tested 2026-10-20"
+    assert page.inner_text("#lk-result .lk-dv") == "iPhone 18 Pro: passed, tested 2026-10-20"
     page.select_option("#lk-device", "iPhone 17")
     page.wait_for_function(
-        "() => document.querySelector('#lk-result .lk-dv').textContent.includes('warn')"
+        "() => document.querySelector('#lk-result .lk-dv').textContent.includes('warnings')"
     )
     page.wait_for_function(
         "() => document.querySelector('#lk-result .lk-dv').textContent.includes('2026-10-22')"
     )
-    assert page.inner_text("#lk-result .lk-dv") == "iPhone 17: warn, tested 2026-10-22"
+    line = page.inner_text("#lk-result .lk-dv")
+    assert line == "iPhone 17: passed with warnings, tested 2026-10-22"
     page.select_option("#lk-device", "iPhone 16")
     page.wait_for_function(
         "() => document.querySelector('#lk-result .lk-dv').textContent.startsWith('Not tested')"
@@ -1066,7 +1079,92 @@ def test_check_my_version_says_not_tested_with_an_empty_results_index(page, base
 
 
 def test_check_my_version_survives_a_missing_results_index(page, base_url):
+    problems: list[str] = []
+    page.on("pageerror", lambda e: problems.append(str(e)))
+    # The 404 the test itself forces is logged by the browser; anything else is a real error.
+    page.on(
+        "console",
+        lambda m: problems.append(m.text)
+        if m.type == "error" and "404" not in m.text
+        else None,
+    )
     page.route("**/data/results/index.json", lambda route: route.fulfill(status=404, body=""))
+    lookup_ready(page, base_url)
+    lookup_ask(page, "iOS", RESULT_BUILD)
+    page.wait_for_selector("#lk-result .lk-dv")
+    assert page.inner_text("#lk-result .lk-dv") == "Not tested yet on iPhone 18 Pro."
+    assert problems == []
+
+
+def test_check_my_version_survives_a_missing_device_list_and_malformed_data(page, base_url):
+    problems: list[str] = []
+    page.on("pageerror", lambda e: problems.append(str(e)))
+    page.on("console", lambda m: problems.append(m.text) if m.type == "error" else None)
+    page.route(
+        "**/data/devices.json",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body='{"families": {"iOS": {"27": {"default": "x", "devices": {"a": 1}}}}}',
+        ),
+    )
+    page.route(
+        "**/data/results/index.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body='{"results": {"a": 1}}'
+        ),
+    )
+    lookup_ready(page, base_url)
+    lookup_ask(page, "iOS", RESULT_BUILD)
+    answer(page)
+    page.wait_for_load_state("networkidle")
+    assert not page.is_visible("#lk-dev")
+    assert problems == []
+
+
+def test_check_my_version_falls_back_to_the_first_device_for_a_bad_default(page, base_url):
+    problems: list[str] = []
+    page.on("pageerror", lambda e: problems.append(str(e)))
+    devices = json.loads(json.dumps(DEVICES))
+    devices["families"]["iOS"]["27"]["default"] = "No such phone"
+    page.route(
+        "**/data/devices.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json", body=json.dumps(devices)
+        ),
+    )
+    lookup_ready(page, base_url)
+    lookup_ask(page, "iOS", RESULT_BUILD)
+    page.wait_for_selector("#lk-result .lk-dv")
+    first = DEVICES["families"]["iOS"]["27"]["devices"][0]
+    assert page.input_value("#lk-device") == first
+    assert page.inner_text("#lk-result .lk-dv").startswith(first)
+    assert problems == []
+
+
+def test_check_my_version_reads_an_untested_result_as_not_tested(page, base_url):
+    page.route(
+        "**/data/results/index.json",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "schema": 1,
+                    "results": [
+                        {
+                            "vendor": "apple",
+                            "family": "iOS",
+                            "build": RESULT_BUILD,
+                            "device": "iPhone 18 Pro",
+                            "status": "untested",
+                            "path": "/data/results/apple/iOS/24A446/iphone-18-pro.json",
+                        }
+                    ],
+                }
+            ),
+        ),
+    )
     lookup_ready(page, base_url)
     lookup_ask(page, "iOS", RESULT_BUILD)
     page.wait_for_selector("#lk-result .lk-dv")
