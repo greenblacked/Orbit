@@ -278,17 +278,56 @@ function visibleText(html) {
   }
 }
 
+// At most this many h1 elements are looked at, so a hostile page cannot make the heading lookup long.
+const MAX_H1 = 20;
+
 /**
- * One security content page as { title, products, released, cves }, or null when it has no `h1`.
+ * The page heading, as { text, h1Count, prefixInH1, prefixInTitle } with `text` null when the page has no
+ * `h1` and no usable `<title>`. Lookup order: the first of the first MAX_H1 `h1` elements whose
+ * visible text starts with TITLE_PREFIX; else the document `<title>` when it starts with the prefix
+ * and names at least one recognised product (a trailing " - <site>" is cut off when what remains
+ * still names one); else the first `h1`. `text` is the chosen heading, prefix included.
+ */
+function findHeading(text) {
+  const re = /<h1\b[^>]*>([\s\S]*?)<\/h1>/g;
+  const h1s = [];
+  while (h1s.length < MAX_H1) {
+    const m = re.exec(text);
+    if (!m) break;
+    h1s.push(textOf(m[1]));
+  }
+  const prefixed = h1s.find((h) => h.startsWith(TITLE_PREFIX));
+  const tag = /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(text);
+  const full = tag ? textOf(tag[1]) : '';
+  const prefixInTitle = full.startsWith(TITLE_PREFIX);
+  let fromTitle = null;
+  if (prefixInTitle) {
+    const cut = full.lastIndexOf(' - ');
+    const named = (heading) => parseProducts(heading.slice(TITLE_PREFIX.length)).length > 0;
+    if (cut > TITLE_PREFIX.length && named(full.slice(0, cut))) fromTitle = full.slice(0, cut);
+    else if (named(full)) fromTitle = full;
+  }
+  const chosen = prefixed ?? fromTitle ?? h1s[0];
+  return {
+    text: chosen ?? null,
+    h1Count: h1s.length,
+    prefixInH1: prefixed !== undefined,
+    prefixInTitle,
+  };
+}
+
+/**
+ * One security content page as { title, products, released, cves }, or null when it has no `h1`
+ * and no usable `<title>` (see findHeading for the lookup order).
  * `title` is the page heading without "About the security content of". `released` is the
  * "Released ..." line, else the Published Date, else null. `cves` is the sorted, unique ids that
  * start a paragraph ("CVE-2026-86950: credit"), and nothing else of the page is kept.
  */
 export function parseNote(html) {
   const text = String(html);
-  const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(text);
-  if (!h1) return null;
-  let title = textOf(h1[1]);
+  const heading = findHeading(text);
+  if (heading.text === null) return null;
+  let title = heading.text;
   if (title.startsWith(TITLE_PREFIX)) title = title.slice(TITLE_PREFIX.length);
   const released = /<p\b[^>]*>\s*Released ([A-Za-z]{3,9} \d{1,2}, \d{4})\s*<\/p>/.exec(text);
   return {
@@ -330,10 +369,12 @@ export function whyNotUsable(html, release, maxCves) {
   const count = cveParagraphIds(text).length;
   if (page && count > 0 && count <= maxCves && covers(page, release)) return null;
   const yn = (value) => (value ? 'yes' : 'no');
-  const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(text);
+  const heading = findHeading(text);
   const anywhere = new Set(visibleText(text).match(CVE_ID) ?? []).size;
   return (
-    `h1: ${yn(h1)}; title prefix: ${yn(h1 && textOf(h1[1]).startsWith(TITLE_PREFIX))}; ` +
+    `h1: ${yn(heading.h1Count)}; title prefix: ${yn(heading.text?.startsWith(TITLE_PREFIX))}; ` +
+    `h1 count: ${heading.h1Count}; prefix in any h1: ${yn(heading.prefixInH1)}; ` +
+    `prefix in title: ${yn(heading.prefixInTitle)}; ` +
     `products recognised: ${page ? page.products.length : 0}; ` +
     `covers release: ${yn(page && covers(page, release))}; CVE paragraphs: ${count}; ` +
     `CVE ids anywhere in text: ${anywhere}; over CVE cap: ${yn(count > maxCves)}; ` +
