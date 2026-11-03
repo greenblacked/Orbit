@@ -377,12 +377,17 @@ def test_every_page_advertises_the_atom_feed(name):
     assert html.index(tag) < html.index("</head>")
 
 
-def test_the_timeline_offers_a_subscribe_link_near_its_filters():
+def test_the_timeline_offers_subscribe_links_near_its_filters():
     html = page("timeline/index.html")
-    link = re.search(r'<a class="chip-link" href="/api/feed\.atom"[^>]*>Subscribe', html)
-    assert link
-    assert html.index('id="filters"') < link.start() < html.index('id="count"')
-    assert html.count("/api/feed.atom") == 2  # the head link and this one
+    for ident, href in (("feed-atom", "/api/feed.atom"), ("feed-json", "/api/feed.json")):
+        link = re.search(
+            r'<a class="chip-link" id="%s" href="%s"[^>]*>Subscribe' % (ident, re.escape(href)),
+            html,
+        )
+        assert link, ident
+        assert html.index('id="filters"') < link.start() < html.index('id="count"')
+    assert html.count("/api/feed.atom") == 2  # the head link and the Atom link
+    assert html.count("/api/feed.json") == 1  # the JSON link
 
 
 def test_the_pointer_highlight_on_cards_is_gone():
