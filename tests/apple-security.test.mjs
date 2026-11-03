@@ -810,6 +810,30 @@ describe('the heading lookup across page variants', () => {
     assert.equal(parseNote(html).title, 'iOS 15.8.8');
   });
 
+  it('cuts a pipe separator from the title and keeps every product', () => {
+    const html = `<title>${P}${BOTH} | Apple Support</title><h1>Other</h1>${cve}`;
+    assert.equal(parseNote(html).title, BOTH);
+    assert.equal(whyNotUsable(html, ipad, 5), null);
+  });
+
+  it('refuses a title where one "and" part is not a recognised product', () => {
+    const html = `<title>${P}iOS 15.8.8 and Safari Thing</title><h1>Other</h1>${cve}`;
+    assert.equal(parseNote(html).title, 'Other');
+  });
+
+  it('ignores a title after the head, in a comment, or behind a fake body tag', () => {
+    const t = `<title>${P}iOS 15.8.8</title>`;
+    const tail = `<h1>Other</h1>${cve}`;
+    assert.equal(parseNote(`<head></head><svg>${t}</svg>${tail}`).title, 'Other');
+    assert.equal(parseNote(`<head><!-- ${t} --></head>${tail}`).title, 'Other');
+    assert.equal(parseNote(`<head>${t}</head>${tail}`).title, 'iOS 15.8.8');
+    assert.equal(parseNote(`<bodyguard>${t}${tail}`).title, 'iOS 15.8.8');
+  });
+
+  it('reads h1 case-insensitively and accepts a spaced closing tag', () => {
+    assert.equal(parseNote(`<H1>${P}iOS 15.8.8</H1 >${cve}`).title, 'iOS 15.8.8');
+  });
+
   it('is null with no h1 and no usable title, and parses a title-only page', () => {
     assert.equal(parseNote(`<title>Apple Support</title>${cve}`), null);
     assert.equal(parseNote(`<title>${P}Something else</title>${cve}`), null);

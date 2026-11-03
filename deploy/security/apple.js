@@ -282,7 +282,7 @@ function visibleText(html) {
 const MAX_H1 = 20;
 
 // Site-name separators that may follow the product part of a document title.
-const TITLE_SEPARATORS = [' - ', ' – ', ' — '];
+const TITLE_SEPARATORS = [' - ', ' – ', ' — ', ' | '];
 
 /**
  * The visible text of the first `max` `<name>` elements, found with indexOf only: each search
@@ -304,7 +304,11 @@ function elementTexts(text, lower, name, max) {
     }
     const gt = lower.indexOf('>', at);
     if (gt < 0) break;
-    const end = lower.indexOf(close, gt + 1);
+    // The closing tag needs a boundary after its name ("</h10" is not "</h1").
+    let end = lower.indexOf(close, gt + 1);
+    while (end >= 0 && !/[\s>/]/.test(lower[end + close.length] ?? '')) {
+      end = lower.indexOf(close, end + close.length);
+    }
     if (end < 0) break;
     out.push({ at, text: textOf(text.slice(gt + 1, end)) });
     from = end + close.length;
@@ -315,22 +319,23 @@ function elementTexts(text, lower, name, max) {
 /**
  * The page heading, as { text, h1Count, prefixInH1, prefixInTitle } with `text` null when the page
  * has no `h1` and no usable `<title>`. Lookup order: the first of the first MAX_H1 `h1` elements
- * whose visible text starts with TITLE_PREFIX; else the document `<title>` (the first one, and only
- * before the body) when it starts with the prefix and names a recognised product (when it ends in
- * " - <site>", also with an en or em dash, it is used only if what precedes the last separator
- * names one); else the first `h1`. `text` is the chosen heading, prefix included.
+ * whose visible text starts with TITLE_PREFIX; else the document `<title>` (the first one, found
+ * only before `</head>` or the body, comments skipped) when it starts with the prefix and every
+ * "and"-part of its product list is a recognised product (when it ends in " - <site>", also with
+ * an en or em dash or " | ", it is used only if the part before the last separator is such a
+ * list); else the first `h1`. `text` is the chosen heading, prefix included.
  */
 function findHeading(text) {
   const lower = asciiLower(text);
   const h1s = elementTexts(text, lower, 'h1', MAX_H1).map((h) => h.text);
   const prefixed = h1s.find((h) => h.startsWith(TITLE_PREFIX));
-  const bodyAt = lower.indexOf('<body');
-  const [tag] = elementTexts(text, lower, 'title', 1);
-  const full = tag && (bodyAt < 0 || tag.at < bodyAt) ? tag.text : '';
+  const { head, headLower } = headOf(text, lower);
+  const [tag] = elementTexts(head, headLower, 'title', 1);
+  const full = tag ? tag.text : '';
   const prefixInTitle = full.startsWith(TITLE_PREFIX);
   let fromTitle = null;
   if (prefixInTitle) {
-    const named = (heading) => parseProducts(heading.slice(TITLE_PREFIX.length)).length > 0;
+    const named = (heading) => namesOnlyProducts(heading.slice(TITLE_PREFIX.length));
     const cut = Math.max(...TITLE_SEPARATORS.map((s) => full.lastIndexOf(s)));
     if (cut > TITLE_PREFIX.length) {
       if (named(full.slice(0, cut))) fromTitle = full.slice(0, cut);
@@ -343,6 +348,41 @@ function findHeading(text) {
     prefixInH1: prefixed !== undefined,
     prefixInTitle,
   };
+}
+
+// True when every "and"-part of the name is a recognised product (parseProducts skips the rest).
+function namesOnlyProducts(name) {
+  const parts = String(name).split(/\s+and\s+/);
+  return parseProducts(name).length === parts.length;
+}
+
+// The part of the page before the body, with comments blanked out (same length, so indexes hold):
+// it ends at the first "</head" or real "<body" (name followed by whitespace, ">" or "/").
+function headOf(text, lower) {
+  let masked = '';
+  let at = 0;
+  for (;;) {
+    const open = lower.indexOf('<!--', at);
+    if (open < 0) {
+      masked += text.slice(at);
+      break;
+    }
+    const close = lower.indexOf('-->', open + 4);
+    const end = close < 0 ? text.length : close + 3;
+    masked += text.slice(at, open) + ' '.repeat(end - open);
+    at = end;
+    if (close < 0) break;
+  }
+  const maskedLower = asciiLower(masked);
+  let limit = maskedLower.length;
+  for (const mark of ['</head', '<body']) {
+    let i = maskedLower.indexOf(mark);
+    while (i >= 0 && !/[\s>/]/.test(maskedLower[i + mark.length] ?? '')) {
+      i = maskedLower.indexOf(mark, i + mark.length);
+    }
+    if (i >= 0) limit = Math.min(limit, i);
+  }
+  return { head: masked.slice(0, limit), headLower: maskedLower.slice(0, limit) };
 }
 
 /**
