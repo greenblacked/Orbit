@@ -11,9 +11,12 @@
 #
 # It commits nothing, pushes nothing, opens nothing and holds no secret or token: the job can
 # read the repository and nothing else, the checkout keeps no credential, and the refreshed
-# files stay on the runner. The log carries fixed labels and counts only, never a payload.
-# Same pinned actions as security-snapshot.yml. GitHub disables scheduled workflows after 60
-# days without repository activity; a merge or a manual run switches it back on.
+# files stay on the runner. Apart from the snapshot scripts' own output (fenced with
+# stop-commands), the log carries fixed labels and counts only; no payload is printed.
+# Same pinned actions as security-snapshot.yml. In a public repository GitHub disables
+# scheduled workflows after 60 days without repository activity; re-enable it from the
+# Actions tab (Enable workflow). A scheduled run checks the default branch, a manual run the
+# branch it is dispatched on; if dev already carries the refresh, release it instead.
 name: Data check
 
 on:
@@ -31,7 +34,7 @@ jobs:
   check:
     name: check that the bundled data is current
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     permissions:
       contents: read
     steps:
@@ -120,7 +123,7 @@ jobs:
                   console.log("vendor " + vendor + ": added " + c.added + ", removed " + c.removed + ", changed " + c.changed);
                 }
                 console.log("other fields changed: " + otherFields);
-                process.exit(added + removed + changed + otherFields === 0 ? 0 : 3);
+                process.exit(!same(before, after) || added + removed + changed + otherFields > 0 ? 3 : 0);
               }
               const rowsWas = before.releases ?? {};
               const rowsNow = after.releases ?? {};
@@ -154,7 +157,7 @@ jobs:
               console.log("security notes changed: " + notesChanged);
               console.log("other fields changed: " + otherFields);
               const total = rowsAdded + rowsRemoved + rowsChanged + rowsOther + notesAdded + notesRemoved + notesChanged + otherFields;
-              process.exit(total === 0 ? 0 : 3);
+              process.exit(!same(before, after) || total > 0 ? 3 : 0);
             } catch (error) {
               console.log("comparison failed: a file could not be read or parsed");
               process.exit(2);
@@ -169,16 +172,20 @@ jobs:
           echo "security comparison exit code: $security_diff"
 
           failed=0
+          if { [ "$releases_diff" -ne 0 ] && [ "$releases_diff" -ne 3 ]; } || { [ "$security_diff" -ne 0 ] && [ "$security_diff" -ne 3 ]; }; then
+            echo "::error::The comparison could not read a data file: open the log."
+            failed=1
+          fi
           if [ "$releases_status" -ne 0 ] || [ "$security_status" -ne 0 ]; then
             echo "::error::A source could not be read: open the log, then run the Releases snapshot and the Security snapshot workflows by hand."
             failed=1
           fi
-          if [ "$releases_diff" -ne 0 ]; then
-            echo "::error::The bundled release data is behind the vendors: run the Releases snapshot workflow and open the data pull request; then the Security snapshot."
+          if [ "$releases_diff" -eq 3 ]; then
+            echo "::error::The bundled release data is behind the vendors: run the Releases snapshot workflow and open the data pull request; then the Security snapshot. If dev already has the refresh, release dev instead."
             failed=1
           fi
-          if [ "$security_diff" -ne 0 ]; then
-            echo "::error::The bundled security data is behind the vendors: run the Security snapshot workflow and open the data pull request."
+          if [ "$security_diff" -eq 3 ]; then
+            echo "::error::The bundled security data is behind the vendors: run the Security snapshot workflow and open the data pull request. If dev already has the refresh, release dev instead."
             failed=1
           fi
           if [ "$failed" -eq 0 ]; then

@@ -18,7 +18,8 @@ def test_the_data_check_runs_weekly_or_by_hand_and_nothing_else():
     text = read("data-check.yml")
     head = text.split("\njobs:\n", 1)[0]
     assert re.search(
-        r"^on:\n  schedule:\n    - cron: '[0-9]+ [0-9]+ \* \* [0-9]'\n  workflow_dispatch:\n\npermissions:",
+        r"^on:\n  schedule:\n    - cron: '[0-9]+ [0-9]+ \* \* [0-9]'\n"
+        r"  workflow_dispatch:\n\npermissions:",
         head,
         flags=re.MULTILINE,
     )
@@ -32,7 +33,7 @@ def test_the_data_check_is_read_only_with_a_timeout():
     text = read("data-check.yml")
     assert re.search(r"^permissions: \{\}$", text, flags=re.MULTILINE)
     assert text.count("permissions:") == 2
-    assert re.search(r"^    permissions:\n      contents: read\n", text, flags=re.MULTILINE)
+    assert "\n    permissions:\n      contents: read\n    steps:\n" in text
     assert re.search(r"^    timeout-minutes: \d+$", text, flags=re.MULTILINE)
     assert "secrets." not in text and "upload-artifact" not in text
     assert "GITHUB_TOKEN" not in text and "GH_TOKEN" not in text and "github.token" not in text
@@ -46,6 +47,8 @@ def test_the_data_check_pins_the_same_actions_as_the_snapshot_workflows():
     found = re.findall(USES, text)
     assert len(found) == 2
     assert len(re.findall(r"^\s*- uses:", text, flags=re.MULTILINE)) == 2
+    assert "node-version: '22.23.3'" in text and "node-version: '22.23.3'" in snapshot
+    assert "package-manager-cache: false" in text and "package-manager-cache: false" in snapshot
     for action in found:
         assert action in snapshot, action
 
