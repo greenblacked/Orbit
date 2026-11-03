@@ -1,25 +1,21 @@
 /* "Check my version" on the front page and Compare: a platform and a version or build, matched
    against the loaded releases. The answer is "current" (the newest public release by version, as
-   the cards pick it), the newest of its line (the release's `line`: a RouterOS channel or a Windows
-   feature update; else the major version, which is also all SteamOS has), a
-   pre-release, a version not in the data placed against its line, or how far behind the newest it
-   is, counted as Compare counts, with the CVE count where window.Sec is loaded. The query is kept
-   as ?platform= and ?build=. A second field lists the platform's known builds to pick from
-   instead of typing. find, judge, behind and options are exported for the Node tests; the rest
-   runs in a browser. */
+   the cards pick it), the newest of its line (its `line`, else the major version), a pre-release,
+   a version not in the data placed against its line, or how far behind the newest it is, counted
+   as Compare counts, with the CVE count where window.Sec is loaded. The query is kept as
+   ?platform= and ?build=. A second field lists known builds to pick from. find, judge, behind
+   and options are exported for the Node tests; the rest runs in a browser. */
 (function (root) {
   "use strict";
   var DAY = 864e5;
 
   function norm(s) { return String(s == null ? "" : s).trim().replace(/\s+/g, " ").toLowerCase(); }
 
-  // The series a dotted number belongs to: the major version; Windows has no such thing (22-26 are
-  // years), so each feature update (25H2, 26H1) is its own.
+  // The series of a dotted number: the major version; for Windows (22-26 are years) each
+  // feature update (25H2, 26H1).
   function seriesOf(r) { return r.family === "Windows" ? String(r.version) : String(r.major); }
-  // A line is what the data says (`line`: a RouterOS channel, a Windows feature update), else the
-  // series, which is what an older copy of the data without lines still gets. SteamOS rows carry
-  // a minor-version `line` for the timeline filter, but only one minor is stable at a time, so an
-  // older minor is superseded, not a line of its own: SteamOS stays on its major version.
+  // The data's `line`, else the series (older data has no lines). SteamOS `line` is a minor
+  // version for the timeline only; an older minor is superseded, so SteamOS uses its major.
   function lineOf(r) { return r.line && r.family !== "SteamOS" ? String(r.line) : seriesOf(r); }
 
   function cmp(a, b) {
@@ -53,9 +49,9 @@
     return null;
   }
 
-  // The release whose version or build is `text` (a release wins over a beta of the same version),
-  // else null. A name may come first ("iOS 26.1", "macOS Tahoe 26.6.2"); a bare major ("Android
-  // 16") works when its releases share one version.
+  // The release whose version or build is `text` (a release wins over a beta of the same
+  // version), else null. A name may come first ("iOS 26.1"); a bare major ("Android 16") works
+  // when its releases share one version.
   function find(list, text, family) {
     var asked = norm(text);
     if (!asked) return null;
