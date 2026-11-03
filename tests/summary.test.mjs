@@ -134,6 +134,16 @@ describe('backfillLine', () => {
     assert.equal(backfillLine({ id: 'w#x', family: 'Windows', version: '22621' }).line, undefined);
   });
 
+  it('gives a cached SteamOS row the major.minor of its version as the line', () => {
+    assert.equal(backfillLine({ id: 's#1', family: 'SteamOS', version: '3.7.13' }).line, '3.7');
+    assert.equal(backfillLine({ id: 's#2', family: 'SteamOS', version: '3.10.2' }).line, '3.10');
+    assert.equal(backfillLine({ id: 's#3', family: 'SteamOS', version: '3.8' }).line, '3.8');
+    const odd = { id: 's#4', family: 'SteamOS', version: '3' };
+    assert.equal(backfillLine(odd), odd);
+    const kept = { id: 's#5', family: 'SteamOS', version: '3.7.13', line: '3.6' };
+    assert.equal(backfillLine(kept), kept);
+  });
+
   it('keeps a line that is already there', () => {
     const row = { id: 'routeros-7.23.8-stable', family: 'RouterOS', line: 'testing' };
     assert.equal(backfillLine(row), row);
