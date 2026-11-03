@@ -278,34 +278,63 @@ function visibleText(html) {
   }
 }
 
-// At most this many h1 elements are looked at, so a hostile page cannot make the heading lookup long.
+// At most this many h1 elements are looked at, so a hostile page cannot make the lookup long.
 const MAX_H1 = 20;
 
+// Site-name separators that may follow the product part of a document title.
+const TITLE_SEPARATORS = [' - ', ' – ', ' — '];
+
 /**
- * The page heading, as { text, h1Count, prefixInH1, prefixInTitle } with `text` null when the page has no
- * `h1` and no usable `<title>`. Lookup order: the first of the first MAX_H1 `h1` elements whose
- * visible text starts with TITLE_PREFIX; else the document `<title>` when it starts with the prefix
- * and names at least one recognised product (a trailing " - <site>" is cut off when what remains
- * still names one); else the first `h1`. `text` is the chosen heading, prefix included.
+ * The visible text of the first `max` `<name>` elements, found with indexOf only: each search
+ * starts where the last one ended and stops at the first element with no closing tag, so the
+ * scan is linear however many unclosed openings a page repeats. `lower` is asciiLower(text).
+ */
+function elementTexts(text, lower, name, max) {
+  const out = [];
+  const open = `<${name}`;
+  const close = `</${name}`;
+  let from = 0;
+  while (out.length < max) {
+    const at = lower.indexOf(open, from);
+    if (at < 0) break;
+    const after = lower[at + open.length];
+    if (after !== '>' && after !== '/' && !/\s/.test(after ?? '')) {
+      from = at + open.length;
+      continue;
+    }
+    const gt = lower.indexOf('>', at);
+    if (gt < 0) break;
+    const end = lower.indexOf(close, gt + 1);
+    if (end < 0) break;
+    out.push({ at, text: textOf(text.slice(gt + 1, end)) });
+    from = end + close.length;
+  }
+  return out;
+}
+
+/**
+ * The page heading, as { text, h1Count, prefixInH1, prefixInTitle } with `text` null when the page
+ * has no `h1` and no usable `<title>`. Lookup order: the first of the first MAX_H1 `h1` elements
+ * whose visible text starts with TITLE_PREFIX; else the document `<title>` (the first one, and only
+ * before the body) when it starts with the prefix and names a recognised product (when it ends in
+ * " - <site>", also with an en or em dash, it is used only if what precedes the last separator
+ * names one); else the first `h1`. `text` is the chosen heading, prefix included.
  */
 function findHeading(text) {
-  const re = /<h1\b[^>]*>([\s\S]*?)<\/h1>/g;
-  const h1s = [];
-  while (h1s.length < MAX_H1) {
-    const m = re.exec(text);
-    if (!m) break;
-    h1s.push(textOf(m[1]));
-  }
+  const lower = asciiLower(text);
+  const h1s = elementTexts(text, lower, 'h1', MAX_H1).map((h) => h.text);
   const prefixed = h1s.find((h) => h.startsWith(TITLE_PREFIX));
-  const tag = /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(text);
-  const full = tag ? textOf(tag[1]) : '';
+  const bodyAt = lower.indexOf('<body');
+  const [tag] = elementTexts(text, lower, 'title', 1);
+  const full = tag && (bodyAt < 0 || tag.at < bodyAt) ? tag.text : '';
   const prefixInTitle = full.startsWith(TITLE_PREFIX);
   let fromTitle = null;
   if (prefixInTitle) {
-    const cut = full.lastIndexOf(' - ');
     const named = (heading) => parseProducts(heading.slice(TITLE_PREFIX.length)).length > 0;
-    if (cut > TITLE_PREFIX.length && named(full.slice(0, cut))) fromTitle = full.slice(0, cut);
-    else if (named(full)) fromTitle = full;
+    const cut = Math.max(...TITLE_SEPARATORS.map((s) => full.lastIndexOf(s)));
+    if (cut > TITLE_PREFIX.length) {
+      if (named(full.slice(0, cut))) fromTitle = full.slice(0, cut);
+    } else if (named(full)) fromTitle = full;
   }
   const chosen = prefixed ?? fromTitle ?? h1s[0];
   return {
