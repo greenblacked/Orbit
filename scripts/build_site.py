@@ -112,7 +112,7 @@ def sitemap(urls: list[str], domain: str = DOMAIN) -> str:
     )
 
 
-def copy_results(results: Path, output: Path) -> int:
+def copy_results(results: Path | None, output: Path) -> int:
     """Copy the validated result files to ``output/data/results``; return how many.
 
     The directory is always made, with an ``index.json`` listing what it holds, so the page
@@ -122,7 +122,9 @@ def copy_results(results: Path, output: Path) -> int:
     target = output / "data" / "results"
     target.mkdir(parents=True, exist_ok=True)
     entries = []
-    for path in sorted(results.rglob("*.json")) if results.is_dir() else []:
+    for path in (
+        sorted(results.rglob("*.json")) if results is not None and results.is_dir() else []
+    ):
         relative = path.relative_to(results)
         destination = target / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -158,7 +160,8 @@ def build(
     """Replace ``output`` with the site in ``source`` stamped with ``version``.
 
     With ``results``, the validation results in that directory are copied to
-    ``data/results`` after they pass ``check_results``.
+    ``data/results`` after they pass ``check_results``. Without, ``data/results/index.json``
+    is still written, empty.
     """
     version = normalise_version(version)
     if DOMAIN_RE.fullmatch(domain) is None:
@@ -217,8 +220,8 @@ def build(
             target.write_text(stamped[path], encoding="utf-8")
         else:
             shutil.copyfile(path, target)
-    if results is not None:
-        copy_results(results, output)
+    # Always, so a page reading /data/results/index.json finds an empty index, not a missing file.
+    copy_results(results, output)
     (output / "version.txt").write_text(version + "\n", encoding="utf-8")
     (output / "robots.txt").write_text(robots(noindex, domain), encoding="utf-8")
     if not noindex:

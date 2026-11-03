@@ -550,3 +550,10 @@ def test_the_build_refuses_a_bad_device_result_and_keeps_the_previous_build(root
     with pytest.raises(SystemExit, match="not in the iOS 27 device list"):
         site.build(REPO / "src", out, "v2", results=root)
     assert (out / "version.txt").read_text(encoding="utf-8").strip() == "v1"
+
+
+def test_the_build_writes_an_empty_index_even_without_a_results_directory(tmp_path):
+    out = tmp_path / "site"
+    site.build(REPO / "src", out, "v1")
+    index = json.loads((out / "data" / "results" / "index.json").read_text(encoding="utf-8"))
+    assert index == {"schema": 1, "results": []}
