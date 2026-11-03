@@ -323,20 +323,24 @@
   }
   // The Subscribe links follow the filters. Only a platform and a stage the feeds accept are
   // passed (the Line filter and the view are not feed filters), so the link can never be a 400.
-  var FEED_STAGES = { release: "stable", beta: "beta", rc: "RC" };
+  // The base of each link is the href the page was served with (the bundled preview rewrites it
+  // to the production origin), read once and kept.
+  var FEED_STAGES = { release: "Release", beta: "Beta", rc: "RC" };
+  var feedBase = {};
   function feedLinks() {
     var q = [];
-    var what = "";
-    if (state.family !== "all") { q.push("family=" + encodeURIComponent(state.family)); what += state.family + " "; }
-    if (FEED_STAGES.hasOwnProperty(state.stage)) { q.push("stage=" + encodeURIComponent(state.stage)); what += FEED_STAGES[state.stage] + " "; }
+    var what = [];
+    if (state.family !== "all") { q.push("family=" + encodeURIComponent(state.family)); what.push(state.family); }
+    if (FEED_STAGES.hasOwnProperty(state.stage)) { q.push("stage=" + encodeURIComponent(state.stage)); what.push("stage " + FEED_STAGES[state.stage]); }
     var qs = q.length ? "?" + q.join("&") : "";
     var ids = ["feed-atom", "feed-json"];
     for (var i = 0; i < ids.length; i++) {
       var a = document.getElementById(ids[i]);
       if (!a) continue;
-      a.setAttribute("href", "/api/feed." + (i ? "json" : "atom") + qs);
+      if (!feedBase[ids[i]]) feedBase[ids[i]] = (a.getAttribute("href") || "").split("?")[0];
+      a.setAttribute("href", feedBase[ids[i]] + qs);
       var note = a.querySelector(".sr-only");
-      if (note) note.textContent = " (feed of the newest " + what + "releases)";
+      if (note) note.textContent = " (feed of the newest releases" + (what.length ? " for " + what.join(", ") : "") + ")";
     }
   }
   function remember() {
