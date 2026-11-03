@@ -708,8 +708,11 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
         for path, source in page_scripts.items()
     )
     seed_files = [
-        (path.name, path.read_text(encoding="utf-8").replace("<", "\\u003c"))
-        for path in sorted((dist / "data").glob("*.json"))
+        (
+            path.relative_to(dist / "data").as_posix(),
+            path.read_text(encoding="utf-8").replace("<", "\\u003c"),
+        )
+        for path in sorted((dist / "data").rglob("*.json"))
     ]
     seeds = "\n".join(
         f'<script type="application/json" data-seed="/data/{html.escape(name)}">'

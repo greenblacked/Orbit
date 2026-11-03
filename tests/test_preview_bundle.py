@@ -791,6 +791,22 @@ def test_the_pages_switch_by_hash_and_the_title_follows(tab, served):
 
 
 @pytest.mark.browser
+def test_check_my_version_shows_a_device_result_in_the_bundle_without_a_fetch(tab, served):
+    tab.goto(served + "/")
+    tab.wait_for_selector("#lk-form:not([hidden])")
+    tab.select_option("#lk-family", "iOS")
+    tab.fill("#lk-build", "24A446")
+    tab.click("#lk-form button")
+    tab.wait_for_selector("#lk-dev:not([hidden])")
+    tab.wait_for_function(
+        "() => /tested 2026-10-20/.test(document.querySelector('#lk-result .lk-dv').textContent)"
+    )
+    tab.wait_for_load_state("networkidle")
+    assert tab.requested == []
+    assert tab.errors == []
+
+
+@pytest.mark.browser
 def test_an_in_page_anchor_scrolls_without_leaving_the_page(tab, served):
     tab.goto(served + "/#/about/")
     tab.locator('a[href="#disclaimer"]').click()
@@ -1886,11 +1902,13 @@ def test_every_data_file_is_embedded_as_a_seed_a_page_reads_instead_of_fetching(
             r'<script type="application/json" data-seed="([^"]+)">(.*?)</script>', text, re.S
         )
     )
-    files = sorted((built / "data").glob("*.json"))
+    files = sorted((built / "data").rglob("*.json"))
     assert files, "the build ships data files"
-    assert sorted(seeds) == [f"/data/{path.name}" for path in files]
-    for path in files:
-        body = seeds[f"/data/{path.name}"]
+    names = [f"/data/{path.relative_to(built / 'data').as_posix()}" for path in files]
+    assert sorted(seeds) == sorted(names)
+    assert "/data/results/index.json" in seeds
+    for path, name in zip(files, names, strict=True):
+        body = seeds[name]
         assert "<" not in body, "a '<' could close the block early"
         # The < escape is plain JSON, so the seed parses back to the file's own data.
         assert json.loads(body) == json.loads(path.read_text(encoding="utf-8"))
