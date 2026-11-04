@@ -549,6 +549,15 @@ def public(family: str) -> list[dict]:
     return sorted(stamped, key=lambda r: -r["t"])
 
 
+def answer_font_hosts(page) -> None:
+    """Answer the web font hosts with an empty file, so a test that reads the console sees no
+    error for the font request new_context refuses (the browser logs a refused request)."""
+    page.route(
+        re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"),
+        lambda route: route.fulfill(status=200, content_type="text/css", body=""),
+    )
+
+
 def lookup_ready(page, base_url: str, path: str = "/", query: str = ""):
     page.goto(base_url + path + query)
     page.wait_for_selector("#lk-form:not([hidden])")
@@ -1081,6 +1090,7 @@ def test_check_my_version_says_not_tested_with_an_empty_results_index(page, base
 def test_check_my_version_survives_a_missing_results_index(page, base_url):
     problems: list[str] = []
     page.on("pageerror", lambda e: problems.append(str(e)))
+    answer_font_hosts(page)
     # The 404 the test itself forces is logged by the browser; anything else is a real error.
     page.on(
         "console",
@@ -1098,6 +1108,7 @@ def test_check_my_version_survives_a_missing_device_list_and_malformed_data(page
     problems: list[str] = []
     page.on("pageerror", lambda e: problems.append(str(e)))
     page.on("console", lambda m: problems.append(m.text) if m.type == "error" else None)
+    answer_font_hosts(page)
     page.route(
         "**/data/devices.json",
         lambda route: route.fulfill(
