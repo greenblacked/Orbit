@@ -30,6 +30,7 @@ pytestmark = pytest.mark.browser
 
 try:
     import playwright.sync_api  # noqa: F401
+    from playwright.sync_api import TimeoutError as PlaywrightTimeout
 except ImportError:
     if os.environ.get("REQUIRE_BROWSER") == "1":
         raise
@@ -911,10 +912,20 @@ def assert_checked_visibly(page) -> None:
     assert page.evaluate(
         "() => document.getElementById('lk-result').classList.contains('lk-flash')"
     )
-    page.wait_for_function(
-        "() => { const r = document.getElementById('lk-result').getBoundingClientRect();"
-        " return r.top >= 0 && r.bottom <= innerHeight; }"
-    )
+    try:
+        page.wait_for_function(
+            "() => { const r = document.getElementById('lk-result').getBoundingClientRect();"
+            " return r.top >= 0 && r.bottom <= innerHeight; }"
+        )
+    except PlaywrightTimeout as error:
+        seen = page.evaluate(
+            "() => { const r = document.getElementById('lk-result').getBoundingClientRect();"
+            " const a = document.activeElement, d = document.getElementById('lk-dev');"
+            " return { top: r.top, bottom: r.bottom, height: r.height, innerHeight,"
+            " scrollY, active: a && a.id, dv: !!document.querySelector('#lk-result .lk-dv'),"
+            " devHidden: d && d.hidden }; }"
+        )
+        raise AssertionError(f"the answer never sat inside the viewport: {seen}") from error
 
 
 @pytest.mark.parametrize("path", ["/", "/compare/"])
