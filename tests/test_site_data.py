@@ -126,7 +126,7 @@ FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
 # Raw bytes. below.js (the drawn devices that step through releases), cadence.js, lookup.js and
-# sigil-generic.js are 40,278 together (17,231 + 4,788 + 16,739 + 1,520); the limit leaves 122
+# sigil-generic.js are 40,392 together (17,231 + 4,788 + 16,853 + 1,520); the limit leaves 8
 # bytes, so the next addition needs a deliberate, measured raise here. The Device line of Check
 # my version is its own on-demand script (lookup-device.js) to stay inside it.
 AFTER_PAINT_BUDGET = 40_400

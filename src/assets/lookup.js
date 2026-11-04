@@ -264,6 +264,7 @@
     if (key === shown) return;
     shown = key;
     D.go = 0;
+    var dv = result.hit && result.hit === hitNow && out.querySelector(".lk-dv");
     hitNow = result.hit || null;
     out.textContent = "";
     result.rows.forEach(function (row) { out.appendChild(RO.h("p", row[0], row[1])); });
@@ -272,6 +273,7 @@
       p.appendChild(RO.h("a", "lk-compare", result.link.text, { href: result.link.href }));
       out.appendChild(p);
     }
+    if (dv) out.appendChild(dv);
     device();
   }
 
