@@ -10,6 +10,9 @@
 // The RSS feed is not on it: the Worker treats one failing URL as a failed source and
 // merges the results of all of them, so a second URL would be a requirement, not a fallback.
 //
+// Every release carries `line`, its "major.minor" (3.7, 3.8): SteamOS keeps several minors
+// side by side (3.7 Stable while 3.8 is in Preview). `line` comes before `summary`.
+//
 // Bounds on what is emitted: a post dated more than a day after the clock is refused, and at
 // most MAX_ITEMS posts are read. There is no time window (ADR 0007): every SteamOS release the
 // news API returns is emitted, newest first. The request asks for the newest 100 Steam posts, so
@@ -17,7 +20,16 @@
 // older refreshes saw. The dial filters by date on the client, so wider data does not widen it.
 
 import { familyIds } from '../families.js';
-import { cleanSummary, field, isHttpsOn, parseDate, rssItems, sortReleases } from '../releases.js';
+import {
+  cleanSummary,
+  field,
+  isHttpsOn,
+  minorLine,
+  parseDate,
+  rssItems,
+  sortReleases,
+  withLine,
+} from '../releases.js';
 
 export const ID = 'valve-steam-news';
 export const VENDOR = 'valve';
@@ -164,14 +176,19 @@ export function parseNews(jsonText, now = Date.now()) {
     const time = new Date(seconds * 1000);
     if (!Number.isFinite(time.getTime())) continue;
     releases.push(
-      summarised({
-        id: idOf(title),
-        ...parsed,
-        title,
-        date: time.toISOString().replace('.000Z', 'Z'),
-        url: linkOf(item.url),
-        source: ID,
-      }),
+      summarised(
+        withLine(
+          {
+            id: idOf(title),
+            ...parsed,
+            title,
+            date: time.toISOString().replace('.000Z', 'Z'),
+            url: linkOf(item.url),
+            source: ID,
+          },
+          minorLine(parsed.version),
+        ),
+      ),
     );
   }
   return bounded(releases, now);
@@ -187,7 +204,12 @@ export function parseFeed(xmlText, now = Date.now()) {
     const date = parseDate(field(item, 'pubDate'));
     if (!parsed || !date) continue;
     releases.push(
-      summarised({ id: idOf(title), ...parsed, title, date, url: linkOf(link), source: ID }),
+      summarised(
+        withLine(
+          { id: idOf(title), ...parsed, title, date, url: linkOf(link), source: ID },
+          minorLine(parsed.version),
+        ),
+      ),
     );
   }
   return bounded(releases, now);
