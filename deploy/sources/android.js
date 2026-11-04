@@ -40,6 +40,10 @@ export const ID = 'android-build-numbers';
 export const VENDOR = 'google';
 export const HOST = 'source.android.com';
 export const PAGE_URL = 'https://source.android.com/docs/setup/reference/build-numbers';
+// source.android.com redirects a page to a random localized variant (?hl=it), and the Worker
+// follows no redirect, so every request asks for hl=en. PAGE_URL stays the canonical link
+// that releases carry; FETCH_URL is only what is fetched (and the allowlist).
+export const FETCH_URL = `${PAGE_URL}?hl=en`;
 export const FAMILIES = familyIds(VENDOR);
 
 const FAMILY = 'Android';
@@ -251,7 +255,7 @@ export default {
   id: ID,
   vendor: VENDOR,
   accept: ACCEPT,
-  urls: [PAGE_URL],
+  urls: [FETCH_URL],
   // The Worker passes (text, url); `now` is for tests and defaults to the real clock.
   parse: (html, _url, now = Date.now()) => parsePage(html, now),
 };

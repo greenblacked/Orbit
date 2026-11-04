@@ -1,9 +1,354 @@
 {
   "source": "apple-developer-releases,mikrotik-routeros,android-build-numbers,microsoft-windows-release-health,valve-steam-news",
-  "fetchedAt": "2026-10-26T17:04:19Z",
+  "fetchedAt": "2026-11-04T00:25:07Z",
   "stale": false,
   "snapshot": true,
   "releases": [
+    {
+      "id": "https://developer.apple.com/news/releases/?id=11032026a",
+      "vendor": "apple",
+      "family": "iOS",
+      "version": "27.3",
+      "major": 27,
+      "stage": "beta",
+      "beta": null,
+      "build": "24C5037i",
+      "title": "iOS 27.3 beta (24C5037i)",
+      "date": "2026-11-03T18:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=11032026a",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=11032026b",
+      "vendor": "apple",
+      "family": "iPadOS",
+      "version": "27.3",
+      "major": 27,
+      "stage": "beta",
+      "beta": null,
+      "build": "24C5037i",
+      "title": "iPadOS 27.3 beta (24C5037i)",
+      "date": "2026-11-03T18:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=11032026b",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=11032026c",
+      "vendor": "apple",
+      "family": "macOS",
+      "version": "27.3",
+      "major": 27,
+      "stage": "beta",
+      "beta": null,
+      "build": "26C5035r",
+      "title": "macOS 27.3 beta (26C5035r)",
+      "date": "2026-11-03T18:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=11032026c",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=11032026d",
+      "vendor": "apple",
+      "family": "tvOS",
+      "version": "27.3",
+      "major": 27,
+      "stage": "beta",
+      "beta": null,
+      "build": "24K5286g",
+      "title": "tvOS 27.3 beta (24K5286g)",
+      "date": "2026-11-03T18:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=11032026d",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=11032026e",
+      "vendor": "apple",
+      "family": "visionOS",
+      "version": "27.3",
+      "major": 27,
+      "stage": "beta",
+      "beta": null,
+      "build": "24N5286r",
+      "title": "visionOS 27.3 beta (24N5286r)",
+      "date": "2026-11-03T18:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=11032026e",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=11032026f",
+      "vendor": "apple",
+      "family": "watchOS",
+      "version": "27.3",
+      "major": 27,
+      "stage": "beta",
+      "beta": null,
+      "build": "24S5284h",
+      "title": "watchOS 27.3 beta (24S5284h)",
+      "date": "2026-11-03T18:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=11032026f",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "routeros-7.25.1-stable",
+      "vendor": "mikrotik",
+      "family": "RouterOS",
+      "version": "7.25.1",
+      "major": 7,
+      "stage": "release",
+      "beta": null,
+      "build": "7.25.1",
+      "title": "RouterOS 7.25.1 stable",
+      "date": "2026-11-02T12:39:53Z",
+      "url": "https://mikrotik.com/download?v=7.25.1",
+      "source": "mikrotik-routeros",
+      "line": "stable"
+    },
+    {
+      "id": "routeros-7.24.6-long-term",
+      "vendor": "mikrotik",
+      "family": "RouterOS",
+      "version": "7.24.6",
+      "major": 7,
+      "stage": "release",
+      "beta": null,
+      "build": "7.24.6",
+      "title": "RouterOS 7.24.6 long-term",
+      "date": "2026-10-30T08:24:29Z",
+      "url": "https://mikrotik.com/download?v=7.24.6",
+      "source": "mikrotik-routeros",
+      "line": "long-term",
+      "summary": "Long-term channel release"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#25h2-26200.9818",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "25H2",
+      "major": 25,
+      "stage": "release",
+      "beta": null,
+      "build": "26200.9818",
+      "title": "Windows 11 25H2 (2026-10 D)",
+      "date": "2026-10-28T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5127936",
+      "source": "microsoft-windows-release-health",
+      "line": "25H2"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h1-28000.3365",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "26H1",
+      "major": 26,
+      "stage": "release",
+      "beta": null,
+      "build": "28000.3365",
+      "title": "Windows 11 26H1 (2026-10 D)",
+      "date": "2026-10-28T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5127653",
+      "source": "microsoft-windows-release-health",
+      "line": "26H1"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h2-26300.9818",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "26H2",
+      "major": 26,
+      "stage": "release",
+      "beta": null,
+      "build": "26300.9818",
+      "title": "Windows 11 26H2 (2026-10 D)",
+      "date": "2026-10-28T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5127936",
+      "source": "microsoft-windows-release-health",
+      "line": "26H2"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026a",
+      "vendor": "apple",
+      "family": "iOS",
+      "version": "27.2",
+      "major": 27,
+      "stage": "release",
+      "beta": null,
+      "build": "24B91020",
+      "title": "iOS 27.2 (24B91020)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026a",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026b",
+      "vendor": "apple",
+      "family": "iOS",
+      "version": "27.2",
+      "major": 27,
+      "stage": "release",
+      "beta": null,
+      "build": "24B119",
+      "title": "iOS 27.2 (24B119)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026b",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026c",
+      "vendor": "apple",
+      "family": "iPadOS",
+      "version": "27.2",
+      "major": 27,
+      "stage": "release",
+      "beta": null,
+      "build": "24B119",
+      "title": "iPadOS 27.2 (24B119)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026c",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026d",
+      "vendor": "apple",
+      "family": "macOS",
+      "version": "27.2",
+      "major": 27,
+      "stage": "release",
+      "beta": null,
+      "build": "26B123",
+      "title": "macOS 27.2 (26B123)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026d",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026e",
+      "vendor": "apple",
+      "family": "tvOS",
+      "version": "27.2",
+      "major": 27,
+      "stage": "release",
+      "beta": null,
+      "build": "24K122",
+      "title": "tvOS 27.2 (24K122)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026e",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026f",
+      "vendor": "apple",
+      "family": "visionOS",
+      "version": "27.2",
+      "major": 27,
+      "stage": "release",
+      "beta": null,
+      "build": "24N120",
+      "title": "visionOS 27.2 (24N120)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026f",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026g",
+      "vendor": "apple",
+      "family": "watchOS",
+      "version": "27.2",
+      "major": 27,
+      "stage": "release",
+      "beta": null,
+      "build": "24S118",
+      "title": "watchOS 27.2 (24S118)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026g",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026h",
+      "vendor": "apple",
+      "family": "iPadOS",
+      "version": "26.7.2",
+      "major": 26,
+      "stage": "release",
+      "beta": null,
+      "build": "23H128",
+      "title": "iPadOS 26.7.2 (23H128)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026h",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026i",
+      "vendor": "apple",
+      "family": "iOS",
+      "version": "18.7.11",
+      "major": 18,
+      "stage": "release",
+      "beta": null,
+      "build": "22H384",
+      "title": "iOS 18.7.11 (22H384)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026i",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://developer.apple.com/news/releases/?id=10262026j",
+      "vendor": "apple",
+      "family": "iPadOS",
+      "version": "18.7.11",
+      "major": 18,
+      "stage": "release",
+      "beta": null,
+      "build": "22H384",
+      "title": "iPadOS 18.7.11 (22H384)",
+      "date": "2026-10-26T17:00:00Z",
+      "url": "https://developer.apple.com/news/releases/?id=10262026j",
+      "source": "apple-developer-releases"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/release-information#22h2-19045.7811",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "22H2",
+      "major": 22,
+      "stage": "release",
+      "beta": null,
+      "build": "19045.7811",
+      "title": "Windows 10 22H2 (2026-10 OOB, end of updates)",
+      "date": "2026-10-26T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5134125",
+      "source": "microsoft-windows-release-health",
+      "line": "22H2"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#23h2-22631.7654",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "23H2",
+      "major": 23,
+      "stage": "release",
+      "beta": null,
+      "build": "22631.7654",
+      "title": "Windows 11 23H2 (2026-10 OOB)",
+      "date": "2026-10-26T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5134130",
+      "source": "microsoft-windows-release-health",
+      "line": "23H2"
+    },
+    {
+      "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#24h2-26100.9725",
+      "vendor": "microsoft",
+      "family": "Windows",
+      "version": "24H2",
+      "major": 24,
+      "stage": "release",
+      "beta": null,
+      "build": "26100.9725",
+      "title": "Windows 11 24H2 (2026-10 OOB)",
+      "date": "2026-10-26T00:00:00Z",
+      "url": "https://support.microsoft.com/help/5134133",
+      "source": "microsoft-windows-release-health",
+      "line": "24H2"
+    },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.9",
       "vendor": "valve",
@@ -16,7 +361,8 @@
       "title": "SteamOS 3.9",
       "date": "2026-10-23T22:04:26Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114038096",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.9"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.9.5-beta",
@@ -30,7 +376,8 @@
       "title": "SteamOS 3.9.5 Beta",
       "date": "2026-10-23T22:04:14Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114038094",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.9"
     },
     {
       "id": "routeros-7.25-stable",
@@ -59,7 +406,8 @@
       "title": "SteamOS 3.9.4 Beta",
       "date": "2026-10-22T03:41:55Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114031077",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.9"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=10192026a",
@@ -157,7 +505,8 @@
       "title": "SteamOS 3.9.3 Beta",
       "date": "2026-10-16T19:02:10Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706682826",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.9"
     },
     {
       "id": "https://learn.microsoft.com/en-us/windows/release-health/release-information#22h2-19045.7807",
@@ -490,7 +839,8 @@
       "title": "SteamOS 3.9.2 Beta",
       "date": "2026-09-25T23:16:19Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498226130",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.9"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.28",
@@ -504,7 +854,8 @@
       "title": "SteamOS 3.8.28",
       "date": "2026-09-25T00:28:44Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498222971",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.28-beta",
@@ -518,7 +869,8 @@
       "title": "SteamOS 3.8.28 Beta",
       "date": "2026-09-23T00:21:31Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498216977",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#24h2-26100.9550",
@@ -577,7 +929,8 @@
       "title": "SteamOS 3.9.1 Preview",
       "date": "2026-09-14T23:24:24Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1843481262703165",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.9"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.27-beta",
@@ -591,7 +944,8 @@
       "title": "SteamOS 3.8.27 Beta",
       "date": "2026-09-14T21:51:09Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1843481262703043",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=09142026d",
@@ -705,7 +1059,8 @@
       "title": "SteamOS 3.9.0 Preview",
       "date": "2026-08-29T02:02:08Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1842212951304733",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.9"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.26-beta",
@@ -719,7 +1074,8 @@
       "title": "SteamOS 3.8.26 Beta",
       "date": "2026-08-28T01:44:12Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1842212951301750",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=08172026i",
@@ -789,7 +1145,8 @@
       "title": "SteamOS 3.8.25 Beta",
       "date": "2026-08-08T04:52:36Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1840310314346837",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://developer.apple.com/news/releases/?id=07272026d",
@@ -831,7 +1188,8 @@
       "title": "SteamOS 3.8.24 Beta",
       "date": "2026-07-17T21:15:59Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1838407329260735",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.16",
@@ -845,7 +1203,8 @@
       "title": "SteamOS 3.8.16",
       "date": "2026-07-17T01:04:09Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1838407329258215",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.23-beta",
@@ -859,7 +1218,8 @@
       "title": "SteamOS 3.8.23 Beta",
       "date": "2026-07-15T23:46:44Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1838407329255329",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.15",
@@ -873,7 +1233,8 @@
       "title": "SteamOS 3.8.15",
       "date": "2026-07-15T23:46:06Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1838407329255328",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.22-beta",
@@ -887,7 +1248,8 @@
       "title": "SteamOS 3.8.22 Beta",
       "date": "2026-07-04T00:31:43Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165571694",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.14",
@@ -901,7 +1263,8 @@
       "title": "SteamOS 3.8.14",
       "date": "2026-07-04T00:31:10Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165571693",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.21-beta",
@@ -915,7 +1278,8 @@
       "title": "SteamOS 3.8.21 Beta",
       "date": "2026-07-02T00:14:37Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165566689",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.13",
@@ -929,7 +1293,8 @@
       "title": "SteamOS 3.8.13",
       "date": "2026-07-02T00:14:12Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165566687",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.20-beta",
@@ -943,7 +1308,8 @@
       "title": "SteamOS 3.8.20 Beta",
       "date": "2026-06-30T00:09:38Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165561247",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.12",
@@ -957,7 +1323,8 @@
       "title": "SteamOS 3.8.12",
       "date": "2026-06-29T23:54:07Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165561231",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.11",
@@ -971,7 +1338,8 @@
       "title": "SteamOS 3.8.11",
       "date": "2026-06-20T22:42:00Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1835871199310130",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8",
@@ -985,7 +1353,8 @@
       "title": "SteamOS 3.8",
       "date": "2026-06-18T00:07:43Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1835871199302299",
-      "source": "valve-steam-news"
+      "source": "valve-steam-news",
+      "line": "3.8"
     },
     {
       "id": "https://store.steampowered.com/news/app/1675200#steamos-3.8.10-beta-second-clutch",
@@ -1000,6 +1369,7 @@
       "date": "2026-06-17T21:08:40Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1835871199301937",
       "source": "valve-steam-news",
+      "line": "3.8",
       "summary": "Second Clutch"
     },
     {
@@ -1015,6 +1385,7 @@
       "date": "2026-06-13T01:19:03Z",
       "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1835236783565044",
       "source": "valve-steam-news",
+      "line": "3.8",
       "summary": "Second Clutch"
     },
     {

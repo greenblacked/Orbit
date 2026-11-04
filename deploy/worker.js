@@ -516,7 +516,8 @@ function combine(results) {
     fetchedAt: oldest.fetchedAt,
     stale: parts.length < results.length || parts.some((part) => Boolean(part.stale)),
     snapshot: parts.some((part) => Boolean(part.snapshot)),
-    // A served RouterOS or Windows row cached before `line` existed gets its line here, so /api/releases.json is consistent.
+    // A served RouterOS, Windows or SteamOS row cached before `line` existed gets its line here,
+    // so /api/releases.json is consistent.
     releases: mergeReleases([], parts.flatMap((part) => part.releases)).map(backfillLine),
   };
 }

@@ -1919,14 +1919,25 @@ def test_the_head_alternate_is_not_carried_and_the_feed_link_is_not_left_relativ
     # reaches the file; the timeline's Subscribe link is a body link, rewritten to the
     # production origin, so no root-relative copy of it remains.
     assert not re.search(r"<link[^>]*rel=\"alternate\"", text)
-    assert 'class="chip-link" href="/api/feed.atom"' not in text
+    assert 'id="feed-atom" href="/api/feed.atom"' not in text
+    assert 'id="feed-json" href="/api/feed.json"' not in text
     assert bundle.external_requests(text) == []
 
 
 def test_the_bundled_subscribe_link_is_absolute_and_the_live_build_keeps_it_relative(text, built):
     # A root-relative /api/ link would resolve against whatever host (or file://) opens the
     # bundle, so the bundle points at the production origin; the live page is unchanged.
-    href = "https://orbit.szolotov.com/api/feed.atom"
-    assert text.count(f'class="chip-link" href="{href}"') == 1
+    origin = "https://orbit.szolotov.com"
+    assert text.count(f'id="feed-atom" href="{origin}/api/feed.atom"') == 1
+    assert text.count(f'id="feed-json" href="{origin}/api/feed.json"') == 1
     live = (built / "timeline" / "index.html").read_text(encoding="utf-8")
-    assert 'class="chip-link" href="/api/feed.atom"' in live
+    assert 'id="feed-atom" href="/api/feed.atom"' in live
+    assert 'id="feed-json" href="/api/feed.json"' in live
+
+
+def test_the_feed_links_keep_the_href_they_were_served_with_when_the_filters_change(built):
+    # timeline.js reads each link's own href as the base, so the bundle's production origin
+    # survives the script rewriting the query; it must not hard-code a relative /api/ path.
+    script = (built / "assets" / "timeline.js").read_text(encoding="utf-8")
+    assert 'getAttribute("href")' in script
+    assert '"/api/feed.' not in script

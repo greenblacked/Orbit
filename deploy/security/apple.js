@@ -278,17 +278,125 @@ function visibleText(html) {
   }
 }
 
+// At most this many h1 elements are looked at, so a hostile page cannot make the lookup long.
+const MAX_H1 = 20;
+
+// Site-name separators that may follow the product part of a document title.
+const TITLE_SEPARATORS = [' - ', ' – ', ' — ', ' | '];
+
 /**
- * One security content page as { title, products, released, cves }, or null when it has no `h1`.
+ * The visible text of the first `max` `<name>` elements, found with indexOf only: each search
+ * starts where the last one ended and stops at the first element with no closing tag, so the
+ * scan is linear however many unclosed openings a page repeats. `lower` is asciiLower(text).
+ */
+function elementTexts(text, lower, name, max) {
+  const out = [];
+  const open = `<${name}`;
+  const close = `</${name}`;
+  let from = 0;
+  while (out.length < max) {
+    const at = lower.indexOf(open, from);
+    if (at < 0) break;
+    const after = lower[at + open.length];
+    if (after !== '>' && after !== '/' && !/\s/.test(after ?? '')) {
+      from = at + open.length;
+      continue;
+    }
+    const gt = lower.indexOf('>', at);
+    if (gt < 0) break;
+    // The closing tag needs a boundary after its name ("</h10" is not "</h1").
+    let end = lower.indexOf(close, gt + 1);
+    while (end >= 0 && !/[\s>/]/.test(lower[end + close.length] ?? '')) {
+      end = lower.indexOf(close, end + close.length);
+    }
+    if (end < 0) break;
+    out.push({ at, text: textOf(text.slice(gt + 1, end)) });
+    from = end + close.length;
+  }
+  return out;
+}
+
+/**
+ * The page heading, as { text, h1Count, prefixInH1, prefixInTitle } with `text` null when the page
+ * has no `h1` and no usable `<title>`. Lookup order: the first of the first MAX_H1 `h1` elements
+ * whose visible text starts with TITLE_PREFIX; else the document `<title>` (the first one, found
+ * only before `</head>` or the body, comments skipped) when it starts with the prefix and every
+ * "and"-part of its product list is a recognised product (when it ends in " - <site>", also with
+ * an en or em dash or " | ", it is used only if the part before the last separator is such a
+ * list); else the first `h1`. `text` is the chosen heading, prefix included.
+ */
+function findHeading(text) {
+  const lower = asciiLower(text);
+  const h1s = elementTexts(text, lower, 'h1', MAX_H1).map((h) => h.text);
+  const prefixed = h1s.find((h) => h.startsWith(TITLE_PREFIX));
+  const { head, headLower } = headOf(text, lower);
+  const [tag] = elementTexts(head, headLower, 'title', 1);
+  const full = tag ? tag.text : '';
+  const prefixInTitle = full.startsWith(TITLE_PREFIX);
+  let fromTitle = null;
+  if (prefixInTitle) {
+    const named = (heading) => namesOnlyProducts(heading.slice(TITLE_PREFIX.length));
+    const cut = Math.max(...TITLE_SEPARATORS.map((s) => full.lastIndexOf(s)));
+    if (cut > TITLE_PREFIX.length) {
+      if (named(full.slice(0, cut))) fromTitle = full.slice(0, cut);
+    } else if (named(full)) fromTitle = full;
+  }
+  const chosen = prefixed ?? fromTitle ?? h1s[0];
+  return {
+    text: chosen ?? null,
+    h1Count: h1s.length,
+    prefixInH1: prefixed !== undefined,
+    prefixInTitle,
+  };
+}
+
+// True when every "and"-part of the name is a recognised product (parseProducts skips the rest).
+function namesOnlyProducts(name) {
+  const parts = String(name).split(/\s+and\s+/);
+  return parseProducts(name).length === parts.length;
+}
+
+// The part of the page before the body, with comments blanked out (same length, so indexes hold):
+// it ends at the first "</head" or real "<body" (name followed by whitespace, ">" or "/").
+function headOf(text, lower) {
+  let masked = '';
+  let at = 0;
+  for (;;) {
+    const open = lower.indexOf('<!--', at);
+    if (open < 0) {
+      masked += text.slice(at);
+      break;
+    }
+    const close = lower.indexOf('-->', open + 4);
+    const end = close < 0 ? text.length : close + 3;
+    masked += text.slice(at, open) + ' '.repeat(end - open);
+    at = end;
+    if (close < 0) break;
+  }
+  const maskedLower = asciiLower(masked);
+  let limit = maskedLower.length;
+  for (const mark of ['</head', '<body']) {
+    let i = maskedLower.indexOf(mark);
+    while (i >= 0 && !/[\s>/]/.test(maskedLower[i + mark.length] ?? '')) {
+      i = maskedLower.indexOf(mark, i + mark.length);
+    }
+    if (i >= 0) limit = Math.min(limit, i);
+  }
+  return { head: masked.slice(0, limit), headLower: maskedLower.slice(0, limit) };
+}
+
+/**
+ * One security content page as { title, products, released, cves }, or null when it has no `h1`
+ * and no usable `<title>` (see findHeading for the lookup order).
  * `title` is the page heading without "About the security content of". `released` is the
  * "Released ..." line, else the Published Date, else null. `cves` is the sorted, unique ids that
  * start a paragraph ("CVE-2026-86950: credit"), and nothing else of the page is kept.
  */
 export function parseNote(html) {
   const text = String(html);
-  const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(text);
-  if (!h1) return null;
-  let title = textOf(h1[1]);
+  const heading = findHeading(text);
+  if (heading.text === null) return null;
+  let title = heading.text;
   if (title.startsWith(TITLE_PREFIX)) title = title.slice(TITLE_PREFIX.length);
   const released = /<p\b[^>]*>\s*Released ([A-Za-z]{3,9} \d{1,2}, \d{4})\s*<\/p>/.exec(text);
   return {
@@ -330,10 +438,12 @@ export function whyNotUsable(html, release, maxCves) {
   const count = cveParagraphIds(text).length;
   if (page && count > 0 && count <= maxCves && covers(page, release)) return null;
   const yn = (value) => (value ? 'yes' : 'no');
-  const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(text);
+  const heading = findHeading(text);
   const anywhere = new Set(visibleText(text).match(CVE_ID) ?? []).size;
   return (
-    `h1: ${yn(h1)}; title prefix: ${yn(h1 && textOf(h1[1]).startsWith(TITLE_PREFIX))}; ` +
+    `h1: ${yn(heading.h1Count)}; title prefix: ${yn(heading.text?.startsWith(TITLE_PREFIX))}; ` +
+    `h1 count: ${heading.h1Count}; prefix in any h1: ${yn(heading.prefixInH1)}; ` +
+    `prefix in title: ${yn(heading.prefixInTitle)}; ` +
     `products recognised: ${page ? page.products.length : 0}; ` +
     `covers release: ${yn(page && covers(page, release))}; CVE paragraphs: ${count}; ` +
     `CVE ids anywhere in text: ${anywhere}; over CVE cap: ${yn(count > maxCves)}; ` +

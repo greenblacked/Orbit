@@ -172,11 +172,20 @@ describe('src/data/releases.json', () => {
   it('gives every release the whole contract, from a registered source and a known family', () => {
     const ids = new Set(SOURCES.map((s) => s.id));
     for (const r of payload.releases) {
-      // Two optional keys. `line`: RouterOS and Windows carry it, every other family not.
+      // Two optional keys. `line`: RouterOS, Windows and SteamOS carry it, every other family
+      // not. SteamOS gained lines (one per minor version) after this file was last refreshed,
+      // and the file is only rewritten by the snapshot workflow, so a SteamOS row here may
+      // have no `line` yet; when it has one it must be its major.minor. The adapter output
+      // tests (tests/valve.test.mjs) require the line on every SteamOS release.
       // `summary`: a short plain line from the adapter or an owner note (ADR 0008 keeps
       // security notes out of this file; a summary is not one).
-      const expected = r.family === 'RouterOS' || r.family === 'Windows' ? [...keys, 'line'] : keys;
+      const lined = r.family === 'RouterOS' || r.family === 'Windows' || r.family === 'SteamOS';
+      const steamosWithoutLine = r.family === 'SteamOS' && !('line' in r);
+      const expected = lined && !steamosWithoutLine ? [...keys, 'line'] : keys;
       assert.deepEqual(Object.keys(r).filter((k) => k !== 'summary').sort(), [...expected].sort(), r.id);
+      if (r.family === 'SteamOS' && 'line' in r) {
+        assert.equal(r.line, r.version.split('.').slice(0, 2).join('.'), r.id);
+      }
       if ('summary' in r) {
         assert.equal(typeof r.summary, 'string', r.id);
         assert.equal(r.summary, cleanSummary(r.summary), r.id);

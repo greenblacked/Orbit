@@ -584,7 +584,8 @@ describe('whyNotUsable', () => {
     const html = para('CVE-2026-0001');
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
-      'h1: no; title prefix: no; products recognised: 0; covers release: no; ' +
+      'h1: no; title prefix: no; h1 count: 0; prefix in any h1: no; prefix in title: no; ' +
+        'products recognised: 0; covers release: no; ' +
         `CVE paragraphs: 1; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });
@@ -596,7 +597,8 @@ describe('whyNotUsable', () => {
       '<!-- CVE-2026-0004 --><div>CVE-2026-0005</div>';
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });
@@ -605,7 +607,8 @@ describe('whyNotUsable', () => {
     const html = `<h1>${head} iOS 26.7.1</h1><div>CVE-2026-0001</div><!-- CVE-2026-0002 <div>CVE-2026-0003</div>`;
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });
@@ -616,7 +619,8 @@ describe('whyNotUsable', () => {
       '<script>var b = "-->";</script>';
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });
@@ -626,7 +630,8 @@ describe('whyNotUsable', () => {
       `<h1>${head} iOS 26.7.1</h1><script>var a = 'CVE-2026-0002';</script ><div>CVE-2026-0001</div>`;
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });
@@ -635,7 +640,8 @@ describe('whyNotUsable', () => {
     const html = `<h1>${head} iOS 26.7.1</h1><styles>CVE-2026-0001</styles><div>CVE-2026-0002</div>`;
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 2; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });
@@ -646,7 +652,8 @@ describe('whyNotUsable', () => {
       'CVE-2026-0001';
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });
@@ -655,7 +662,8 @@ describe('whyNotUsable', () => {
     const html = `<h1>${head} iOS 26.7.1</h1><!-- <script> --><div>CVE-2026-0001</div><script>x</script>`;
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });
@@ -664,7 +672,8 @@ describe('whyNotUsable', () => {
     const html = `<h1>${head} iOS 26.7.1</h1><style>/* <script> */</style><div>CVE-2026-0001</div><script>x</script>`;
     assert.equal(
       whyNotUsable(html, release, MAX_CVES_PER_NOTE),
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
   });
@@ -674,7 +683,8 @@ describe('whyNotUsable', () => {
     const why = whyNotUsable(html, release, MAX_CVES_PER_NOTE);
     assert.equal(
       why,
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: no; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: no; ' +
         `CVE paragraphs: 1; CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
     );
     for (const word of ['Tahoe', 'macOS', 'Quokka', 'support.apple.com']) assert.ok(!why.includes(word), word);
@@ -688,7 +698,8 @@ describe('whyNotUsable', () => {
     const why = whyNotUsable(html, release, MAX_CVES_PER_NOTE);
     assert.equal(
       why,
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 0; CVE ids anywhere in text: 3; over CVE cap: no; bytes: ${bytes(html)}`,
     );
     assert.ok(!why.includes('Quokka'));
@@ -698,13 +709,173 @@ describe('whyNotUsable', () => {
     const html = `<h1>${head} iOS 26.7.1</h1>${para('CVE-2026-0001')}${para('CVE-2026-0002')}`;
     assert.equal(
       whyNotUsable(html, release, 1),
-      'h1: yes; title prefix: yes; products recognised: 1; covers release: yes; ' +
+      'h1: yes; title prefix: yes; h1 count: 1; prefix in any h1: yes; ' +
+        'prefix in title: no; products recognised: 1; covers release: yes; ' +
         `CVE paragraphs: 2; CVE ids anywhere in text: 2; over CVE cap: yes; bytes: ${bytes(html)}`,
     );
   });
 
   it('is on the adapter', () => {
     assert.equal(apple.whyNotUsable, whyNotUsable);
+  });
+});
+
+describe('the heading lookup across page variants', () => {
+  const P = 'About the security content of ';
+  const BOTH = 'iOS 15.8.8 and iPadOS 15.8.8';
+  const cve = '<p class="gb-paragraph">CVE-2026-0001: Quokka Researcher</p>';
+  const ios = { family: 'iOS', version: '15.8.8' };
+  const ipad = { family: 'iPadOS', version: '15.8.8' };
+  const bytes = (html) => Buffer.byteLength(html);
+
+  it('takes the first h1 that starts with the prefix, not the first h1', () => {
+    const html = `<h1>Apple Support</h1><h1>${P}${BOTH}</h1>${cve}`;
+    assert.equal(parseNote(html).title, BOTH);
+    assert.equal(whyNotUsable(html, ios, 5), null);
+    assert.equal(whyNotUsable(html, ipad, 5), null);
+  });
+
+  it('is accepted through the build path for an iOS and an iPadOS release', () => {
+    // The index fixture's row is the 26.7.1 release, so the build path uses that version; the
+    // 15.8.8 pages are covered through whyNotUsable above.
+    const rows = parseIndex(INDEX);
+    const both = 'iOS 26.7.1 and iPadOS 26.7.1';
+    const page =
+      `<h1>Apple Support</h1><h1>${P}${both}</h1><p>Released September 28, 2026</p>` +
+      '<p class="gb-paragraph">CVE-2026-86950: Quokka Researcher</p>';
+    const rel = (id, family) => ({
+      id,
+      vendor: 'apple',
+      family,
+      version: '26.7.1',
+      stage: 'release',
+      date: '2026-09-28T17:00:00Z',
+      title: `${family} 26.7.1`,
+    });
+    const { payload, failures } = buildPayload({
+      previous: null,
+      releases: [rel('ios', 'iOS'), rel('ipad', 'iPadOS')],
+      sources: [{ adapter: apple, rows, pages: new Map([[NOTE_URL, page]]) }],
+      now: NOW,
+    });
+    assert.deepEqual(failures, []);
+    for (const id of ['ios', 'ipad']) {
+      assert.equal(payload.releases[id].status, 'listed');
+      assert.deepEqual(payload.releases[id].cves, ['CVE-2026-86950']);
+    }
+  });
+
+  it('falls back to the title when no h1 has the prefix, cutting a site suffix', () => {
+    const html = `<title>${P}${BOTH} - Apple Support</title><h1>Apple Support</h1>${cve}`;
+    assert.equal(parseNote(html).title, BOTH);
+    assert.equal(whyNotUsable(html, ios, 5), null);
+    assert.equal(whyNotUsable(html, ipad, 5), null);
+    const plain = `<title>${P}${BOTH}</title><h1>Other</h1>${cve}`;
+    assert.equal(parseNote(plain).title, BOTH);
+  });
+
+  it('cuts an en or em dash suffix too, and never keeps the site name in the title', () => {
+    for (const dash of ['–', '—']) {
+      const html = `<title>${P}${BOTH} ${dash} Apple Support</title><h1>Other</h1>${cve}`;
+      assert.equal(parseNote(html).title, BOTH);
+      assert.equal(whyNotUsable(html, ios, 5), null);
+      assert.equal(whyNotUsable(html, ipad, 5), null);
+    }
+  });
+
+  it('uses a title with a separator only when the part before it names a product', () => {
+    const html = `<title>${P}Apple Support - iOS 15.8.8</title><h1>Other</h1>${cve}`;
+    assert.equal(parseNote(html).title, 'Other');
+  });
+
+  it('does not take the title of an svg in the body', () => {
+    const html = `<body><svg><title>${P}iOS 15.8.8</title></svg><h1>Other</h1>${cve}</body>`;
+    assert.equal(parseNote(html).title, 'Other');
+    assert.match(whyNotUsable(html, ios, 5), /prefix in title: no;/);
+  });
+
+  it('prefers a prefixed h1 over a title that names another product', () => {
+    const html = `<title>${P}macOS 1.0</title><h1>${P}${BOTH}</h1>${cve}`;
+    assert.equal(parseNote(html).title, BOTH);
+    assert.equal(whyNotUsable(html, ios, 5), null);
+  });
+
+  it('prefers a prefixed title over an unprefixed first h1', () => {
+    const html = `<title>${P}${BOTH}</title><h1>iOS 1.0</h1>${cve}`;
+    assert.equal(parseNote(html).title, BOTH);
+  });
+
+  it('ignores a title whose product does not parse and uses the first h1', () => {
+    const html = `<title>${P}Something else - Apple Support</title><h1>iOS 15.8.8</h1>${cve}`;
+    assert.equal(parseNote(html).title, 'iOS 15.8.8');
+  });
+
+  it('cuts a pipe separator from the title and keeps every product', () => {
+    const html = `<title>${P}${BOTH} | Apple Support</title><h1>Other</h1>${cve}`;
+    assert.equal(parseNote(html).title, BOTH);
+    assert.equal(whyNotUsable(html, ipad, 5), null);
+  });
+
+  it('refuses a title where one "and" part is not a recognised product', () => {
+    const html = `<title>${P}iOS 15.8.8 and Safari Thing</title><h1>Other</h1>${cve}`;
+    assert.equal(parseNote(html).title, 'Other');
+  });
+
+  it('ignores a title after the head, in a comment, or behind a fake body tag', () => {
+    const t = `<title>${P}iOS 15.8.8</title>`;
+    const tail = `<h1>Other</h1>${cve}`;
+    assert.equal(parseNote(`<head></head><svg>${t}</svg>${tail}`).title, 'Other');
+    assert.equal(parseNote(`<head><!-- ${t} --></head>${tail}`).title, 'Other');
+    assert.equal(parseNote(`<head>${t}</head>${tail}`).title, 'iOS 15.8.8');
+    assert.equal(parseNote(`<bodyguard>${t}${tail}`).title, 'iOS 15.8.8');
+  });
+
+  it('reads h1 case-insensitively and accepts a spaced closing tag', () => {
+    assert.equal(parseNote(`<H1>${P}iOS 15.8.8</H1 >${cve}`).title, 'iOS 15.8.8');
+  });
+
+  it('is null with no h1 and no usable title, and parses a title-only page', () => {
+    assert.equal(parseNote(`<title>Apple Support</title>${cve}`), null);
+    assert.equal(parseNote(`<title>${P}Something else</title>${cve}`), null);
+    assert.equal(parseNote(`<title>${P}${BOTH}</title>${cve}`).title, BOTH);
+  });
+
+  it('still refuses a page with no prefixed heading anywhere, with the new fields', () => {
+    const html = `<title>Apple Support</title><h1>Apple Support</h1><h1>Other</h1>${cve}`;
+    assert.equal(
+      whyNotUsable(html, ios, 5),
+      'h1: yes; title prefix: no; h1 count: 2; prefix in any h1: no; prefix in title: no; ' +
+        'products recognised: 0; covers release: no; CVE paragraphs: 1; ' +
+        `CVE ids anywhere in text: 1; over CVE cap: no; bytes: ${bytes(html)}`,
+    );
+  });
+
+  it('reports a prefixed title the title lookup could not use', () => {
+    const html = `<title>${P}Something else</title><h1>Other</h1>${cve}`;
+    assert.match(
+      whyNotUsable(html, ios, 5),
+      /title prefix: no; h1 count: 1; prefix in any h1: no; prefix in title: yes;/,
+    );
+  });
+
+  it('looks at no more than 20 h1 elements: a match beyond the cap is not seen', () => {
+    const filler = '<h1>Site heading</h1>'.repeat(25);
+    const beyond = `${filler}<h1>${P}${BOTH}</h1>${cve}`;
+    assert.equal(parseNote(beyond).title, 'Site heading');
+    assert.match(whyNotUsable(beyond, ios, 5), /h1 count: 20; prefix in any h1: no;/);
+    const within = `${'<h1>Site heading</h1>'.repeat(19)}<h1>${P}${BOTH}</h1>${cve}`;
+    assert.equal(parseNote(within).title, BOTH);
+    const withTitle = `<title>${P}${BOTH} - Apple Support</title>${beyond}`;
+    assert.equal(parseNote(withTitle).title, BOTH);
+  });
+
+  it('stays linear on many unclosed openings (no closing tag, bounded work)', () => {
+    // Each of these made the old patterns rescan to the end of the page for every opening.
+    for (const open of ['<title>', '<h1>', '<title ', '<h1 ']) {
+      const html = open.repeat(200000);
+      assert.equal(parseNote(html), null);
+      assert.match(whyNotUsable(html, ios, 5), /^h1: no; title prefix: no; h1 count: 0;/);
+    }
   });
 });
 
