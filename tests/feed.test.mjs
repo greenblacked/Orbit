@@ -139,6 +139,10 @@ describe('/api/feed.atom', () => {
     assert.deepEqual(titlesOf(family), ['iOS 27.2 beta 2', 'iOS 27.1']);
     assert.match(family, /<id>https:\/\/orbit\.szolotov\.com\/api\/feed\.atom\?family=iOS<\/id>/);
     assert.match(family, /<title>Release Orbit releases \(iOS\)<\/title>/);
+    // The timeline's Subscribe links ask for exactly this pair.
+    const pair = await (await offZone('/api/feed.atom?family=iOS&stage=release', MIXED)).text();
+    assert.deepEqual(titlesOf(pair), ['iOS 27.1']);
+    assert.ok(pair.includes('<id>https://orbit.szolotov.com/api/feed.atom?family=iOS&amp;stage=release</id>'));
     const stage = await (await offZone('/api/feed.atom?stage=rc', MIXED)).text();
     assert.deepEqual(titlesOf(stage), ['macOS 27.1 RC']);
     const both = await (await offZone('/api/feed.atom?stage=beta&family=iPadOS&vendor=apple', MIXED)).text();
