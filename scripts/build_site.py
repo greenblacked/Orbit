@@ -122,9 +122,7 @@ def copy_results(results: Path | None, output: Path) -> int:
     target = output / "data" / "results"
     target.mkdir(parents=True, exist_ok=True)
     entries = []
-    for path in (
-        sorted(results.rglob("*.json")) if results is not None and results.is_dir() else []
-    ):
+    for path in sorted(results.rglob("*.json")) if results is not None and results.is_dir() else []:
         relative = path.relative_to(results)
         destination = target / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
