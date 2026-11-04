@@ -1866,7 +1866,8 @@ html[data-theme="reactor"] select { border-radius: 0; }
 .lk-go:hover { opacity: 0.8; }
 /* The device list sits on a row of its own below the others, two columns wide where there are several. */
 @media (min-width: 40rem) { .lk-form .lk-dev { grid-column: 1 / span 2; } }
-.lk-result { margin-top: 1.25rem; border-radius: 0.5rem; }
+/* Check scrolls the answer into view with a small gap under it, so a scroll rounded to a whole pixel still leaves it whole and the focus ring and flash are not cut off at the screen edge. */
+.lk-result { margin-top: 1.25rem; border-radius: 0.5rem; scroll-margin-bottom: 1rem; }
 .lk-result p + p { margin-top: 0.5rem; }
 /* :focus, not :focus-visible: a script moves focus here after a click or tap. */
 .lk-result:focus { outline: 2px solid var(--ink); outline-offset: 3px; }
