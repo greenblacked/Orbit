@@ -40,8 +40,7 @@
         var p = out.querySelector(".lk-dv") || out.appendChild(RO.h("p", "lk-dv"));
         p.textContent = !row ? "Not tested yet on " + dev + "." :
           dev + ": " + SAY[row.status] + (date ? ", tested " + String(date).slice(0, 10) : "");
-        // Arrives after Check scrolled: keep a focused answer on screen.
-        if (doc.activeElement === out) out.scrollIntoView({ block: "nearest" });
+        if (D.go) out.scrollIntoView({ block: "nearest" }); // after Check only
       }
       if (row) RO.loadJson(row.path).then(function (d) { put(d && d.testedAt); }, function () { put(); });
       else put();

@@ -263,6 +263,7 @@
     var key = JSON.stringify(result);
     if (key === shown) return;
     shown = key;
+    D.go = 0;
     hitNow = result.hit || null;
     out.textContent = "";
     result.rows.forEach(function (row) { out.appendChild(RO.h("p", row[0], row[1])); });
@@ -275,6 +276,7 @@
   }
 
   function reveal(pointer) {
+    D.go = 1;
     var c = out.classList;
     c.remove("lk-flash"); void out.offsetWidth; c.add("lk-flash");
     if (pointer) out.focus({ preventScroll: true });
