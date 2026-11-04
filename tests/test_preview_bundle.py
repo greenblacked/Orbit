@@ -61,6 +61,20 @@ def test_the_front_page_runs_below_js_after_home_js_as_the_bundle_cannot_load_it
     assert 'data-page-script="/assets/below.js"' in text
 
 
+def test_every_page_with_check_my_version_runs_lookup_device_js_right_after_lookup_js(text):
+    assert 'data-page-script="/assets/lookup-device.js"' in text
+    tags = re.findall(r'<template data-route="([^"]+)"[^>]*data-scripts="([^"]*)"', text)
+    asking = [(r, n.split()) for r, n in tags if "/assets/lookup.js" in n.split()]
+    assert asking, "some page loads lookup.js"
+    for route, names in asking:
+        at = names.index("/assets/lookup.js")
+        assert names.index("/assets/lookup-device.js") == at + 1, route
+        assert names.count("/assets/lookup-device.js") == 1, route
+    for route, names in tags:
+        if "/assets/lookup.js" not in names.split():
+            assert "/assets/lookup-device.js" not in names.split(), route
+
+
 def test_the_timeline_runs_lanes_js_right_after_timeline_js_as_the_bundle_cannot_fetch_it(text):
     tag = re.search(r'<template data-route="/timeline/"[^>]*data-scripts="([^"]*)"', text)
     assert tag

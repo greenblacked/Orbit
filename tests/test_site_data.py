@@ -113,10 +113,11 @@ AFTER_PAINT = {
     "lookup.js": ("compare.js", "home.js"),
     "sigil-generic.js": ("sigil.js",),
 }
-# On demand, a step further than after paint: the Cadence view of the timeline. timeline.js
-# fetches lanes.js only when a visitor shows that view (or opens ?view=cadence), so it is neither
-# on the first paint nor loaded after it. No page names it; timeline.js is the only file that does.
-ON_DEMAND = {"lanes.js": ("timeline.js",)}
+# On demand, a step further than after paint: the Cadence view of the timeline, and the Device
+# line of Check my version. timeline.js fetches lanes.js only when a visitor shows that view (or
+# opens ?view=cadence); lookup.js fetches lookup-device.js when it first shows an answer. Neither
+# is on the first paint or loaded after it. No page names them; only their loader does.
+ON_DEMAND = {"lanes.js": ("timeline.js",), "lookup-device.js": ("lookup.js",)}
 # The first paint is budgeted on what crosses the wire: the sum of each script gzipped alone at
 # level 9 (the scripts are separate responses, so a per-file sum is what a visitor downloads;
 # a concatenation would flatter it). When set, the front page was 20,767 bytes and the limit
@@ -125,12 +126,14 @@ FIRST_PAINT_GZIP_BUDGET = 26_000
 FIRST_PAINT_RAW_BUDGET = 80_000
 LAZY_BUDGET = 16_000
 # Raw bytes. below.js (the drawn devices that step through releases), cadence.js, lookup.js and
-# sigil-generic.js are 40,390 together (17,231 + 4,788 + 16,851 + 1,520); the limit leaves 10
-# bytes, so the next addition needs a deliberate, measured raise here.
+# sigil-generic.js are 40,250 together (17,231 + 4,788 + 16,711 + 1,520); the limit leaves 150
+# bytes, so the next addition needs a deliberate, measured raise here. The Device line of Check
+# my version is its own on-demand script (lookup-device.js) to stay inside it.
 AFTER_PAINT_BUDGET = 40_400
-# Raw bytes. lanes.js is 15,277 (5,357 gzipped); the limit leaves 323 bytes (about 2%) of room,
-# so the next addition to it needs a deliberate, measured raise here.
-ON_DEMAND_BUDGET = 15_600
+# Raw bytes, one limit per file. lanes.js is 15,277 (5,357 gzipped); its limit leaves 323 bytes
+# (about 2%) of room. lookup-device.js is 2,435; its limit leaves about 7%. The next addition to
+# either needs a deliberate, measured raise here.
+ON_DEMAND_BUDGET = {"lanes.js": 15_600, "lookup-device.js": 2_600}
 
 
 @pytest.mark.parametrize("name", [p for p in pages() if p != "404.html"])
@@ -169,8 +172,8 @@ def test_the_scripts_loaded_after_the_first_paint_are_named_only_by_their_loader
 
 
 def test_the_scripts_loaded_on_demand_are_named_only_by_their_loader_and_no_page():
-    assert sum((ASSETS / name).stat().st_size for name in ON_DEMAND) < ON_DEMAND_BUDGET
     for name, loaders in ON_DEMAND.items():
+        assert (ASSETS / name).stat().st_size < ON_DEMAND_BUDGET[name], name
         named = [
             script.name
             for script in ASSETS.glob("*.js")
@@ -406,5 +409,5 @@ def test_the_device_field_of_check_my_version_is_labelled_hidden_and_free_of_inl
     assert '<label for="lk-device">Device</label><select id="lk-device"' in field.group(0)
     assert "style=" not in field.group(0)
     assert text.count('id="lk-device"') == 1
-    script = (ASSETS / "lookup.js").read_text(encoding="utf-8")
+    script = (ASSETS / "lookup-device.js").read_text(encoding="utf-8")
     assert "/data/devices.json" in script and "/data/results/index.json" in script

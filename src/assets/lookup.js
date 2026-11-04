@@ -1,10 +1,9 @@
 /* "Check my version" on the front page and Compare: a platform and a version or build, matched
-   against the loaded releases. The answer is "current" (the newest public release by version, as
-   the cards pick it), the newest of its line (its `line`, else the major version), a pre-release,
-   a version not in the data placed against its line, or how far behind the newest it is, counted
-   as Compare counts, with the CVE count where window.Sec is loaded. The query is kept as
-   ?platform= and ?build=. A second field lists known builds to pick from. find, judge, behind
-   and options are exported for the Node tests; the rest runs in a browser. */
+   against the loaded releases. The answer is current (the newest public release, as the cards
+   pick it), the newest of its line, a pre-release, a version not in the data placed against its
+   line, or how far behind the newest it is, with the CVE count where window.Sec is loaded. The
+   query is kept as ?platform= and ?build=. find, judge, behind and options are exported for the
+   Node tests; the rest runs in a browser. The Device line is lookup-device.js. */
 (function (root) {
   "use strict";
   var DAY = 864e5;
@@ -27,9 +26,8 @@
     return 0;
   }
 
-  // For a dotted number that names no release (iOS "26.5", a Windows "26100.6584"): the release it
-  // is older than, as { kind: "build" | "line", ref, line }, else null. A build is compared with
-  // the newest build that starts with the same number; a version with the newest of its major version.
+  // For a dotted number that names no release (iOS "26.5", Windows "26100.6584"): the release it is
+  // older than, as { kind: "build" | "line", ref, line }, else null.
   function behind(list, text, family) {
     var asked = norm(text), prefix = norm(family) + " ";
     var rest = asked.indexOf(prefix) === 0 ? asked.slice(prefix.length) : asked;
@@ -49,9 +47,8 @@
     return null;
   }
 
-  // The release whose version or build is `text` (a release wins over a beta of the same
-  // version), else null. A name may come first ("iOS 26.1"); a bare major ("Android 16") works
-  // when its releases share one version.
+  // The release whose version or build is `text` (a release wins over a beta), else null. A name
+  // may come first ("iOS 26.1"); a bare major ("Android 16") works if its releases share a version.
   function find(list, text, family) {
     var asked = norm(text);
     if (!asked) return null;
@@ -75,11 +72,9 @@
     return null;
   }
 
-  // Where `hit` stands against the newest public release (`ctx.newest` by version, as the cards
-  // pick it; `ctx.higher(a, b)` orders versions; else the first public release and the list order,
-  // which is newest first by date). kind: current, line (newest of its line), ahead,
-  // older (dated after the newest, lower version), superseded (public releases between by list
-  // position and days apart, as Compare counts them) or none.
+  // Where `hit` stands against the newest public release (`ctx.newest`, `ctx.higher(a, b)`; else
+  // the first public release and the list order, newest first). kind: current, line (newest of
+  // its line), ahead, older (dated after the newest, lower version), superseded or none.
   function judge(list, hit, ctx) {
     ctx = ctx || {};
     var at = list.indexOf(hit), newest = ctx.newest || null;
@@ -111,11 +106,9 @@
     };
   }
 
-  // The choices for the "Pick a build" list: one per value of `family`, in list order (newest
-  // first), as { value, label }. The value is the build, else the version, which find() matches
-  // either way; the label is the version, the build when it differs, and the stage of a release
-  // that is not public ("27.2 · 24B5099f (beta)"). A shared value keeps its first place, labelled
-  // by the release find() picks.
+  // The "Pick a build" choices: one per value of `family`, newest first, as { value, label }. The
+  // value is the build, else the version; the label adds the build when it differs and the stage
+  // of a release that is not public ("27.2 · 24B5099f (beta)").
   function options(list, family) {
     var seen = [], rows = [];
     list.forEach(function (r) {
@@ -144,10 +137,7 @@
   var pick = doc.getElementById("lk-pick");
   var out = doc.getElementById("lk-result");
   var devBox = doc.getElementById("lk-dev");
-  var selDev = doc.getElementById("lk-device");
-  var extra = null;
   var hitNow = null;
-  var devKey = "";
   var all = [];
   var asked = false;
   var shown = null;
@@ -231,47 +221,21 @@
     return { rows: rows, link: link, hit: hit };
   }
 
-  // Device list and results index, loaded once; a missing file reads as empty.
-  function more() {
-    return extra || (extra = Promise.all(["/data/devices.json", "/data/results/index.json"].map(function (u) {
-      return RO.loadJson(u).catch(function () { return {}; });
-    })));
-  }
-
-  // The Device list (only where devices.json lists the build's major) and the line under the answer.
-  var SAY = { pass: "passed", warn: "passed with warnings", fail: "failed" };
+  // The Device list and line are lookup-device.js, fetched on the first answer (a bundle runs it
+  // right after this script); it sets RODevice.run.
+  var D = root.RODevice = { hit: function () { return hitNow; } };
   function device() {
-    var hit = hitNow;
-    if (!hit) { devBox.hidden = true; return; }
-    more().then(function (m) {
-      var list = ((m[0].families || {})[hit.family] || {})[hit.major], devs = list && list.devices;
-      devBox.hidden = hit !== hitNow || !Array.isArray(devs) || !devs.length;
-      if (devBox.hidden) return;
-      if (hit.family + hit.major !== devKey) {
-        devKey = hit.family + hit.major;
-        selDev.textContent = "";
-        devs.forEach(function (d) { selDev.appendChild(RO.h("option", "", d, { value: d })); });
-        selDev.value = list.default;
-        if (!selDev.value) selDev.selectedIndex = 0;
-      }
-      var dev = selDev.value, rs = m[1].results, row = (Array.isArray(rs) ? rs : []).filter(function (r) {
-        return r.family === hit.family && r.build === String(hit.build || hit.version) && r.device === dev && SAY[r.status];
-      })[0];
-      function put(date) {
-        if (hit !== hitNow || selDev.value !== dev) return;
-        var p = out.querySelector(".lk-dv") || out.appendChild(RO.h("p", "lk-dv"));
-        p.textContent = !row ? "Not tested yet on " + dev + "." :
-          dev + ": " + SAY[row.status] + (date ? ", tested " + String(date).slice(0, 10) : "");
-      }
-      if (row) RO.loadJson(row.path).then(function (d) { put(d.testedAt); }, function () { put(); });
-      else put();
-    }).catch(function () { devBox.hidden = true; });
+    if (!hitNow) devBox.hidden = true;
+    else if (D.run) D.run();
+    else if (!D.asked && !doc.querySelector("script[data-seed]")) {
+      D.asked = 1;
+      doc.head.appendChild(RO.h("script", "", null, { src: "/assets/lookup-device.js" }));
+    }
   }
 
-  // The "Pick a build" list for the selected platform: a first empty choice, then its builds. It
-  // shows the release the input names (as find() reads it: a version, a prefixed name, any case),
-  // else the empty choice, so a refill after a data poll keeps what was picked. After a platform
-  // change the input text is stale, so the list stays empty until the visitor types or picks.
+  // The "Pick a build" list for the selected platform: an empty choice, then its builds. It shows
+  // the release the input names (as find() reads it), else the empty choice, so a refill after a
+  // data poll keeps the pick. After a platform change the input is stale, so it stays empty.
   function syncPick() {
     var now = "";
     if (!stale) {
@@ -355,13 +319,13 @@
     stale = true;
     shown = null;
     hitNow = null;
-    devBox.hidden = true;
+    device();
     out.textContent = "";
     fillPick();
     remember(true);
   });
   // Up and Down on a closed list fire change at every step, so the answer waits until the picking
-  // stops; the input is filled at once. Typing or choosing nothing drops a pending answer.
+  // stops; the input is filled at once. Typing or choosing nothing drops a pending one.
   pick.addEventListener("change", function () {
     cancel();
     if (!pick.value) return;
@@ -374,7 +338,6 @@
       remember();
     }, 300);
   });
-  selDev.addEventListener("change", device);
   // Typing a version or build of the platform picks that release; anything else empties the pick.
   input.addEventListener("input", function () {
     cancel();
