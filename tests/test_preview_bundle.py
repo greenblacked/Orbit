@@ -61,6 +61,20 @@ def test_the_front_page_runs_below_js_after_home_js_as_the_bundle_cannot_load_it
     assert 'data-page-script="/assets/below.js"' in text
 
 
+def test_every_page_with_check_my_version_runs_lookup_device_js_right_after_lookup_js(text):
+    assert 'data-page-script="/assets/lookup-device.js"' in text
+    tags = re.findall(r'<template data-route="([^"]+)"[^>]*data-scripts="([^"]*)"', text)
+    asking = [(r, n.split()) for r, n in tags if "/assets/lookup.js" in n.split()]
+    assert asking, "some page loads lookup.js"
+    for route, names in asking:
+        at = names.index("/assets/lookup.js")
+        assert names.index("/assets/lookup-device.js") == at + 1, route
+        assert names.count("/assets/lookup-device.js") == 1, route
+    for route, names in tags:
+        if "/assets/lookup.js" not in names.split():
+            assert "/assets/lookup-device.js" not in names.split(), route
+
+
 def test_the_timeline_runs_lanes_js_right_after_timeline_js_as_the_bundle_cannot_fetch_it(text):
     tag = re.search(r'<template data-route="/timeline/"[^>]*data-scripts="([^"]*)"', text)
     assert tag
@@ -785,6 +799,22 @@ def test_the_pages_switch_by_hash_and_the_title_follows(tab, served):
     heading(tab, "Not found")
     tab.goto(served + "/#/404.html")
     heading(tab, "Not found")
+    tab.wait_for_load_state("networkidle")
+    assert tab.requested == []
+    assert tab.errors == []
+
+
+@pytest.mark.browser
+def test_check_my_version_shows_a_device_result_in_the_bundle_without_a_fetch(tab, served):
+    tab.goto(served + "/")
+    tab.wait_for_selector("#lk-form:not([hidden])")
+    tab.select_option("#lk-family", "iOS")
+    tab.fill("#lk-build", "24A446")
+    tab.click("#lk-form button")
+    tab.wait_for_selector("#lk-dev:not([hidden])")
+    tab.wait_for_function(
+        "() => /tested 2026-10-20/.test(document.querySelector('#lk-result .lk-dv').textContent)"
+    )
     tab.wait_for_load_state("networkidle")
     assert tab.requested == []
     assert tab.errors == []
@@ -1886,11 +1916,13 @@ def test_every_data_file_is_embedded_as_a_seed_a_page_reads_instead_of_fetching(
             r'<script type="application/json" data-seed="([^"]+)">(.*?)</script>', text, re.S
         )
     )
-    files = sorted((built / "data").glob("*.json"))
+    files = sorted((built / "data").rglob("*.json"))
     assert files, "the build ships data files"
-    assert sorted(seeds) == [f"/data/{path.name}" for path in files]
-    for path in files:
-        body = seeds[f"/data/{path.name}"]
+    names = [f"/data/{path.relative_to(built / 'data').as_posix()}" for path in files]
+    assert sorted(seeds) == sorted(names)
+    assert "/data/results/index.json" in seeds
+    for path, name in zip(files, names, strict=True):
+        body = seeds[name]
         assert "<" not in body, "a '<' could close the block early"
         # The < escape is plain JSON, so the seed parses back to the file's own data.
         assert json.loads(body) == json.loads(path.read_text(encoding="utf-8"))
