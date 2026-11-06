@@ -131,7 +131,7 @@ LAZY_BUDGET = 16_000
 # my version is its own on-demand script (lookup-device.js) to stay inside it.
 AFTER_PAINT_BUDGET = 40_400
 # Raw bytes, one limit per file. lanes.js is 15,277 (5,357 gzipped); its limit leaves 323 bytes
-# (about 2%) of room. lookup-device.js is 2,539; its limit leaves 61 bytes (about 2%). The next
+# (about 2%) of room. lookup-device.js is 2,558; its limit leaves 42 bytes (about 2%). The next
 # addition to either needs a deliberate, measured raise here.
 ON_DEMAND_BUDGET = {"lanes.js": 15_600, "lookup-device.js": 2_600}
 
