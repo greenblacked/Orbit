@@ -136,6 +136,7 @@ def preview_csp(scripts: list[str], styles: list[str], style_attrs: list[str]) -
 HOME_SCRIPT = "/assets/home.js"
 BELOW_SCRIPT = "/assets/below.js"
 LOOKUP_SCRIPT = "/assets/lookup.js"
+LOOKUP_DEVICE_SCRIPT = "/assets/lookup-device.js"
 COMPARE_SCRIPT = "/assets/compare.js"
 TIMELINE_SCRIPT = "/assets/timeline.js"
 LANES_SCRIPT = "/assets/lanes.js"
@@ -618,6 +619,12 @@ def unique(items) -> list[str]:
     return seen
 
 
+def insert_device(scripts: list[str], dist: Path) -> None:
+    """Run lookup-device.js right after lookup.js, which loads it on the first answer."""
+    if (dist / "assets" / "lookup-device.js").is_file():
+        scripts.insert(scripts.index(LOOKUP_SCRIPT) + 1, LOOKUP_DEVICE_SCRIPT)
+
+
 def bundle(dist: Path, version: str, commit: str, built: str) -> str:
     pages = collect(dist)["pages"]
     if not pages:
@@ -629,17 +636,20 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
     # home.js loads below.js (the drawn devices that step through releases) and lookup.js
     # (Check my version; compare.js loads it too) after the page has painted, which a bundle
     # cannot do; the bundle runs them right after home.js (lookup.js right after compare.js)
-    # instead. timeline.js loads lanes.js (the Cadence view) the first time that view is shown,
-    # so the bundle runs it right after timeline.js; timeline.js finds window.Lanes and does not
-    # fetch.
+    # instead. lookup.js loads lookup-device.js (the Device line) on its first answer, so the
+    # bundle runs that right after lookup.js, which sees the seeded data and does not fetch.
+    # timeline.js loads lanes.js (the Cadence view) the first time that view is shown, so the
+    # bundle runs it right after timeline.js; timeline.js finds window.Lanes and does not fetch.
     for page in pages:
         if HOME_SCRIPT in page["body_scripts"]:
             at = page["body_scripts"].index(HOME_SCRIPT) + 1
             page["body_scripts"].insert(at, BELOW_SCRIPT)
             page["body_scripts"].insert(at + 1, LOOKUP_SCRIPT)
+            insert_device(page["body_scripts"], dist)
         if COMPARE_SCRIPT in page["body_scripts"] and LOOKUP_SCRIPT not in page["body_scripts"]:
             at = page["body_scripts"].index(COMPARE_SCRIPT) + 1
             page["body_scripts"].insert(at, LOOKUP_SCRIPT)
+            insert_device(page["body_scripts"], dist)
         if (
             TIMELINE_SCRIPT in page["body_scripts"]
             and LANES_SCRIPT not in page["body_scripts"]
@@ -708,8 +718,11 @@ def bundle(dist: Path, version: str, commit: str, built: str) -> str:
         for path, source in page_scripts.items()
     )
     seed_files = [
-        (path.name, path.read_text(encoding="utf-8").replace("<", "\\u003c"))
-        for path in sorted((dist / "data").glob("*.json"))
+        (
+            path.relative_to(dist / "data").as_posix(),
+            path.read_text(encoding="utf-8").replace("<", "\\u003c"),
+        )
+        for path in sorted((dist / "data").rglob("*.json"))
     ]
     seeds = "\n".join(
         f'<script type="application/json" data-seed="/data/{html.escape(name)}">'

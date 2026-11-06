@@ -1,0 +1,14 @@
+{
+  "vendor": "apple",
+  "family": "iOS",
+  "build": "24A446",
+  "version": "27.0.1",
+  "stage": "release",
+  "status": "warn",
+  "checks": [
+    { "name": "boots to the home screen", "status": "pass" }
+  ],
+  "testedAt": "2026-10-22T11:00:00Z",
+  "runner": "fixture",
+  "device": "iPhone 17"
+}

@@ -21,7 +21,8 @@ from helpers import REPO, SITE_DATA, load_script  # noqa: E402  (after the path 
 
 @pytest.fixture(scope="session")
 def built(tmp_path_factory) -> Path:
-    """The site built once for the session, at version ``v0``, with the frozen data.
+    """The site built once for the session, at version ``v0``, with the frozen data and the
+    fixture results (``tests/fixtures/results``).
 
     The build copies ``src/data`` as it is and derives nothing from the releases (the sitemap
     lists pages only), so swapping the three files after the build pins every reader: the pages,
@@ -29,9 +30,21 @@ def built(tmp_path_factory) -> Path:
     independent of the production snapshot (see ``tests/fixtures/site-data/README.md``).
     """
     output = tmp_path_factory.mktemp("browser") / "site"
-    load_script("build_site").build(REPO / "src", output, "v0")
+    site = load_script("build_site")
+    site.build(REPO / "src", output, "v0")
     for name in ("releases.json", "security.json", "notes.json"):
         shutil.copyfile(SITE_DATA / name, output / "data" / name)
+    # The fixture results are checked and copied after the swap, against the frozen releases, so a
+    # refresh of the production snapshot cannot break them.
+    results = REPO / "tests" / "fixtures" / "results"
+    problems = site.result_problems(
+        results,
+        SITE_DATA / "releases.json",
+        output / "data" / "families.json",
+        output / "data" / "devices.json",
+    )
+    assert problems == []
+    site.copy_results(results, output)
     return output
 
 
