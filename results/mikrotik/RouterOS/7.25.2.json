@@ -1,0 +1,32 @@
+{
+  "vendor": "mikrotik",
+  "family": "RouterOS",
+  "build": "7.25.2",
+  "version": "7.25.2",
+  "stage": "release",
+  "status": "warn",
+  "checks": [
+    {
+      "name": "RouterOS CHR x86_64 boots under QEMU/KVM",
+      "status": "pass",
+      "detail": "Official 7.25.2 CHR image SHA-256 verified; system resource reports RouterOS 7.25.2"
+    },
+    {
+      "name": "RouterOS CHR integration suite",
+      "status": "pass",
+      "detail": "72 passed, 9 expected failures, 7 warnings; ops-toolbox GitHub Actions run 45380762885 (2026-11-24)"
+    },
+    {
+      "name": "Physical hAP ax2 Qualcomm Wi-Fi, WPA3 and RouterBOOT",
+      "status": "untested",
+      "detail": "CHR is x86_64 virtual hardware; no physical hAP ax2 test was performed"
+    },
+    {
+      "name": "Home management bridge, guest/IoT isolation and DoH configuration",
+      "status": "untested",
+      "detail": "The CHR suite does not reproduce the user's physical router configuration"
+    }
+  ],
+  "testedAt": "2026-11-24T11:14:06Z",
+  "runner": "GitHub Actions ops-toolbox run 45380762885 (ubuntu-24.04 QEMU/KVM CHR)"
+}
