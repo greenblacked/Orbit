@@ -5,6 +5,37 @@
   "snapshot": true,
   "releases": [
     {
+      "id": "routeros-7.25.2-stable",
+      "vendor": "mikrotik",
+      "family": "RouterOS",
+      "version": "7.25.2",
+      "major": 7,
+      "stage": "release",
+      "beta": null,
+      "build": "7.25.2",
+      "title": "RouterOS 7.25.2 stable",
+      "date": "2026-11-20T11:11:10Z",
+      "url": "https://mikrotik.com/download?v=7.25.2",
+      "source": "mikrotik-routeros",
+      "line": "stable"
+    },
+    {
+      "id": "routeros-7.24.7-long-term",
+      "vendor": "mikrotik",
+      "family": "RouterOS",
+      "version": "7.24.7",
+      "major": 7,
+      "stage": "release",
+      "beta": null,
+      "build": "7.24.7",
+      "title": "RouterOS 7.24.7 long-term",
+      "date": "2026-11-19T08:42:49Z",
+      "url": "https://mikrotik.com/download?v=7.24.7",
+      "source": "mikrotik-routeros",
+      "line": "long-term",
+      "summary": "Long-term channel release"
+    },
+    {
       "id": "https://developer.apple.com/news/releases/?id=11032026a",
       "vendor": "apple",
       "family": "iOS",
