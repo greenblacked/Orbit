@@ -1,15 +1,17 @@
 # Release validation bot
 
-The **Release validation bot** workflow runs four times daily from the default branch,
+The **Release validation bot** workflow runs daily at 06:47 UTC from the default branch,
 or by manual dispatch from main/dev. It refreshes all registered vendor releases and
 security notes together using the existing snapshot scripts. The read-only weekly Data
 check remains independent. Changes in refresh/check timestamps alone do not create a PR.
 
 The refresh job has no write permission, checks the result schema and runs Node tests.
-A separate proposal job copies only the generated data files and optional result,
-verifies the dev commit has not moved, and opens a reviewable PR into dev. No force push,
-no merge, no stage or production deployment. One open proposal at a time; a closed
-identical proposal is not recreated. The existing owner review and promotion process
+A separate job pushes a candidate branch containing only the generated data files and
+optional result. The bot dispatches CI and Security, waits for both runs to pass on the
+exact candidate commit, rechecks the candidate and `dev` refs, and opens a PR into `dev`.
+A failed, cancelled or mismatched run leaves the candidate branch available for retry.
+The bot never force-pushes, merges or deploys. It opens one proposal at a time and
+does not recreate an identical closed proposal. The existing owner review and promotion process
 is unchanged.
 
 In ops-toolbox, a new stable RouterOS candidate is tested under CHR and emits a JSON
@@ -29,8 +31,8 @@ If creation fails after the push, a later run can resume the branch after checki
 that its single commit has the same dev parent and matches the regenerated candidate.
 The comparison ignores snapshot timestamp churn and checks the full tree for
 unexpected paths and file-mode changes. Its generated PR may require the owner
-to approve PR-event workflows; the bot also dispatches CI and Security on the branch.
-Those branch checks do not replace PR merge-result checks or the deployment dry run.
+to approve PR-event workflows. Those merge-result checks and the deployment dry run
+still apply after the PR opens.
 A failed refresh opens a deduplicated issue; investigate, close it and retry manually.
 The workflow becomes scheduled only after it reaches the default branch.
 
