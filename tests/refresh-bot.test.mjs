@@ -27,8 +27,28 @@ test('metadata timestamp churn is not a release change', () => {
 test('trusted CHR evidence yields WARN, never hardware PASS', () => {
   assert.ok(validateEvidence(evidence, '7.25.2', run, jobs));
   const result = orbitResult(evidence);
-  assert.equal(result.status, 'warn');
-  assert.equal(result.checks.at(-1).status, 'untested');
+  assert.deepEqual(result, {
+    vendor: 'mikrotik', family: 'RouterOS', build: '7.25.2', version: '7.25.2',
+    stage: 'release', status: 'warn',
+    checks: [
+      { name: 'RouterOS CHR x86_64 candidate integration suite', status: 'pass',
+        detail: '72 passed, 9 expected failures, 7 warnings, 0 skipped; no unexpected failures' },
+      { name: 'Candidate archive digest pinned', status: 'pass',
+        detail: 'SHA-256 ' + evidence.archiveSha256 + '; tested commit ' + evidence.testedCommit },
+      { name: 'Physical hardware, Wi-Fi, RouterBOOT and deployment-specific configuration',
+        status: 'untested', detail: 'Virtual CHR evidence only; no physical router validation' },
+    ],
+    testedAt: '2026-11-24T11:14:06Z',
+    runner: 'GitHub Actions ops-toolbox run 123 attempt 1',
+  });
+});
+test('artifact preserves canonical UTC and full decimal run identifiers', () => {
+  const result = orbitResult({
+    ...evidence, testedAt: '0001-01-01T00:00:00Z',
+    runId: Number.MAX_SAFE_INTEGER, runAttempt: Number.MAX_SAFE_INTEGER,
+  }, '7.25.2');
+  assert.equal(result.testedAt, '0001-01-01T00:00:00Z');
+  assert.equal(result.runner, 'GitHub Actions ops-toolbox run 9007199254740991 attempt 9007199254740991');
 });
 test('reject mismatched, failed, skipped or untrusted evidence', () => {
   for (const patch of [{ version: '7.25.1' }, { runAttempt: 2 }, { passed: 0 },
@@ -49,8 +69,12 @@ test('reject unexpected fields, non-string identifiers and unbounded counts', ()
     { testedCommit: [evidence.testedCommit] },
     { warnings: 1000001 },
     { testedAt: '2026-11-31T11:14:06Z' },
+    { testedAt: '0000-01-01T00:00:00Z' },
     { version: '7.25.2\n' },
   ]) {
-    assert.equal(validateEvidence({ ...evidence, ...patch }, '7.25.2', run, jobs), false);
+    const invalid = { ...evidence, ...patch };
+    assert.equal(validateEvidence(invalid, '7.25.2', run, jobs), false);
+    assert.throws(() => orbitResult(invalid, '7.25.2'), /invalid CHR evidence schema/);
   }
+  assert.throws(() => orbitResult(evidence, '7.25.3'), /invalid CHR evidence schema/);
 });

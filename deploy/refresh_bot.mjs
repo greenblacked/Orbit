@@ -8,7 +8,7 @@ const SOURCE = 'greenblacked/ops-toolbox';
 const VERSION = /^[0-9]{1,3}\.[0-9]{1,3}(?:\.[0-9]{1,4})?$/;
 const SHA = /^[a-f0-9]{40}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
-const UTC = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/;
+const UTC = /^(?!0000)\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/;
 const VOLATILE = new Set(['fetchedAt', 'generatedAt', 'checkedAt']);
 const read = (path) => JSON.parse(readFileSync(path, 'utf8'));
 // Generated data is JSON only, never downloaded executable bytes. Exclusive creation
@@ -32,21 +32,29 @@ const exact = (value, pattern) => typeof value === 'string' && pattern.test(valu
   !/[\r\n]/.test(value);
 const FIELDS = ['archiveSha256', 'channel', 'passed', 'platform', 'runAttempt', 'runId',
   'schema', 'skipped', 'testedAt', 'testedCommit', 'unexpectedFailures', 'version',
-  'warnings', 'xfailed'].sort();
+  'warnings', 'xfailed'];
 const positive = (n) => integer(n) && n > 0;
 
+function hasEvidenceSchema(e, version) {
+  return exact(version, VERSION) && e !== null && typeof e === 'object' &&
+    !Array.isArray(e) && Object.keys(e).length === FIELDS.length &&
+    FIELDS.every((field) => Object.hasOwn(e, field)) &&
+    e.schema === 1 && e.version === version &&
+    e.channel === 'stable' && e.platform === 'chr-x86_64' &&
+    exact(e.archiveSha256, DIGEST) && exact(e.testedCommit, SHA) &&
+    positive(e.runId) && positive(e.runAttempt) &&
+    exact(e.testedAt, UTC) && Number.isFinite(Date.parse(e.testedAt)) &&
+    new Date(e.testedAt).toISOString().replace('.000Z', 'Z') === e.testedAt &&
+    positive(e.passed) && [e.passed, e.xfailed, e.warnings, e.skipped]
+      .every((n) => integer(n) && n <= 1000000) &&
+    e.unexpectedFailures === 0;
+}
+
 export function validateEvidence(e, version, run, jobs) {
-  if (!exact(version, VERSION) || !e || typeof e !== 'object' || Array.isArray(e) ||
-      Object.keys(e).sort().join(',') !== FIELDS.join(',') ||
-      e.schema !== 1 || e.version !== version ||
-      e.channel !== 'stable' || e.platform !== 'chr-x86_64' ||
-      !exact(e.archiveSha256, DIGEST) || !exact(e.testedCommit, SHA) ||
-      !positive(e.runId) || !positive(e.runAttempt) ||
-      !exact(e.testedAt, UTC) || !Number.isFinite(Date.parse(e.testedAt)) ||
-      new Date(e.testedAt).toISOString().replace('.000Z', 'Z') !== e.testedAt ||
-      !positive(e.passed) || !integer(e.xfailed) || !integer(e.warnings) ||
-      !integer(e.skipped) || [e.passed, e.xfailed, e.warnings, e.skipped].some((n) => n > 1000000) ||
-      e.unexpectedFailures !== 0) return false;
+  return hasEvidenceSchema(e, version) && matchesRun(e, run, jobs);
+}
+
+function matchesRun(e, run, jobs) {
   if (!run || run.id !== e.runId || run.run_attempt !== e.runAttempt ||
       run.repository?.full_name !== SOURCE || run.head_repository?.full_name !== SOURCE ||
       run.path !== '.github/workflows/routeros-version.yml' ||
@@ -61,21 +69,28 @@ export function validateEvidence(e, version, run, jobs) {
       step.conclusion === 'success'));
 }
 
-export function orbitResult(e) {
+export function orbitResult(e, version = e?.version) {
+  if (!hasEvidenceSchema(e, version)) throw new Error('invalid CHR evidence schema');
+  // Emit only canonical representations of the validated scalar values.
+  const testedAt = new Date(Date.parse(e.testedAt)).toISOString().replace('.000Z', 'Z');
+  const runId = BigInt(e.runId).toString(10);
+  const runAttempt = BigInt(e.runAttempt).toString(10);
+  const archiveSha256 = Buffer.from(e.archiveSha256, 'hex').toString('hex');
+  const testedCommit = Buffer.from(e.testedCommit, 'hex').toString('hex');
   return {
-    vendor: 'mikrotik', family: 'RouterOS', build: e.version, version: e.version,
+    vendor: 'mikrotik', family: 'RouterOS', build: version, version,
     stage: 'release', status: 'warn',
     checks: [
       { name: 'RouterOS CHR x86_64 candidate integration suite', status: 'pass',
         detail: e.passed + ' passed, ' + e.xfailed + ' expected failures, ' + e.warnings +
           ' warnings, ' + e.skipped + ' skipped; no unexpected failures' },
       { name: 'Candidate archive digest pinned', status: 'pass',
-        detail: 'SHA-256 ' + e.archiveSha256 + '; tested commit ' + e.testedCommit },
+        detail: 'SHA-256 ' + archiveSha256 + '; tested commit ' + testedCommit },
       { name: 'Physical hardware, Wi-Fi, RouterBOOT and deployment-specific configuration',
         status: 'untested', detail: 'Virtual CHR evidence only; no physical router validation' },
     ],
-    testedAt: e.testedAt,
-    runner: 'GitHub Actions ops-toolbox run ' + e.runId + ' attempt ' + e.runAttempt,
+    testedAt,
+    runner: 'GitHub Actions ops-toolbox run ' + runId + ' attempt ' + runAttempt,
   };
 }
 
@@ -113,11 +128,11 @@ async function findEvidence(version) {
   const bytes = Buffer.from(file.content, 'base64');
   if (bytes.length !== file.size) return null;
   const evidence = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  if (!positive(evidence.runId) || !positive(evidence.runAttempt)) return null;
+  if (!hasEvidenceSchema(evidence, version)) return null;
   const run = await github('actions/runs/' + evidence.runId);
   const jobs = await github('actions/runs/' + evidence.runId + '/attempts/' +
     evidence.runAttempt + '/jobs?per_page=100');
-  if (!validateEvidence(evidence, version, run, jobs.jobs)) return null;
+  if (!matchesRun(evidence, run, jobs?.jobs)) return null;
   // The evidence's tested source must be in the reviewed branch history.
   // The scheduled workflow is defined on master but checks out dev for testing.
   const ancestry = await github('compare/' + evidence.testedCommit + '...' + sha);
@@ -140,7 +155,7 @@ async function main() {
       try {
         const evidence = await findEvidence(stable.version);
         if (evidence) {
-          const validated = orbitResult(evidence);
+          const validated = orbitResult(evidence, stable.version);
           mkdirSync(directory, { recursive: true });
           writeJson(path, validated);
           result = validated;
