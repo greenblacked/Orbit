@@ -234,8 +234,10 @@
     var t = asOf === null ? now : asOf;
     ui.hand.setAttribute("transform", "rotate(" + r2(angle(t)) + ")");
     ui.hand.setAttribute("aria-valuenow", String(Math.round((t - start) / DAY)));
-    ui.hand.setAttribute("aria-valuetext", asOf === null ? "Now, " + RO.day(now) : "As of " + RO.day(asOf));
-    ui.date.textContent = RO.day(t);
+    // Now is a local calendar label. Time-machine days and release dates are UTC.
+    var date = asOf === null ? new Date(now).toLocaleDateString("en-US", { dateStyle: "medium" }) : RO.day(t);
+    ui.hand.setAttribute("aria-valuetext", (asOf === null ? "Now, " : "As of ") + date);
+    ui.date.textContent = date;
     ui.note.textContent = asOf === null ? "NOW" : "TIME MACHINE";
     var landed = 0;
     notches.forEach(function (g) {
@@ -245,10 +247,19 @@
     });
     var out = document.getElementById("orbit-asof");
     var plural = function (n) { return n + (n === 1 ? " release" : " releases"); };
-    out.textContent = asOf === null
-      ? "Today, " + RO.day(now) + ": " + plural(notches.length) + " in the last " + weeks + " weeks."
-      : "As of " + RO.day(asOf) + ": " + landed + " of " + plural(notches.length) +
+    if (asOf === null) {
+      var midnight = new Date(now);
+      midnight.setHours(0, 0, 0, 0);
+      var since = function (from) {
+        return notches.filter(function (g) { return g.rel.t >= from; }).length;
+      };
+      out.textContent = "Today, " + date + ": " + plural(since(midnight.getTime())) + " so far. " +
+        "Last 7 days: " + since(now - 7 * DAY) + " · Last 14 days: " + since(now - 14 * DAY) +
+        " · Last 30 days: " + since(now - 30 * DAY) + " · Last " + weeks + " weeks: " + notches.length + ".";
+    } else {
+      out.textContent = "As of " + date + ": " + landed + " of " + plural(notches.length) +
         " in the window had landed. The cards and sections below show that day.";
+    }
     var w = document.getElementById("orbit-weeks");
     if (w) w.textContent = String(weeks);
     var back = document.getElementById("orbit-back");
@@ -535,8 +546,9 @@
     }
     var helpNow = document.getElementById("orbit-help");
     if (helpNow) helpNow.hidden = false;
-    var next = data.releases.map(function (r) { return r.id + r.status; }).join("|") + "|" +
-      Math.floor(Date.now() / (6 * 3600000));
+    var currentTime = Date.now();
+    var next = data.releases.map(function (r) { return r.id + r.t + r.status; }).join("|") + "|" +
+      new Date(currentTime).toDateString() + "|" + Math.floor(currentTime / (5 * 60000));
     if (next === signature || stage.contains(document.activeElement)) return;
     signature = next;
     all = data.releases;
