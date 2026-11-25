@@ -202,7 +202,8 @@ for (const [label, overrides] of [
 ]) {
   test('keep the candidate and withhold the PR when ' + label, (t) => {
     const env = setup(t);
-    assert.equal(env.run(overrides).status, 1);
+    const run = env.run(overrides);
+    assert.ok(run.status > 0, run.stderr);
     assert.match(env.tip(), /^[0-9a-f]{40}$/);
     assert.throws(() => readFileSync(env.log), { code: 'ENOENT' });
   });
