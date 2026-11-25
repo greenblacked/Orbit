@@ -5,13 +5,18 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const SOURCE = 'greenblacked/ops-toolbox';
-const VERSION = /^\d+\.\d+(?:\.\d+)?$/;
+const VERSION = /^[0-9]{1,3}\.[0-9]{1,3}(?:\.[0-9]{1,4})?$/;
 const SHA = /^[a-f0-9]{40}$/;
 const DIGEST = /^[a-f0-9]{64}$/;
 const UTC = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/;
 const VOLATILE = new Set(['fetchedAt', 'generatedAt', 'checkedAt']);
 const read = (path) => JSON.parse(readFileSync(path, 'utf8'));
-const write = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + '\n');
+// Generated data is JSON only, never downloaded executable bytes. Exclusive creation
+// also refuses to overwrite an existing file or follow a final-component symlink.
+function writeJson(path, value) {
+  if (!path.endsWith('.json')) throw new Error('refusing non-JSON output');
+  writeFileSync(path, JSON.stringify(value, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+}
 
 export function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -23,16 +28,25 @@ export function canonical(value) {
 }
 export const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 const integer = (n) => Number.isSafeInteger(n) && n >= 0;
+const exact = (value, pattern) => typeof value === 'string' && pattern.test(value) &&
+  !/[\r\n]/.test(value);
+const FIELDS = ['archiveSha256', 'channel', 'passed', 'platform', 'runAttempt', 'runId',
+  'schema', 'skipped', 'testedAt', 'testedCommit', 'unexpectedFailures', 'version',
+  'warnings', 'xfailed'].sort();
 const positive = (n) => integer(n) && n > 0;
 
 export function validateEvidence(e, version, run, jobs) {
-  if (!VERSION.test(version) || !e || e.schema !== 1 || e.version !== version ||
+  if (!exact(version, VERSION) || !e || typeof e !== 'object' || Array.isArray(e) ||
+      Object.keys(e).sort().join(',') !== FIELDS.join(',') ||
+      e.schema !== 1 || e.version !== version ||
       e.channel !== 'stable' || e.platform !== 'chr-x86_64' ||
-      !DIGEST.test(e.archiveSha256 || '') || !SHA.test(e.testedCommit || '') ||
+      !exact(e.archiveSha256, DIGEST) || !exact(e.testedCommit, SHA) ||
       !positive(e.runId) || !positive(e.runAttempt) ||
-      !UTC.test(e.testedAt || '') || !Number.isFinite(Date.parse(e.testedAt)) ||
+      !exact(e.testedAt, UTC) || !Number.isFinite(Date.parse(e.testedAt)) ||
+      new Date(e.testedAt).toISOString().replace('.000Z', 'Z') !== e.testedAt ||
       !positive(e.passed) || !integer(e.xfailed) || !integer(e.warnings) ||
-      !integer(e.skipped) || e.unexpectedFailures !== 0) return false;
+      !integer(e.skipped) || [e.passed, e.xfailed, e.warnings, e.skipped].some((n) => n > 1000000) ||
+      e.unexpectedFailures !== 0) return false;
   if (!run || run.id !== e.runId || run.run_attempt !== e.runAttempt ||
       run.repository?.full_name !== SOURCE || run.head_repository?.full_name !== SOURCE ||
       run.path !== '.github/workflows/routeros-version.yml' ||
@@ -74,24 +88,41 @@ async function github(path, optional = false) {
   });
   if (optional && response.status === 404) return null;
   if (!response.ok) throw new Error('upstream evidence API unavailable');
-  const text = await response.text();
-  if (text.length > 2 * 1024 * 1024) throw new Error('upstream evidence response too large');
-  return JSON.parse(text);
+  if (!/^application\/(?:vnd\.github\+)?json\b/i.test(response.headers.get('content-type') || '')) {
+    throw new Error('unexpected upstream content type');
+  }
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of response.body ?? []) {
+    size += chunk.byteLength;
+    if (size > 2 * 1024 * 1024) throw new Error('upstream evidence response too large');
+    chunks.push(chunk);
+  }
+  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)));
 }
 
 async function findEvidence(version) {
-  if (!VERSION.test(version)) return null;
+  if (!exact(version, VERSION)) return null;
   const ref = await github('branches/dev');
   const sha = ref?.commit?.sha;
-  if (!SHA.test(sha || '')) return null;
+  if (!exact(sha, SHA)) return null;
   const file = await github('contents/mikrotik/tests/evidence/' + version + '.json?ref=' + sha, true);
-  if (!file || file.encoding !== 'base64' || file.size > 16384) return null;
-  const evidence = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
+  if (!file || file.type !== 'file' || file.encoding !== 'base64' ||
+      !positive(file.size) || file.size > 16384 || typeof file.content !== 'string' ||
+      file.content.length > 24000) return null;
+  const bytes = Buffer.from(file.content, 'base64');
+  if (bytes.length !== file.size) return null;
+  const evidence = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   if (!positive(evidence.runId) || !positive(evidence.runAttempt)) return null;
   const run = await github('actions/runs/' + evidence.runId);
   const jobs = await github('actions/runs/' + evidence.runId + '/attempts/' +
     evidence.runAttempt + '/jobs?per_page=100');
-  return validateEvidence(evidence, version, run, jobs.jobs) ? evidence : null;
+  if (!validateEvidence(evidence, version, run, jobs.jobs)) return null;
+  // The evidence's tested source must be in the reviewed branch history.
+  // The scheduled workflow is defined on master but checks out dev for testing.
+  const ancestry = await github('compare/' + evidence.testedCommit + '...' + sha);
+  if (!['ahead', 'identical'].includes(ancestry.status)) return null;
+  return evidence;
 }
 
 async function main() {
@@ -102,7 +133,7 @@ async function main() {
     row.family === 'RouterOS' && row.stage === 'release' && row.line === 'stable');
   let result = null;
   let version = '';
-  if (stable && VERSION.test(stable.version) && stable.build === stable.version) {
+  if (stable && exact(stable.version, VERSION) && stable.build === stable.version) {
     const directory = 'results/mikrotik/RouterOS';
     const path = join(directory, stable.version + '.json');
     if (!existsSync(path) && !existsSync(join(directory, stable.version))) {
@@ -112,7 +143,7 @@ async function main() {
           result = orbitResult(evidence);
           version = stable.version;
           mkdirSync(directory, { recursive: true });
-          write(path, result);
+          writeJson(path, result);
         }
       } catch {
         // A transient evidence-source failure must not invent PASS or block vendor data.
@@ -127,9 +158,9 @@ async function main() {
   const key = createHash('sha256').update(JSON.stringify(canonical({ releases, security, result })))
     .digest('hex').slice(0, 24);
   mkdirSync(output, { recursive: true });
-  write(join(output, 'releases.json'), releases);
-  write(join(output, 'security.json'), security);
-  if (result) write(join(output, 'result.json'), result);
+  writeJson(join(output, 'releases.json'), releases);
+  writeJson(join(output, 'security.json'), security);
+  if (result) writeJson(join(output, 'result.json'), result);
   console.log('candidate=' + key);
   console.log('result_version=' + version);
 }
