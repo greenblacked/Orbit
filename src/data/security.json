@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-04T01:09:11Z",
+  "generatedAt": "2026-11-25T18:49:51Z",
   "sources": {
     "android-security-bulletin": {
       "status": "ok",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "index": "https://source.android.com/docs/setup/reference/build-numbers"
     },
     "apple-security-releases": {
       "status": "ok",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "index": "https://support.apple.com/en-us/100100"
     }
   },
@@ -22265,6 +22265,10 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-112487",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-112488",
           "severity": null
         },
@@ -22597,6 +22601,18 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-113955",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113987",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114025",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-28864",
           "severity": null
         },
@@ -22793,6 +22809,10 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-112465",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-112466",
           "severity": null
         },
@@ -22830,6 +22850,10 @@
         },
         {
           "id": "CVE-2026-112486",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-112487",
           "severity": null
         },
         {
@@ -23089,6 +23113,10 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-112662",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-112665",
           "severity": null
         },
@@ -23282,6 +23310,30 @@
         },
         {
           "id": "CVE-2026-113952",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113953",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113954",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113987",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114024",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114025",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114026",
           "severity": null
         },
         {
@@ -23529,6 +23581,10 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-112465",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-112466",
           "severity": null
         },
@@ -23770,6 +23826,10 @@
         },
         {
           "id": "CVE-2026-112537",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-112538",
           "severity": null
         },
         {
@@ -24313,6 +24373,42 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-113953",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113987",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114021",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114023",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114024",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114025",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114026",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114028",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-132475",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-65327",
           "severity": null
         },
@@ -24478,6 +24574,10 @@
         },
         {
           "id": "CVE-2026-112464",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-112465",
           "severity": null
         },
         {
@@ -24702,6 +24802,22 @@
         },
         {
           "id": "CVE-2026-113950",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113953",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113987",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114025",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114026",
           "severity": null
         },
         {
@@ -24965,6 +25081,18 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-113987",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114024",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114026",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-65350",
           "severity": null
         },
@@ -25058,6 +25186,10 @@
         },
         {
           "id": "CVE-2026-112464",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-112465",
           "severity": null
         },
         {
@@ -25437,6 +25569,22 @@
           "severity": null
         },
         {
+          "id": "CVE-2026-113953",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113987",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114024",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-114026",
+          "severity": null
+        },
+        {
           "id": "CVE-2026-65350",
           "severity": null
         },
@@ -25502,6 +25650,286 @@
         }
       ],
       "noCveEntries": false
+    },
+    "https://support.apple.com/en-us/149715": {
+      "source": "apple-security-releases",
+      "title": "iOS 27.2.1 and iPadOS 27.2.1",
+      "published": "2026-11-09",
+      "cves": [
+        {
+          "id": "CVE-2026-111497",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113960",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113961",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113963",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113964",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113965",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113968",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113969",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113970",
+          "severity": null
+        }
+      ],
+      "noCveEntries": false
+    },
+    "https://support.apple.com/en-us/149716": {
+      "source": "apple-security-releases",
+      "title": "iOS 26.7.3 and iPadOS 26.7.3",
+      "published": "2026-11-09",
+      "cves": [
+        {
+          "id": "CVE-2026-111497",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113960",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113961",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113964",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113965",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113968",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113969",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113970",
+          "severity": null
+        }
+      ],
+      "noCveEntries": false
+    },
+    "https://support.apple.com/en-us/149717": {
+      "source": "apple-security-releases",
+      "title": "iOS 18.7.12 and iPadOS 18.7.12",
+      "published": "2026-11-09",
+      "cves": [
+        {
+          "id": "CVE-2026-113964",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113965",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113968",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113969",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113970",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113971",
+          "severity": null
+        }
+      ],
+      "noCveEntries": false
+    },
+    "https://support.apple.com/en-us/149718": {
+      "source": "apple-security-releases",
+      "title": "macOS Golden Gate 27.2.1",
+      "published": "2026-11-09",
+      "cves": [
+        {
+          "id": "CVE-2026-111497",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113960",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113961",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113964",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113965",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113968",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113969",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113970",
+          "severity": null
+        }
+      ],
+      "noCveEntries": false
+    },
+    "https://support.apple.com/en-us/149721": {
+      "source": "apple-security-releases",
+      "title": "tvOS 27.2.1",
+      "published": "2026-11-13",
+      "cves": [
+        {
+          "id": "CVE-2026-111497",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113963",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113964",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113965",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113968",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113969",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113970",
+          "severity": null
+        }
+      ],
+      "noCveEntries": false
+    },
+    "https://support.apple.com/en-us/149722": {
+      "source": "apple-security-releases",
+      "title": "watchOS 27.2.1",
+      "published": "2026-11-09",
+      "cves": [
+        {
+          "id": "CVE-2026-111497",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113960",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113961",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113963",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113964",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113965",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113968",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113969",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113970",
+          "severity": null
+        }
+      ],
+      "noCveEntries": false
+    },
+    "https://support.apple.com/en-us/149724": {
+      "source": "apple-security-releases",
+      "title": "visionOS 27.2.1",
+      "published": "2026-11-09",
+      "cves": [
+        {
+          "id": "CVE-2026-111497",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113960",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113961",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113963",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113964",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113965",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113968",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113969",
+          "severity": null
+        },
+        {
+          "id": "CVE-2026-113970",
+          "severity": null
+        }
+      ],
+      "noCveEntries": false
     }
   },
   "releases": {
@@ -25560,7 +25988,7 @@
       ],
       "count": 46,
       "patchLevel": "2019-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r10": {
@@ -25609,7 +26037,7 @@
       ],
       "count": 37,
       "patchLevel": "2019-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r11": {
@@ -25658,7 +26086,7 @@
       ],
       "count": 37,
       "patchLevel": "2019-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r12": {
@@ -25707,7 +26135,7 @@
       ],
       "count": 37,
       "patchLevel": "2019-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r13": {
@@ -25756,7 +26184,7 @@
       ],
       "count": 37,
       "patchLevel": "2019-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r14": {
@@ -25805,7 +26233,7 @@
       ],
       "count": 37,
       "patchLevel": "2019-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r15": {
@@ -25858,7 +26286,7 @@
       ],
       "count": 41,
       "patchLevel": "2019-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r16": {
@@ -25911,7 +26339,7 @@
       ],
       "count": 41,
       "patchLevel": "2019-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r17": {
@@ -25948,7 +26376,7 @@
       ],
       "count": 25,
       "patchLevel": "2019-10-06",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r18": {
@@ -26001,7 +26429,7 @@
       ],
       "count": 41,
       "patchLevel": "2019-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r19": {
@@ -26054,7 +26482,7 @@
       ],
       "count": 41,
       "patchLevel": "2019-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r2": {
@@ -26112,7 +26540,7 @@
       ],
       "count": 46,
       "patchLevel": "2019-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r20": {
@@ -26165,7 +26593,7 @@
       ],
       "count": 41,
       "patchLevel": "2019-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r21": {
@@ -26217,7 +26645,7 @@
       ],
       "count": 40,
       "patchLevel": "2020-01-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r22": {
@@ -26269,7 +26697,7 @@
       ],
       "count": 40,
       "patchLevel": "2020-01-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r23": {
@@ -26321,7 +26749,7 @@
       ],
       "count": 40,
       "patchLevel": "2020-01-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r24": {
@@ -26373,7 +26801,7 @@
       ],
       "count": 40,
       "patchLevel": "2020-01-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r25": {
@@ -26425,7 +26853,7 @@
       ],
       "count": 40,
       "patchLevel": "2020-01-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r26": {
@@ -26462,7 +26890,7 @@
       ],
       "count": 25,
       "patchLevel": "2020-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r27": {
@@ -26499,7 +26927,7 @@
       ],
       "count": 25,
       "patchLevel": "2020-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r28": {
@@ -26536,7 +26964,7 @@
       ],
       "count": 25,
       "patchLevel": "2020-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r29": {
@@ -26573,7 +27001,7 @@
       ],
       "count": 25,
       "patchLevel": "2020-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r3": {
@@ -26631,7 +27059,7 @@
       ],
       "count": 46,
       "patchLevel": "2019-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r30": {
@@ -26712,7 +27140,7 @@
       ],
       "count": 69,
       "patchLevel": "2020-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r31": {
@@ -26793,7 +27221,7 @@
       ],
       "count": 69,
       "patchLevel": "2020-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r32": {
@@ -26874,7 +27302,7 @@
       ],
       "count": 69,
       "patchLevel": "2020-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r33": {
@@ -26940,7 +27368,7 @@
       ],
       "count": 54,
       "patchLevel": "2020-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r34": {
@@ -26987,7 +27415,7 @@
       ],
       "count": 35,
       "patchLevel": "2020-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r35": {
@@ -27034,7 +27462,7 @@
       ],
       "count": 35,
       "patchLevel": "2020-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r36": {
@@ -27081,7 +27509,7 @@
       ],
       "count": 35,
       "patchLevel": "2020-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r37": {
@@ -27125,7 +27553,7 @@
       ],
       "count": 32,
       "patchLevel": "2020-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r38": {
@@ -27169,7 +27597,7 @@
       ],
       "count": 32,
       "patchLevel": "2020-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r39": {
@@ -27213,7 +27641,7 @@
       ],
       "count": 32,
       "patchLevel": "2020-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r4": {
@@ -27250,7 +27678,7 @@
       ],
       "count": 25,
       "patchLevel": "2019-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r40": {
@@ -27286,7 +27714,7 @@
       ],
       "count": 24,
       "patchLevel": "2020-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r41": {
@@ -27352,7 +27780,7 @@
       ],
       "count": 54,
       "patchLevel": "2020-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r42": {
@@ -27399,7 +27827,7 @@
       ],
       "count": 35,
       "patchLevel": "2020-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r43": {
@@ -27446,7 +27874,7 @@
       ],
       "count": 35,
       "patchLevel": "2020-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r44": {
@@ -27512,7 +27940,7 @@
       ],
       "count": 54,
       "patchLevel": "2020-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r45": {
@@ -27578,7 +28006,7 @@
       ],
       "count": 54,
       "patchLevel": "2020-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r46": {
@@ -27636,7 +28064,7 @@
       ],
       "count": 46,
       "patchLevel": "2019-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r47": {
@@ -27694,7 +28122,7 @@
       ],
       "count": 46,
       "patchLevel": "2019-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r5": {
@@ -27731,7 +28159,7 @@
       ],
       "count": 25,
       "patchLevel": "2019-10-06",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r6": {
@@ -27789,7 +28217,7 @@
       ],
       "count": 46,
       "patchLevel": "2019-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r7": {
@@ -27826,7 +28254,7 @@
       ],
       "count": 25,
       "patchLevel": "2019-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r8": {
@@ -27863,7 +28291,7 @@
       ],
       "count": 25,
       "patchLevel": "2019-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-10.0.0_r9": {
@@ -27900,7 +28328,7 @@
       ],
       "count": 25,
       "patchLevel": "2019-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r1": {
@@ -27963,7 +28391,7 @@
       ],
       "count": 51,
       "patchLevel": "2020-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r10": {
@@ -28023,7 +28451,7 @@
       ],
       "count": 48,
       "patchLevel": "2020-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r11": {
@@ -28083,7 +28511,7 @@
       ],
       "count": 48,
       "patchLevel": "2020-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r12": {
@@ -28125,7 +28553,7 @@
       ],
       "count": 30,
       "patchLevel": "2020-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r13": {
@@ -28167,7 +28595,7 @@
       ],
       "count": 30,
       "patchLevel": "2020-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r14": {
@@ -28209,7 +28637,7 @@
       ],
       "count": 30,
       "patchLevel": "2020-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r15": {
@@ -28251,7 +28679,7 @@
       ],
       "count": 30,
       "patchLevel": "2020-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r16": {
@@ -28293,7 +28721,7 @@
       ],
       "count": 30,
       "patchLevel": "2020-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r17": {
@@ -28335,7 +28763,7 @@
       ],
       "count": 30,
       "patchLevel": "2020-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r18": {
@@ -28393,7 +28821,7 @@
       ],
       "count": 46,
       "patchLevel": "2020-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r19": {
@@ -28451,7 +28879,7 @@
       ],
       "count": 46,
       "patchLevel": "2020-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r2": {
@@ -28514,7 +28942,7 @@
       ],
       "count": 51,
       "patchLevel": "2020-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r20": {
@@ -28572,7 +29000,7 @@
       ],
       "count": 46,
       "patchLevel": "2020-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r21": {
@@ -28630,7 +29058,7 @@
       ],
       "count": 46,
       "patchLevel": "2020-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r22": {
@@ -28688,7 +29116,7 @@
       ],
       "count": 46,
       "patchLevel": "2020-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r23": {
@@ -28746,7 +29174,7 @@
       ],
       "count": 46,
       "patchLevel": "2020-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r24": {
@@ -28804,7 +29232,7 @@
       ],
       "count": 46,
       "patchLevel": "2020-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r25": {
@@ -28864,7 +29292,7 @@
       ],
       "count": 48,
       "patchLevel": "2020-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r26": {
@@ -28917,7 +29345,7 @@
       ],
       "count": 41,
       "patchLevel": "2021-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r27": {
@@ -28970,7 +29398,7 @@
       ],
       "count": 41,
       "patchLevel": "2021-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r28": {
@@ -29023,7 +29451,7 @@
       ],
       "count": 41,
       "patchLevel": "2021-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r29": {
@@ -29078,7 +29506,7 @@
       ],
       "count": 43,
       "patchLevel": "2021-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r3": {
@@ -29141,7 +29569,7 @@
       ],
       "count": 51,
       "patchLevel": "2020-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r30": {
@@ -29196,7 +29624,7 @@
       ],
       "count": 43,
       "patchLevel": "2021-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r31": {
@@ -29251,7 +29679,7 @@
       ],
       "count": 43,
       "patchLevel": "2021-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r32": {
@@ -29300,7 +29728,7 @@
       ],
       "count": 37,
       "patchLevel": "2021-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r33": {
@@ -29349,7 +29777,7 @@
       ],
       "count": 37,
       "patchLevel": "2021-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r34": {
@@ -29396,7 +29824,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r35": {
@@ -29443,7 +29871,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r36": {
@@ -29497,7 +29925,7 @@
       ],
       "count": 42,
       "patchLevel": "2021-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r37": {
@@ -29551,7 +29979,7 @@
       ],
       "count": 42,
       "patchLevel": "2021-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r38": {
@@ -29602,7 +30030,7 @@
       ],
       "count": 39,
       "patchLevel": "2021-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r39": {
@@ -29650,7 +30078,7 @@
       ],
       "count": 36,
       "patchLevel": "2021-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r4": {
@@ -29710,7 +30138,7 @@
       ],
       "count": 48,
       "patchLevel": "2020-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r40": {
@@ -29755,7 +30183,7 @@
       ],
       "count": 33,
       "patchLevel": "2021-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r41": {
@@ -29806,7 +30234,7 @@
       ],
       "count": 39,
       "patchLevel": "2021-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r42": {
@@ -29857,7 +30285,7 @@
       ],
       "count": 39,
       "patchLevel": "2021-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r43": {
@@ -29908,7 +30336,7 @@
       ],
       "count": 39,
       "patchLevel": "2021-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r44": {
@@ -29959,7 +30387,7 @@
       ],
       "count": 39,
       "patchLevel": "2021-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r45": {
@@ -30010,7 +30438,7 @@
       ],
       "count": 39,
       "patchLevel": "2021-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r46": {
@@ -30069,7 +30497,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r47": {
@@ -30128,7 +30556,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r48": {
@@ -30187,7 +30615,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r5": {
@@ -30247,7 +30675,7 @@
       ],
       "count": 48,
       "patchLevel": "2020-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r7": {
@@ -30307,7 +30735,7 @@
       ],
       "count": 48,
       "patchLevel": "2020-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r8": {
@@ -30367,7 +30795,7 @@
       ],
       "count": 48,
       "patchLevel": "2020-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-11.0.0_r9": {
@@ -30427,7 +30855,7 @@
       ],
       "count": 48,
       "patchLevel": "2020-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r1": {
@@ -30486,7 +30914,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r10": {
@@ -30533,7 +30961,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r11": {
@@ -30580,7 +31008,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r12": {
@@ -30627,7 +31055,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r13": {
@@ -30674,7 +31102,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r14": {
@@ -30721,7 +31149,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r15": {
@@ -30768,7 +31196,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r16": {
@@ -30826,7 +31254,7 @@
       ],
       "count": 46,
       "patchLevel": "2021-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r18": {
@@ -30884,7 +31312,7 @@
       ],
       "count": 46,
       "patchLevel": "2021-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r19": {
@@ -30942,7 +31370,7 @@
       ],
       "count": 46,
       "patchLevel": "2021-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r20": {
@@ -31000,7 +31428,7 @@
       ],
       "count": 46,
       "patchLevel": "2021-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r21": {
@@ -31058,7 +31486,7 @@
       ],
       "count": 46,
       "patchLevel": "2021-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r25": {
@@ -31117,7 +31545,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r26": {
@@ -31162,7 +31590,7 @@
       ],
       "count": 33,
       "patchLevel": "2022-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r27": {
@@ -31207,7 +31635,7 @@
       ],
       "count": 33,
       "patchLevel": "2022-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r28": {
@@ -31254,7 +31682,7 @@
       ],
       "count": 35,
       "patchLevel": "2022-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r29": {
@@ -31301,7 +31729,7 @@
       ],
       "count": 35,
       "patchLevel": "2022-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r3": {
@@ -31360,7 +31788,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r30": {
@@ -31419,7 +31847,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r31": {
@@ -31478,7 +31906,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r32": {
@@ -31525,7 +31953,7 @@
       ],
       "count": 35,
       "patchLevel": "2022-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r33": {
@@ -31584,7 +32012,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r34": {
@@ -31643,7 +32071,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r4": {
@@ -31702,7 +32130,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r5": {
@@ -31761,7 +32189,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r6": {
@@ -31820,7 +32248,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r7": {
@@ -31879,7 +32307,7 @@
       ],
       "count": 47,
       "patchLevel": "2021-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r8": {
@@ -31926,7 +32354,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.0.0_r9": {
@@ -31973,7 +32401,7 @@
       ],
       "count": 35,
       "patchLevel": "2021-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r1": {
@@ -32022,7 +32450,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r10": {
@@ -32062,7 +32490,7 @@
       ],
       "count": 28,
       "patchLevel": "2022-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r11": {
@@ -32102,7 +32530,7 @@
       ],
       "count": 28,
       "patchLevel": "2022-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r12": {
@@ -32151,7 +32579,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r13": {
@@ -32200,7 +32628,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r14": {
@@ -32253,7 +32681,7 @@
       ],
       "count": 41,
       "patchLevel": "2022-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r15": {
@@ -32306,7 +32734,7 @@
       ],
       "count": 41,
       "patchLevel": "2022-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r16": {
@@ -32359,7 +32787,7 @@
       ],
       "count": 41,
       "patchLevel": "2022-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r17": {
@@ -32408,7 +32836,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r18": {
@@ -32457,7 +32885,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r19": {
@@ -32497,7 +32925,7 @@
       ],
       "count": 28,
       "patchLevel": "2022-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r2": {
@@ -32546,7 +32974,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r20": {
@@ -32586,7 +33014,7 @@
       ],
       "count": 28,
       "patchLevel": "2022-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r21": {
@@ -32626,7 +33054,7 @@
       ],
       "count": 28,
       "patchLevel": "2022-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r22": {
@@ -32666,7 +33094,7 @@
       ],
       "count": 28,
       "patchLevel": "2022-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r23": {
@@ -32715,7 +33143,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r24": {
@@ -32764,7 +33192,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r25": {
@@ -32813,7 +33241,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r26": {
@@ -32862,7 +33290,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r27": {
@@ -32910,7 +33338,7 @@
       ],
       "count": 36,
       "patchLevel": "2022-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r3": {
@@ -32963,7 +33391,7 @@
       ],
       "count": 41,
       "patchLevel": "2022-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r4": {
@@ -33016,7 +33444,7 @@
       ],
       "count": 41,
       "patchLevel": "2022-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r5": {
@@ -33064,7 +33492,7 @@
       ],
       "count": 36,
       "patchLevel": "2022-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r6": {
@@ -33112,7 +33540,7 @@
       ],
       "count": 36,
       "patchLevel": "2022-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r7": {
@@ -33161,7 +33589,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r8": {
@@ -33210,7 +33638,7 @@
       ],
       "count": 37,
       "patchLevel": "2022-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-12.1.0_r9": {
@@ -33250,7 +33678,7 @@
       ],
       "count": 28,
       "patchLevel": "2022-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r1": {
@@ -33298,7 +33726,7 @@
       ],
       "count": 36,
       "patchLevel": "2022-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r10": {
@@ -33356,7 +33784,7 @@
       ],
       "count": 46,
       "patchLevel": "2022-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r11": {
@@ -33416,7 +33844,7 @@
       ],
       "count": 48,
       "patchLevel": "2022-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r12": {
@@ -33470,7 +33898,7 @@
       ],
       "count": 42,
       "patchLevel": "2022-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r13": {
@@ -33524,7 +33952,7 @@
       ],
       "count": 42,
       "patchLevel": "2022-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r14": {
@@ -33578,7 +34006,7 @@
       ],
       "count": 42,
       "patchLevel": "2022-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r15": {
@@ -33632,7 +34060,7 @@
       ],
       "count": 42,
       "patchLevel": "2022-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r16": {
@@ -33717,7 +34145,7 @@
       ],
       "count": 73,
       "patchLevel": "2022-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r17": {
@@ -33802,7 +34230,7 @@
       ],
       "count": 73,
       "patchLevel": "2022-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r18": {
@@ -33887,7 +34315,7 @@
       ],
       "count": 73,
       "patchLevel": "2022-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r19": {
@@ -33956,7 +34384,7 @@
       ],
       "count": 57,
       "patchLevel": "2023-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r2": {
@@ -34004,7 +34432,7 @@
       ],
       "count": 36,
       "patchLevel": "2022-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r20": {
@@ -34073,7 +34501,7 @@
       ],
       "count": 57,
       "patchLevel": "2023-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r21": {
@@ -34142,7 +34570,7 @@
       ],
       "count": 57,
       "patchLevel": "2023-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r22": {
@@ -34211,7 +34639,7 @@
       ],
       "count": 57,
       "patchLevel": "2023-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r23": {
@@ -34280,7 +34708,7 @@
       ],
       "count": 57,
       "patchLevel": "2023-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r24": {
@@ -34349,7 +34777,7 @@
       ],
       "count": 57,
       "patchLevel": "2023-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r27": {
@@ -34399,7 +34827,7 @@
       ],
       "count": 38,
       "patchLevel": "2023-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r28": {
@@ -34449,7 +34877,7 @@
       ],
       "count": 38,
       "patchLevel": "2023-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r29": {
@@ -34499,7 +34927,7 @@
       ],
       "count": 38,
       "patchLevel": "2023-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r3": {
@@ -34547,7 +34975,7 @@
       ],
       "count": 36,
       "patchLevel": "2022-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r30": {
@@ -34597,7 +35025,7 @@
       ],
       "count": 38,
       "patchLevel": "2023-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r31": {
@@ -34657,7 +35085,7 @@
       ],
       "count": 48,
       "patchLevel": "2022-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r32": {
@@ -34723,7 +35151,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r33": {
@@ -34789,7 +35217,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r34": {
@@ -34855,7 +35283,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r35": {
@@ -34921,7 +35349,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r36": {
@@ -34987,7 +35415,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r37": {
@@ -35053,7 +35481,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r38": {
@@ -35130,7 +35558,7 @@
       ],
       "count": 65,
       "patchLevel": "2023-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r39": {
@@ -35207,7 +35635,7 @@
       ],
       "count": 65,
       "patchLevel": "2023-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r4": {
@@ -35265,7 +35693,7 @@
       ],
       "count": 46,
       "patchLevel": "2022-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r40": {
@@ -35342,7 +35770,7 @@
       ],
       "count": 65,
       "patchLevel": "2023-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r41": {
@@ -35419,7 +35847,7 @@
       ],
       "count": 65,
       "patchLevel": "2023-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r42": {
@@ -35496,7 +35924,7 @@
       ],
       "count": 65,
       "patchLevel": "2023-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r43": {
@@ -35551,7 +35979,7 @@
       ],
       "count": 43,
       "patchLevel": "2023-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r44": {
@@ -35606,7 +36034,7 @@
       ],
       "count": 43,
       "patchLevel": "2023-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r45": {
@@ -35661,7 +36089,7 @@
       ],
       "count": 43,
       "patchLevel": "2023-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r46": {
@@ -35727,7 +36155,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r47": {
@@ -35793,7 +36221,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r48": {
@@ -35859,7 +36287,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r49": {
@@ -35914,7 +36342,7 @@
       ],
       "count": 43,
       "patchLevel": "2023-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r5": {
@@ -35972,7 +36400,7 @@
       ],
       "count": 46,
       "patchLevel": "2022-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r50": {
@@ -36040,7 +36468,7 @@
       ],
       "count": 56,
       "patchLevel": "2023-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r51": {
@@ -36108,7 +36536,7 @@
       ],
       "count": 56,
       "patchLevel": "2023-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r52": {
@@ -36176,7 +36604,7 @@
       ],
       "count": 56,
       "patchLevel": "2023-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r53": {
@@ -36244,7 +36672,7 @@
       ],
       "count": 56,
       "patchLevel": "2023-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r54": {
@@ -36312,7 +36740,7 @@
       ],
       "count": 56,
       "patchLevel": "2023-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r55": {
@@ -36378,7 +36806,7 @@
       ],
       "count": 54,
       "patchLevel": "2023-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r56": {
@@ -36446,7 +36874,7 @@
       ],
       "count": 56,
       "patchLevel": "2023-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r57": {
@@ -36523,7 +36951,7 @@
       ],
       "count": 65,
       "patchLevel": "2023-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r58": {
@@ -36591,7 +37019,7 @@
       ],
       "count": 56,
       "patchLevel": "2023-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r59": {
@@ -36659,7 +37087,7 @@
       ],
       "count": 56,
       "patchLevel": "2023-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r6": {
@@ -36717,7 +37145,7 @@
       ],
       "count": 46,
       "patchLevel": "2022-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r60": {
@@ -36785,7 +37213,7 @@
       ],
       "count": 56,
       "patchLevel": "2023-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r61": {
@@ -36838,7 +37266,7 @@
       ],
       "count": 41,
       "patchLevel": "2023-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r62": {
@@ -36891,7 +37319,7 @@
       ],
       "count": 41,
       "patchLevel": "2023-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r63": {
@@ -36944,7 +37372,7 @@
       ],
       "count": 41,
       "patchLevel": "2023-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r64": {
@@ -36997,7 +37425,7 @@
       ],
       "count": 41,
       "patchLevel": "2023-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r65": {
@@ -37050,7 +37478,7 @@
       ],
       "count": 41,
       "patchLevel": "2023-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r66": {
@@ -37103,7 +37531,7 @@
       ],
       "count": 41,
       "patchLevel": "2023-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r67": {
@@ -37155,7 +37583,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r68": {
@@ -37207,7 +37635,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r69": {
@@ -37259,7 +37687,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r7": {
@@ -37319,7 +37747,7 @@
       ],
       "count": 48,
       "patchLevel": "2022-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r70": {
@@ -37371,7 +37799,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r71": {
@@ -37423,7 +37851,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r72": {
@@ -37475,7 +37903,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r73": {
@@ -37527,7 +37955,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r74": {
@@ -37579,7 +38007,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r76": {
@@ -37623,7 +38051,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r77": {
@@ -37667,7 +38095,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r78": {
@@ -37711,7 +38139,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r79": {
@@ -37755,7 +38183,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r8": {
@@ -37815,7 +38243,7 @@
       ],
       "count": 48,
       "patchLevel": "2022-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r80": {
@@ -37859,7 +38287,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r81": {
@@ -37903,7 +38331,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r82": {
@@ -37947,7 +38375,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r83": {
@@ -37999,7 +38427,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r84": {
@@ -38051,7 +38479,7 @@
       ],
       "count": 40,
       "patchLevel": "2023-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-13.0.0_r9": {
@@ -38109,7 +38537,7 @@
       ],
       "count": 46,
       "patchLevel": "2022-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r1": {
@@ -38163,7 +38591,7 @@
       ],
       "count": 42,
       "patchLevel": "2023-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r10": {
@@ -38207,7 +38635,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r11": {
@@ -38261,7 +38689,7 @@
       ],
       "count": 42,
       "patchLevel": "2023-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r12": {
@@ -38310,7 +38738,7 @@
       ],
       "count": 37,
       "patchLevel": "2023-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r13": {
@@ -38359,7 +38787,7 @@
       ],
       "count": 37,
       "patchLevel": "2023-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r14": {
@@ -38408,7 +38836,7 @@
       ],
       "count": 37,
       "patchLevel": "2023-11-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r15": {
@@ -38457,7 +38885,7 @@
       ],
       "count": 37,
       "patchLevel": "2023-11-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r16": {
@@ -38561,7 +38989,7 @@
       ],
       "count": 92,
       "patchLevel": "2023-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r17": {
@@ -38665,7 +39093,7 @@
       ],
       "count": 92,
       "patchLevel": "2023-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r18": {
@@ -38769,7 +39197,7 @@
       ],
       "count": 92,
       "patchLevel": "2023-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r19": {
@@ -38839,7 +39267,7 @@
       ],
       "count": 58,
       "patchLevel": "2024-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r2": {
@@ -38893,7 +39321,7 @@
       ],
       "count": 42,
       "patchLevel": "2023-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r20": {
@@ -38963,7 +39391,7 @@
       ],
       "count": 58,
       "patchLevel": "2024-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r21": {
@@ -39033,7 +39461,7 @@
       ],
       "count": 58,
       "patchLevel": "2024-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r22": {
@@ -39088,7 +39516,7 @@
       ],
       "count": 43,
       "patchLevel": "2024-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r23": {
@@ -39143,7 +39571,7 @@
       ],
       "count": 43,
       "patchLevel": "2024-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r24": {
@@ -39198,7 +39626,7 @@
       ],
       "count": 43,
       "patchLevel": "2024-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r25": {
@@ -39253,7 +39681,7 @@
       ],
       "count": 43,
       "patchLevel": "2024-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r26": {
@@ -39308,7 +39736,7 @@
       ],
       "count": 43,
       "patchLevel": "2024-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r27": {
@@ -39363,7 +39791,7 @@
       ],
       "count": 43,
       "patchLevel": "2024-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r28": {
@@ -39412,7 +39840,7 @@
       ],
       "count": 37,
       "patchLevel": "2023-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r29": {
@@ -39461,7 +39889,7 @@
       ],
       "count": 37,
       "patchLevel": "2024-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r3": {
@@ -39505,7 +39933,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r30": {
@@ -39545,7 +39973,7 @@
       ],
       "count": 28,
       "patchLevel": "2024-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r31": {
@@ -39585,7 +40013,7 @@
       ],
       "count": 28,
       "patchLevel": "2024-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r32": {
@@ -39625,7 +40053,7 @@
       ],
       "count": 28,
       "patchLevel": "2024-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r33": {
@@ -39665,7 +40093,7 @@
       ],
       "count": 28,
       "patchLevel": "2024-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r34": {
@@ -39703,7 +40131,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r35": {
@@ -39741,7 +40169,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r36": {
@@ -39779,7 +40207,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r37": {
@@ -39817,7 +40245,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r38": {
@@ -39866,7 +40294,7 @@
       ],
       "count": 37,
       "patchLevel": "2024-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r39": {
@@ -39915,7 +40343,7 @@
       ],
       "count": 37,
       "patchLevel": "2024-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r4": {
@@ -39959,7 +40387,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r40": {
@@ -40008,7 +40436,7 @@
       ],
       "count": 37,
       "patchLevel": "2024-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r41": {
@@ -40046,7 +40474,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r42": {
@@ -40084,7 +40512,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r43": {
@@ -40122,7 +40550,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r44": {
@@ -40160,7 +40588,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r45": {
@@ -40198,7 +40626,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r5": {
@@ -40242,7 +40670,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r50": {
@@ -40291,7 +40719,7 @@
       ],
       "count": 37,
       "patchLevel": "2024-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r51": {
@@ -40340,7 +40768,7 @@
       ],
       "count": 37,
       "patchLevel": "2024-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r52": {
@@ -40378,7 +40806,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r53": {
@@ -40416,7 +40844,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r54": {
@@ -40454,7 +40882,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r55": {
@@ -40511,7 +40939,7 @@
       ],
       "count": 45,
       "patchLevel": "2024-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r56": {
@@ -40568,7 +40996,7 @@
       ],
       "count": 45,
       "patchLevel": "2024-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r57": {
@@ -40625,7 +41053,7 @@
       ],
       "count": 45,
       "patchLevel": "2024-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r58": {
@@ -40682,7 +41110,7 @@
       ],
       "count": 45,
       "patchLevel": "2024-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r59": {
@@ -40739,7 +41167,7 @@
       ],
       "count": 45,
       "patchLevel": "2024-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r6": {
@@ -40783,7 +41211,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r60": {
@@ -40840,7 +41268,7 @@
       ],
       "count": 45,
       "patchLevel": "2024-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r61": {
@@ -40897,7 +41325,7 @@
       ],
       "count": 45,
       "patchLevel": "2024-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r62": {
@@ -40935,7 +41363,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r63": {
@@ -40973,7 +41401,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r64": {
@@ -41011,7 +41439,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r65": {
@@ -41049,7 +41477,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r66": {
@@ -41106,7 +41534,7 @@
       ],
       "count": 45,
       "patchLevel": "2024-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r67": {
@@ -41153,7 +41581,7 @@
       ],
       "count": 35,
       "patchLevel": "2024-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r68": {
@@ -41200,7 +41628,7 @@
       ],
       "count": 35,
       "patchLevel": "2024-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r69": {
@@ -41247,7 +41675,7 @@
       ],
       "count": 35,
       "patchLevel": "2024-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r7": {
@@ -41291,7 +41719,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r70": {
@@ -41338,7 +41766,7 @@
       ],
       "count": 35,
       "patchLevel": "2024-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r71": {
@@ -41385,7 +41813,7 @@
       ],
       "count": 35,
       "patchLevel": "2024-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r72": {
@@ -41432,7 +41860,7 @@
       ],
       "count": 35,
       "patchLevel": "2024-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r73": {
@@ -41479,7 +41907,7 @@
       ],
       "count": 35,
       "patchLevel": "2024-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r74": {
@@ -41526,7 +41954,7 @@
       ],
       "count": 35,
       "patchLevel": "2024-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r75": {
@@ -41583,7 +42011,7 @@
       ],
       "count": 45,
       "patchLevel": "2024-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r8": {
@@ -41627,7 +42055,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-14.0.0_r9": {
@@ -41671,7 +42099,7 @@
       ],
       "count": 32,
       "patchLevel": "2023-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r1": {
@@ -41718,7 +42146,7 @@
       ],
       "count": 35,
       "patchLevel": "2024-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r10": {
@@ -41764,7 +42192,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r11": {
@@ -41810,7 +42238,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r12": {
@@ -41856,7 +42284,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r13": {
@@ -41902,7 +42330,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r14": {
@@ -41960,7 +42388,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r15": {
@@ -42018,7 +42446,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r16": {
@@ -42076,7 +42504,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r17": {
@@ -42134,7 +42562,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r2": {
@@ -42172,7 +42600,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r20": {
@@ -42225,7 +42653,7 @@
       ],
       "count": 41,
       "patchLevel": "2025-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r21": {
@@ -42278,7 +42706,7 @@
       ],
       "count": 41,
       "patchLevel": "2025-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r22": {
@@ -42331,7 +42759,7 @@
       ],
       "count": 41,
       "patchLevel": "2025-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r23": {
@@ -42384,7 +42812,7 @@
       ],
       "count": 41,
       "patchLevel": "2025-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r24": {
@@ -42430,7 +42858,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r25": {
@@ -42488,7 +42916,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r26": {
@@ -42555,7 +42983,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r27": {
@@ -42622,7 +43050,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r28": {
@@ -42689,7 +43117,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r29": {
@@ -42756,7 +43184,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r3": {
@@ -42794,7 +43222,7 @@
       ],
       "count": 26,
       "patchLevel": "2024-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r30": {
@@ -42861,7 +43289,7 @@
       ],
       "count": 55,
       "patchLevel": "2025-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r31": {
@@ -42919,7 +43347,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r32": {
@@ -42977,7 +43405,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r33": {
@@ -43035,7 +43463,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r34": {
@@ -43093,7 +43521,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r35": {
@@ -43151,7 +43579,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r36": {
@@ -43209,7 +43637,7 @@
       ],
       "count": 46,
       "patchLevel": "2025-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r4": {
@@ -43260,7 +43688,7 @@
       ],
       "count": 39,
       "patchLevel": "2024-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r5": {
@@ -43311,7 +43739,7 @@
       ],
       "count": 39,
       "patchLevel": "2024-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r6": {
@@ -43337,7 +43765,7 @@
       ],
       "count": 14,
       "patchLevel": "2024-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r7": {
@@ -43363,7 +43791,7 @@
       ],
       "count": 14,
       "patchLevel": "2024-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r8": {
@@ -43389,7 +43817,7 @@
       ],
       "count": 14,
       "patchLevel": "2024-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-15.0.0_r9": {
@@ -43415,7 +43843,7 @@
       ],
       "count": 14,
       "patchLevel": "2024-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-16.0.0_r1": {
@@ -43461,7 +43889,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-16.0.0_r2": {
@@ -43507,7 +43935,7 @@
       ],
       "count": 34,
       "patchLevel": "2025-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-16.0.0_r3": {
@@ -43627,7 +44055,7 @@
       ],
       "count": 108,
       "patchLevel": "2025-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-16.0.0_r4": {
@@ -43738,7 +44166,7 @@
       ],
       "count": 99,
       "patchLevel": "2025-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-17.0.0_r1": {
@@ -43864,7 +44292,7 @@
       ],
       "count": 114,
       "patchLevel": "2026-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-7.1.1_r59": {
@@ -43890,7 +44318,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-7.1.1_r60": {
@@ -43916,7 +44344,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-7.1.1_r61": {
@@ -43942,7 +44370,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-7.1.2_r37": {
@@ -43968,7 +44396,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-7.1.2_r38": {
@@ -43994,7 +44422,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-7.1.2_r39": {
@@ -44020,7 +44448,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r1": {
@@ -44085,7 +44513,7 @@
       ],
       "count": 53,
       "patchLevel": "2017-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r10": {
@@ -44184,7 +44612,7 @@
       ],
       "count": 87,
       "patchLevel": "2017-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r11": {
@@ -44283,7 +44711,7 @@
       ],
       "count": 87,
       "patchLevel": "2017-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r12": {
@@ -44382,7 +44810,7 @@
       ],
       "count": 87,
       "patchLevel": "2017-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r13": {
@@ -44408,7 +44836,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r15": {
@@ -44434,7 +44862,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r16": {
@@ -44460,7 +44888,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r17": {
@@ -44486,7 +44914,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r2": {
@@ -44551,7 +44979,7 @@
       ],
       "count": 53,
       "patchLevel": "2017-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r21": {
@@ -44650,7 +45078,7 @@
       ],
       "count": 87,
       "patchLevel": "2017-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r22": {
@@ -44749,7 +45177,7 @@
       ],
       "count": 87,
       "patchLevel": "2017-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r23": {
@@ -44848,7 +45276,7 @@
       ],
       "count": 87,
       "patchLevel": "2017-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r24": {
@@ -44947,7 +45375,7 @@
       ],
       "count": 87,
       "patchLevel": "2017-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r25": {
@@ -44990,7 +45418,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r26": {
@@ -45033,7 +45461,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r27": {
@@ -45076,7 +45504,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r28": {
@@ -45119,7 +45547,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r29": {
@@ -45162,7 +45590,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r3": {
@@ -45227,7 +45655,7 @@
       ],
       "count": 53,
       "patchLevel": "2017-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r30": {
@@ -45270,7 +45698,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r31": {
@@ -45313,7 +45741,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r32": {
@@ -45356,7 +45784,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r33": {
@@ -45399,7 +45827,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r34": {
@@ -45442,7 +45870,7 @@
       ],
       "count": 31,
       "patchLevel": "2017-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r35": {
@@ -45501,7 +45929,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r36": {
@@ -45560,7 +45988,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r37": {
@@ -45586,7 +46014,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r38": {
@@ -45612,7 +46040,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r39": {
@@ -45638,7 +46066,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r4": {
@@ -45703,7 +46131,7 @@
       ],
       "count": 53,
       "patchLevel": "2017-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r40": {
@@ -45729,7 +46157,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r41": {
@@ -45755,7 +46183,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r42": {
@@ -45781,7 +46209,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r43": {
@@ -45807,7 +46235,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r44": {
@@ -45833,7 +46261,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r45": {
@@ -45859,7 +46287,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r46": {
@@ -45885,7 +46313,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r47": {
@@ -45911,7 +46339,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r48": {
@@ -45937,7 +46365,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r49": {
@@ -45963,7 +46391,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r50": {
@@ -45989,7 +46417,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r51": {
@@ -46015,7 +46443,7 @@
       ],
       "count": 14,
       "patchLevel": "2017-10-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r7": {
@@ -46114,7 +46542,7 @@
       ],
       "count": 87,
       "patchLevel": "2017-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.0.0_r9": {
@@ -46213,7 +46641,7 @@
       ],
       "count": 87,
       "patchLevel": "2017-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r1": {
@@ -46272,7 +46700,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r10": {
@@ -46309,7 +46737,7 @@
       ],
       "count": 25,
       "patchLevel": "2018-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r11": {
@@ -46346,7 +46774,7 @@
       ],
       "count": 25,
       "patchLevel": "2018-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r12": {
@@ -46383,7 +46811,7 @@
       ],
       "count": 25,
       "patchLevel": "2018-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r13": {
@@ -46420,7 +46848,7 @@
       ],
       "count": 25,
       "patchLevel": "2018-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r14": {
@@ -46457,7 +46885,7 @@
       ],
       "count": 25,
       "patchLevel": "2018-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r15": {
@@ -46506,7 +46934,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r16": {
@@ -46555,7 +46983,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r17": {
@@ -46604,7 +47032,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r18": {
@@ -46653,7 +47081,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r19": {
@@ -46976,7 +47404,7 @@
       ],
       "count": 311,
       "patchLevel": "2018-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r2": {
@@ -47035,7 +47463,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r20": {
@@ -47358,7 +47786,7 @@
       ],
       "count": 311,
       "patchLevel": "2018-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r21": {
@@ -47681,7 +48109,7 @@
       ],
       "count": 311,
       "patchLevel": "2018-04-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r22": {
@@ -48004,7 +48432,7 @@
       ],
       "count": 311,
       "patchLevel": "2018-04-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r23": {
@@ -48327,7 +48755,7 @@
       ],
       "count": 311,
       "patchLevel": "2018-04-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r25": {
@@ -48361,7 +48789,7 @@
       ],
       "count": 22,
       "patchLevel": "2018-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r26": {
@@ -48395,7 +48823,7 @@
       ],
       "count": 22,
       "patchLevel": "2018-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r27": {
@@ -48429,7 +48857,7 @@
       ],
       "count": 22,
       "patchLevel": "2018-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r28": {
@@ -48463,7 +48891,7 @@
       ],
       "count": 22,
       "patchLevel": "2018-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r29": {
@@ -48497,7 +48925,7 @@
       ],
       "count": 22,
       "patchLevel": "2018-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r3": {
@@ -48546,7 +48974,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r30": {
@@ -48615,7 +49043,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r31": {
@@ -48684,7 +49112,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r32": {
@@ -48753,7 +49181,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r33": {
@@ -48822,7 +49250,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r35": {
@@ -48874,7 +49302,7 @@
       ],
       "count": 40,
       "patchLevel": "2018-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r36": {
@@ -48926,7 +49354,7 @@
       ],
       "count": 40,
       "patchLevel": "2018-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r37": {
@@ -48978,7 +49406,7 @@
       ],
       "count": 40,
       "patchLevel": "2018-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r38": {
@@ -49030,7 +49458,7 @@
       ],
       "count": 40,
       "patchLevel": "2018-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r39": {
@@ -49082,7 +49510,7 @@
       ],
       "count": 40,
       "patchLevel": "2018-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r4": {
@@ -49131,7 +49559,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r40": {
@@ -49183,7 +49611,7 @@
       ],
       "count": 40,
       "patchLevel": "2018-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r41": {
@@ -49235,7 +49663,7 @@
       ],
       "count": 40,
       "patchLevel": "2018-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r42": {
@@ -49290,7 +49718,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r43": {
@@ -49345,7 +49773,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r45": {
@@ -49414,7 +49842,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r46": {
@@ -49483,7 +49911,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r47": {
@@ -49521,7 +49949,7 @@
       ],
       "count": 26,
       "patchLevel": "2018-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r48": {
@@ -49559,7 +49987,7 @@
       ],
       "count": 26,
       "patchLevel": "2018-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r5": {
@@ -49608,7 +50036,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r50": {
@@ -49653,7 +50081,7 @@
       ],
       "count": 33,
       "patchLevel": "2018-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r51": {
@@ -49698,7 +50126,7 @@
       ],
       "count": 33,
       "patchLevel": "2018-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r52": {
@@ -49763,7 +50191,7 @@
       ],
       "count": 53,
       "patchLevel": "2018-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r53": {
@@ -49828,7 +50256,7 @@
       ],
       "count": 53,
       "patchLevel": "2018-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r6": {
@@ -49877,7 +50305,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r60": {
@@ -49916,7 +50344,7 @@
       ],
       "count": 27,
       "patchLevel": "2019-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r61": {
@@ -49970,7 +50398,7 @@
       ],
       "count": 42,
       "patchLevel": "2019-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r62": {
@@ -50022,7 +50450,7 @@
       ],
       "count": 40,
       "patchLevel": "2019-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r63": {
@@ -50122,7 +50550,7 @@
       ],
       "count": 88,
       "patchLevel": "2019-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r64": {
@@ -50165,7 +50593,7 @@
       ],
       "count": 31,
       "patchLevel": "2019-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r65": {
@@ -50199,7 +50627,7 @@
       ],
       "count": 22,
       "patchLevel": "2019-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r66": {
@@ -50258,7 +50686,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r67": {
@@ -50292,7 +50720,7 @@
       ],
       "count": 22,
       "patchLevel": "2019-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r68": {
@@ -50351,7 +50779,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r69": {
@@ -50410,7 +50838,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r7": {
@@ -50459,7 +50887,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r70": {
@@ -50518,7 +50946,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r71": {
@@ -50577,7 +51005,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r72": {
@@ -50636,7 +51064,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r73": {
@@ -50695,7 +51123,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r74": {
@@ -50754,7 +51182,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r75": {
@@ -50813,7 +51241,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r76": {
@@ -50872,7 +51300,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r77": {
@@ -50931,7 +51359,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r78": {
@@ -50990,7 +51418,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r79": {
@@ -51049,7 +51477,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r8": {
@@ -51098,7 +51526,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r80": {
@@ -51157,7 +51585,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r81": {
@@ -51216,7 +51644,7 @@
       ],
       "count": 47,
       "patchLevel": "2017-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-8.1.0_r9": {
@@ -51265,7 +51693,7 @@
       ],
       "count": 37,
       "patchLevel": "2018-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r1": {
@@ -51320,7 +51748,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r10": {
@@ -51358,7 +51786,7 @@
       ],
       "count": 26,
       "patchLevel": "2018-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r11": {
@@ -51427,7 +51855,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r12": {
@@ -51496,7 +51924,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r16": {
@@ -51541,7 +51969,7 @@
       ],
       "count": 33,
       "patchLevel": "2018-11-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r17": {
@@ -51586,7 +52014,7 @@
       ],
       "count": 33,
       "patchLevel": "2018-11-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r18": {
@@ -51631,7 +52059,7 @@
       ],
       "count": 33,
       "patchLevel": "2018-11-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r19": {
@@ -51696,7 +52124,7 @@
       ],
       "count": 53,
       "patchLevel": "2018-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r2": {
@@ -51751,7 +52179,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r20": {
@@ -51816,7 +52244,7 @@
       ],
       "count": 53,
       "patchLevel": "2018-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r21": {
@@ -51881,7 +52309,7 @@
       ],
       "count": 53,
       "patchLevel": "2018-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r22": {
@@ -51946,7 +52374,7 @@
       ],
       "count": 53,
       "patchLevel": "2018-12-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r3": {
@@ -52001,7 +52429,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r30": {
@@ -52040,7 +52468,7 @@
       ],
       "count": 27,
       "patchLevel": "2019-01-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r31": {
@@ -52094,7 +52522,7 @@
       ],
       "count": 42,
       "patchLevel": "2019-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r32": {
@@ -52148,7 +52576,7 @@
       ],
       "count": 42,
       "patchLevel": "2019-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r33": {
@@ -52202,7 +52630,7 @@
       ],
       "count": 42,
       "patchLevel": "2019-02-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r34": {
@@ -52254,7 +52682,7 @@
       ],
       "count": 40,
       "patchLevel": "2019-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r35": {
@@ -52354,7 +52782,7 @@
       ],
       "count": 88,
       "patchLevel": "2019-04-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r36": {
@@ -52397,7 +52825,7 @@
       ],
       "count": 31,
       "patchLevel": "2019-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r37": {
@@ -52440,7 +52868,7 @@
       ],
       "count": 31,
       "patchLevel": "2019-05-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r38": {
@@ -52492,7 +52920,7 @@
       ],
       "count": 40,
       "patchLevel": "2019-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r39": {
@@ -52544,7 +52972,7 @@
       ],
       "count": 40,
       "patchLevel": "2019-03-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r40": {
@@ -52578,7 +53006,7 @@
       ],
       "count": 22,
       "patchLevel": "2019-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r41": {
@@ -52612,7 +53040,7 @@
       ],
       "count": 22,
       "patchLevel": "2019-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r42": {
@@ -52646,7 +53074,7 @@
       ],
       "count": 22,
       "patchLevel": "2019-06-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r43": {
@@ -52691,7 +53119,7 @@
       ],
       "count": 33,
       "patchLevel": "2019-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r44": {
@@ -52736,7 +53164,7 @@
       ],
       "count": 33,
       "patchLevel": "2019-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r45": {
@@ -52781,7 +53209,7 @@
       ],
       "count": 33,
       "patchLevel": "2019-07-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r46": {
@@ -52822,7 +53250,7 @@
       ],
       "count": 29,
       "patchLevel": "2019-08-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r47": {
@@ -52863,7 +53291,7 @@
       ],
       "count": 29,
       "patchLevel": "2019-08-01",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r48": {
@@ -52918,7 +53346,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r49": {
@@ -52973,7 +53401,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r5": {
@@ -53042,7 +53470,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r50": {
@@ -53097,7 +53525,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r51": {
@@ -53152,7 +53580,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r52": {
@@ -53207,7 +53635,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r53": {
@@ -53262,7 +53690,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r54": {
@@ -53317,7 +53745,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r55": {
@@ -53372,7 +53800,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r56": {
@@ -53427,7 +53855,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r57": {
@@ -53482,7 +53910,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r58": {
@@ -53537,7 +53965,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r59": {
@@ -53592,7 +54020,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r6": {
@@ -53661,7 +54089,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r60": {
@@ -53716,7 +54144,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r61": {
@@ -53771,7 +54199,7 @@
       ],
       "count": 43,
       "patchLevel": "2018-08-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r7": {
@@ -53840,7 +54268,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r8": {
@@ -53909,7 +54337,7 @@
       ],
       "count": 57,
       "patchLevel": "2018-09-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "android-9.0.0_r9": {
@@ -53947,7 +54375,7 @@
       ],
       "count": 26,
       "patchLevel": "2018-10-05",
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "android-security-bulletin"
     },
     "https://developer.apple.com/news/releases/?id=05112026i": {
@@ -53960,7 +54388,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=05112026j": {
@@ -53973,7 +54401,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=05112026k": {
@@ -53986,7 +54414,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=05112026l": {
@@ -53999,7 +54427,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=05112026m": {
@@ -54012,7 +54440,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=07272026d": {
@@ -54130,7 +54558,7 @@
       ],
       "count": 106,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=07272026f": {
@@ -54248,7 +54676,7 @@
       ],
       "count": 106,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=08172026i": {
@@ -54262,7 +54690,7 @@
       ],
       "count": 2,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=08172026j": {
@@ -54308,7 +54736,7 @@
       ],
       "count": 34,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=08172026k": {
@@ -54451,7 +54879,7 @@
       ],
       "count": 131,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=08172026l": {
@@ -54594,7 +55022,7 @@
       ],
       "count": 131,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09082026a": {
@@ -54603,7 +55031,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09082026b": {
@@ -54612,7 +55040,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09092026g": {
@@ -54719,7 +55147,7 @@
       ],
       "count": 95,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09142026d": {
@@ -54832,7 +55260,7 @@
       ],
       "count": 101,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09142026f": {
@@ -54950,7 +55378,7 @@
       ],
       "count": 106,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026a": {
@@ -54959,7 +55387,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026b": {
@@ -54968,7 +55396,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026c": {
@@ -54977,7 +55405,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026d": {
@@ -54986,7 +55414,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026e": {
@@ -54995,7 +55423,7 @@
       "cves": [],
       "count": 0,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=09282026f": {
@@ -55008,7 +55436,7 @@
       ],
       "count": 1,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10052026a": {
@@ -55017,7 +55445,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026b": {
       "status": "not-applicable",
@@ -55025,7 +55453,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026c": {
       "status": "not-applicable",
@@ -55033,7 +55461,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026d": {
       "status": "not-applicable",
@@ -55041,7 +55469,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026e": {
       "status": "not-applicable",
@@ -55049,7 +55477,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10052026f": {
       "status": "not-applicable",
@@ -55057,7 +55485,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10192026a": {
       "status": "not-applicable",
@@ -55065,7 +55493,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10192026b": {
       "status": "not-applicable",
@@ -55073,7 +55501,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10192026c": {
       "status": "not-applicable",
@@ -55081,7 +55509,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10192026d": {
       "status": "not-applicable",
@@ -55089,7 +55517,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10192026e": {
       "status": "not-applicable",
@@ -55097,7 +55525,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10192026f": {
       "status": "not-applicable",
@@ -55105,7 +55533,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=10262026a": {
       "status": "listed",
@@ -55129,6 +55557,7 @@
         "CVE-2026-112459",
         "CVE-2026-112461",
         "CVE-2026-112464",
+        "CVE-2026-112465",
         "CVE-2026-112466",
         "CVE-2026-112468",
         "CVE-2026-112469",
@@ -55139,6 +55568,7 @@
         "CVE-2026-112479",
         "CVE-2026-112485",
         "CVE-2026-112486",
+        "CVE-2026-112487",
         "CVE-2026-112488",
         "CVE-2026-112491",
         "CVE-2026-112500",
@@ -55203,6 +55633,7 @@
         "CVE-2026-112658",
         "CVE-2026-112659",
         "CVE-2026-112660",
+        "CVE-2026-112662",
         "CVE-2026-112665",
         "CVE-2026-112666",
         "CVE-2026-112669",
@@ -55252,6 +55683,12 @@
         "CVE-2026-113949",
         "CVE-2026-113950",
         "CVE-2026-113952",
+        "CVE-2026-113953",
+        "CVE-2026-113954",
+        "CVE-2026-113987",
+        "CVE-2026-114024",
+        "CVE-2026-114025",
+        "CVE-2026-114026",
         "CVE-2026-65350",
         "CVE-2026-65385",
         "CVE-2026-65397",
@@ -55277,9 +55714,9 @@
         "CVE-2026-86991",
         "CVE-2026-86992"
       ],
-      "count": 163,
+      "count": 172,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10262026b": {
@@ -55304,6 +55741,7 @@
         "CVE-2026-112459",
         "CVE-2026-112461",
         "CVE-2026-112464",
+        "CVE-2026-112465",
         "CVE-2026-112466",
         "CVE-2026-112468",
         "CVE-2026-112469",
@@ -55314,6 +55752,7 @@
         "CVE-2026-112479",
         "CVE-2026-112485",
         "CVE-2026-112486",
+        "CVE-2026-112487",
         "CVE-2026-112488",
         "CVE-2026-112491",
         "CVE-2026-112500",
@@ -55378,6 +55817,7 @@
         "CVE-2026-112658",
         "CVE-2026-112659",
         "CVE-2026-112660",
+        "CVE-2026-112662",
         "CVE-2026-112665",
         "CVE-2026-112666",
         "CVE-2026-112669",
@@ -55427,6 +55867,12 @@
         "CVE-2026-113949",
         "CVE-2026-113950",
         "CVE-2026-113952",
+        "CVE-2026-113953",
+        "CVE-2026-113954",
+        "CVE-2026-113987",
+        "CVE-2026-114024",
+        "CVE-2026-114025",
+        "CVE-2026-114026",
         "CVE-2026-65350",
         "CVE-2026-65385",
         "CVE-2026-65397",
@@ -55452,9 +55898,9 @@
         "CVE-2026-86991",
         "CVE-2026-86992"
       ],
-      "count": 163,
+      "count": 172,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10262026c": {
@@ -55479,6 +55925,7 @@
         "CVE-2026-112459",
         "CVE-2026-112461",
         "CVE-2026-112464",
+        "CVE-2026-112465",
         "CVE-2026-112466",
         "CVE-2026-112468",
         "CVE-2026-112469",
@@ -55489,6 +55936,7 @@
         "CVE-2026-112479",
         "CVE-2026-112485",
         "CVE-2026-112486",
+        "CVE-2026-112487",
         "CVE-2026-112488",
         "CVE-2026-112491",
         "CVE-2026-112500",
@@ -55553,6 +56001,7 @@
         "CVE-2026-112658",
         "CVE-2026-112659",
         "CVE-2026-112660",
+        "CVE-2026-112662",
         "CVE-2026-112665",
         "CVE-2026-112666",
         "CVE-2026-112669",
@@ -55602,6 +56051,12 @@
         "CVE-2026-113949",
         "CVE-2026-113950",
         "CVE-2026-113952",
+        "CVE-2026-113953",
+        "CVE-2026-113954",
+        "CVE-2026-113987",
+        "CVE-2026-114024",
+        "CVE-2026-114025",
+        "CVE-2026-114026",
         "CVE-2026-65350",
         "CVE-2026-65385",
         "CVE-2026-65397",
@@ -55627,9 +56082,9 @@
         "CVE-2026-86991",
         "CVE-2026-86992"
       ],
-      "count": 163,
+      "count": 172,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10262026d": {
@@ -55673,6 +56128,7 @@
         "CVE-2026-112461",
         "CVE-2026-112462",
         "CVE-2026-112464",
+        "CVE-2026-112465",
         "CVE-2026-112466",
         "CVE-2026-112467",
         "CVE-2026-112468",
@@ -55734,6 +56190,7 @@
         "CVE-2026-112535",
         "CVE-2026-112536",
         "CVE-2026-112537",
+        "CVE-2026-112538",
         "CVE-2026-112539",
         "CVE-2026-112540",
         "CVE-2026-112541",
@@ -55869,6 +56326,15 @@
         "CVE-2026-113949",
         "CVE-2026-113950",
         "CVE-2026-113952",
+        "CVE-2026-113953",
+        "CVE-2026-113987",
+        "CVE-2026-114021",
+        "CVE-2026-114023",
+        "CVE-2026-114024",
+        "CVE-2026-114025",
+        "CVE-2026-114026",
+        "CVE-2026-114028",
+        "CVE-2026-132475",
         "CVE-2026-65327",
         "CVE-2026-65350",
         "CVE-2026-65384",
@@ -55902,9 +56368,9 @@
         "CVE-2026-86991",
         "CVE-2026-86992"
       ],
-      "count": 263,
+      "count": 274,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10262026e": {
@@ -55921,6 +56387,7 @@
         "CVE-2026-112455",
         "CVE-2026-112459",
         "CVE-2026-112464",
+        "CVE-2026-112465",
         "CVE-2026-112466",
         "CVE-2026-112468",
         "CVE-2026-112469",
@@ -55977,6 +56444,10 @@
         "CVE-2026-113912",
         "CVE-2026-113915",
         "CVE-2026-113950",
+        "CVE-2026-113953",
+        "CVE-2026-113987",
+        "CVE-2026-114025",
+        "CVE-2026-114026",
         "CVE-2026-65350",
         "CVE-2026-84495",
         "CVE-2026-86970",
@@ -55986,9 +56457,9 @@
         "CVE-2026-86988",
         "CVE-2026-86992"
       ],
-      "count": 72,
+      "count": 77,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10262026f": {
@@ -56012,6 +56483,7 @@
         "CVE-2026-112455",
         "CVE-2026-112461",
         "CVE-2026-112464",
+        "CVE-2026-112465",
         "CVE-2026-112466",
         "CVE-2026-112468",
         "CVE-2026-112469",
@@ -56106,6 +56578,10 @@
         "CVE-2026-113915",
         "CVE-2026-113949",
         "CVE-2026-113950",
+        "CVE-2026-113953",
+        "CVE-2026-113987",
+        "CVE-2026-114024",
+        "CVE-2026-114026",
         "CVE-2026-65350",
         "CVE-2026-65385",
         "CVE-2026-65397",
@@ -56123,9 +56599,9 @@
         "CVE-2026-86991",
         "CVE-2026-86992"
       ],
-      "count": 125,
+      "count": 130,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10262026g": {
@@ -56189,6 +56665,9 @@
         "CVE-2026-113910",
         "CVE-2026-113915",
         "CVE-2026-113950",
+        "CVE-2026-113987",
+        "CVE-2026-114024",
+        "CVE-2026-114026",
         "CVE-2026-65350",
         "CVE-2026-65385",
         "CVE-2026-84495",
@@ -56197,9 +56676,9 @@
         "CVE-2026-86988",
         "CVE-2026-86992"
       ],
-      "count": 62,
+      "count": 65,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10262026h": {
@@ -56228,6 +56707,7 @@
         "CVE-2026-112477",
         "CVE-2026-112479",
         "CVE-2026-112486",
+        "CVE-2026-112487",
         "CVE-2026-112488",
         "CVE-2026-112491",
         "CVE-2026-112501",
@@ -56311,6 +56791,9 @@
         "CVE-2026-113915",
         "CVE-2026-113949",
         "CVE-2026-113952",
+        "CVE-2026-113955",
+        "CVE-2026-113987",
+        "CVE-2026-114025",
         "CVE-2026-28864",
         "CVE-2026-64750",
         "CVE-2026-64759",
@@ -56343,9 +56826,9 @@
         "CVE-2026-86991",
         "CVE-2026-86992"
       ],
-      "count": 134,
+      "count": 138,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10262026i": {
@@ -56360,7 +56843,7 @@
       ],
       "count": 3,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=10262026j": {
@@ -56375,7 +56858,7 @@
       ],
       "count": 3,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z",
+      "checkedAt": "2026-11-25T18:49:51Z",
       "source": "apple-security-releases"
     },
     "https://developer.apple.com/news/releases/?id=11032026a": {
@@ -56384,7 +56867,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=11032026b": {
       "status": "not-applicable",
@@ -56392,7 +56875,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=11032026c": {
       "status": "not-applicable",
@@ -56400,7 +56883,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=11032026d": {
       "status": "not-applicable",
@@ -56408,7 +56891,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=11032026e": {
       "status": "not-applicable",
@@ -56416,7 +56899,7 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://developer.apple.com/news/releases/?id=11032026f": {
       "status": "not-applicable",
@@ -56424,7 +56907,239 @@
       "cves": [],
       "count": null,
       "patchLevel": null,
-      "checkedAt": "2026-11-04T01:09:11Z"
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
+    "https://developer.apple.com/news/releases/?id=11092026a": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149715"
+      ],
+      "cves": [
+        "CVE-2026-111497",
+        "CVE-2026-113960",
+        "CVE-2026-113961",
+        "CVE-2026-113963",
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970"
+      ],
+      "count": 9,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11092026b": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149715"
+      ],
+      "cves": [
+        "CVE-2026-111497",
+        "CVE-2026-113960",
+        "CVE-2026-113961",
+        "CVE-2026-113963",
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970"
+      ],
+      "count": 9,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11092026c": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149715"
+      ],
+      "cves": [
+        "CVE-2026-111497",
+        "CVE-2026-113960",
+        "CVE-2026-113961",
+        "CVE-2026-113963",
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970"
+      ],
+      "count": 9,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11092026d": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149718"
+      ],
+      "cves": [
+        "CVE-2026-111497",
+        "CVE-2026-113960",
+        "CVE-2026-113961",
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970"
+      ],
+      "count": 8,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11092026e": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149724"
+      ],
+      "cves": [
+        "CVE-2026-111497",
+        "CVE-2026-113960",
+        "CVE-2026-113961",
+        "CVE-2026-113963",
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970"
+      ],
+      "count": 9,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11092026f": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149722"
+      ],
+      "cves": [
+        "CVE-2026-111497",
+        "CVE-2026-113960",
+        "CVE-2026-113961",
+        "CVE-2026-113963",
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970"
+      ],
+      "count": 9,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11092026g": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149716"
+      ],
+      "cves": [
+        "CVE-2026-111497",
+        "CVE-2026-113960",
+        "CVE-2026-113961",
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970"
+      ],
+      "count": 8,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11092026h": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149717"
+      ],
+      "cves": [
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970",
+        "CVE-2026-113971"
+      ],
+      "count": 6,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11092026i": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149717"
+      ],
+      "cves": [
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970",
+        "CVE-2026-113971"
+      ],
+      "count": 6,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11132026a": {
+      "status": "listed",
+      "notes": [
+        "https://support.apple.com/en-us/149721"
+      ],
+      "cves": [
+        "CVE-2026-111497",
+        "CVE-2026-113963",
+        "CVE-2026-113964",
+        "CVE-2026-113965",
+        "CVE-2026-113968",
+        "CVE-2026-113969",
+        "CVE-2026-113970"
+      ],
+      "count": 7,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z",
+      "source": "apple-security-releases"
+    },
+    "https://developer.apple.com/news/releases/?id=11162026c": {
+      "status": "not-applicable",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
+    "https://developer.apple.com/news/releases/?id=11162026d": {
+      "status": "not-applicable",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
+    "https://developer.apple.com/news/releases/?id=11162026e": {
+      "status": "not-applicable",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
+    "https://developer.apple.com/news/releases/?id=11162026f": {
+      "status": "not-applicable",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://learn.microsoft.com/en-us/windows/release-health/release-information#22h2-19045.7727": {
       "status": "not-connected",
@@ -56450,6 +57165,14 @@
       "patchLevel": null,
       "checkedAt": "2026-11-04T01:09:11Z"
     },
+    "https://learn.microsoft.com/en-us/windows/release-health/release-information#22h2-19045.7850": {
+      "status": "not-connected",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
     "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#23h2-22631.7584": {
       "status": "not-connected",
       "notes": [],
@@ -56474,6 +57197,14 @@
       "patchLevel": null,
       "checkedAt": "2026-11-04T01:09:11Z"
     },
+    "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#23h2-22631.7714": {
+      "status": "not-connected",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
     "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#24h2-26100.9550": {
       "status": "not-connected",
       "notes": [],
@@ -56497,6 +57228,22 @@
       "count": null,
       "patchLevel": null,
       "checkedAt": "2026-11-04T01:09:11Z"
+    },
+    "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#24h2-26100.9974": {
+      "status": "not-connected",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
+    "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#25h2-26200.10075": {
+      "status": "not-connected",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#25h2-26200.9550": {
       "status": "not-connected",
@@ -56546,6 +57293,22 @@
       "patchLevel": null,
       "checkedAt": "2026-11-04T01:09:11Z"
     },
+    "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h1-28000.3620": {
+      "status": "not-connected",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
+    "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h2-26300.10075": {
+      "status": "not-connected",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
     "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information#26h2-26300.9550": {
       "status": "not-connected",
       "notes": [],
@@ -56569,6 +57332,22 @@
       "count": null,
       "patchLevel": null,
       "checkedAt": "2026-11-04T01:09:11Z"
+    },
+    "https://store.steampowered.com/news/app/1675200#steamos-3.10.0-preview": {
+      "status": "not-applicable",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
+    "https://store.steampowered.com/news/app/1675200#steamos-3.10.1-preview": {
+      "status": "not-applicable",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "https://store.steampowered.com/news/app/1675200#steamos-3.8": {
       "status": "not-connected",
@@ -56786,6 +57565,22 @@
       "patchLevel": null,
       "checkedAt": "2026-11-02T08:34:45Z"
     },
+    "https://store.steampowered.com/news/app/1675200#steamos-3.9.6-beta": {
+      "status": "not-applicable",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
+    "https://store.steampowered.com/news/app/1675200#steamos-3.9.7-beta": {
+      "status": "not-applicable",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
     "routeros-7.23.8-long-term": {
       "status": "not-connected",
       "notes": [],
@@ -56810,6 +57605,14 @@
       "patchLevel": null,
       "checkedAt": "2026-11-04T01:09:11Z"
     },
+    "routeros-7.24.7-long-term": {
+      "status": "not-connected",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
+    },
     "routeros-7.25-stable": {
       "status": "not-connected",
       "notes": [],
@@ -56825,6 +57628,14 @@
       "count": null,
       "patchLevel": null,
       "checkedAt": "2026-11-04T01:09:11Z"
+    },
+    "routeros-7.25.2-stable": {
+      "status": "not-connected",
+      "notes": [],
+      "cves": [],
+      "count": null,
+      "patchLevel": null,
+      "checkedAt": "2026-11-25T18:49:51Z"
     },
     "routeros-7.25rc1-testing": {
       "status": "not-applicable",
