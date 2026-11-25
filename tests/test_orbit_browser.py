@@ -135,6 +135,44 @@ def text(page, selector):
 # --- the dial ---------------------------------------------------------------------------
 
 
+def test_live_counts_use_the_browser_date_past_local_midnight(browser, base_url):
+    context = make_context(browser, base_url, timezone_id="Europe/Kyiv")
+    try:
+        page = context.new_page()
+        data = dict(SNAPSHOT)
+        base = next(r for r in SNAPSHOT["releases"] if r["family"] == "iOS")
+        data["releases"] = [
+            dict(base, id=f"count-{i}", date=day)
+            for i, day in enumerate(
+                (
+                    "2026-11-25T22:20:00Z",  # Today in Kyiv
+                    "2026-11-25T21:59:00Z",  # Yesterday in Kyiv
+                    "2026-11-15T12:00:00Z",  # Last 14 days
+                    "2026-11-05T12:00:00Z",  # Last 30 days
+                    "2026-10-10T12:00:00Z",  # Last 26 weeks
+                    "2026-11-25T22:31:00Z",  # Future, excluded
+                )
+            )
+        ]
+        serve(page, data)
+        # 22:30 UTC on Nov 25 is 00:30 in Kyiv on Nov 26.
+        page.goto(base_url + "/")
+        page.wait_for_selector("#orbit-dial .notch")
+        page.evaluate(
+            "() => { Date.now = () => Date.parse('2026-11-25T22:30:00Z'); RO.refresh(); }"
+        )
+        page.wait_for_function(
+            "() => document.getElementById('orbit-asof').textContent.startsWith('Today, Nov 26, 2026:')"
+        )
+        summary = text(page, "#orbit-asof")
+        assert summary.startswith("Today, Nov 26, 2026: 1 release so far.")
+        assert "Last 7 days: 2 · Last 14 days: 3 · Last 30 days: 4 · Last 26 weeks: 5." in summary
+        assert text(page, "#orbit-dial .c-date") == "Nov 26, 2026"
+        assert page.get_attribute(HAND, "aria-valuetext") == "Now, Nov 26, 2026"
+    finally:
+        context.close()
+
+
 def test_the_dial_has_one_notch_per_release_in_the_window(page, base_url):
     open_front_page(page, base_url)
     weeks = int(page.get_attribute("#orbit-dial", "data-weeks"))
