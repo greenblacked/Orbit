@@ -10,9 +10,15 @@ import { canonical } from '../deploy/refresh_bot.mjs';
 
 const workflow = readFileSync(new URL('../.github/workflows/release-validation-bot.yml',
   import.meta.url), 'utf8');
-const proposal = workflow.split('      - name: Open reviewed snapshot proposal\n')[1]
-  .split('\n  validate:')[0].split('        run: |\n')[1]
-  .split('\n').map((line) => line.slice(10)).join('\n');
+function runStep(name) {
+  const step = workflow.split('      - name: ' + name + '\n')[1];
+  return step.split('        run: |\n')[1].split(/\n(?= {0,8}\S)/, 1)[0]
+    .split('\n').map((line) => line.slice(10)).join('\n');
+}
+
+const prepare = runStep('Prepare the snapshot candidate branch');
+const validate = runStep('Require successful CI and Security on the exact candidate');
+const propose = runStep('Open the validated snapshot pull request');
 
 function setup(t) {
   const root = mkdtempSync(join(tmpdir(), 'orbit-proposal-'));
@@ -53,6 +59,18 @@ case "$1 $2" in
   "api repos/example/Orbit/actions/permissions/workflow")
     if [[ "$MOCK_CAPABILITY" == forbidden ]]; then echo 'HTTP 403' >&2; exit 1; fi
     printf '%s\\n' "$MOCK_CAPABILITY" ;;
+  "api repos/example/Orbit/actions/runs/"*)
+    case "$2" in
+      */1) workflow=ci; conclusion=success; sha="$HEAD_SHA" ;;
+      */2) workflow=security; conclusion="$MOCK_SECURITY"; sha="${MOCK_RUN_SHA:-$HEAD_SHA}" ;;
+      *) exit 99 ;;
+    esac
+    printf '{"path":".github/workflows/%s.yml","event":"workflow_dispatch","head_branch":"%s","head_sha":"%s","status":"completed","conclusion":"%s"}\\n' \
+      "$workflow" "$BRANCH" "$sha" "$conclusion" ;;
+  "api repos/example/Orbit/git/ref/heads/dev")
+    printf '%s\\n' "${MOCK_BASE_SHA:-$BASE_SHA}" ;;
+  "api repos/example/Orbit/git/ref/heads/"*)
+    printf '%s\\n' "${MOCK_HEAD_SHA:-$HEAD_SHA}" ;;
   "pr create")
     echo create >> "$MOCK_LOG"
     if [[ "$MOCK_CREATE" == fail ]]; then echo 'PR creation denied' >&2; exit 1; fi ;;
@@ -78,16 +96,26 @@ esac
     const checkout = join(root, 'run-' + ++runCount);
     git(root, 'clone', '--depth=1', '--branch=dev', origin, checkout);
     writeFileSync(output, '');
-    return spawnSync('bash', ['-c', proposal], {
-      cwd: checkout, encoding: 'utf8',
-      env: { ...process.env, PATH: bin + ':' + process.env.PATH,
-        GITHUB_OUTPUT: output, GITHUB_REPOSITORY: 'example/Orbit',
-        GITHUB_SERVER_URL: 'https://github.example', GITHUB_RUN_ID: '1',
-        GH_TOKEN: 'mock-token', RUNNER_TEMP: root, BASE_SHA: base,
-        CANDIDATE: key, RESULT_VERSION: '7.25.2',
-        MOCK_OPEN: '0', MOCK_SEEN: '0', MOCK_CAPABILITY: 'true', MOCK_CREATE: 'ok', MOCK_LOG: log,
-        ...overrides },
-    });
+    const config = {
+      ...process.env, PATH: bin + ':' + process.env.PATH,
+      GITHUB_OUTPUT: output, GITHUB_REPOSITORY: 'example/Orbit', GH_REPO: 'example/Orbit',
+      GITHUB_SERVER_URL: 'https://github.example',
+      GH_TOKEN: 'mock-token', RUNNER_TEMP: root, BASE_SHA: base,
+      CANDIDATE: key, RESULT_VERSION: '7.25.2', BRANCH: branch, CI_RUN: '1', SECURITY_RUN: '2',
+      MOCK_OPEN: '0', MOCK_SEEN: '0', MOCK_CAPABILITY: 'true', MOCK_CREATE: 'ok',
+      MOCK_SECURITY: 'success', MOCK_LOG: log,
+      ...overrides,
+    };
+    const runStep = (script) => spawnSync('bash', ['-c', script],
+      { cwd: checkout, encoding: 'utf8', env: config });
+    const prepared = runStep(prepare);
+    const candidate = /^sha=([a-f0-9]{40})$/m.exec(readFileSync(output, 'utf8'));
+    if (prepared.status !== 0 || !candidate) return prepared;
+    config.HEAD_SHA = candidate[1];
+    const validated = runStep(validate);
+    const result = validated.status === 0 ? runStep(propose) : validated;
+    return { ...result, stdout: prepared.stdout + result.stdout };
+
   }
   function tip() {
     return git(seed, 'ls-remote', origin, ref).split('\t')[0];
@@ -103,14 +131,14 @@ test('PR creation failure leaves a candidate which a fresh run resumes after tim
   assert.match(first.stderr, /PR creation denied/);
   const pushed = env.tip();
   assert.match(pushed, /^[0-9a-f]{40}$/);
-  assert.equal(readFileSync(env.output, 'utf8'), '');
+  assert.equal(readFileSync(env.output, 'utf8'), 'branch=' + env.branch + '\nsha=' + pushed + '\n');
 
   assert.equal(env.generate('retry'), env.key);
   const retry = env.run();
   assert.equal(retry.status, 0, retry.stderr);
   assert.equal(env.tip(), pushed);
   assert.equal(readFileSync(env.log, 'utf8'), 'create\ncreate\n');
-  assert.equal(readFileSync(env.output, 'utf8'), 'branch=' + env.branch + '\n');
+  assert.equal(readFileSync(env.output, 'utf8'), 'branch=' + env.branch + '\nsha=' + pushed + '\n');
 });
 
 for (const mismatch of ['candidate JSON', 'extra path', 'file mode', 'wrong parent']) {
@@ -161,6 +189,21 @@ for (const [setting, message] of [
     assert.equal(run.status, 0, run.stderr);
     assert.match(run.stdout, message);
     assert.equal(env.tip(), '');
+    assert.throws(() => readFileSync(env.log), { code: 'ENOENT' });
+  });
+}
+
+for (const [label, overrides] of [
+  ['Security failed', { MOCK_SECURITY: 'failure' }],
+  ['Security was cancelled', { MOCK_SECURITY: 'cancelled' }],
+  ['Security tested a different SHA', { MOCK_RUN_SHA: 'a'.repeat(40) }],
+  ['dev moved after testing', { MOCK_BASE_SHA: 'a'.repeat(40) }],
+  ['the candidate moved after testing', { MOCK_HEAD_SHA: 'a'.repeat(40) }],
+]) {
+  test('keep the candidate and withhold the PR when ' + label, (t) => {
+    const env = setup(t);
+    assert.equal(env.run(overrides).status, 1);
+    assert.match(env.tip(), /^[0-9a-f]{40}$/);
     assert.throws(() => readFileSync(env.log), { code: 'ENOENT' });
   });
 }
