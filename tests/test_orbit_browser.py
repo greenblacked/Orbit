@@ -162,7 +162,8 @@ def test_live_counts_use_the_browser_date_past_local_midnight(browser, base_url)
             "() => { Date.now = () => Date.parse('2026-11-25T22:30:00Z'); RO.refresh(); }"
         )
         page.wait_for_function(
-            "() => document.getElementById('orbit-asof').textContent.startsWith('Today, Nov 26, 2026:')"
+            "() => document.getElementById('orbit-asof').textContent"
+            ".startsWith('Today, Nov 26, 2026:')"
         )
         summary = text(page, "#orbit-asof")
         assert summary.startswith("Today, Nov 26, 2026: 1 release so far.")
