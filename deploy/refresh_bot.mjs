@@ -34,11 +34,13 @@ const FIELDS = ['archiveSha256', 'channel', 'passed', 'platform', 'runAttempt', 
   'schema', 'skipped', 'testedAt', 'testedCommit', 'unexpectedFailures', 'version',
   'warnings', 'xfailed'];
 const positive = (n) => integer(n) && n > 0;
+const boundedCount = (n) => integer(n) && n <= 1000000;
 
 function hasEvidenceSchema(e, version) {
   return exact(version, VERSION) && e !== null && typeof e === 'object' &&
-    !Array.isArray(e) && Object.keys(e).length === FIELDS.length &&
-    FIELDS.every((field) => Object.hasOwn(e, field)) &&
+    !Array.isArray(e) && FIELDS.every((field) => Object.hasOwn(e, field)) &&
+    Object.keys(e).length === FIELDS.length + Number(Object.hasOwn(e, 'subtestsPassed')) &&
+    (!Object.hasOwn(e, 'subtestsPassed') || boundedCount(e.subtestsPassed)) &&
     e.schema === 1 && e.version === version &&
     e.channel === 'stable' && e.platform === 'chr-x86_64' &&
     exact(e.archiveSha256, DIGEST) && exact(e.testedCommit, SHA) &&
@@ -46,7 +48,7 @@ function hasEvidenceSchema(e, version) {
     exact(e.testedAt, UTC) && Number.isFinite(Date.parse(e.testedAt)) &&
     new Date(e.testedAt).toISOString().replace('.000Z', 'Z') === e.testedAt &&
     positive(e.passed) && [e.passed, e.xfailed, e.warnings, e.skipped]
-      .every((n) => integer(n) && n <= 1000000) &&
+      .every(boundedCount) &&
     e.unexpectedFailures === 0;
 }
 

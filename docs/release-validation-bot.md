@@ -20,8 +20,15 @@ with physical hardware explicitly UNTESTED. Existing manually reviewed results a
 never overwritten. Missing, invalid or unavailable evidence does not imply firmware
 compatibility. This path does not require a cross-repository secret.
 
-Enable repository Actions permission to create pull requests if not already enabled.
-The bot uses the built-in repository token. Its generated PR may require the owner
+Before rollout, enable **Allow GitHub Actions to create and approve pull requests**
+in the repository's Actions settings. The organization policy must allow it too.
+The bot uses the built-in repository token. When that token can read the setting,
+a disabled setting stops the proposal before the push. When GitHub limits access to
+the setting, the PR creation request determines whether the token can open a PR.
+If creation fails after the push, a later run can resume the branch after checking
+that its single commit has the same dev parent and matches the regenerated candidate.
+The comparison ignores snapshot timestamp churn and checks the full tree for
+unexpected paths and file-mode changes. Its generated PR may require the owner
 to approve PR-event workflows; the bot also dispatches CI and Security on the branch.
 Those branch checks do not replace PR merge-result checks or the deployment dry run.
 A failed refresh opens a deduplicated issue; investigate, close it and retry manually.
