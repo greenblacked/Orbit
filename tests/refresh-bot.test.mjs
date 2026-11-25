@@ -41,3 +41,16 @@ test('reject mismatched, failed, skipped or untrusted evidence', () => {
   }
   assert.equal(validateEvidence(evidence, '7.25.2', run, []), false);
 });
+
+test('reject unexpected fields, non-string identifiers and unbounded counts', () => {
+  for (const patch of [
+    { arbitrary: 'unexpected' },
+    { archiveSha256: [evidence.archiveSha256] },
+    { testedCommit: [evidence.testedCommit] },
+    { warnings: 1000001 },
+    { testedAt: '2026-11-31T11:14:06Z' },
+    { version: '7.25.2\n' },
+  ]) {
+    assert.equal(validateEvidence({ ...evidence, ...patch }, '7.25.2', run, jobs), false);
+  }
+});

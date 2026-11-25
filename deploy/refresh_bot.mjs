@@ -140,10 +140,11 @@ async function main() {
       try {
         const evidence = await findEvidence(stable.version);
         if (evidence) {
-          result = orbitResult(evidence);
-          version = stable.version;
+          const validated = orbitResult(evidence);
           mkdirSync(directory, { recursive: true });
-          writeJson(path, result);
+          writeJson(path, validated);
+          result = validated;
+          version = stable.version;
         }
       } catch {
         // A transient evidence-source failure must not invent PASS or block vendor data.
