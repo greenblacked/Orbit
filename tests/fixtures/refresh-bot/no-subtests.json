@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "version": "7.25.2",
+  "channel": "stable",
+  "platform": "chr-x86_64",
+  "archiveSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "testedCommit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "runId": 123,
+  "runAttempt": 1,
+  "testedAt": "2026-11-24T23:20:32Z",
+  "passed": 72,
+  "subtestsPassed": 0,
+  "xfailed": 9,
+  "warnings": 7,
+  "skipped": 0,
+  "unexpectedFailures": 0
+}
