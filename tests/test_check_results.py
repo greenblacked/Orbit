@@ -68,10 +68,9 @@ def root(tmp_path):
     return path
 
 
-def test_the_repository_commits_the_readme_and_no_results_yet():
+def test_the_repository_commits_the_readme_and_only_valid_results():
     results = REPO / "results"
     assert (results / "README.md").is_file()
-    assert list(results.rglob("*.json")) == []
     assert check.problems(results, REPO / "src" / "data" / "releases.json", FAMILIES) == []
 
 
