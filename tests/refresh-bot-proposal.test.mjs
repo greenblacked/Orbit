@@ -62,15 +62,15 @@ case "$1 $2" in
   "api repos/example/Orbit/actions/runs/"*)
     case "$2" in
       */1) workflow=ci; conclusion=success; sha="$HEAD_SHA" ;;
-      */2) workflow=security; conclusion="$MOCK_SECURITY"; sha="${MOCK_RUN_SHA:-$HEAD_SHA}" ;;
+      */2) workflow=security; conclusion="$MOCK_SECURITY"; sha="\${MOCK_RUN_SHA:-$HEAD_SHA}" ;;
       *) exit 99 ;;
     esac
     printf '{"path":".github/workflows/%s.yml","event":"workflow_dispatch","head_branch":"%s","head_sha":"%s","status":"completed","conclusion":"%s"}\\n' \
       "$workflow" "$BRANCH" "$sha" "$conclusion" ;;
   "api repos/example/Orbit/git/ref/heads/dev")
-    printf '%s\\n' "${MOCK_BASE_SHA:-$BASE_SHA}" ;;
+    printf '%s\\n' "\${MOCK_BASE_SHA:-$BASE_SHA}" ;;
   "api repos/example/Orbit/git/ref/heads/"*)
-    printf '%s\\n' "${MOCK_HEAD_SHA:-$HEAD_SHA}" ;;
+    printf '%s\\n' "\${MOCK_HEAD_SHA:-$HEAD_SHA}" ;;
   "pr create")
     echo create >> "$MOCK_LOG"
     if [[ "$MOCK_CREATE" == fail ]]; then echo 'PR creation denied' >&2; exit 1; fi ;;
