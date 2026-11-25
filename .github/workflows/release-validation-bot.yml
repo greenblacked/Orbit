@@ -1,0 +1,178 @@
+---
+name: Release validation bot
+
+on:
+  schedule:
+    - cron: '47 0,6,12,18 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-validation-bot
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.generate.outputs.changed }}
+      candidate: ${{ steps.generate.outputs.candidate }}
+      result_version: ${{ steps.generate.outputs.result_version }}
+      base_sha: ${{ steps.base.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: dev
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
+      - name: Record exact source
+        id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Refresh and validate vendor data
+        id: generate
+        run: |
+          set -Eeuo pipefail
+          before="$RUNNER_TEMP/before"
+          mkdir -p "$before"
+          cp src/data/releases.json src/data/security.json "$before/"
+          token=$(uuidgen)
+          echo "::stop-commands::$token"
+          node deploy/snapshot_releases.mjs
+          node deploy/snapshot_security.mjs
+          node deploy/refresh_bot.mjs "$before" "$RUNNER_TEMP/candidate" >> "$GITHUB_OUTPUT"
+          node --test 'tests/*.test.mjs'
+          python3 scripts/check_results.py
+          echo "::$token::"
+      - name: Preserve data candidate
+        if: steps.generate.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: snapshot-candidate
+          path: ${{ runner.temp }}/candidate/
+          if-no-files-found: error
+          retention-days: 3
+
+  propose:
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      branch: ${{ steps.pr.outputs.branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: dev
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: snapshot-candidate
+          path: ${{ runner.temp }}/candidate/
+      - name: Open reviewed snapshot proposal
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ needs.refresh.outputs.base_sha }}
+          CANDIDATE: ${{ needs.refresh.outputs.candidate }}
+          RESULT_VERSION: ${{ needs.refresh.outputs.result_version }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ && "$CANDIDATE" =~ ^[a-f0-9]{24}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$BASE_SHA" ]]
+          branch="chore/snapshot-$CANDIDATE"
+          # One open bot proposal at a time. A closed identical proposal is not regenerated.
+          open=$(gh pr list --base dev --state open --limit 100 --json headRefName,isCrossRepository \
+            --jq '[.[] | select(.isCrossRepository == false and (.headRefName | startswith("chore/snapshot-")))] | length')
+          if [[ "$open" != 0 ]]; then
+            echo "An existing snapshot proposal needs review."
+            exit 0
+          fi
+          seen=$(gh pr list --state all --head "$branch" --limit 100 --json isCrossRepository \
+            --jq '[.[] | select(.isCrossRepository == false)] | length')
+          if [[ "$seen" != 0 ]]; then
+            echo "This exact candidate already has a review decision."
+            exit 0
+          fi
+          source="$RUNNER_TEMP/candidate"
+          git switch -c "$branch"
+          cp "$source/releases.json" src/data/releases.json
+          cp "$source/security.json" src/data/security.json
+          git add src/data/releases.json src/data/security.json
+          if [[ -n "$RESULT_VERSION" ]]; then
+            [[ "$RESULT_VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]
+            dir=results/mikrotik/RouterOS
+            mkdir -p "$dir"
+            [[ ! -e "$dir/$RESULT_VERSION.json" && ! -e "$dir/$RESULT_VERSION" ]]
+            cp "$source/result.json" "$dir/$RESULT_VERSION.json"
+            git add "$dir/$RESULT_VERSION.json"
+          fi
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Refresh release and security snapshots'
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
+          remote_git() {
+            GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \
+              GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" git "$@"
+          }
+          [[ "$(remote_git ls-remote origin refs/heads/dev | cut -f1)" == "$BASE_SHA" ]]
+          # No force push: another writer or an orphan branch is an explicit failure.
+          remote_git push origin "HEAD:refs/heads/$branch"
+          gh pr create --base dev --head "$branch" \
+            --title 'Refresh release and security snapshots' \
+            --body "Scheduled vendor refresh. Candidate tested on $BASE_SHA. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Review source changes and approve PR-specific checks. No production or hardware compatibility claim."
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+  validate:
+    needs: propose
+    if: needs.propose.outputs.branch != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch branch validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ needs.propose.outputs.branch }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$BRANCH" =~ ^chore/snapshot-[a-f0-9]{24}$ ]]
+          gh workflow run ci.yml --ref "$BRANCH"
+          gh workflow run security.yml --ref "$BRANCH"
+
+  report-failure:
+    needs: [refresh, propose, validate]
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Report a blocked refresh once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          title='Automated release snapshot refresh blocked'
+          existing=$(gh issue list --state open --limit 100 --json title,author \
+            --jq '[.[] | select(.title == "Automated release snapshot refresh blocked" and (.author.login == "app/github-actions" or .author.login == "github-actions"))] | length')
+          if [[ "$existing" == 0 ]]; then
+            gh issue create --title "$title" \
+              --body "Review the failed refresh and retry after resolving the cause. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. No production changes were made."
+          fi
